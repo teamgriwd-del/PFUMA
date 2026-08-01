@@ -1,0 +1,273 @@
+.pfuma-vet-comm.enterprise.zim-focused {
+  display: flex;
+  height: 600px;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  border: 1px solid #eee;
+}
+
+/* Sidebar */
+.comm-sidebar {
+  width: 300px;
+  border-right: 1px solid #eee;
+  display: flex;
+  flex-direction: column;
+  background: #fcfcfc;
+}
+
+.sidebar-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sidebar-header h3 { margin: 0; font-size: 1.1rem; color: #1b5e20; }
+
+.new-ticket-btn {
+  background: #2e7d32;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.ticket-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.ticket-item {
+  padding: 1rem;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-align: left;
+}
+
+.ticket-item:hover { background: #f0f4f0; }
+.ticket-item.active { background: #e8f5e9; border-left: 4px solid #2e7d32; }
+
+.ticket-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  margin-bottom: 0.4rem;
+  color: #888;
+}
+
+.ticket-item.critical { border-left: 4px solid #d32f2f; }
+.ticket-item strong { display: block; font-size: 0.9rem; margin-bottom: 0.2rem; }
+.ticket-item p { margin: 0; font-size: 0.8rem; color: #666; }
+
+.emergency-section {
+  padding: 1rem;
+  background: #fff5f5;
+  border-top: 1px solid #fee;
+}
+
+.emergency-section h4 { margin: 0 0 0.5rem 0; font-size: 0.8rem; color: #c62828; text-transform: uppercase; }
+
+.hotline {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  margin-bottom: 0.3rem;
+}
+
+/* Main Content Area */
+.comm-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: white;
+  position: relative;
+  text-align: left;
+}
+
+/* Create Form */
+.create-ticket-form {
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.form-row {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.field label { font-size: 0.85rem; font-weight: 600; color: #555; }
+
+.field input, .field select, .field textarea {
+  padding: 0.7rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-family: inherit;
+}
+
+.field textarea { height: 100px; resize: vertical; }
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.submit-btn {
+  background: #2e7d32;
+  color: white;
+  border: none;
+  padding: 0.8rem 1.5rem;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  padding: 0.8rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* Chat Interface */
+.chat-interface {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chat-header {
+  padding: 1rem 2rem;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chat-header h4 { margin: 0; }
+
+.priority-tag {
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.priority-tag.critical { background: #ffebee; color: #c62828; }
+.priority-tag.routine { background: #e3f2fd; color: #1976d2; }
+
+.message-log {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: #f9f9fb;
+}
+
+.msg-bubble {
+  max-width: 70%;
+  padding: 0.8rem 1rem;
+  border-radius: 12px;
+}
+
+.msg-bubble small { display: block; font-size: 0.65rem; margin-bottom: 0.2rem; font-weight: bold; }
+.msg-bubble p { margin: 0; font-size: 0.95rem; line-height: 1.4; }
+
+.msg-bubble.vet {
+  align-self: flex-start;
+  background: white;
+  border: 1px solid #eee;
+  border-bottom-left-radius: 2px;
+}
+
+.msg-bubble.farmer {
+  align-self: flex-end;
+  background: #2e7d32;
+  color: white;
+  border-bottom-right-radius: 2px;
+}
+
+.chat-input-area {
+  padding: 1.5rem 2rem;
+  border-top: 1px solid #eee;
+  display: flex;
+  gap: 1rem;
+}
+
+.chat-input-area input {
+  flex: 1;
+  padding: 0.8rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.chat-input-area button {
+  background: #2e7d32;
+  color: white;
+  border: none;
+  padding: 0 1.5rem;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* Advisory Portal */
+.advisory-portal {
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.portal-hero {
+  background: #e8f5e9;
+  padding: 2rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+}
+
+.portal-hero h3 { margin: 0 0 0.5rem 0; color: #1b5e20; }
+.portal-hero p { margin: 0; color: #555; }
+
+.advisory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.advisory-card {
+  background: white;
+  border: 1px solid #eee;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+}
+
+.advisory-card .source {
+  font-size: 0.7rem;
+  font-weight: bold;
+  color: #2e7d32;
+  text-transform: uppercase;
+}
+
+.advisory-card h4 { margin: 0.5rem 0; color: #333; }
+.advisory-card p { font-size: 0.9rem; color: #666; line-height: 1.5; margin: 0; }

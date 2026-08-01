@@ -1,0 +1,212 @@
+.pfuma-health-mgmt.enterprise {
+  padding: 1rem;
+  font-family: 'Inter', sans-serif;
+}
+
+.health-header {
+  background: #1b5e20;
+  color: white;
+  padding: 2rem;
+  border-radius: 12px;
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.health-header h2 {
+  margin: 0;
+}
+
+.animal-selector-large {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.animal-selector-large select {
+  padding: 0.8rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: bold;
+  min-width: 250px;
+}
+
+.empty-state {
+  padding: 4rem;
+  background: #f9f9f9;
+  border: 2px dashed #ddd;
+  border-radius: 12px;
+  color: #888;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
+  text-align: left;
+}
+
+.health-card {
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+}
+
+.health-card h3 {
+  margin-top: 0;
+  color: #2e7d32;
+  font-size: 1.1rem;
+  border-bottom: 1px solid #f0f0f0;
+  padding-bottom: 0.8rem;
+  margin-bottom: 1.2rem;
+}
+
+/* Reproduction Section */
+.gestation-tool {
+  margin-bottom: 1.5rem;
+}
+
+.gestation-tool label {
+  display: block;
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.gestation-tool input {
+  width: 100%;
+  padding: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.countdown-box {
+  background: #e8f5e9;
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.countdown-box.urgent {
+  background: #fff3e0;
+  border: 1px solid #ffb74d;
+}
+
+.countdown-box .label {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #555;
+}
+
+.countdown-box .date {
+  display: block;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #2e7d32;
+  margin: 0.3rem 0;
+}
+
+.countdown-box .days {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1b5e20;
+}
+
+.lifecycle-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+
+.status-badge {
+  padding: 0.4rem;
+  text-align: center;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 0.8rem;
+}
+
+.status-badge.safe { background: #e8f5e9; color: #2e7d32; }
+.status-badge.info { background: #e3f2fd; color: #1976d2; }
+
+/* Timeline Section */
+.task-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.timeline-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 4px solid #ddd;
+  background: #fcfcfc;
+}
+
+.timeline-item.overdue { border-left-color: #d32f2f; background: #fffde7; }
+.timeline-item.due-today { border-left-color: #f57c00; background: #fff3e0; }
+.timeline-item.completed { border-left-color: #2e7d32; opacity: 0.7; }
+
+.task-name {
+  display: block;
+  font-weight: bold;
+  font-size: 0.95rem;
+}
+
+.req-tag {
+  background: #ffebee;
+  color: #c62828;
+  font-size: 0.6rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 2px;
+  margin-left: 0.5rem;
+}
+
+.task-date {
+  font-size: 0.8rem;
+  color: #777;
+}
+
+.complete-btn {
+  background: #2e7d32;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.done-check {
+  color: #2e7d32;
+  font-weight: bold;
+  font-size: 0.85rem;
+}
+
+/* Audit Log */
+.log-entry {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid #f9f9f9;
+  font-size: 0.85rem;
+}
+
+.log-action { font-weight: 500; }
+.log-date { color: #888; font-size: 0.75rem; }
+.hint { color: #aaa; font-style: italic; font-size: 0.9rem; }

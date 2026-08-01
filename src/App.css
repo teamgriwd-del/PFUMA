@@ -1,0 +1,211 @@
+.App {
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.App-header {
+  background: linear-gradient(135deg, #1b5e20 0%, #2e7d32 100%);
+  padding: 2.5rem 1rem;
+  color: white;
+  margin-bottom: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  text-align: center;
+}
+
+.header-content p {
+  margin-top: 0.5rem;
+  opacity: 0.8;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.logo-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.logo-text {
+  margin: 0;
+  font-size: 2.5rem;
+  font-weight: 900;
+  letter-spacing: -1px;
+}
+
+.badge {
+  background: #fbc02d;
+  color: #1b5e20;
+  font-size: 0.7rem;
+  font-weight: 900;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.pfuma-nav {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-bottom: 1px solid #eee;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-wrap: wrap;
+}
+
+.pfuma-nav button {
+  padding: 0.7rem 1.2rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #666;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pfuma-nav button:hover {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.pfuma-nav button.active {
+  background: #1b5e20;
+  color: white;
+  box-shadow: 0 4px 10px rgba(27, 94, 32, 0.2);
+}
+
+.pfuma-main {
+  padding: 2rem 1rem;
+  min-height: 60vh;
+}
+
+/* Dashboard Styles */
+.pfuma-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  text-align: left;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.stat-card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  cursor: pointer;
+  transition: transform 0.2s;
+  border: 1px solid #eee;
+}
+
+.stat-card:hover { transform: translateY(-3px); border-color: #2e7d32; }
+
+.stat-card.urgent { border-left: 5px solid #d32f2f; }
+.stat-card.urgent:hover { border-color: #d32f2f; }
+
+.stat-info strong { display: block; font-size: 1.8rem; color: #1b5e20; }
+.stat-info span { font-size: 0.85rem; color: #888; text-transform: uppercase; font-weight: 600; }
+
+.recent-activity-box, .quick-actions {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  border: 1px solid #eee;
+}
+
+.activity-list {
+  list-style: none;
+  padding: 0;
+}
+
+.activity-list li {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid #f9f9f9;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  background: #2e7d32;
+  border-radius: 50%;
+  margin-top: 5px;
+}
+
+.log-detail { display: flex; flex-direction: column; }
+.log-detail small { color: #999; font-size: 0.75rem; }
+
+.action-btns {
+  display: flex;
+  gap: 1rem;
+}
+
+.action-btns button {
+  flex: 1;
+  padding: 1rem;
+  border: none;
+  background: #f5f5f5;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-btns button:hover { background: #2e7d32; color: white; }
+
+/* Footer & Flag */
+footer {
+  margin-top: 4rem;
+  padding: 3rem 1rem;
+  background: #f8f9fa;
+  border-top: 1px solid #eee;
+}
+
+.footer-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.footer-content p { margin: 0; color: #888; font-size: 0.9rem; font-weight: 500; }
+
+.zim-flag {
+  display: flex;
+  width: 200px;
+  height: 20px;
+  border-radius: 2px;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.flag-stripe { flex: 1; }
+.flag-stripe.green { background: #318039; }
+.flag-stripe.yellow { background: #FFD200; }
+.flag-stripe.red { background: #D40000; }
+.flag-stripe.black { background: #000000; }
+
+@media (max-width: 600px) {
+  .logo-text { font-size: 2rem; }
+  .pfuma-nav button { padding: 0.6rem 0.8rem; font-size: 0.8rem; }
+}

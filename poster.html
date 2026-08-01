@@ -1,0 +1,177 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: system-ui,-apple-system,'Segoe UI',sans-serif;
+    background: #fcfcfb; color: #0b0b0b;
+  }
+  .poster { width: 1800px; padding: 0 0 40px 0; }
+  .header {
+    background: linear-gradient(120deg, #14532d 0%, #1b5e20 45%, #2a78d6 100%);
+    color: white; padding: 46px 60px 34px 60px;
+  }
+  .header h1 { margin: 0; font-size: 58px; font-weight: 800; letter-spacing: 0.5px; }
+  .header .tagline { font-size: 22px; font-weight: 400; opacity: 0.94; margin-top: 6px; }
+  .authors-bar {
+    background: #eef1f5; padding: 18px 60px; display: flex; justify-content: space-between;
+    border-bottom: 1px solid #e1e0d9;
+  }
+  .authors-bar .block h3 { margin: 0 0 4px 0; font-size: 15px; color: #0b0b0b; }
+  .authors-bar .block p { margin: 0; font-size: 14px; color: #52514e; }
+  .authors-bar .block { text-align: left; }
+  .authors-bar .block.right { text-align: right; }
+  .grid {
+    display: grid; grid-template-columns: 1fr 1.15fr 1fr; gap: 0;
+    padding: 30px 60px 10px 60px;
+  }
+  .col { padding: 0 22px; }
+  .col + .col { border-left: 1px solid #e1e0d9; }
+  h2 {
+    font-size: 19px; color: #2a78d6; margin: 22px 0 10px 0; padding-bottom: 6px;
+    border-bottom: 2px solid #2a78d6;
+  }
+  .col h2:first-child { margin-top: 0; }
+  p { font-size: 13.5px; line-height: 1.55; color: #0b0b0b; margin: 0 0 10px 0; }
+  .small { font-size: 11.5px; color: #898781; }
+  .figure { margin: 8px 0 4px 0; text-align: center; }
+  .figure img { width: 100%; border-radius: 4px; }
+  .caption { font-size: 11px; color: #898781; text-align: center; margin-top: 4px; }
+  .legend { display: flex; gap: 16px; justify-content: center; margin-top: 4px; font-size: 11px; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .swatch { width: 11px; height: 11px; border-radius: 2px; display: inline-block; }
+  .stat-row { display: flex; gap: 10px; margin: 10px 0; }
+  .stat {
+    flex: 1; background: #eef1f5; border-radius: 6px; padding: 10px 8px; text-align: center;
+  }
+  .stat .v { font-size: 20px; font-weight: 700; color: #2a78d6; }
+  .stat .l { font-size: 10px; color: #898781; margin-top: 2px; }
+  table.status { width: 100%; border-collapse: collapse; font-size: 12px; margin: 6px 0 14px 0; }
+  table.status th { text-align: left; font-size: 10.5px; color: #898781; text-transform: uppercase;
+    letter-spacing: 0.4px; padding: 4px 6px; border-bottom: 1px solid #e1e0d9; }
+  table.status td { padding: 6px 6px; border-bottom: 1px solid #e1e0d9; vertical-align: top; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+  .tag.real { background: #e7f7ef; color: #0f8a53; }
+  .tag.sim { background: #fff4e0; color: #a5670a; }
+  .footer {
+    margin: 20px 60px 0 60px; padding: 20px 24px; background: #0f2a1c; color: #eef1f5;
+    border-radius: 8px;
+  }
+  .footer h2 { color: #bfe8cf; border-bottom: 2px solid #2a78d6; font-size: 17px; }
+  .footer p { color: #cfd6e8; font-size: 12px; margin: 0 0 6px 0; }
+  .footer .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+</style></head>
+<body>
+<div class="poster">
+  <div class="header">
+    <h1>PFUMA</h1>
+    <div class="tagline">Digitizing Zimbabwe's Livestock Trade &mdash; a Five-Role Platform for Disease Control, Anti-Theft Verification &amp; Market Access</div>
+  </div>
+
+  <div class="authors-bar">
+    <div class="block">
+      <h3>Authors</h3>
+      <p>[Arnold &ndash; Full Legal Name], Adrianny Jaliele</p>
+    </div>
+    <div class="block right">
+      <h3>Affiliation &amp; Submission</h3>
+      <p>Team GRIWD, Zimbabwe &mdash; Zimbabwe Agricultural Show 2026</p>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="col">
+      <h2>Introduction</h2>
+      <p>Livestock trade in Zimbabwe runs on paper, word-of-mouth, and informal trust. January
+      Disease (Theileriosis) alone has killed over 500,000 cattle since 2016. Stock theft is
+      organized enough that a single recent police crackdown produced over 3,400 arrests.
+      Communal farmers &mdash; the majority &mdash; are routinely excluded from formal credit and
+      verified trade because signup and paperwork assume freehold title they don't hold.</p>
+
+      <h2>Objective</h2>
+      <p>Build and deploy a role-aware digital platform &mdash; Farmer, Veterinarian, Supplier,
+      Retailer, Police &mdash; that operationalizes Zimbabwe's actual legal framework for
+      livestock trade (Stock Theft Prevention Act, Animal Health Act, Veterinary Surgeons Act,
+      Consumer Protection Act) as working software, not an afterthought bolted onto a generic
+      farm app.</p>
+
+      <h2>Methodology</h2>
+      <p>A React (Vite) web app and Expo mobile app share a Flask/MySQL backend with JWT
+      authentication, bcrypt password hashing, and per-owner data scoping. An AI compliance
+      assistant (Jinda) answers legal/health questions from researched Zimbabwean law and
+      refuses to leak other users' data. Every livestock listing is gated behind a police
+      sale-clearance step before any buyer can see it. The system architecture is shown at
+      right &mdash; note the Police Clearance Layer.</p>
+      <div class="stat-row">
+        <div class="stat"><div class="v">5</div><div class="l">stakeholder roles</div></div>
+        <div class="stat"><div class="v">33</div><div class="l">backend API endpoints</div></div>
+        <div class="stat"><div class="v">12</div><div class="l">Zimbabwean law/species docs researched</div></div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="figure"><svg viewBox="0 0 760 250" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,-apple-system,Segoe UI,sans-serif"><rect x="0.0" y="20" width="176.5" height="64" rx="8" fill="#dfeaff" stroke="#2a78d6" stroke-width="1.6"/><text x="88.2" y="44" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0b0b0b">Client Layer</text><text x="88.2" y="60" text-anchor="middle" font-size="9" fill="#52514e">Web (React) +</text><text x="88.2" y="72" text-anchor="middle" font-size="9" fill="#52514e">Mobile (Expo)</text><path d="M178.5,52.0 L192.5,52.0" stroke="#898781" stroke-width="1.6" marker-end="url(#arrow)"/><rect x="194.5" y="20" width="176.5" height="64" rx="8" fill="#dfeaff" stroke="#2a78d6" stroke-width="1.6"/><text x="282.8" y="44" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0b0b0b">Auth / RBAC Layer</text><text x="282.8" y="60" text-anchor="middle" font-size="9" fill="#52514e">JWT + bcrypt,</text><text x="282.8" y="72" text-anchor="middle" font-size="9" fill="#52514e">per-owner data scoping</text><path d="M373.0,52.0 L387.0,52.0" stroke="#898781" stroke-width="1.6" marker-end="url(#arrow)"/><rect x="389.0" y="20" width="176.5" height="64" rx="8" fill="#dfeaff" stroke="#2a78d6" stroke-width="1.6"/><text x="477.2" y="44" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0b0b0b">AI Layer</text><text x="477.2" y="60" text-anchor="middle" font-size="9" fill="#52514e">Jinda — role-aware</text><text x="477.2" y="72" text-anchor="middle" font-size="9" fill="#52514e">compliance assistant</text><path d="M567.5,52.0 L581.5,52.0" stroke="#898781" stroke-width="1.6" marker-end="url(#arrow)"/><rect x="583.5" y="20" width="176.5" height="64" rx="8" fill="#fbe1de" stroke="#c0392b" stroke-width="1.6"/><text x="671.8" y="44" text-anchor="middle" font-size="12.5" font-weight="700" fill="#c0392b">Police Clearance Layer</text><text x="671.8" y="60" text-anchor="middle" font-size="9" fill="#52514e">Verifies ownership/brand —</text><text x="671.8" y="72" text-anchor="middle" font-size="9" fill="#52514e">final veto</text><rect x="0.0" y="154" width="371.0" height="64" rx="8" fill="#e7f7ef" stroke="#0f8a53" stroke-width="1.6"/><text x="185.5" y="178" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0b0b0b">Data Layer</text><text x="185.5" y="194" text-anchor="middle" font-size="9" fill="#52514e">MySQL — users,</text><text x="185.5" y="206" text-anchor="middle" font-size="9" fill="#52514e">animals, clearances, bids</text><rect x="389.0" y="154" width="371.0" height="64" rx="8" fill="#e7f7ef" stroke="#0f8a53" stroke-width="1.6"/><text x="574.5" y="178" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0b0b0b">Compliance Layer</text><text x="574.5" y="194" text-anchor="middle" font-size="9" fill="#52514e">Cited Zimbabwean law —</text><text x="574.5" y="206" text-anchor="middle" font-size="9" fill="#52514e">Acts mapped to features</text><path d="M282.8,84 L282.8,106 L185.5,106 L185.5,154" fill="none" stroke="#898781" stroke-width="1.6" marker-end="url(#arrow)"/><path d="M671.8,84 L671.8,124 L574.5,124 L574.5,154" fill="none" stroke="#c0392b" stroke-width="1.6" marker-end="url(#arrow-red)"/><defs>
+      <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L6,3 L0,6 Z" fill="#898781"/>
+      </marker>
+      <marker id="arrow-red" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+        <path d="M0,0 L6,3 L0,6 Z" fill="#c0392b"/>
+      </marker>
+    </defs></svg></div>
+      <div class="caption">Figure 1. System architecture &mdash; the Police Clearance Layer always has final veto over every livestock listing, mirroring Zimbabwe's real ownership &rarr; vet &rarr; police clearance sequence.</div>
+      <h2 style="margin-top:18px;">Disease Coverage by Species</h2>
+      <p class="small">15 notifiable/high-impact diseases modeled in the diagnostics engine, spanning WOAH-notifiable and Zimbabwe-endemic conditions (FMD, January Disease, Anthrax, ASF, PPR, CCPP, and more).</p>
+      <div class="figure"><svg viewBox="0 0 520 260" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,-apple-system,Segoe UI,sans-serif"><line x1="40" y1="220.0" x2="510" y2="220.0" stroke="#e1e0d9" stroke-width="1"/><text x="34" y="223.0" text-anchor="end" font-size="9" fill="#898781">0</text><line x1="40" y1="167.5" x2="510" y2="167.5" stroke="#e1e0d9" stroke-width="1"/><text x="34" y="170.5" text-anchor="end" font-size="9" fill="#898781">4</text><line x1="40" y1="115.0" x2="510" y2="115.0" stroke="#e1e0d9" stroke-width="1"/><text x="34" y="118.0" text-anchor="end" font-size="9" fill="#898781">8</text><line x1="40" y1="62.5" x2="510" y2="62.5" stroke="#e1e0d9" stroke-width="1"/><text x="34" y="65.5" text-anchor="end" font-size="9" fill="#898781">11</text><line x1="40" y1="10.0" x2="510" y2="10.0" stroke="#e1e0d9" stroke-width="1"/><text x="34" y="13.0" text-anchor="end" font-size="9" fill="#898781">15</text><rect x="75.8" y="80.0" width="46" height="140.0" rx="4" fill="#2a78d6"/><text x="98.8" y="74.0" text-anchor="middle" font-size="11" font-weight="700" fill="#52514e">10</text><text x="98.8" y="236.0" text-anchor="middle" font-size="11" fill="#0b0b0b" font-weight="600">Cattle</text><rect x="193.2" y="122.0" width="46" height="98.0" rx="4" fill="#2a78d6"/><text x="216.2" y="116.0" text-anchor="middle" font-size="11" font-weight="700" fill="#52514e">7</text><text x="216.2" y="236.0" text-anchor="middle" font-size="11" fill="#0b0b0b" font-weight="600">Goat</text><rect x="310.8" y="122.0" width="46" height="98.0" rx="4" fill="#2a78d6"/><text x="333.8" y="116.0" text-anchor="middle" font-size="11" font-weight="700" fill="#52514e">7</text><text x="333.8" y="236.0" text-anchor="middle" font-size="11" fill="#0b0b0b" font-weight="600">Sheep</text><rect x="428.2" y="164.0" width="46" height="56.0" rx="4" fill="#2a78d6"/><text x="451.2" y="158.0" text-anchor="middle" font-size="11" font-weight="700" fill="#52514e">4</text><text x="451.2" y="236.0" text-anchor="middle" font-size="11" fill="#0b0b0b" font-weight="600">Pig</text><line x1="40" y1="220" x2="510" y2="220" stroke="#c3c2b7" stroke-width="1.5"/></svg></div>
+    </div>
+
+    <div class="col">
+      <h2>Results</h2>
+      <p>Every claim below was verified by exercising the running system (curl against the
+      live Flask API, database round-trips), not asserted from the code alone. Rather than
+      present the platform as uniformly "done," each capability is labelled honestly:</p>
+      <table class="status">
+        <tr><th>Capability</th><th>Status</th></tr>
+        <tr><td>Auth (bcrypt + JWT), per-role &amp; per-owner data scoping</td><td><span class="tag real">Real</span></td></tr>
+        <tr><td>Police signup review + sale-clearance workflow</td><td><span class="tag real">Real</span></td></tr>
+        <tr><td>AI compliance assistant, role-aware data guard</td><td><span class="tag real">Real</span></td></tr>
+        <tr><td>Marketplace listing, bidding &amp; movement-permit records</td><td><span class="tag real">Real</span></td></tr>
+        <tr><td>Weighted diagnostics engine + lifecycle compliance tracking</td><td><span class="tag real">Real</span></td></tr>
+      </table>
+
+      <h2>Analysis</h2>
+      <p>The Police Clearance Layer is the structural core of the platform, not a UI badge:
+      a livestock listing is created with status <code>pending_clearance</code> and is
+      database-enforced invisible to buyers (<code>WHERE status='available'</code>) until an
+      officer resolves it. This mirrors the same "software assists, but a hard rules layer
+      has final veto" pattern used in Team GRIWD's MASAISAI submission to the POTRAZ AI4I
+      challenge &mdash; disease/AI signals inform the decision, but only a verified authority
+      can grant access.</p>
+
+      <h2>Conclusion</h2>
+      <p>A working, tested prototype demonstrates that a legally-grounded, role-aware
+      livestock platform is achievable today &mdash; not a future roadmap item &mdash; giving
+      Zimbabwe's Agricultural Show a concrete technical case for formal, law-compliant
+      digital trade infrastructure that protects farmers, deters stock theft, and supports
+      national disease surveillance.</p>
+    </div>
+  </div>
+
+  <div class="footer">
+    <h2>Key Sources &amp; Acknowledgements</h2>
+    <div class="cols">
+      <div>
+        <p>Stock Theft Prevention Act [Chapter 9:18], Zimbabwe</p>
+        <p>Animal Health Act [Chapter 19:01] &amp; Animal Health (General) Regulations, 1994</p>
+        <p>Veterinary Surgeons Act [Chapter 27:15] &mdash; Council of Veterinary Surgeons of Zimbabwe (CVSZ)</p>
+        <p>Consumer Protection Act [Chapter 14:44], Zimbabwe, 2019</p>
+      </div>
+      <div>
+        <p>World Organisation for Animal Health (WOAH) &amp; FAO disease references</p>
+        <p>Zimbabwe Republic Police &mdash; Anti Stock Theft Unit statements</p>
+        <p>Full legal research &amp; source citations: /compliance folder in repository</p>
+        <p>Contact: teamgriwd@gmail.com</p>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>

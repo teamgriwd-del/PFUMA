@@ -1,0 +1,45 @@
+# Dependencies — reinstall with `npm install` (root and app/)
+node_modules/
+app/node_modules/
+app-webview/node_modules/
+
+# Build output
+dist/
+build/
+.vite/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Expo / React Native
+.expo/
+.expo-shared/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Environment / secrets — never commit these
+.env
+.env.*
+*.local
+
+# Editor & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+yarn-error.log*
+
+# Local scratch
+*.tmp
+*.bak
