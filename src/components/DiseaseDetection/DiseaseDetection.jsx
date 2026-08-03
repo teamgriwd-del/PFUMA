@@ -99,13 +99,18 @@ const DiseaseDetection = ({ animals = [], onAddAuditLog }) => {
     setActiveTab('action');
   };
 
-  const saveToHistory = (diseaseName) => {
+  const saveToHistory = async (diseaseName) => {
     const id = parseInt(targetAnimalId, 10);
     const animal = animals.find(a => a.id === id);
     if (!animal || !onAddAuditLog) return;
-    onAddAuditLog({ id: Date.now(), animalId: animal.id, animal: animal.name, action: `Diagnostic: ${diseaseName}`, date: new Date().toLocaleString() });
+    const result = await onAddAuditLog({
+      id: Date.now(), animalId: animal.id, animal: animal.name,
+      eventType: `Diagnostic: ${diseaseName}`,
+      notes: `Symptoms: ${selectedSymptoms.join(', ') || 'none selected'}`,
+      date: new Date().toLocaleString(),
+    });
     if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
-    setSavedFeedback(`Saved to ${animal.name}'s health record.`);
+    setSavedFeedback(result.ok ? `Saved to ${animal.name}'s health record.` : (result.error || 'Could not save — try again.'));
     feedbackTimer.current = setTimeout(() => setSavedFeedback(null), 3000);
   };
 

@@ -1,53 +1,101 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
-  StyleSheet, ActivityIndicator, RefreshControl, Image, Modal
+  StyleSheet, ActivityIndicator, RefreshControl, Image, Modal, Alert
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { API, COLORS } from '../config';
+import { authFetch, authJson } from '../api';
 
-const DEMO_ANIMALS = [
-  { id: 101, name: 'Bessie',  species: 'Cattle', breed: 'Brahman', current_weight: 420, tag_id: 'ZIM-882', for_sale: false, image_url: 'https://images.unsplash.com/photo-1546445317-29f4545e9d53?w=400' },
-  { id: 102, name: 'Thunder', species: 'Cattle', breed: 'Angus',   current_weight: 380, tag_id: 'ZIM-104', for_sale: true,  image_url: 'https://images.unsplash.com/photo-1596733430284-f7437764b1a9?w=400' },
-];
+const SPECIES = ['Cattle','Goat'];
+const todayStr = () => new Date().toISOString().slice(0, 10);
 
-const SPECIES = ['Cattle','Goat','Sheep','Pig'];
+// A real uploaded photo is a relative /uploads/... path from the backend;
+// the species stock fallback (or a picked-but-not-yet-uploaded local file)
+// is already a usable URI as-is.
+const resolveImageUrl = (url) => (url && url.startsWith('/uploads/')) ? `${API}${url}` : url;
 
-export default function HerdScreen() {
-  const [animals,    setAnimals]    = useState(DEMO_ANIMALS);
+export default function HerdScreen({ currentUser }) {
+  const [animals,    setAnimals]    = useState([]);
   const [search,     setSearch]     = useState('');
   const [loading,    setLoading]    = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showAdd,    setShowAdd]    = useState(false);
-  const [form, setForm] = useState({ name:'', species:'Cattle', breed:'', tag_id:'', current_weight:'' });
+  const [form, setForm] = useState({ name:'', species:'Cattle', breed:'', tag_id:'', birth_date: todayStr(), current_weight:'' });
+  const [photo, setPhoto] = useState(null); // { uri, name, type }
   const [saving, setSaving] = useState(false);
+  const [listingAnimal, setListingAnimal] = useState(null); // animal being priced for listing
+  const [priceInput, setPriceInput] = useState('');
 
   const load = async (refresh = false) => {
     if (refresh) setRefreshing(true); else setLoading(true);
     try {
-      const res = await fetch(`${API}/animals?owner_id=1`);
+      const res = await authFetch(currentUser, '/animals');
       if (res.ok) setAnimals(await res.json());
-    } catch { /* use demo */ }
+    } catch { /* offline — leave whatever was last loaded, no fake fallback */ }
     finally { setLoading(false); setRefreshing(false); }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [currentUser?.token]);
+
+  const pickPhoto = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) { Alert.alert('Photo access needed', 'Enable photo library access in Settings to attach a photo.'); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
+    if (result.canceled || !result.assets?.[0]) return;
+    const asset = result.assets[0];
+    const filename = asset.uri.split('/').pop();
+    const ext = (filename.split('.').pop() || 'jpg').toLowerCase();
+    setPhoto({ uri: asset.uri, name: filename, type: `image/${ext === 'jpg' ? 'jpeg' : ext}` });
+  };
 
   const handleAdd = async () => {
     if (!form.name.trim()) return;
     setSaving(true);
-    const payload = { ...form, owner_id: 1, birth_weight: form.current_weight };
-    try {
-      const res = await fetch(`${API}/animals`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-      if (res.ok) { await load(); }
-      else { setAnimals(prev => [{ ...form, id: Date.now(), for_sale: false }, ...prev]); }
-    } catch { setAnimals(prev => [{ ...form, id: Date.now(), for_sale: false }, ...prev]); }
-    finally { setSaving(false); setShowAdd(false); setForm({ name:'', species:'Cattle', breed:'', tag_id:'', current_weight:'' }); }
+    const fd = new FormData();
+    fd.append('name', form.name);
+    fd.append('species', form.species);
+    fd.append('breed', form.breed || '');
+    fd.append('tag_id', form.tag_id || '');
+    fd.append('birth_date', form.birth_date || '');
+    fd.append('birth_weight', form.current_weight || '0');
+    fd.append('current_weight', form.current_weight || '0');
+    if (photo) fd.append('photo', photo);
+
+    const res = await authFetch(currentUser, '/animals', { method: 'POST', body: fd });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      Alert.alert('Could not register animal', data.error || 'Try again.');
+      setSaving(false);
+      return;
+    }
+    await load();
+    setSaving(false); setShowAdd(false); setPhoto(null);
+    setForm({ name:'', species:'Cattle', breed:'', tag_id:'', birth_date: todayStr(), current_weight:'' });
   };
 
-  const toggleSale = async (animal) => {
-    try { await fetch(`${API}/animals/${animal.id}/sale`, { method: 'PATCH' }); }
-    catch { /* offline */ }
-    setAnimals(prev => prev.map(a => a.id === animal.id ? { ...a, for_sale: !a.for_sale } : a));
+  // Turning listing ON needs a price (same rule as the web app) — opens the
+  // price modal below instead of toggling immediately. Turning it OFF
+  // withdraws the listing right away, no price needed.
+  const toggleSale = (animal) => {
+    if (!animal.for_sale) { setListingAnimal(animal); setPriceInput(''); return; }
+    submitSaleToggle(animal, null);
+  };
+
+  const submitSaleToggle = async (animal, price) => {
+    const { ok, data } = await authJson(currentUser, `/animals/${animal.id}/sale`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(price ? { price } : {}),
+    });
+    if (!ok) { Alert.alert('Could not update listing', data.error || 'Try again.'); return; }
+    setAnimals(prev => prev.map(a => a.id === animal.id ? { ...a, for_sale: data.for_sale } : a));
+  };
+
+  const confirmListing = async () => {
+    const price = parseFloat(priceInput);
+    if (!price || price <= 0) { Alert.alert('Enter a valid price to list this animal.'); return; }
+    await submitSaleToggle(listingAnimal, price);
+    setListingAnimal(null);
   };
 
   const filtered = animals.filter(a =>
@@ -91,7 +139,7 @@ export default function HerdScreen() {
         ) : filtered.map(a => (
           <View key={a.id} style={styles.card}>
             {a.image_url ? (
-              <Image source={{ uri: a.image_url }} style={styles.cardImage} />
+              <Image source={{ uri: resolveImageUrl(a.image_url) }} style={styles.cardImage} />
             ) : (
               <View style={[styles.cardImage, { backgroundColor: COLORS.light, alignItems: 'center', justifyContent: 'center' }]}>
                 <Text style={{ fontSize: 36 }}>🐄</Text>
@@ -125,7 +173,7 @@ export default function HerdScreen() {
       </ScrollView>
 
       {/* Add Animal Modal */}
-      <Modal visible={showAdd} animationType="slide" transparent>
+      <Modal visible={showAdd} animationType="slide" transparent onRequestClose={() => setShowAdd(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
@@ -133,10 +181,22 @@ export default function HerdScreen() {
               <TouchableOpacity onPress={() => setShowAdd(false)}><Text style={styles.modalClose}>✕</Text></TouchableOpacity>
             </View>
 
+            <TouchableOpacity style={styles.photoPicker} onPress={pickPhoto} activeOpacity={0.8}>
+              {photo ? (
+                <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
+              ) : (
+                <View style={[styles.photoPreview, styles.photoPlaceholder]}>
+                  <Text style={{ fontSize: 22 }}>📷</Text>
+                </View>
+              )}
+              <Text style={styles.photoPickerText}>{photo ? 'Change photo' : 'Upload a photo (optional)'}</Text>
+            </TouchableOpacity>
+
             {[
               { label: 'Animal Name *', key: 'name',            placeholder: 'e.g. Bessie' },
               { label: 'Breed',         key: 'breed',           placeholder: 'e.g. Brahman' },
               { label: 'Ear Tag ID',    key: 'tag_id',          placeholder: 'e.g. ZIM-001' },
+              { label: 'Date of Birth', key: 'birth_date',      placeholder: 'YYYY-MM-DD' },
               { label: 'Weight (kg)',   key: 'current_weight',  placeholder: 'e.g. 35', keyboard: 'numeric' },
             ].map(f => (
               <View key={f.key} style={styles.formField}>
@@ -169,6 +229,31 @@ export default function HerdScreen() {
 
             <TouchableOpacity style={styles.submitBtn} onPress={handleAdd} disabled={saving} activeOpacity={0.8}>
               {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>✓ Register Animal</Text>}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Listing price modal — turning "For Sale" on requires a price */}
+      <Modal visible={!!listingAnimal} animationType="fade" transparent onRequestClose={() => setListingAnimal(null)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>List {listingAnimal?.name}</Text>
+              <TouchableOpacity onPress={() => setListingAnimal(null)}><Text style={styles.modalClose}>✕</Text></TouchableOpacity>
+            </View>
+            <View style={styles.formField}>
+              <Text style={styles.formLabel}>Asking Price (USD) *</Text>
+              <TextInput
+                style={styles.formInput} placeholder="e.g. 650" keyboardType="numeric" autoFocus
+                value={priceInput} onChangeText={setPriceInput} placeholderTextColor="#bbb"
+              />
+            </View>
+            <Text style={{ fontSize: 11, color: COLORS.muted, marginBottom: 14 }}>
+              Submitted for police sale clearance — visible on the Marketplace once cleared.
+            </Text>
+            <TouchableOpacity style={styles.submitBtn} onPress={confirmListing} activeOpacity={0.8}>
+              <Text style={styles.submitText}>List For Sale</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -211,6 +296,10 @@ const styles = StyleSheet.create({
   modalHeader:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalTitle:     { fontSize: 20, fontWeight: '900', color: COLORS.text },
   modalClose:     { fontSize: 20, color: COLORS.muted },
+  photoPicker:    { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
+  photoPreview:   { width: 56, height: 56, borderRadius: 14, backgroundColor: '#f5f5f5' },
+  photoPlaceholder: { alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#e0e0e0', borderStyle: 'dashed' },
+  photoPickerText:{ fontSize: 13, fontWeight: '800', color: COLORS.primary },
   formField:      { marginBottom: 14 },
   formLabel:      { fontSize: 11, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
   formInput:      { backgroundColor: '#f5f5f5', borderRadius: 12, padding: 14, fontSize: 14, color: COLORS.text },

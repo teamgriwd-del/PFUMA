@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking } from 'react-native';
 import { COLORS, API } from '../config';
+import { authFetch } from '../api';
 
 const MenuItem = ({ emoji, label, desc, color, onPress }) => (
   <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.8}>
@@ -22,6 +23,17 @@ export default function ProfileScreen({ navigation, currentUser, onLogout }) {
   const role      = currentUser?.role || 'Farmer';
   const headerBg  = ROLE_COLOR[role]  || COLORS.primary;
   const emoji     = ROLE_EMOJI[role]  || '🌾';
+  const [stats, setStats] = useState({ animals: 0, listings: 0, messages: 0 });
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    (async () => {
+      try {
+        const res = await authFetch(currentUser, `/dashboard/${currentUser.id}`);
+        if (res.ok) setStats(await res.json());
+      } catch { /* offline — leave zeros, no fake numbers */ }
+    })();
+  }, [currentUser?.id]);
 
   return (
     <ScrollView style={styles.container}>
@@ -34,11 +46,11 @@ export default function ProfileScreen({ navigation, currentUser, onLogout }) {
         <Text style={styles.userRole}>{role} · {currentUser?.province || 'Zimbabwe'}</Text>
         {currentUser?.org ? <Text style={styles.userOrg}>{currentUser.org}</Text> : null}
         <View style={styles.userStats}>
-          <View style={styles.userStat}><Text style={styles.userStatVal}>2</Text><Text style={styles.userStatLabel}>Animals</Text></View>
+          <View style={styles.userStat}><Text style={styles.userStatVal}>{stats.animals ?? 0}</Text><Text style={styles.userStatLabel}>Animals</Text></View>
           <View style={styles.statDivider} />
-          <View style={styles.userStat}><Text style={styles.userStatVal}>1</Text><Text style={styles.userStatLabel}>Listed</Text></View>
+          <View style={styles.userStat}><Text style={styles.userStatVal}>{stats.listings ?? 0}</Text><Text style={styles.userStatLabel}>Listed</Text></View>
           <View style={styles.statDivider} />
-          <View style={styles.userStat}><Text style={styles.userStatVal}>2</Text><Text style={styles.userStatLabel}>Events</Text></View>
+          <View style={styles.userStat}><Text style={styles.userStatVal}>{stats.messages ?? 0}</Text><Text style={styles.userStatLabel}>Events</Text></View>
         </View>
       </View>
 

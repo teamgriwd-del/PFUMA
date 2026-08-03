@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, TextInput,
+  View, Text, Image, ScrollView, TouchableOpacity, TextInput,
   StyleSheet, KeyboardAvoidingView, Platform, StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,9 +8,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import {
   Sprout, Stethoscope, Pill, Store, Shield, User, Phone, Mail,
   Building2, MapPin, Check, CheckCircle, ArrowRight, ArrowLeft,
-  Lock, AlertTriangle, CreditCard,
+  Lock, AlertTriangle, CreditCard, Eye, EyeOff,
 } from 'lucide-react-native';
-import { COLORS, API } from '../config';
+import { COLORS, FONTS, API } from '../config';
+import pfumaMark from '../assets/pfuma-mark.png';
 
 const ROLES = [
   { name: 'Farmer',       icon: Sprout,      color: COLORS.primary, desc: 'Register animals, track health, list for sale' },
@@ -47,12 +48,31 @@ function isValidZwNationalId(raw) {
   return ZW_ID_RE.test((raw || '').trim());
 }
 
-const InputField = ({ icon: Icon, ...props }) => (
-  <View style={styles.inputWrap}>
-    <Icon size={16} color="#aaa" style={styles.inputIcon} />
-    <TextInput style={[inp, styles.inputWithIcon]} placeholderTextColor="#aaa" {...props} />
-  </View>
-);
+// Password fields toggle their own visibility so users can check what they
+// typed before submitting, without every call site managing that state.
+const InputField = ({ icon: Icon, secureTextEntry, ...props }) => {
+  const [visible, setVisible] = useState(false);
+  return (
+    <View style={styles.inputWrap}>
+      <Icon size={16} color="#aaa" style={styles.inputIcon} />
+      <TextInput
+        style={[inp, styles.inputWithIcon, secureTextEntry && styles.inputWithToggle]}
+        placeholderTextColor="#aaa"
+        secureTextEntry={secureTextEntry && !visible}
+        {...props}
+      />
+      {secureTextEntry && (
+        <TouchableOpacity
+          onPress={() => setVisible(v => !v)}
+          style={styles.inputToggle}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          {visible ? <EyeOff size={16} color="#aaa" /> : <Eye size={16} color="#aaa" />}
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+};
 
 // Maps the backend's snake_case user record (+ JWT) into the shape the rest
 // of the app expects — mirrors src/components/IntelAI/AuthPortal.jsx on web.
@@ -247,7 +267,7 @@ export default function LoginScreen({ onLogin }) {
         <TextInput style={inp} placeholder="e.g. 50" value={form.farmSize} onChangeText={v=>set('farmSize',v)} keyboardType="numeric" placeholderTextColor="#aaa" />
         <Text style={styles.label}>Main Livestock Species</Text>
         <View style={styles.chipRow}>
-          {['Cattle','Goat','Sheep','Pig','Poultry'].map(s => (
+          {['Cattle','Goat'].map(s => (
             <TouchableOpacity key={s} activeOpacity={0.8} onPress={() => toggleArr('species',s)}
               style={[styles.chip, form.species.includes(s) && { backgroundColor:COLORS.primary, borderColor:COLORS.primary }]}>
               <Text style={[styles.chipText, form.species.includes(s) && { color:'#fff' }]}>{s}</Text>
@@ -343,7 +363,7 @@ export default function LoginScreen({ onLogin }) {
           <View style={styles.headerGlow1} />
           <View style={styles.headerGlow2} />
           <View style={styles.headerTop}>
-            <View style={styles.logoBox}><Text style={styles.logoText}>P</Text></View>
+            <Image source={pfumaMark} style={styles.logoBox} />
             <View style={{ flex:1 }}>
               <Text style={styles.appName}>PFUMA</Text>
               <Text style={styles.appTagline}>Zimbabwe's Livestock Intelligence Platform</Text>
@@ -430,10 +450,9 @@ const styles = StyleSheet.create({
   headerGlow1:   { position:'absolute', width:170, height:170, borderRadius:85, backgroundColor:'rgba(255,255,255,0.06)', top:-70, right:-50 },
   headerGlow2:   { position:'absolute', width:130, height:130, borderRadius:65, backgroundColor:'rgba(255,255,255,0.05)', bottom:-60, left:-40 },
   headerTop:     { flexDirection:'row', alignItems:'center', gap:14, marginBottom:16 },
-  logoBox:       { width:48, height:48, backgroundColor:COLORS.yellow, borderRadius:14, alignItems:'center', justifyContent:'center', elevation:4 },
-  logoText:      { color:COLORS.primary, fontSize:28, fontWeight:'900' },
-  appName:       { color:'#fff', fontSize:20, fontWeight:'900' },
-  appTagline:    { color:'#a5d6a7', fontSize:11, fontWeight:'600', marginTop:1 },
+  logoBox:       { width:48, height:48, borderRadius:14, elevation:4 },
+  appName:       { color:'#fff', fontSize:20, fontFamily:FONTS.extrabold },
+  appTagline:    { color:'#a5d6a7', fontSize:11, fontFamily:FONTS.semibold, marginTop:1 },
   ecosystemRow:    { flexDirection:'row', justifyContent:'space-between', paddingHorizontal:2 },
   ecosystemItem:   { alignItems:'center', gap:5, width:64 },
   ecosystemIconBox:{ width:36, height:36, borderRadius:12, backgroundColor:'rgba(255,255,255,0.14)', borderWidth:1, borderColor:'rgba(255,255,255,0.2)', alignItems:'center', justifyContent:'center' },
@@ -450,6 +469,8 @@ const styles = StyleSheet.create({
   inputWrap:     { justifyContent:'center', marginBottom:12 },
   inputIcon:     { position:'absolute', left:14, zIndex:1 },
   inputWithIcon: { paddingLeft:42, marginBottom:0 },
+  inputWithToggle: { paddingRight:42 },
+  inputToggle:   { position:'absolute', right:14, zIndex:1 },
   infoBox:       { backgroundColor:'#e8f5e9', borderRadius:12, padding:12, marginTop:4, marginBottom:12 },
   infoText:      { fontSize:12, color:COLORS.primary, fontWeight:'600', lineHeight:18 },
   progress:      { flexDirection:'row', alignItems:'center', marginBottom:24 },

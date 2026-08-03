@@ -1,13 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import * as SplashScreen from 'expo-splash-screen';
+import {
+  useFonts,
+  PlusJakartaSans_400Regular,
+  PlusJakartaSans_600SemiBold,
+  PlusJakartaSans_700Bold,
+  PlusJakartaSans_800ExtraBold,
+} from '@expo-google-fonts/plus-jakarta-sans';
 import {
   Home, Users, ShoppingCart, Wheat, MessageSquare,
   User, ClipboardList, Package, Store, Shield,
 } from 'lucide-react-native';
-import { COLORS } from './config';
+import { COLORS, FONTS } from './config';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 import LoginScreen        from './screens/LoginScreen';
 import DashboardScreen    from './screens/DashboardScreen';
@@ -111,17 +121,29 @@ function RoleTabNavigator({ currentUser, onLogout }) {
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
+  const [fontsLoaded] = useFonts({
+    PlusJakartaSans_400Regular,
+    PlusJakartaSans_600SemiBold,
+    PlusJakartaSans_700Bold,
+    PlusJakartaSans_800ExtraBold,
+  });
+
+  const onLayoutRootView = useCallback(async () => {
+    if (fontsLoaded) await SplashScreen.hideAsync();
+  }, [fontsLoaded]);
+
+  if (!fontsLoaded) return null;
 
   if (!currentUser) {
     return (
-      <SafeAreaProvider>
+      <SafeAreaProvider onLayout={onLayoutRootView}>
         <LoginScreen onLogin={setCurrentUser} />
       </SafeAreaProvider>
     );
   }
 
   return (
-    <SafeAreaProvider>
+    <SafeAreaProvider onLayout={onLayoutRootView}>
       {/* Wrap in a relative View so the FAB can be absolutely positioned above the tab bar */}
       <View style={{ flex: 1 }}>
         <NavigationContainer>
@@ -170,7 +192,7 @@ const styles = StyleSheet.create({
 
   tabLabel: {
     fontSize: 10,
-    fontWeight: '700',
+    fontFamily: FONTS.bold,
     letterSpacing: 0.1,
     marginBottom: 2,
   },

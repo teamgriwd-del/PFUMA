@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
+import pfumaMark from '../../assets/pfuma-mark.png';
 import {
   Sprout, ShoppingBag, Truck, ArrowRight, ArrowLeft,
   Phone, Mail, MapPin, Building2, CheckCircle, Stethoscope, Shield,
-  Lock, Upload, AlertTriangle, CreditCard,
+  Lock, Upload, AlertTriangle, CreditCard, Eye, EyeOff,
 } from 'lucide-react';
 
 const API = 'http://localhost:5000';
@@ -87,7 +88,7 @@ const DISTRICTS = {
   'Bulawayo':            ['Bulawayo Urban', 'Umguza'],
 };
 
-const SPECIES_OPTIONS = ['Cattle', 'Goat', 'Sheep', 'Pig', 'Poultry', 'Mixed'];
+const SPECIES_OPTIONS = ['Cattle', 'Goat', 'Mixed'];
 const SUPPLY_CATEGORIES = ['Vaccines', 'Antibiotics', 'Antiparasitcs', 'Feed Supplements', 'Equipment', 'All Products'];
 
 const STEPS = ['Role', 'Personal', 'Organization', 'Details', 'Confirm'];
@@ -104,6 +105,35 @@ const Field = ({ label, required, children }) => (
 
 const inputCls = 'w-full p-3.5 bg-gray-50 rounded-xl border-2 border-transparent focus:border-pfuma-green outline-none font-semibold text-sm text-gray-800 placeholder:text-gray-400 transition';
 const selectCls = inputCls + ' appearance-none cursor-pointer';
+
+// Password field with a show/hide toggle so users can check what they typed
+// before submitting (registration errors on a mistyped password are otherwise
+// only caught by the confirm-password mismatch check, or not at all on login).
+const PasswordInput = ({ value, onChange, placeholder, required }) => {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className="relative">
+      <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+      <input
+        className={inputCls + ' pl-10 pr-10'}
+        type={visible ? 'text' : 'password'}
+        placeholder={placeholder}
+        required={required}
+        value={value}
+        onChange={onChange}
+      />
+      <button
+        type="button"
+        tabIndex={-1}
+        onClick={() => setVisible(v => !v)}
+        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+        aria-label={visible ? 'Hide password' : 'Show password'}
+      >
+        {visible ? <EyeOff size={15} /> : <Eye size={15} />}
+      </button>
+    </div>
+  );
+};
 
 // ── component ──────────────────────────────────────────────────────────────
 const AuthPortal = ({ onLogin }) => {
@@ -297,16 +327,10 @@ const AuthPortal = ({ onLogin }) => {
         </div>
       </Field>
       <Field label="Password" required>
-        <div className="relative">
-          <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input className={inputCls + ' pl-10'} type="password" placeholder="At least 8 characters" value={form.password} onChange={e => set('password', e.target.value)} />
-        </div>
+        <PasswordInput placeholder="At least 8 characters" value={form.password} onChange={e => set('password', e.target.value)} />
       </Field>
       <Field label="Confirm Password" required>
-        <div className="relative">
-          <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input className={inputCls + ' pl-10'} type="password" placeholder="Re-enter your password" value={form.confirmPassword} onChange={e => set('confirmPassword', e.target.value)} />
-        </div>
+        <PasswordInput placeholder="Re-enter your password" value={form.confirmPassword} onChange={e => set('confirmPassword', e.target.value)} />
       </Field>
       {form.password && form.confirmPassword && form.password !== form.confirmPassword && (
         <p className="text-[10px] text-red-500 font-bold">Passwords don't match.</p>
@@ -576,9 +600,9 @@ const AuthPortal = ({ onLogin }) => {
 
           <div className="relative z-10">
             <div className="flex items-center gap-3 mb-3 md:mb-8">
-              <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center text-pfuma-green font-black text-2xl shadow-lg shrink-0">P</div>
+              <img src={pfumaMark} alt="PFUMA" className="w-10 h-10 rounded-xl shadow-lg shrink-0 object-cover" />
               <div>
-                <p className="text-base font-black tracking-tight leading-none">PFUMA</p>
+                <p className="text-base font-extrabold tracking-tight leading-none">PFUMA</p>
               </div>
             </div>
             <h2 className="text-xl md:text-3xl font-black leading-tight mb-2 md:mb-4">Zimbabwe's Livestock Intelligence Platform</h2>
@@ -630,10 +654,7 @@ const AuthPortal = ({ onLogin }) => {
                   </div>
                 </Field>
                 <Field label="Password" required>
-                  <div className="relative">
-                    <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input className={inputCls + ' pl-10'} type="password" required value={loginPassword} onChange={e => setLoginPassword(e.target.value)} />
-                  </div>
+                  <PasswordInput required value={loginPassword} onChange={e => setLoginPassword(e.target.value)} />
                 </Field>
 
                 {authError && (

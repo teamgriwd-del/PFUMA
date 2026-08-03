@@ -1,5 +1,6 @@
 import os
 import re
+import json
 import functools
 import datetime
 
@@ -25,9 +26,25 @@ TOKEN_TTL_HOURS = 24 * 7  # 1 week
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 ALLOWED_DOC_EXT = {'.pdf', '.jpg', '.jpeg', '.png'}
+ALLOWED_IMG_EXT = {'.jpg', '.jpeg', '.png', '.webp'}
 
 # Roles that are not self-service — provisioned by an existing Police officer.
 ADMIN_PROVISIONED_ROLES = {'Police'}
+
+# Self-signup only ever creates these roles. Anything else (Police — see
+# above — or the hidden Admin oversight role) is rejected with the same
+# generic message, so probing the API with an unexpected role value never
+# confirms whether that role even exists.
+ALLOWED_SELF_SIGNUP_ROLES = {'Farmer', 'Veterinarian', 'Supplier', 'Retailer'}
+
+# Stock photo used only when a Farmer skips the photo-upload step — mirrors
+# src/App.jsx's IMAGE_BY_SPECIES so web/mobile show the same fallback.
+SPECIES_STOCK_IMAGES = {
+    'Cattle': 'https://images.unsplash.com/photo-1546445317-29f4545e9d53?auto=format&fit=crop&q=80&w=800',
+    'Goat':   'https://images.unsplash.com/photo-1524024973431-2ad916746881?auto=format&fit=crop&q=80&w=800',
+    'Sheep':  'https://images.unsplash.com/photo-1484557985045-edf25e08da73?auto=format&fit=crop&q=80&w=800',
+    'Pig':    'https://images.unsplash.com/photo-1516467508483-a7212febe31a?auto=format&fit=crop&q=80&w=800',
+}
 
 # ── ZIMBABWE-SPECIFIC FORMAT VALIDATION ─────────────────────────────
 # Mobile prefixes per POTRAZ's national numbering plan: Econet 077/078,
@@ -135,6 +152,19 @@ def require_role(*roles):
     return decorator
 
 
+def require_admin(fn):
+    """Like require_role('Admin'), but returns a generic 404 instead of a
+    403 — the whole point of the hidden Admin role is that a non-admin (or
+    someone probing the API) can't tell /admin/* exists at all, let alone
+    that it's gated behind a role called Admin."""
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        if g.current_user['role'] != 'Admin':
+            return jsonify({"error": "Not found"}), 404
+        return fn(*args, **kwargs)
+    return wrapper
+
+
 def require_verified(fn):
     @functools.wraps(fn)
     def wrapper(*args, **kwargs):
@@ -196,6 +226,22 @@ def save_upload(file_storage, user_id, doctype):
     return f"{user_id}/{filename}"
 
 
+def save_photo(file_storage, category, entity_id):
+    """Saves an uploaded animal/listing photo under uploads/<category>/<entity_id><ext>
+    and returns the relative path stored in the DB (served publicly, unlike
+    save_upload's private id/credential documents)."""
+    if not file_storage or not file_storage.filename:
+        return None
+    ext = os.path.splitext(secure_filename(file_storage.filename))[1].lower()
+    if ext not in ALLOWED_IMG_EXT:
+        raise ValueError(f"Unsupported image type '{ext}' — use JPG, PNG, or WEBP")
+    category_dir = os.path.join(UPLOAD_DIR, category)
+    os.makedirs(category_dir, exist_ok=True)
+    filename = f"{entity_id}{ext}"
+    file_storage.save(os.path.join(category_dir, filename))
+    return f"{category}/{filename}"
+
+
 # ── HEALTH CHECK ──────────────────────────────────────────────
 @app.route('/')
 def home():
@@ -207,7 +253,7 @@ def home():
 def register():
     d = request.form
     role = d.get('role', 'Farmer')
-    if role in ADMIN_PROVISIONED_ROLES:
+    if role not in ALLOWED_SELF_SIGNUP_ROLES:
         return jsonify({"error": "Police accounts are provisioned by an existing verified officer, not self-service. Contact ZRP/DVS liaison."}), 403
 
     full_name = d.get('full_name', '').strip()
@@ -304,7 +350,7 @@ def get_verifications():
     c = db.cursor()
     if requester['role'] == 'Police':
         c.execute("SELECT id, full_name, role, org_name, province, id_document_path, credential_document_path, created_at "
-                   "FROM users WHERE verification_status=%s AND role != 'Veterinarian' ORDER BY created_at ASC", (status,))
+                   "FROM users WHERE verification_status=%s AND role NOT IN ('Veterinarian','Admin') ORDER BY created_at ASC", (status,))
     elif requester['role'] == 'Veterinarian' and requester['verification_status'] == 'verified':
         c.execute("SELECT id, full_name, role, org_name, province, id_document_path, credential_document_path, created_at "
                    "FROM users WHERE verification_status=%s AND role='Veterinarian' AND id != %s ORDER BY created_at ASC",
@@ -334,6 +380,7 @@ def resolve_verification(user_id):
         db.close(); return jsonify({"error": "User not found"}), 404
 
     authorized = (
+        requester['role'] == 'Admin' or
         (requester['role'] == 'Police' and target['role'] != 'Veterinarian') or
         (requester['role'] == 'Veterinarian' and requester['verification_status'] == 'verified' and target['role'] == 'Veterinarian')
     )
@@ -377,6 +424,15 @@ def get_document(user_id, doctype):
     return send_from_directory(os.path.join(UPLOAD_DIR, directory), filename)
 
 
+# Animal/listing photos — publicly viewable (unlike the private id/credential
+# documents above), same as a stock product photo would be on any marketplace.
+@app.route('/uploads/<category>/<path:filename>', methods=['GET'])
+def get_photo(category, filename):
+    if category not in ('animals', 'listings'):
+        return jsonify({"error": "Not found"}), 404
+    return send_from_directory(os.path.join(UPLOAD_DIR, category), filename)
+
+
 # ── USERS ─────────────────────────────────────────────────────
 @app.route('/users', methods=['GET'])
 @require_auth
@@ -408,6 +464,9 @@ def get_users():
     # only through the clearance/verification workflow, not public search.
     if requester['role'] != 'Police':
         sql += " AND role != 'Police'"
+    # Admin is never listed here for anyone, including other admins — the
+    # hidden oversight role has its own dedicated /admin/* endpoints.
+    sql += " AND role != 'Admin'"
     c.execute(sql, params)
     users = c.fetchall()
     db.close()
@@ -653,23 +712,37 @@ def get_animals():
 @require_role('Farmer')
 @require_verified
 def add_animal():
-    d = request.json
+    # multipart (photo upload) and plain JSON (no photo) bodies are both
+    # accepted — request.form is empty for a JSON body, so fall back to it.
+    d = request.form if request.form else (request.json or {})
+    photo = request.files.get('photo')
     db = get_db()
     c = db.cursor()
+    species = d['species']
+    fallback_image = SPECIES_STOCK_IMAGES.get(species, SPECIES_STOCK_IMAGES['Cattle'])
     c.execute("""
         INSERT INTO animals (owner_id, name, species, breed, birth_date, tag_id, brand_id,
             sire_id, dam_id, birth_weight, current_weight, image_url, for_sale)
         VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
     """, (
-        g.current_user['id'], d['name'], d['species'], d.get('breed', ''),
+        g.current_user['id'], d['name'], species, d.get('breed', ''),
         d.get('birth_date') or d.get('birthDate'), d.get('tag_id') or d.get('tagId', ''),
         d.get('brand_id') or d.get('brandId', ''), d.get('sire_id') or d.get('sireId', ''),
         d.get('dam_id') or d.get('damId', ''),
         d.get('birth_weight') or d.get('birthWeight', 0),
         d.get('current_weight') or d.get('currentWeight', 0),
-        d.get('image_url') or d.get('imageUrl', ''), d.get('for_sale', False)
+        fallback_image, d.get('for_sale', False)
     ))
     animal_id = c.lastrowid
+
+    if photo and photo.filename:
+        try:
+            rel_path = save_photo(photo, 'animals', animal_id)
+            c.execute("UPDATE animals SET image_url=%s WHERE id=%s", (f"/uploads/{rel_path}", animal_id))
+        except ValueError as e:
+            db.commit(); db.close()
+            return jsonify({"error": str(e)}), 400
+
     bw = d.get('birth_weight') or d.get('birthWeight', 0)
     if bw:
         c.execute("INSERT INTO weight_history (animal_id, month_label, weight_kg) VALUES (%s,'Initial',%s)", (animal_id, bw))
@@ -715,6 +788,32 @@ def get_health(animal_id):
     return jsonify(events)
 
 
+@app.route('/health-events', methods=['GET'])
+@require_auth
+def list_health_events():
+    """The farmer's (or vet's) real, persisted health/compliance audit log —
+    what the dashboard's 'Recent Activity' should read from, instead of
+    client-only state that resets on every refresh."""
+    db = get_db()
+    c = db.cursor()
+    if g.current_user['role'] == 'Veterinarian':
+        c.execute("""
+            SELECT he.* FROM health_events he
+            WHERE he.performed_by = %s
+            ORDER BY he.event_date DESC LIMIT 200
+        """, (g.current_user['id'],))
+    else:
+        c.execute("""
+            SELECT he.* FROM health_events he
+            JOIN animals a ON he.animal_id = a.id
+            WHERE a.owner_id = %s
+            ORDER BY he.event_date DESC LIMIT 200
+        """, (g.current_user['id'],))
+    rows = c.fetchall()
+    db.close()
+    return jsonify(rows)
+
+
 @app.route('/health-events', methods=['POST'])
 @require_auth
 @require_role('Farmer', 'Veterinarian')
@@ -722,20 +821,32 @@ def add_health_event():
     d = request.json
     db = get_db()
     c = db.cursor()
-    c.execute("SELECT owner_id FROM animals WHERE id = %s", (d['animal_id'],))
+    c.execute("SELECT owner_id, name FROM animals WHERE id = %s", (d['animal_id'],))
     animal = c.fetchone()
     if not animal:
         db.close(); return jsonify({"error": "Animal not found"}), 404
     if g.current_user['role'] == 'Farmer' and animal['owner_id'] != g.current_user['id']:
         db.close(); return jsonify({"error": "You can only log events for your own animals"}), 403
-    c.execute("""
-        INSERT INTO health_events (animal_id, animal_name, event_type, notes, performed_by)
-        VALUES (%s,%s,%s,%s,%s)
-    """, (d['animal_id'], d.get('animal_name', ''), d['event_type'], d.get('notes', ''), g.current_user['id']))
+
+    next_due_date = d.get('next_due_date') or None
+    event_date = (d.get('event_date') or '').strip()  # lets a farmer backdate "when it actually happened"
+
+    if event_date:
+        c.execute("""
+            INSERT INTO health_events (animal_id, animal_name, event_type, notes, performed_by, event_date, next_due_date)
+            VALUES (%s,%s,%s,%s,%s,%s,%s)
+        """, (d['animal_id'], animal['name'], d['event_type'], d.get('notes', ''), g.current_user['id'], event_date, next_due_date))
+    else:
+        c.execute("""
+            INSERT INTO health_events (animal_id, animal_name, event_type, notes, performed_by, next_due_date)
+            VALUES (%s,%s,%s,%s,%s,%s)
+        """, (d['animal_id'], animal['name'], d['event_type'], d.get('notes', ''), g.current_user['id'], next_due_date))
     db.commit()
     event_id = c.lastrowid
+    c.execute("SELECT * FROM health_events WHERE id = %s", (event_id,))
+    event = c.fetchone()
     db.close()
-    return jsonify({"id": event_id, "message": "Health event logged ✅"})
+    return jsonify({"id": event_id, "message": "Health event logged ✅", "event": event})
 
 
 # ── MEDICINE INVENTORY ────────────────────────────────────────
@@ -801,9 +912,10 @@ def get_listings():
 @require_auth
 @require_verified
 def add_listing():
-    d = request.json
+    d = request.form if request.form else (request.json or {})
+    photo = request.files.get('photo')
     category = d.get('category', 'livestock')
-    animal_id = d.get('animal_id')
+    animal_id = d.get('animal_id') or None
 
     if animal_id:
         db = get_db(); c = db.cursor()
@@ -829,6 +941,14 @@ def add_listing():
         d.get('quantity', 1), d.get('location', ''), d.get('description', ''), status
     ))
     listing_id = c.lastrowid
+
+    if photo and photo.filename:
+        try:
+            rel_path = save_photo(photo, 'listings', listing_id)
+            c.execute("UPDATE marketplace_listings SET photo_url=%s WHERE id=%s", (f"/uploads/{rel_path}", listing_id))
+        except ValueError as e:
+            db.commit(); db.close()
+            return jsonify({"error": str(e)}), 400
 
     if needs_clearance:
         c.execute("""
@@ -972,6 +1092,608 @@ def get_bids(listing_id):
     return jsonify(rows)
 
 
+@app.route('/bids/mine', methods=['GET'])
+@require_auth
+def get_my_bids():
+    """Real recent-bids feed for the current user (e.g. the Retailer
+    Dashboard's "Recent Bids" panel) — bids they've personally placed,
+    newest first."""
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT b.*, l.product_name, l.animal_id
+        FROM bids b JOIN marketplace_listings l ON b.listing_id = l.id
+        WHERE b.bidder_id = %s
+        ORDER BY b.created_at DESC
+        LIMIT 10
+    """, (g.current_user['id'],))
+    rows = c.fetchall()
+    db.close()
+    return jsonify(rows)
+
+
+@app.route('/listings/<int:listing_id>/bids/<int:bid_id>/accept', methods=['PATCH'])
+@require_auth
+def accept_bid(listing_id, bid_id):
+    """Seller accepts a bid: that bid is marked accepted, every other
+    pending bid on the listing is declined, and the listing is closed out
+    as sold at the accepted price. This is the only place a listing ever
+    becomes 'sold' — needed so the price-trend chart reflects real sales."""
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT user_id, status FROM marketplace_listings WHERE id=%s", (listing_id,))
+    listing = c.fetchone()
+    if not listing:
+        db.close(); return jsonify({"error": "Listing not found"}), 404
+    if listing['user_id'] != g.current_user['id']:
+        db.close(); return jsonify({"error": "Only the listing owner can accept a bid"}), 403
+    if listing['status'] == 'sold':
+        db.close(); return jsonify({"error": "This listing is already sold"}), 409
+
+    c.execute("SELECT id, amount, status FROM bids WHERE id=%s AND listing_id=%s", (bid_id, listing_id))
+    bid = c.fetchone()
+    if not bid:
+        db.close(); return jsonify({"error": "Bid not found"}), 404
+    if bid['status'] != 'pending':
+        db.close(); return jsonify({"error": "This bid is no longer pending"}), 409
+
+    c.execute("UPDATE bids SET status='accepted' WHERE id=%s", (bid_id,))
+    c.execute("UPDATE bids SET status='declined' WHERE listing_id=%s AND id!=%s AND status='pending'", (listing_id, bid_id))
+    c.execute("UPDATE marketplace_listings SET status='sold', price=%s, sold_at=NOW() WHERE id=%s", (bid['amount'], listing_id))
+    db.commit()
+    db.close()
+    return jsonify({"message": "Bid accepted — listing marked sold ✅"})
+
+
+@app.route('/listings/price-trend', methods=['GET'])
+@require_auth
+def listings_price_trend():
+    """Average sold price per month for livestock, last 6 months — real
+    data only (no chart until sales actually happen)."""
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT DATE_FORMAT(sold_at, '%Y-%m') AS month, AVG(price) AS avg_price, COUNT(*) AS sales
+        FROM marketplace_listings
+        WHERE category = 'livestock' AND status = 'sold' AND sold_at IS NOT NULL
+          AND sold_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+        GROUP BY month
+        ORDER BY month ASC
+    """)
+    rows = c.fetchall()
+    db.close()
+    return jsonify(rows)
+
+
+# ── COOPERATIVES ───────────────────────────────────────────────
+# A communal farmer's real shared dip tank / grazing association — a
+# Farmer belongs to at most one (mirrors the real "one dip tank" constraint).
+@app.route('/cooperatives', methods=['POST'])
+@require_auth
+@require_role('Farmer')
+def create_cooperative():
+    d = request.json or {}
+    if not (d.get('name') or '').strip():
+        return jsonify({"error": "name is required"}), 400
+    province = (d.get('province') or g.current_user.get('province') or '').strip()
+    if not province:
+        return jsonify({"error": "province is required"}), 400
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT id FROM cooperative_members WHERE user_id=%s", (g.current_user['id'],))
+    if c.fetchone():
+        db.close(); return jsonify({"error": "You're already in a cooperative — leave it first to create or join another"}), 409
+    c.execute("""
+        INSERT INTO cooperatives (name, description, province, district, dip_tank_location, created_by)
+        VALUES (%s,%s,%s,%s,%s,%s)
+    """, (d['name'], d.get('description', ''), province, d.get('district', ''), d.get('dip_tank_location', ''), g.current_user['id']))
+    coop_id = c.lastrowid
+    c.execute("INSERT INTO cooperative_members (cooperative_id, user_id, role) VALUES (%s,%s,'admin')", (coop_id, g.current_user['id']))
+    db.commit()
+    db.close()
+    return jsonify({"id": coop_id, "message": "Cooperative created ✅"})
+
+
+@app.route('/cooperatives', methods=['GET'])
+@require_auth
+def list_cooperatives():
+    province = request.args.get('province') or g.current_user.get('province')
+    district = request.args.get('district')
+    db = get_db()
+    c = db.cursor()
+    sql = """
+        SELECT co.*, COUNT(cm.id) AS member_count
+        FROM cooperatives co LEFT JOIN cooperative_members cm ON cm.cooperative_id = co.id
+        WHERE 1=1
+    """
+    params = []
+    if province:
+        sql += " AND co.province = %s"; params.append(province)
+    if district:
+        sql += " AND co.district = %s"; params.append(district)
+    sql += " GROUP BY co.id ORDER BY co.name"
+    c.execute(sql, params)
+    rows = c.fetchall()
+    db.close()
+    return jsonify(rows)
+
+
+@app.route('/cooperatives/<int:coop_id>/join', methods=['POST'])
+@require_auth
+@require_role('Farmer')
+def join_cooperative(coop_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT id FROM cooperatives WHERE id=%s", (coop_id,))
+    if not c.fetchone():
+        db.close(); return jsonify({"error": "Cooperative not found"}), 404
+    c.execute("SELECT id FROM cooperative_members WHERE user_id=%s", (g.current_user['id'],))
+    if c.fetchone():
+        db.close(); return jsonify({"error": "You're already in a cooperative — leave it first to join another"}), 409
+    c.execute("INSERT INTO cooperative_members (cooperative_id, user_id) VALUES (%s,%s)", (coop_id, g.current_user['id']))
+    db.commit()
+    db.close()
+    return jsonify({"message": "Joined ✅"})
+
+
+@app.route('/cooperatives/<int:coop_id>/leave', methods=['POST'])
+@require_auth
+def leave_cooperative(coop_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute("DELETE FROM cooperative_members WHERE cooperative_id=%s AND user_id=%s", (coop_id, g.current_user['id']))
+    db.commit()
+    changed = c.rowcount
+    db.close()
+    if not changed:
+        return jsonify({"error": "You're not a member of this cooperative"}), 404
+    return jsonify({"message": "Left cooperative ✅"})
+
+
+@app.route('/cooperatives/mine', methods=['GET'])
+@require_auth
+def my_cooperative():
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT cooperative_id FROM cooperative_members WHERE user_id=%s", (g.current_user['id'],))
+    membership = c.fetchone()
+    if not membership:
+        db.close(); return jsonify(None)
+    c.execute("SELECT * FROM cooperatives WHERE id=%s", (membership['cooperative_id'],))
+    coop = c.fetchone()
+    c.execute("""
+        SELECT u.id, u.full_name, u.org_name, u.phone, cm.role, cm.joined_at,
+               (SELECT COUNT(*) FROM animals a WHERE a.owner_id = u.id) AS animal_count
+        FROM cooperative_members cm JOIN users u ON cm.user_id = u.id
+        WHERE cm.cooperative_id = %s
+        ORDER BY cm.role DESC, u.full_name
+    """, (coop['id'],))
+    coop['members'] = c.fetchall()
+    db.close()
+    return jsonify(coop)
+
+
+@app.route('/cooperatives/<int:coop_id>/dip-schedule', methods=['POST'])
+@require_auth
+def add_dip_schedule(coop_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT role FROM cooperative_members WHERE cooperative_id=%s AND user_id=%s", (coop_id, g.current_user['id']))
+    membership = c.fetchone()
+    if not membership or membership['role'] != 'admin':
+        db.close(); return jsonify({"error": "Only a cooperative admin can schedule a dip"}), 403
+    d = request.json or {}
+    if not d.get('scheduled_date'):
+        db.close(); return jsonify({"error": "scheduled_date is required"}), 400
+    c.execute("""
+        INSERT INTO cooperative_dip_schedule (cooperative_id, scheduled_date, notes, created_by)
+        VALUES (%s,%s,%s,%s)
+    """, (coop_id, d['scheduled_date'], d.get('notes', ''), g.current_user['id']))
+    db.commit()
+    entry_id = c.lastrowid
+    db.close()
+    return jsonify({"id": entry_id, "message": "Dip day scheduled ✅"})
+
+
+@app.route('/cooperatives/<int:coop_id>/dip-schedule', methods=['GET'])
+@require_auth
+def get_dip_schedule(coop_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT id FROM cooperative_members WHERE cooperative_id=%s AND user_id=%s", (coop_id, g.current_user['id']))
+    if not c.fetchone():
+        db.close(); return jsonify({"error": "Not a member of this cooperative"}), 403
+    c.execute("""
+        SELECT ds.*, u.full_name AS created_by_name FROM cooperative_dip_schedule ds
+        JOIN users u ON ds.created_by = u.id
+        WHERE ds.cooperative_id = %s AND ds.scheduled_date >= CURDATE()
+        ORDER BY ds.scheduled_date ASC
+    """, (coop_id,))
+    rows = c.fetchall()
+    db.close()
+    return jsonify(rows)
+
+
+# ── COOPERATIVE VET REQUESTS ──────────────────────────────────────
+@app.route('/cooperatives/<int:coop_id>/vet-requests', methods=['POST'])
+@require_auth
+def create_vet_request(coop_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT id FROM cooperative_members WHERE cooperative_id=%s AND user_id=%s", (coop_id, g.current_user['id']))
+    if not c.fetchone():
+        db.close(); return jsonify({"error": "Not a member of this cooperative"}), 403
+    d = request.json or {}
+    if not (d.get('reason') or '').strip():
+        db.close(); return jsonify({"error": "reason is required"}), 400
+    c.execute("""
+        INSERT INTO cooperative_vet_requests (cooperative_id, requested_by, reason, preferred_date)
+        VALUES (%s,%s,%s,%s)
+    """, (coop_id, g.current_user['id'], d['reason'], d.get('preferred_date') or None))
+    db.commit()
+    req_id = c.lastrowid
+    db.close()
+    return jsonify({"id": req_id, "message": "Vet request posted ✅"})
+
+
+@app.route('/cooperatives/<int:coop_id>/vet-requests', methods=['GET'])
+@require_auth
+def get_coop_vet_requests(coop_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT id FROM cooperative_members WHERE cooperative_id=%s AND user_id=%s", (coop_id, g.current_user['id']))
+    if not c.fetchone():
+        db.close(); return jsonify({"error": "Not a member of this cooperative"}), 403
+    c.execute("""
+        SELECT vr.*, u.full_name AS requested_by_name, v.full_name AS vet_name
+        FROM cooperative_vet_requests vr
+        JOIN users u ON vr.requested_by = u.id
+        LEFT JOIN users v ON vr.vet_id = v.id
+        WHERE vr.cooperative_id = %s
+        ORDER BY vr.created_at DESC
+    """, (coop_id,))
+    rows = c.fetchall()
+    db.close()
+    return jsonify(rows)
+
+
+@app.route('/vet-requests', methods=['GET'])
+@require_auth
+@require_role('Veterinarian')
+def list_vet_requests():
+    province = request.args.get('province') or g.current_user.get('province')
+    status = request.args.get('status', 'open')
+    db = get_db()
+    c = db.cursor()
+    sql = """
+        SELECT vr.*, co.name AS cooperative_name, co.province, co.district, co.dip_tank_location,
+               u.full_name AS requested_by_name
+        FROM cooperative_vet_requests vr
+        JOIN cooperatives co ON vr.cooperative_id = co.id
+        JOIN users u ON vr.requested_by = u.id
+        WHERE 1=1
+    """
+    params = []
+    if province:
+        sql += " AND co.province = %s"; params.append(province)
+    if status:
+        sql += " AND vr.status = %s"; params.append(status)
+    sql += " ORDER BY vr.created_at DESC"
+    c.execute(sql, params)
+    rows = c.fetchall()
+    db.close()
+    return jsonify(rows)
+
+
+@app.route('/vet-requests/<int:req_id>/claim', methods=['PATCH'])
+@require_auth
+@require_role('Veterinarian')
+def claim_vet_request(req_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT status FROM cooperative_vet_requests WHERE id=%s", (req_id,))
+    row = c.fetchone()
+    if not row:
+        db.close(); return jsonify({"error": "Request not found"}), 404
+    if row['status'] != 'open':
+        db.close(); return jsonify({"error": f"This request is already {row['status']}"}), 409
+    c.execute("UPDATE cooperative_vet_requests SET status='claimed', vet_id=%s WHERE id=%s", (g.current_user['id'], req_id))
+    db.commit()
+    db.close()
+    return jsonify({"message": "Request claimed ✅"})
+
+
+@app.route('/vet-requests/<int:req_id>/complete', methods=['PATCH'])
+@require_auth
+@require_role('Veterinarian')
+def complete_vet_request(req_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT status, vet_id FROM cooperative_vet_requests WHERE id=%s", (req_id,))
+    row = c.fetchone()
+    if not row:
+        db.close(); return jsonify({"error": "Request not found"}), 404
+    if row['vet_id'] != g.current_user['id']:
+        db.close(); return jsonify({"error": "Only the vet who claimed this can mark it complete"}), 403
+    if row['status'] != 'claimed':
+        db.close(); return jsonify({"error": f"Request must be claimed first (currently {row['status']})"}), 409
+    c.execute("UPDATE cooperative_vet_requests SET status='completed', completed_at=NOW() WHERE id=%s", (req_id,))
+    db.commit()
+    db.close()
+    return jsonify({"message": "Request marked complete ✅"})
+
+
+# ── OUTBREAKS ──────────────────────────────────────────────────
+# Visible to every user in the affected province — a real safety warning,
+# not just Vet/Police oversight. Only Vet/Police can file or update one.
+@app.route('/outbreaks', methods=['POST'])
+@require_auth
+@require_role('Veterinarian', 'Police')
+def report_outbreak():
+    d = request.json or {}
+    if not (d.get('disease_name') or '').strip():
+        return jsonify({"error": "disease_name is required"}), 400
+    province = (d.get('province') or g.current_user.get('province') or '').strip()
+    if not province:
+        return jsonify({"error": "province is required"}), 400
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        INSERT INTO outbreaks (disease_name, district, province, details, affected_farms, animals_at_risk, reported_by)
+        VALUES (%s,%s,%s,%s,%s,%s,%s)
+    """, (
+        d['disease_name'], d.get('district', ''), province, d.get('details', ''),
+        d.get('affected_farms', 0), d.get('animals_at_risk', ''), g.current_user['id']
+    ))
+    outbreak_id = c.lastrowid
+    db.commit()
+    db.close()
+    return jsonify({"id": outbreak_id, "message": "Outbreak reported ✅"})
+
+
+@app.route('/outbreaks', methods=['GET'])
+@require_auth
+def get_outbreaks():
+    province = request.args.get('province') or g.current_user.get('province')
+    status = request.args.get('status', 'active')
+    db = get_db()
+    c = db.cursor()
+    sql = """
+        SELECT o.*, u.full_name AS reported_by_name
+        FROM outbreaks o JOIN users u ON o.reported_by = u.id
+        WHERE 1=1
+    """
+    params = []
+    if province:
+        sql += " AND o.province = %s"; params.append(province)
+    if status:
+        sql += " AND o.status = %s"; params.append(status)
+    sql += " ORDER BY o.created_at DESC"
+    c.execute(sql, params)
+    rows = c.fetchall()
+    db.close()
+    return jsonify(rows)
+
+
+@app.route('/outbreaks/<int:outbreak_id>', methods=['PATCH'])
+@require_auth
+@require_role('Veterinarian', 'Police')
+def update_outbreak(outbreak_id):
+    d = request.json or {}
+    status = d.get('status')
+    if status not in ('active', 'contained', 'resolved'):
+        return jsonify({"error": "status must be active, contained, or resolved"}), 400
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT reported_by FROM outbreaks WHERE id=%s", (outbreak_id,))
+    row = c.fetchone()
+    if not row:
+        db.close(); return jsonify({"error": "Outbreak not found"}), 404
+    if row['reported_by'] != g.current_user['id'] and g.current_user['role'] != 'Police':
+        db.close(); return jsonify({"error": "Only the reporting officer or Police can update this"}), 403
+    resolved_at = "NOW()" if status in ('contained', 'resolved') else "NULL"
+    c.execute(f"UPDATE outbreaks SET status=%s, resolved_at={resolved_at} WHERE id=%s", (status, outbreak_id))
+    db.commit()
+    db.close()
+    return jsonify({"message": "Outbreak updated ✅"})
+
+
+# ── VETERINARIAN OVERSIGHT ───────────────────────────────────────
+@app.route('/vet/farm-registry', methods=['GET'])
+@require_auth
+@require_role('Veterinarian')
+def vet_farm_registry():
+    province = g.current_user.get('province')
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT u.id, u.full_name, u.org_name, u.province, u.verification_status,
+               COUNT(a.id) AS animal_count
+        FROM users u LEFT JOIN animals a ON a.owner_id = u.id
+        WHERE u.role = 'Farmer' AND u.province = %s
+        GROUP BY u.id
+        ORDER BY u.full_name
+    """, (province,))
+    rows = c.fetchall()
+    db.close()
+    return jsonify(rows)
+
+
+@app.route('/vet/reporting-health', methods=['GET'])
+@require_auth
+@require_role('Veterinarian')
+def vet_reporting_health():
+    province = g.current_user.get('province')
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT COUNT(*) AS total FROM users WHERE role='Farmer' AND province=%s", (province,))
+    total_farmers = c.fetchone()['total']
+    rows = []
+    for i in range(6, -1, -1):
+        c.execute("""
+            SELECT COUNT(DISTINCT a.owner_id) AS reporting
+            FROM health_events he
+            JOIN animals a ON he.animal_id = a.id
+            JOIN users u ON a.owner_id = u.id
+            WHERE u.role = 'Farmer' AND u.province = %s
+              AND DATE(he.event_date) = DATE(DATE_SUB(NOW(), INTERVAL %s DAY))
+        """, (province, i))
+        reporting = c.fetchone()['reporting']
+        pct = round((reporting / total_farmers) * 100) if total_farmers else 0
+        rows.append({
+            "day": (datetime.datetime.now() - datetime.timedelta(days=i)).strftime('%a'),
+            "sync": pct,
+        })
+    db.close()
+    return jsonify(rows)
+
+
+@app.route('/vet/cert-queue', methods=['GET'])
+@require_auth
+@require_role('Veterinarian')
+def vet_cert_queue():
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT COUNT(DISTINCT c.id) AS total
+        FROM conversations c
+        JOIN conversation_messages cm ON cm.conversation_id = c.id
+        WHERE c.category = 'Trade Certification'
+          AND (c.user_a_id = %s OR c.user_b_id = %s)
+          AND cm.sender_id != %s AND cm.read_at IS NULL
+    """, (g.current_user['id'], g.current_user['id'], g.current_user['id']))
+    total = c.fetchone()['total']
+    db.close()
+    return jsonify({"pending": total})
+
+
+# ── ORDERS (Supplier fulfillment) ─────────────────────────────────
+@app.route('/orders', methods=['POST'])
+@require_auth
+@require_role('Farmer')
+@require_verified
+def place_order():
+    d = request.json or {}
+    listing_id = d.get('listing_id')
+    quantity = d.get('quantity')
+    if not listing_id or not quantity or float(quantity) <= 0:
+        return jsonify({"error": "listing_id and a positive quantity are required"}), 400
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT user_id, category FROM marketplace_listings WHERE id=%s", (listing_id,))
+    listing = c.fetchone()
+    if not listing:
+        db.close(); return jsonify({"error": "Listing not found"}), 404
+    if listing['category'] not in ('medicine', 'equipment'):
+        db.close(); return jsonify({"error": "Orders are only for medicine/equipment listings — use a bid for livestock or feed"}), 400
+    c.execute("""
+        INSERT INTO orders (listing_id, farmer_id, supplier_id, quantity)
+        VALUES (%s,%s,%s,%s)
+    """, (listing_id, g.current_user['id'], listing['user_id'], quantity))
+    order_id = c.lastrowid
+    db.commit()
+    db.close()
+    return jsonify({"id": order_id, "message": "Order placed ✅"})
+
+
+@app.route('/orders/mine', methods=['GET'])
+@require_auth
+def get_my_orders():
+    requester = g.current_user
+    db = get_db()
+    c = db.cursor()
+    if requester['role'] == 'Supplier':
+        c.execute("""
+            SELECT o.*, l.product_name, u.full_name AS farmer_name
+            FROM orders o
+            JOIN marketplace_listings l ON o.listing_id = l.id
+            JOIN users u ON o.farmer_id = u.id
+            WHERE o.supplier_id = %s
+            ORDER BY o.created_at DESC
+        """, (requester['id'],))
+    else:
+        c.execute("""
+            SELECT o.*, l.product_name, u.full_name AS supplier_name
+            FROM orders o
+            JOIN marketplace_listings l ON o.listing_id = l.id
+            JOIN users u ON o.supplier_id = u.id
+            WHERE o.farmer_id = %s
+            ORDER BY o.created_at DESC
+        """, (requester['id'],))
+    rows = c.fetchall()
+    db.close()
+    return jsonify(rows)
+
+
+def _advance_order(order_id, from_status, to_status, timestamp_col):
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT supplier_id, status FROM orders WHERE id=%s", (order_id,))
+    order = c.fetchone()
+    if not order:
+        db.close(); return jsonify({"error": "Order not found"}), 404
+    if order['supplier_id'] != g.current_user['id']:
+        db.close(); return jsonify({"error": "Only the supplier can update this order"}), 403
+    if order['status'] != from_status:
+        db.close(); return jsonify({"error": f"Order must be {from_status} first (currently {order['status']})"}), 409
+    c.execute(f"UPDATE orders SET status=%s, {timestamp_col}=NOW() WHERE id=%s", (to_status, order_id))
+    db.commit()
+    db.close()
+    return jsonify({"message": f"Order marked {to_status} ✅"})
+
+
+@app.route('/orders/<int:order_id>/dispatch', methods=['PATCH'])
+@require_auth
+@require_role('Supplier')
+def dispatch_order(order_id):
+    return _advance_order(order_id, 'pending', 'dispatched', 'dispatched_at')
+
+
+@app.route('/orders/<int:order_id>/deliver', methods=['PATCH'])
+@require_auth
+@require_role('Supplier')
+def deliver_order(order_id):
+    return _advance_order(order_id, 'dispatched', 'delivered', 'delivered_at')
+
+
+@app.route('/supplier/demand', methods=['GET'])
+@require_auth
+@require_role('Supplier')
+def supplier_demand():
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT YEARWEEK(created_at, 3) AS yw, MIN(DATE(created_at)) AS week_start, COUNT(*) AS orders
+        FROM orders
+        WHERE supplier_id = %s AND created_at >= DATE_SUB(NOW(), INTERVAL 6 WEEK)
+        GROUP BY yw
+        ORDER BY yw ASC
+    """, (g.current_user['id'],))
+    rows = c.fetchall()
+    db.close()
+    return jsonify([{"week": r['week_start'].strftime('%b %d'), "orders": r['orders']} for r in rows])
+
+
+@app.route('/supplier/fulfillment-rate', methods=['GET'])
+@require_auth
+@require_role('Supplier')
+def supplier_fulfillment_rate():
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT status, COUNT(*) AS total FROM orders
+        WHERE supplier_id = %s AND status IN ('dispatched','delivered','cancelled')
+        GROUP BY status
+    """, (g.current_user['id'],))
+    counts = {r['status']: r['total'] for r in c.fetchall()}
+    db.close()
+    resolved = counts.get('dispatched', 0) + counts.get('delivered', 0) + counts.get('cancelled', 0)
+    if resolved == 0:
+        return jsonify({"rate": None, "message": "No resolved orders yet"})
+    rate = round((counts.get('delivered', 0) / resolved) * 100)
+    return jsonify({"rate": rate})
+
+
 # ── FEED ANALYZER ─────────────────────────────────────────────
 # Nutrition reference data — public, not user-specific, so no auth required.
 @app.route('/feed', methods=['GET'])
@@ -993,6 +1715,244 @@ def search_feed():
     results = c.fetchall()
     db.close()
     return jsonify(results)
+
+
+# Ration Builder — this is what makes Feed Analyzer more than a nutrition
+# lookup table: it computes what THIS animal actually needs (species +
+# live weight + age → daily protein/energy target, standard maintenance
+# formulas scaled by growth stage) and prices a chosen ration against real
+# PFUMA Marketplace listings, not generic numbers.
+RATION_SUPPORTED_SPECIES = {'Cattle', 'Goat'}
+
+# Maintenance requirement coefficients per kg^0.75 of live weight.
+# Goats need slightly more CP and less ME per unit metabolic weight than
+# cattle — standard small-ruminant vs. large-ruminant maintenance ratios.
+_MAINTENANCE = {
+    'Cattle': {'energy_mj': 0.50, 'protein_g': 3.5},
+    'Goat':   {'energy_mj': 0.45, 'protein_g': 3.8},
+}
+
+# Growth-stage multiplier on top of maintenance — young growing stock need
+# substantially more energy/protein per kg bodyweight than mature animals.
+def _life_stage(birth_date):
+    if not birth_date:
+        return 'adult', 1.0
+    if isinstance(birth_date, str):
+        birth_date = datetime.date.fromisoformat(birth_date)
+    age_months = (datetime.date.today() - birth_date).days / 30.44
+    if age_months < 6:
+        return 'young', 1.8
+    if age_months < 18:
+        return 'growing', 1.4
+    return 'adult', 1.0
+
+
+def _compute_requirement(species, weight_kg):
+    coef = _MAINTENANCE.get(species, _MAINTENANCE['Cattle'])
+    metabolic_weight = float(weight_kg) ** 0.75
+    return coef['energy_mj'] * metabolic_weight, coef['protein_g'] * metabolic_weight
+
+
+def _nutrient_status(total, target):
+    if target <= 0:
+        return 'balanced'
+    ratio = total / target
+    if ratio < 0.9:
+        return 'deficient'
+    if ratio > 1.15:
+        return 'excess'
+    return 'balanced'
+
+
+def _best_market_price(db_cursor, feed_name):
+    """Cheapest live 'available' Marketplace listing whose product name
+    matches this feed — real local pricing instead of a generic number."""
+    db_cursor.execute("""
+        SELECT ml.id AS listing_id, ml.price, ml.unit, u.full_name AS supplier_name, u.province
+        FROM marketplace_listings ml
+        JOIN users u ON u.id = ml.user_id
+        WHERE ml.category = 'feed' AND ml.status = 'available' AND ml.product_name LIKE %s
+        ORDER BY ml.price ASC LIMIT 1
+    """, (f'%{feed_name}%',))
+    return db_cursor.fetchone()
+
+
+def _load_animal_for_ration(c, animal_id):
+    c.execute("SELECT id, owner_id, name, species, current_weight, birth_date FROM animals WHERE id = %s", (animal_id,))
+    animal = c.fetchone()
+    if not animal:
+        return None, (jsonify({"error": "Animal not found"}), 404)
+    if g.current_user['role'] not in ('Veterinarian', 'Police', 'Admin') and animal['owner_id'] != g.current_user['id']:
+        return None, (jsonify({"error": "You can only build rations for your own animals"}), 403)
+    if animal['species'] not in RATION_SUPPORTED_SPECIES:
+        return None, (jsonify({"error": f"Ration planning currently supports Cattle and Goat only (this animal is {animal['species']})"}), 400)
+    if not animal['current_weight']:
+        return None, (jsonify({"error": "This animal has no recorded weight yet — add one in Herd Management first"}), 400)
+    return animal, None
+
+
+@app.route('/feed/requirements', methods=['GET'])
+@require_auth
+def feed_requirements():
+    animal_id = request.args.get('animal_id')
+    if not animal_id:
+        return jsonify({"error": "animal_id is required"}), 400
+    db = get_db()
+    c = db.cursor()
+    animal, error = _load_animal_for_ration(c, animal_id)
+    if error:
+        db.close()
+        return error
+
+    life_stage, stage_mult = _life_stage(animal['birth_date'])
+    energy_mj, protein_g = _compute_requirement(animal['species'], animal['current_weight'])
+    db.close()
+    return jsonify({
+        "animal_id": animal['id'],
+        "animal_name": animal['name'],
+        "species": animal['species'],
+        "weight_kg": float(animal['current_weight']),
+        "life_stage": life_stage,
+        "stage_multiplier": stage_mult,
+        "target_energy_mj": round(energy_mj * stage_mult, 2),
+        "target_protein_g": round(protein_g * stage_mult, 2),
+    })
+
+
+@app.route('/feed/prices', methods=['GET'])
+def feed_prices():
+    """Feed reference data enriched with live Marketplace pricing, so a
+    farmer sees what each feed actually costs from real PFUMA suppliers
+    right now, not just its nutrient content."""
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT * FROM feed_types")
+    feeds = c.fetchall()
+    for feed in feeds:
+        listing = _best_market_price(c, feed['name'])
+        feed['market_price'] = listing
+    db.close()
+    return jsonify(feeds)
+
+
+@app.route('/feed/plan', methods=['POST'])
+@require_auth
+def create_feed_plan():
+    d = request.json or {}
+    animal_id = d.get('animal_id')
+    items_in = d.get('items') or []
+    if not animal_id or not items_in:
+        return jsonify({"error": "animal_id and at least one feed item are required"}), 400
+
+    db = get_db()
+    c = db.cursor()
+    animal, error = _load_animal_for_ration(c, animal_id)
+    if error:
+        db.close()
+        return error
+
+    life_stage, stage_mult = _life_stage(animal['birth_date'])
+    energy_mj, protein_g = _compute_requirement(animal['species'], animal['current_weight'])
+    target_energy_mj = round(energy_mj * stage_mult, 2)
+    target_protein_g = round(protein_g * stage_mult, 2)
+
+    feed_ids = [i['feed_type_id'] for i in items_in if i.get('feed_type_id')]
+    if not feed_ids:
+        db.close()
+        return jsonify({"error": "No valid feed items supplied"}), 400
+    placeholders = ','.join(['%s'] * len(feed_ids))
+    c.execute(f"SELECT * FROM feed_types WHERE id IN ({placeholders})", feed_ids)
+    feed_lookup = {f['id']: f for f in c.fetchall()}
+
+    line_items, total_protein_g, total_energy_mj, total_cost = [], 0.0, 0.0, 0.0
+    for i in items_in:
+        feed = feed_lookup.get(i.get('feed_type_id'))
+        qty_kg = float(i.get('qty_kg') or 0)
+        if not feed or qty_kg <= 0:
+            continue
+        item_protein_g = qty_kg * 1000 * (float(feed['protein_percent'] or 0) / 100)
+        item_energy_mj = qty_kg * float(feed['energy_mj'] or 0)
+        listing = _best_market_price(c, feed['name'])
+        unit_cost = float(listing['price']) if listing else None
+        line_cost = round(unit_cost * qty_kg, 2) if unit_cost is not None else 0.0
+        total_protein_g += item_protein_g
+        total_energy_mj += item_energy_mj
+        total_cost += line_cost
+        line_items.append({
+            "feed_type_id": feed['id'],
+            "name": feed['name'],
+            "qty_kg": qty_kg,
+            "protein_g": round(item_protein_g, 1),
+            "energy_mj": round(item_energy_mj, 1),
+            "unit_cost_usd": unit_cost,
+            "line_cost_usd": line_cost,
+            "priced": listing is not None,
+            "supplier_name": listing['supplier_name'] if listing else None,
+        })
+
+    if not line_items:
+        db.close()
+        return jsonify({"error": "No valid feed items supplied"}), 400
+
+    protein_status = _nutrient_status(total_protein_g, target_protein_g)
+    energy_status = _nutrient_status(total_energy_mj, target_energy_mj)
+
+    c.execute("""
+        INSERT INTO feeding_plans
+          (animal_id, owner_id, species, weight_kg, life_stage, target_protein_g, target_energy_mj,
+           items, total_protein_g, total_energy_mj, total_cost_usd, protein_status, energy_status)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+    """, (
+        animal['id'], animal['owner_id'], animal['species'], animal['current_weight'], life_stage,
+        target_protein_g, target_energy_mj, json.dumps(line_items),
+        round(total_protein_g, 1), round(total_energy_mj, 1), round(total_cost, 2),
+        protein_status, energy_status,
+    ))
+    plan_id = c.lastrowid
+    # Feeds the animal's running cost-to-date, which the Herd view already
+    # displays but had nothing populating it until now.
+    c.execute("UPDATE animals SET cost_to_date = cost_to_date + %s WHERE id = %s", (round(total_cost, 2), animal['id']))
+    db.commit()
+    db.close()
+
+    return jsonify({
+        "id": plan_id,
+        "animal_id": animal['id'],
+        "animal_name": animal['name'],
+        "species": animal['species'],
+        "weight_kg": float(animal['current_weight']),
+        "life_stage": life_stage,
+        "target_protein_g": target_protein_g,
+        "target_energy_mj": target_energy_mj,
+        "total_protein_g": round(total_protein_g, 1),
+        "total_energy_mj": round(total_energy_mj, 1),
+        "total_cost_usd": round(total_cost, 2),
+        "protein_status": protein_status,
+        "energy_status": energy_status,
+        "items": line_items,
+        "created_at": datetime.datetime.now().isoformat(),
+    }), 201
+
+
+@app.route('/feed/plans', methods=['GET'])
+@require_auth
+def list_feed_plans():
+    animal_id = request.args.get('animal_id')
+    db = get_db()
+    c = db.cursor()
+    if animal_id:
+        animal, error = _load_animal_for_ration(c, animal_id)
+        if error:
+            db.close()
+            return error
+        c.execute("SELECT * FROM feeding_plans WHERE animal_id = %s ORDER BY created_at DESC", (animal_id,))
+    else:
+        c.execute("SELECT * FROM feeding_plans WHERE owner_id = %s ORDER BY created_at DESC LIMIT 50", (g.current_user['id'],))
+    plans = c.fetchall()
+    db.close()
+    for p in plans:
+        p['items'] = json.loads(p['items'])
+    return jsonify(plans)
 
 
 # ── DASHBOARD ─────────────────────────────────────────────────
@@ -1048,6 +2008,133 @@ def get_cases():
     cases = c.fetchall()
     db.close()
     return jsonify(cases)
+
+
+# ── ADMIN (hidden platform oversight — see require_admin above) ─────
+@app.route('/admin/users', methods=['GET'])
+@require_auth
+@require_admin
+def admin_list_users():
+    role = request.args.get('role')
+    province = request.args.get('province')
+    verification_status = request.args.get('verification_status')
+    q = request.args.get('q', '')
+    sql = "SELECT * FROM users WHERE 1=1"
+    params = []
+    if role:
+        sql += " AND role = %s"; params.append(role)
+    if province:
+        sql += " AND province = %s"; params.append(province)
+    if verification_status:
+        sql += " AND verification_status = %s"; params.append(verification_status)
+    if q:
+        q_digits = re.sub(r'\D', '', q)
+        sql += " AND (full_name LIKE %s OR org_name LIKE %s OR province LIKE %s"
+        params += [f'%{q}%', f'%{q}%', f'%{q}%']
+        if q_digits:
+            sql += " OR phone LIKE %s"
+            params.append(f'%{q_digits}%')
+        sql += ")"
+    sql += " ORDER BY created_at DESC"
+    db = get_db()
+    c = db.cursor()
+    c.execute(sql, params)
+    rows = c.fetchall()
+    db.close()
+    # Full oversight view — deliberately not run through public_user_view(),
+    # unlike the client-facing /users directory.
+    for r in rows:
+        r.pop('password_hash', None)
+    return jsonify(rows)
+
+
+@app.route('/admin/trends', methods=['GET'])
+@require_auth
+@require_admin
+def admin_trends():
+    db = get_db()
+    c = db.cursor()
+
+    c.execute("SELECT role, COUNT(*) AS total FROM users WHERE role != 'Admin' GROUP BY role")
+    users_by_role = c.fetchall()
+
+    c.execute("SELECT COUNT(*) AS total FROM animals")
+    total_animals = c.fetchone()['total']
+
+    c.execute("SELECT category, COUNT(*) AS total FROM marketplace_listings GROUP BY category")
+    listings_by_category = c.fetchall()
+
+    c.execute("SELECT status, COUNT(*) AS total FROM orders GROUP BY status")
+    orders_by_status = c.fetchall()
+
+    c.execute("SELECT status, COUNT(*) AS total FROM outbreaks GROUP BY status")
+    outbreaks_by_status = c.fetchall()
+
+    c.execute("SELECT COUNT(*) AS total FROM cooperatives")
+    total_cooperatives = c.fetchone()['total']
+
+    c.execute("""
+        SELECT YEARWEEK(created_at, 3) AS yw, MIN(DATE(created_at)) AS week_start, COUNT(*) AS signups
+        FROM users WHERE role != 'Admin' AND created_at >= DATE_SUB(NOW(), INTERVAL 8 WEEK)
+        GROUP BY yw ORDER BY yw ASC
+    """)
+    signups_per_week = [{"week": r['week_start'].strftime('%b %d'), "signups": r['signups']} for r in c.fetchall()]
+
+    c.execute("""
+        SELECT YEARWEEK(created_at, 3) AS yw, MIN(DATE(created_at)) AS week_start, COUNT(*) AS animals
+        FROM animals WHERE created_at >= DATE_SUB(NOW(), INTERVAL 8 WEEK)
+        GROUP BY yw ORDER BY yw ASC
+    """)
+    animals_per_week = [{"week": r['week_start'].strftime('%b %d'), "animals": r['animals']} for r in c.fetchall()]
+
+    db.close()
+    return jsonify({
+        "users_by_role": users_by_role,
+        "total_animals": total_animals,
+        "listings_by_category": listings_by_category,
+        "orders_by_status": orders_by_status,
+        "outbreaks_by_status": outbreaks_by_status,
+        "total_cooperatives": total_cooperatives,
+        "signups_per_week": signups_per_week,
+        "animals_per_week": animals_per_week,
+    })
+
+
+@app.route('/admin/activity', methods=['GET'])
+@require_auth
+@require_admin
+def admin_activity():
+    db = get_db()
+    c = db.cursor()
+
+    c.execute("SELECT id, full_name, role, created_at FROM users WHERE role != 'Admin' ORDER BY created_at DESC LIMIT 20")
+    signups = [{"type": "signup", "at": r['created_at'], "text": f"{r['full_name']} joined as {r['role']}"} for r in c.fetchall()]
+
+    c.execute("""
+        SELECT l.id, l.product_name, l.category, u.full_name, l.created_at
+        FROM marketplace_listings l JOIN users u ON l.user_id = u.id
+        ORDER BY l.created_at DESC LIMIT 20
+    """)
+    listings = [{"type": "listing", "at": r['created_at'], "text": f"{r['full_name']} listed \"{r['product_name']}\" ({r['category']})"} for r in c.fetchall()]
+
+    c.execute("""
+        SELECT o.id, o.disease_name, o.province, u.full_name, o.created_at
+        FROM outbreaks o JOIN users u ON o.reported_by = u.id
+        ORDER BY o.created_at DESC LIMIT 20
+    """)
+    outbreak_reports = [{"type": "outbreak", "at": r['created_at'], "text": f"{r['full_name']} reported {r['disease_name']} in {r['province']}"} for r in c.fetchall()]
+
+    c.execute("""
+        SELECT co.id, co.name, co.province, u.full_name, co.created_at
+        FROM cooperatives co JOIN users u ON co.created_by = u.id
+        ORDER BY co.created_at DESC LIMIT 20
+    """)
+    cooperatives = [{"type": "cooperative", "at": r['created_at'], "text": f"{r['full_name']} started \"{r['name']}\" in {r['province']}"} for r in c.fetchall()]
+
+    db.close()
+    feed = signups + listings + outbreak_reports + cooperatives
+    feed.sort(key=lambda x: x['at'], reverse=True)
+    return jsonify(feed[:50])
 
 
 if __name__ == '__main__':

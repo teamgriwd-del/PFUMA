@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
   phone         VARCHAR(20)  NOT NULL,
   national_id_number VARCHAR(20),   -- Zimbabwe national ID, e.g. 63-1234567A00 (format-checked, see backend/app.py)
   email         VARCHAR(120),
-  role          ENUM('Farmer','Veterinarian','Supplier','Retailer','Police') NOT NULL,
+  role          ENUM('Farmer','Veterinarian','Supplier','Retailer','Police','Admin') NOT NULL,
   org_name      VARCHAR(120),          -- farm/business/practice name
   province      VARCHAR(60),
   district      VARCHAR(60),
@@ -44,6 +44,9 @@ CREATE TABLE IF NOT EXISTS users (
   created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (verified_by) REFERENCES users(id) ON DELETE SET NULL
 );
+-- Upgrades an existing database that predates the Admin role. MODIFY is
+-- idempotent (safe to re-run) unlike ADD COLUMN, so no IF NOT EXISTS needed.
+ALTER TABLE users MODIFY COLUMN role ENUM('Farmer','Veterinarian','Supplier','Retailer','Police','Admin') NOT NULL;
 
 -- ── ANIMALS ──────────────────────────────────────────────────
 -- Arnold's web app animal registry, available via API.
@@ -86,10 +89,13 @@ CREATE TABLE IF NOT EXISTS health_events (
   event_type  VARCHAR(200) NOT NULL,   -- e.g. 'FMD Vaccine', 'Diagnostic: FMD'
   notes       TEXT,
   performed_by INT,                    -- FK → users.id (vet/farmer)
-  event_date  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  event_date  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- when it was actually done (backdatable)
+  next_due_date DATE NULL,             -- farmer/vet-set or auto-computed next occurrence (recurring items: dips, annual boosters)
   FOREIGN KEY (animal_id)    REFERENCES animals(id) ON DELETE CASCADE,
   FOREIGN KEY (performed_by) REFERENCES users(id)   ON DELETE SET NULL
 );
+-- Upgrades an existing database that was created before next_due_date existed.
+ALTER TABLE health_events ADD COLUMN IF NOT EXISTS next_due_date DATE NULL;
 
 -- ── MEDICINE INVENTORY ───────────────────────────────────────
 -- Per-farm medicine cabinet, tracks stock levels.
@@ -122,11 +128,17 @@ CREATE TABLE IF NOT EXISTS marketplace_listings (
   quantity     DECIMAL(10,2) DEFAULT 1,
   location     VARCHAR(120),
   description  TEXT,
+  photo_url    VARCHAR(300),          -- uploaded listing photo, served from /uploads/listings/<file>
   status       ENUM('pending_clearance','available','sold','withdrawn') DEFAULT 'available',
   created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  sold_at      TIMESTAMP NULL,        -- set when a bid is accepted; feeds the real price-trend chart
   FOREIGN KEY (user_id)   REFERENCES users(id)   ON DELETE CASCADE,
   FOREIGN KEY (animal_id) REFERENCES animals(id) ON DELETE SET NULL
 );
+-- Live databases created before these columns existed — MariaDB 10.4 supports
+-- ADD COLUMN IF NOT EXISTS, so re-running this file is always safe.
+ALTER TABLE marketplace_listings ADD COLUMN IF NOT EXISTS photo_url VARCHAR(300);
+ALTER TABLE marketplace_listings ADD COLUMN IF NOT EXISTS sold_at TIMESTAMP NULL;
 
 -- ── SALE CLEARANCES ───────────────────────────────────────────
 -- Police sign-off that a livestock sale's papers (ownership, brand,
@@ -228,6 +240,98 @@ CREATE TABLE IF NOT EXISTS conversation_messages (
 );
 CREATE INDEX idx_conv_messages_conv_time ON conversation_messages (conversation_id, sent_at);
 
+-- ── COOPERATIVES ───────────────────────────────────────────────
+-- Communal farmers coordinate through a real shared dip tank / grazing
+-- association, not as isolated individuals — this models that group so
+-- "when do we dip" and "can a vet see all of us at once" are real
+-- features instead of word-of-mouth.
+CREATE TABLE IF NOT EXISTS cooperatives (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  name        VARCHAR(120) NOT NULL,
+  description TEXT,
+  province    VARCHAR(60) NOT NULL,
+  district    VARCHAR(60),
+  dip_tank_location VARCHAR(150),
+  created_by  INT NOT NULL,
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS cooperative_members (
+  id             INT AUTO_INCREMENT PRIMARY KEY,
+  cooperative_id INT NOT NULL,
+  user_id        INT NOT NULL,
+  role           ENUM('admin','member') DEFAULT 'member',
+  joined_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_member (cooperative_id, user_id),
+  FOREIGN KEY (cooperative_id) REFERENCES cooperatives(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id)        REFERENCES users(id)        ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS cooperative_dip_schedule (
+  id             INT AUTO_INCREMENT PRIMARY KEY,
+  cooperative_id INT NOT NULL,
+  scheduled_date DATE NOT NULL,
+  notes          TEXT,
+  created_by     INT NOT NULL,
+  created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (cooperative_id) REFERENCES cooperatives(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by)     REFERENCES users(id)        ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS cooperative_vet_requests (
+  id             INT AUTO_INCREMENT PRIMARY KEY,
+  cooperative_id INT NOT NULL,
+  requested_by   INT NOT NULL,
+  reason         TEXT NOT NULL,
+  preferred_date DATE,
+  status         ENUM('open','claimed','completed') DEFAULT 'open',
+  vet_id         INT NULL,
+  created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  completed_at   TIMESTAMP NULL,
+  FOREIGN KEY (cooperative_id) REFERENCES cooperatives(id) ON DELETE CASCADE,
+  FOREIGN KEY (requested_by)   REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (vet_id)         REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- ── OUTBREAKS ──────────────────────────────────────────────────
+-- Disease outbreak reports filed by a Vet or Police officer. Visible to
+-- every user in the affected province (a real safety warning), not just
+-- Vet/Police oversight — see /outbreaks GET.
+CREATE TABLE IF NOT EXISTS outbreaks (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  disease_name    VARCHAR(120) NOT NULL,
+  district        VARCHAR(80),
+  province        VARCHAR(60) NOT NULL,
+  status          ENUM('active','contained','resolved') DEFAULT 'active',
+  details         TEXT,
+  affected_farms  INT DEFAULT 0,
+  animals_at_risk VARCHAR(60),
+  reported_by     INT NOT NULL,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  resolved_at     TIMESTAMP NULL,
+  FOREIGN KEY (reported_by) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- ── ORDERS (Supplier fulfillment) ────────────────────────────────
+-- A Farmer ordering medicine/equipment from a Supplier's marketplace
+-- listing — distinct from the livestock `bids` table (an order is a fixed
+-- quantity request, not a price negotiation).
+CREATE TABLE IF NOT EXISTS orders (
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  listing_id    INT NOT NULL,
+  farmer_id     INT NOT NULL,
+  supplier_id   INT NOT NULL,
+  quantity      DECIMAL(10,2) NOT NULL,
+  status        ENUM('pending','dispatched','delivered','cancelled') DEFAULT 'pending',
+  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  dispatched_at TIMESTAMP NULL,
+  delivered_at  TIMESTAMP NULL,
+  FOREIGN KEY (listing_id)  REFERENCES marketplace_listings(id) ON DELETE CASCADE,
+  FOREIGN KEY (farmer_id)   REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (supplier_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- ── FEED TYPES (Addy's Feed Analyzer) ────────────────────────
 CREATE TABLE IF NOT EXISTS feed_types (
   id               INT AUTO_INCREMENT PRIMARY KEY,
@@ -240,6 +344,33 @@ CREATE TABLE IF NOT EXISTS feed_types (
   phosphorus_percent DECIMAL(5,2),
   description      TEXT,
   suitable_for     VARCHAR(200)         -- comma-separated species
+);
+
+-- ── FEEDING PLANS (Ration Builder) ────────────────────────────
+-- A saved ration for one real animal: server computes the animal's daily
+-- protein/energy requirement from its species+weight+age, prices each feed
+-- item against live PFUMA Marketplace listings where possible, and stores
+-- the verdict so a farmer can track ration cost/quality over time instead
+-- of just browsing a static nutrition table.
+CREATE TABLE IF NOT EXISTS feeding_plans (
+  id                INT AUTO_INCREMENT PRIMARY KEY,
+  animal_id         INT NOT NULL,
+  owner_id          INT NOT NULL,
+  species           VARCHAR(20) NOT NULL,
+  weight_kg         DECIMAL(8,2) NOT NULL,
+  life_stage        VARCHAR(20) NOT NULL,
+  target_protein_g  DECIMAL(8,2) NOT NULL,
+  target_energy_mj  DECIMAL(8,2) NOT NULL,
+  items             JSON NOT NULL,          -- [{feed_type_id, name, qty_kg, protein_g, energy_mj, unit_cost_usd, line_cost_usd, priced}]
+  total_protein_g   DECIMAL(8,2) NOT NULL,
+  total_energy_mj   DECIMAL(8,2) NOT NULL,
+  total_cost_usd    DECIMAL(10,2) NOT NULL DEFAULT 0,
+  protein_status    ENUM('deficient','balanced','excess') NOT NULL,
+  energy_status     ENUM('deficient','balanced','excess') NOT NULL,
+  created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (animal_id) REFERENCES animals(id) ON DELETE CASCADE,
+  FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_feeding_plans_animal (animal_id)
 );
 
 -- ── SEED DATA ─────────────────────────────────────────────────
@@ -285,29 +416,50 @@ INSERT IGNORE INTO weight_history (animal_id, month_label, weight_kg) VALUES
   (102, 'Nov', 240), (102, 'Jan', 310), (102, 'Mar', 380);
 
 -- Demo health event
-INSERT IGNORE INTO health_events (animal_id, animal_name, event_type, performed_by, event_date)
-VALUES (101, 'Bessie', 'FMD Vaccine (Annual)', 2, '2026-02-15 10:30:00');
+INSERT IGNORE INTO health_events (id, animal_id, animal_name, event_type, performed_by, event_date)
+VALUES (1, 101, 'Bessie', 'FMD Vaccine (Annual)', 2, '2026-02-15 10:30:00');
 
 -- Medicine inventory for Arnold
-INSERT IGNORE INTO medicine_inventory (owner_id, medicine_name, stock, unit, min_stock, supplier, price_usd)
+INSERT IGNORE INTO medicine_inventory (id, owner_id, medicine_name, stock, unit, min_stock, supplier, price_usd)
 VALUES
-  (1, 'Oxytetracycline (LA)', 500, 'ml', 100, 'AgroChem Zim', 25),
-  (1, 'Buparvaquone',         120, 'ml', 50,  'VetDirect',    85),
-  (1, 'Albendazole',         1000, 'ml', 200, 'AgroChem Zim', 15);
+  (1, 1, 'Oxytetracycline (LA)', 500, 'ml', 100, 'AgroChem Zim', 25),
+  (2, 1, 'Buparvaquone',         120, 'ml', 50,  'VetDirect',    85),
+  (3, 1, 'Albendazole',         1000, 'ml', 200, 'AgroChem Zim', 15);
 
 -- Marketplace listing for Thunder (linked to animal) — already cleared for demo purposes
 INSERT IGNORE INTO marketplace_listings (id, user_id, animal_id, product_name, category, price, unit, quantity, location, description, status)
 VALUES (201, 1, 102, 'Thunder — Angus Cattle', 'livestock', 770, 'head', 1, 'Zvimba, Mashonaland West', 'Healthy 1y 9m Angus bull. DVS certified. Verified health passport.', 'available');
 
 -- Matching sale clearance for Thunder's listing — approved by the demo Police account
-INSERT IGNORE INTO sale_clearances (animal_id, listing_id, seller_id, status, movement_permit_number, officer_id, notes, resolved_at)
-VALUES (102, 201, 1, 'cleared', 'DVS-MP-2026-00417', 5, 'Ownership and brand verified against ZRP stock register. Cleared for sale.', NOW());
+INSERT IGNORE INTO sale_clearances (id, animal_id, listing_id, seller_id, status, movement_permit_number, officer_id, notes, resolved_at)
+VALUES (14, 102, 201, 1, 'cleared', 'DVS-MP-2026-00417', 5, 'Ownership and brand verified against ZRP stock register. Cleared for sale.', NOW());
 
 -- Marketplace listings from Addy's demo data
-INSERT IGNORE INTO marketplace_listings (user_id, product_name, category, price, unit, quantity, location, description, status)
+INSERT IGNORE INTO marketplace_listings (id, user_id, product_name, category, price, unit, quantity, location, description, status)
 VALUES
-  (1, 'Soya Bean Meal', 'feed',    450, 'kg', 500,  'Harare',    'High quality soya meal', 'available'),
-  (1, 'Maize Grain',    'feed',    320, 'kg', 1000, 'Bulawayo',  'Fresh maize grain',      'available');
+  (202, 1, 'Soya Bean Meal', 'feed',    0.65, 'kg', 500,  'Harare',    'High quality soya meal', 'available'),
+  (203, 1, 'Maize Grain',    'feed',    0.35, 'kg', 1000, 'Bulawayo',  'Fresh maize grain',      'available');
+
+-- Past sold livestock (Arnold selling, ZimAgro Retailer buying) so the
+-- Retailer Dashboard's real "Recent Bids" and "Price Trend" have something
+-- to show out of the box instead of being empty for a first-run demo.
+INSERT IGNORE INTO animals (id, owner_id, name, species, breed, birth_date, tag_id, brand_id, birth_weight, current_weight, for_sale)
+VALUES
+  (103, 1, 'Daisy', 'Cattle', 'Brahman', '2023-02-10', 'ZIM-701', 'AR-MP', 33, 460, FALSE),
+  (104, 1, 'Rocky', 'Cattle', 'Angus',   '2023-06-05', 'ZIM-702', 'AR-MP', 31, 440, FALSE),
+  (105, 1, 'Storm', 'Cattle', 'Brahman', '2023-09-18', 'ZIM-703', 'AR-MP', 34, 410, FALSE);
+
+INSERT IGNORE INTO marketplace_listings (id, user_id, animal_id, product_name, category, price, unit, quantity, location, description, status, created_at, sold_at)
+VALUES
+  (301, 1, 103, 'Daisy — Brahman Cattle', 'livestock', 610, 'head', 1, 'Zvimba, Mashonaland West', 'Healthy Brahman cow, DVS certified.', 'sold', NOW() - INTERVAL 3 MONTH, NOW() - INTERVAL 3 MONTH),
+  (302, 1, 104, 'Rocky — Angus Cattle',   'livestock', 705, 'head', 1, 'Zvimba, Mashonaland West', 'Healthy Angus bull, DVS certified.',  'sold', NOW() - INTERVAL 2 MONTH, NOW() - INTERVAL 2 MONTH),
+  (303, 1, 105, 'Storm — Brahman Cattle', 'livestock', 680, 'head', 1, 'Zvimba, Mashonaland West', 'Healthy Brahman bull, DVS certified.','sold', NOW() - INTERVAL 1 MONTH, NOW() - INTERVAL 1 MONTH);
+
+INSERT IGNORE INTO bids (id, listing_id, bidder_id, amount, message, status, created_at)
+VALUES
+  (401, 301, 4, 610, 'Interested — can collect this week.', 'accepted', NOW() - INTERVAL 3 MONTH),
+  (402, 302, 4, 705, 'Good price, taking it.',               'accepted', NOW() - INTERVAL 2 MONTH),
+  (403, 303, 4, 680, 'Deal — sending payment.',               'accepted', NOW() - INTERVAL 1 MONTH);
 
 -- Feed types (for Addy's Feed Analyzer)
 INSERT IGNORE INTO feed_types (id, name, category, protein_percent, energy_mj, fibre_percent, calcium_percent, phosphorus_percent, description, suitable_for) VALUES

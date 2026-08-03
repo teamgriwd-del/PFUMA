@@ -10,10 +10,18 @@ export const HEALTH_PROTOCOLS = {
     },
     vaccines: [
       { name: "Brucellosis (S19)", age: 120, mandatory: true, type: "Once", notes: "Heifers only, 3-8 months" },
-      { name: "Anthrax/Blackleg (Blanthax)", age: 180, mandatory: true, type: "Annual", notes: "Pre-rainy season" },
-      { name: "Lumpy Skin Disease", age: 210, mandatory: true, type: "Annual", notes: "Before wet season" },
-      { name: "FMD Vaccine", age: 180, mandatory: true, type: "Bi-Annual", notes: "April & October" },
-      { name: "CBPP Vaccine (T1sr)", age: 365, mandatory: true, type: "Annual", notes: "Endemic zones only" }
+      { name: "Anthrax/Blackleg (Blanthax)", age: 180, mandatory: true, type: "Annual", intervalDays: 365, notes: "Pre-rainy season" },
+      { name: "Lumpy Skin Disease", age: 210, mandatory: true, type: "Annual", intervalDays: 365, notes: "Before wet season" },
+      { name: "FMD Vaccine", age: 180, mandatory: true, type: "Bi-Annual", intervalDays: 182, notes: "April & October" },
+      { name: "CBPP Vaccine (T1sr)", age: 365, mandatory: true, type: "Annual", intervalDays: 365, notes: "Endemic zones only" }
+    ],
+    // Tick-control dipping — the practice behind Theileriosis/January Disease
+    // prevention. Real interval is season-dependent (5 days Nov–Apr summer,
+    // 7 days May–Oct winter); intervalDays defaults to the winter figure
+    // since it's the safer (more frequent than needed only in summer) default
+    // for auto-scheduling — a farmer can always log an earlier actual date.
+    dips: [
+      { name: "Dipping (Tick Control)", age: 14, mandatory: true, type: "Recurring", intervalDays: 7, notes: "Every 5 days Nov–Apr (summer), every 7 days May–Oct (winter). Grease ears/groin/tail base weekly." }
     ]
   },
   Goat: {
@@ -26,10 +34,13 @@ export const HEALTH_PROTOCOLS = {
       heartRateLow: 70
     },
     vaccines: [
-      { name: "Pulpy Kidney (Enterotoxaemia)", age: 60, mandatory: true, type: "Annual", notes: "Kid at 2 months" },
-      { name: "Pasteurella (Pneumonia)", age: 45, mandatory: true, type: "Annual", notes: "Pre-cold season" },
-      { name: "Foot Rot Vaccine", age: 90, mandatory: false, type: "Annual", notes: "Wet-area flocks" },
-      { name: "Deworming (Albendazole)", age: 30, mandatory: false, type: "Quarterly", notes: "Every 3 months" }
+      { name: "Pulpy Kidney (Enterotoxaemia)", age: 60, mandatory: true, type: "Annual", intervalDays: 365, notes: "Kid at 2 months" },
+      { name: "Pasteurella (Pneumonia)", age: 45, mandatory: true, type: "Annual", intervalDays: 365, notes: "Pre-cold season" },
+      { name: "Foot Rot Vaccine", age: 90, mandatory: false, type: "Annual", intervalDays: 365, notes: "Wet-area flocks" },
+      { name: "Deworming (Albendazole)", age: 30, mandatory: false, type: "Quarterly", intervalDays: 91, notes: "Every 3 months" }
+    ],
+    dips: [
+      { name: "Dipping (Tick Control)", age: 14, mandatory: true, type: "Recurring", intervalDays: 7, notes: "Every 5 days Nov–Apr (summer), every 7 days May–Oct (winter)." }
     ]
   },
   Sheep: {

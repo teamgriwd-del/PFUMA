@@ -2,7 +2,18 @@
 // Find it by running `ipconfig` and looking for IPv4 Address.
 // Example: 'http://192.168.1.42:5000'
 // For browser/emulator, localhost works fine.
-export const API = 'http://192.168.2.32:5000';
+export const API = 'http://10.94.167.78:5000';
+
+// RN registers each weight of a custom font as its own distinct font
+// family (no CSS-style weight cascade within one family name) — loaded
+// via expo-font in App.js. Use these names directly as `fontFamily`
+// instead of `fontWeight` wherever this typeface is applied.
+export const FONTS = {
+  regular:   'PlusJakartaSans_400Regular',
+  semibold:  'PlusJakartaSans_600SemiBold',
+  bold:      'PlusJakartaSans_700Bold',
+  extrabold: 'PlusJakartaSans_800ExtraBold',
+};
 
 export const COLORS = {
   primary:   '#1b5e20',

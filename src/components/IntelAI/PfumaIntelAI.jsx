@@ -27,7 +27,7 @@ const Jinda = ({ setActiveTab, animals, currentUser }) => {
     {
       id: 1,
       sender: 'ai',
-      text: `Mwauya nei? I am Jinda, your loyal messenger. I am here to help you manage your own PFUMA herd${currentUser?.role ? ` as a ${currentUser.role}` : ''}, and I know the compliance rules for cattle, pigs, sheep, and goats. Ask me anything in simple terms, or tell me where you want to go. I'll only ever discuss your own animals and account — not other users' data.`,
+      text: `Mwauya nei? I am Jinda, your loyal messenger. I am here to help you manage your own PFUMA herd${currentUser?.role ? ` as a ${currentUser.role}` : ''}, and I know the compliance rules for cattle and goats. Ask me anything in simple terms, or tell me where you want to go. I'll only ever discuss your own animals and account — not other users' data.`,
       type: 'text'
     }
   ]);
