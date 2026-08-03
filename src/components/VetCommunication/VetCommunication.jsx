@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import './VetCommunication.css';
 
-const API = 'http://localhost:5000';
+import { API } from '../../config';
 
 // Backend role strings, used consistently — no more separate "type" vocabulary.
 const ROLE_META = {

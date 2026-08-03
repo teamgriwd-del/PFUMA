@@ -1,21 +1,30 @@
 {
   "expo": {
-    "name": "app",
-    "slug": "app",
+    "name": "PFUMA",
+    "slug": "pfuma",
+    "scheme": "pfuma",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "primaryColor": "#1B5E20",
+    "backgroundColor": "#F6FAF6",
+    "description": "PFUMA — five roles, one shared livestock record. Register animals, track health, consult a vet, and sell only once police have cleared the listing.",
     "ios": {
+      "bundleIdentifier": "zw.co.griwd.pfuma",
+      "buildNumber": "1",
       "supportsTablet": true
     },
     "android": {
+      "package": "zw.co.griwd.pfuma",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#1B5E20",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "edgeToEdgeEnabled": true
     },
     "web": {
       "favicon": "./assets/favicon.png"
