@@ -1,27 +1,57 @@
 import os
 import re
 import json
+import secrets
 import functools
 import datetime
 
 from flask import Flask, jsonify, request, g, send_from_directory
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from werkzeug.utils import secure_filename
 import pymysql
 import bcrypt
 import jwt
 
 app = Flask(__name__)
-CORS(app)
 
 # ── CONFIG ───────────────────────────────────────────────────────
+# PFUMA_ENV gates every production-only hardening default below. Anything
+# reachable from the internet MUST run with PFUMA_ENV=production set —
+# treat "forgot to set this" as the expected failure mode and default
+# every check to the safe (locked-down) behaviour, not the convenient one.
+IS_PRODUCTION = os.environ.get('PFUMA_ENV', 'development').lower() == 'production'
+
 SECRET_KEY = os.environ.get('PFUMA_SECRET_KEY')
 if not SECRET_KEY:
-    SECRET_KEY = 'dev-insecure-secret-change-me'
-    print("[WARNING] PFUMA_SECRET_KEY not set - using an insecure dev default. "
-          "Set the PFUMA_SECRET_KEY environment variable before deploying.")
+    if IS_PRODUCTION:
+        raise RuntimeError(
+            "PFUMA_SECRET_KEY is not set. Refusing to start in production without it — "
+            "this key signs every login session; a guessable or shared default lets "
+            "anyone forge a session for any account, including Admin."
+        )
+    # Local dev only: a fresh random secret per process. Unlike a hardcoded
+    # string, this is never the same value twice and is never sitting in
+    # the (public) repo, so it can't be used to forge tokens — the only
+    # cost is that restarting the dev server invalidates existing sessions.
+    SECRET_KEY = secrets.token_hex(32)
+    print("[WARNING] PFUMA_SECRET_KEY not set — using a random one-time dev secret. "
+          "Sessions won't survive a restart. Set PFUMA_SECRET_KEY before deploying.")
 
 TOKEN_TTL_HOURS = 24 * 7  # 1 week
+
+# CORS: restrict to known frontend origins in production; permissive for
+# local dev across the usual Vite/Expo ports so nothing here blocks testing.
+_default_dev_origins = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8081,http://localhost:19006"
+_allowed_origins = os.environ.get('PFUMA_ALLOWED_ORIGINS', _default_dev_origins).split(',')
+CORS(app, resources={r"/*": {"origins": [o.strip() for o in _allowed_origins if o.strip()]}})
+
+# Cap request/upload size so a huge file can't fill the disk or exhaust
+# memory — one animal/listing photo or ID document, generously sized.
+app.config['MAX_CONTENT_LENGTH'] = 15 * 1024 * 1024  # 15 MB
+
+limiter = Limiter(get_remote_address, app=app, storage_uri="memory://", default_limits=[])
 
 UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -96,10 +126,11 @@ def normalize_zw_national_id(raw):
 
 def get_db():
     return pymysql.connect(
-        host='localhost',
-        user='root',
-        password='',
-        database='pfuma',
+        host=os.environ.get('PFUMA_DB_HOST', 'localhost'),
+        port=int(os.environ.get('PFUMA_DB_PORT', '3306')),
+        user=os.environ.get('PFUMA_DB_USER', 'root'),
+        password=os.environ.get('PFUMA_DB_PASSWORD', ''),
+        database=os.environ.get('PFUMA_DB_NAME', 'pfuma'),
         charset='utf8mb4',
         cursorclass=pymysql.cursors.DictCursor
     )
@@ -250,6 +281,7 @@ def home():
 
 # ── AUTHENTICATION ───────────────────────────────────────────────
 @app.route('/auth/register', methods=['POST'])
+@limiter.limit("10 per hour")
 def register():
     d = request.form
     role = d.get('role', 'Farmer')
@@ -320,6 +352,7 @@ def register():
 
 
 @app.route('/auth/login', methods=['POST'])
+@limiter.limit("15 per 5 minutes")
 def login():
     d = request.json or {}
     phone = normalize_zw_phone(d.get('phone', '')) or d.get('phone', '').strip()
@@ -2138,4 +2171,9 @@ def admin_activity():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True, port=5000)
+    # Debug mode's interactive Werkzeug debugger allows remote code
+    # execution on any unhandled exception — never on in production.
+    # In production this file also isn't the entrypoint: run behind a
+    # real WSGI server (gunicorn) and a reverse proxy terminating TLS,
+    # not Flask's own dev server.
+    app.run(host='0.0.0.0', debug=not IS_PRODUCTION, port=int(os.environ.get('PORT', 5000)))
