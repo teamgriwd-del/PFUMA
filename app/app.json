@@ -51,6 +51,12 @@
         "projectId": "dbf5ba50-fea2-49e9-949a-fd7c5bc83e40"
       }
     },
-    "owner": "teamgriwds-team"
+    "owner": "teamgriwds-team",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/dbf5ba50-fea2-49e9-949a-fd7c5bc83e40"
+    }
   }
 }
