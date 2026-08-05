@@ -4,6 +4,7 @@ import {
   StyleSheet, ActivityIndicator, RefreshControl, Image, Modal, Alert
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { Search, Beef, X, Camera, Check } from 'lucide-react-native';
 import { API, COLORS } from '../config';
 import { authFetch, authJson } from '../api';
 
@@ -120,7 +121,7 @@ export default function HerdScreen({ currentUser }) {
 
       {/* Search */}
       <View style={styles.searchBox}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <Search size={16} color={COLORS.muted} style={{ marginRight: 8 }} />
         <TextInput style={styles.searchInput} placeholder="Search animals..." value={search} onChangeText={setSearch} placeholderTextColor="#aaa" />
       </View>
 
@@ -132,7 +133,7 @@ export default function HerdScreen({ currentUser }) {
       >
         {filtered.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={{ fontSize: 48 }}>🐄</Text>
+            <Beef size={44} color={COLORS.muted} strokeWidth={1.5} />
             <Text style={styles.emptyTitle}>No animals yet</Text>
             <Text style={styles.emptyDesc}>Tap "+ Add" to register your first animal.</Text>
           </View>
@@ -142,7 +143,7 @@ export default function HerdScreen({ currentUser }) {
               <Image source={{ uri: resolveImageUrl(a.image_url) }} style={styles.cardImage} />
             ) : (
               <View style={[styles.cardImage, { backgroundColor: COLORS.light, alignItems: 'center', justifyContent: 'center' }]}>
-                <Text style={{ fontSize: 36 }}>🐄</Text>
+                <Beef size={32} color={COLORS.primary} strokeWidth={1.5} />
               </View>
             )}
             <View style={styles.cardBody}>
@@ -178,7 +179,7 @@ export default function HerdScreen({ currentUser }) {
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Register Animal</Text>
-              <TouchableOpacity onPress={() => setShowAdd(false)}><Text style={styles.modalClose}>✕</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowAdd(false)}><X size={20} color={COLORS.muted} /></TouchableOpacity>
             </View>
 
             <TouchableOpacity style={styles.photoPicker} onPress={pickPhoto} activeOpacity={0.8}>
@@ -186,7 +187,7 @@ export default function HerdScreen({ currentUser }) {
                 <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
               ) : (
                 <View style={[styles.photoPreview, styles.photoPlaceholder]}>
-                  <Text style={{ fontSize: 22 }}>📷</Text>
+                  <Camera size={20} color={COLORS.muted} />
                 </View>
               )}
               <Text style={styles.photoPickerText}>{photo ? 'Change photo' : 'Upload a photo (optional)'}</Text>
@@ -228,7 +229,12 @@ export default function HerdScreen({ currentUser }) {
             </View>
 
             <TouchableOpacity style={styles.submitBtn} onPress={handleAdd} disabled={saving} activeOpacity={0.8}>
-              {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>✓ Register Animal</Text>}
+              {saving ? <ActivityIndicator color="#fff" /> : (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Check size={16} color="#fff" strokeWidth={2.5} />
+                  <Text style={styles.submitText}>Register Animal</Text>
+                </View>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -240,7 +246,7 @@ export default function HerdScreen({ currentUser }) {
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>List {listingAnimal?.name}</Text>
-              <TouchableOpacity onPress={() => setListingAnimal(null)}><Text style={styles.modalClose}>✕</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => setListingAnimal(null)}><X size={20} color={COLORS.muted} /></TouchableOpacity>
             </View>
             <View style={styles.formField}>
               <Text style={styles.formLabel}>Asking Price (USD) *</Text>

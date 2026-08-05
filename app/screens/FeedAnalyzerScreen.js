@@ -5,8 +5,11 @@ import {
 } from 'react-native';
 import {
   Calculator, BookOpen, Scale, Clock, ShieldCheck,
-  PlusCircle, Trash2, DollarSign, CheckCircle, AlertTriangle
+  PlusCircle, Trash2, DollarSign, CheckCircle, AlertTriangle,
+  Drumstick, Zap, Leaf, Bone, Wheat,
 } from 'lucide-react-native';
+
+const CATEGORY_ICON = { protein: Drumstick, energy: Zap, roughage: Leaf, mineral: Bone };
 import { API, COLORS } from '../config';
 import { authFetch, authJson } from '../api';
 
@@ -268,7 +271,10 @@ function RationBuilder({ currentUser, feeds }) {
                     <Text style={styles.costVal}>USD {preview.cost.toFixed(2)}</Text>
                   </View>
                   {preview.anyUnpriced && (
-                    <Text style={styles.warnText}>⚠ One or more feeds have no live PFUMA supplier listing — cost shown is partial.</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 4 }}>
+                      <AlertTriangle size={13} color={COLORS.gold} style={{ marginTop: 1 }} />
+                      <Text style={[styles.warnText, { flex: 1 }]}>One or more feeds have no live PFUMA supplier listing — cost shown is partial.</Text>
+                    </View>
                   )}
 
                   {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -334,11 +340,12 @@ export default function FeedAnalyzerScreen({ currentUser }) {
     const speciesList = (item.suitable_for || '').split(',').filter(Boolean);
     const color = CAT_COLOR[item.category] || '#555';
     const bg    = CAT_BG[item.category]   || '#f5f5f5';
+    const CatIcon = CATEGORY_ICON[item.category] || Wheat;
     return (
       <TouchableOpacity style={styles.card} onPress={() => setExpandedId(isOpen ? null : item.id)} activeOpacity={0.9}>
         <View style={styles.cardTop}>
           <View style={[styles.catIcon, { backgroundColor: bg }]}>
-            <Text style={{ fontSize: 22 }}>{item.category === 'protein' ? '🥩' : item.category === 'energy' ? '⚡' : item.category === 'roughage' ? '🌿' : item.category === 'mineral' ? '🦴' : '🌾'}</Text>
+            <CatIcon size={20} color={color} strokeWidth={2} />
           </View>
           <View style={{ flex: 1 }}>
             <View style={styles.cardHeaderRow}>

@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import {
   Globe, Sprout, Pill, Store, Stethoscope, AlertTriangle, CheckCircle, Check,
   MessageSquare, ShieldCheck, Wifi, Package, PhoneCall, HeartPulse, ShoppingCart,
-  ArrowRight, Users, Wheat, Wallet, Syringe, ListChecks, Compass, Tag, TrendingUp, Truck,
+  ArrowRight, Users, Wheat, Wallet, Syringe, ListChecks, Compass, Tag, TrendingUp, Truck, Beef,
 } from 'lucide-react-native';
 import { COLORS, FONTS, API } from '../config';
 import { authFetch } from '../api';
@@ -360,7 +360,7 @@ function FarmerDashboard({ currentUser, navigation }) {
         </Text>
         {localAnimals.length === 0 ? (
           <View style={s.emptyInner}>
-            <Text style={{ fontSize: 36 }}>🐄</Text>
+            <Beef size={32} color={COLORS.muted} strokeWidth={1.5} />
             <Text style={s.emptyInnerText}>No animals registered yet</Text>
           </View>
         ) : localAnimals.map(a => (
@@ -675,7 +675,7 @@ function SupplierDashboard({ currentUser, navigation }) {
           <Pill size={16} color={COLORS.gold} />
           <Text style={s.flowText}>You fulfill & dispatch</Text>
           <ArrowRight size={12} color={COLORS.gold} />
-          <Text style={{ fontSize: 16 }}>🐄</Text>
+          <Beef size={16} color={COLORS.gold} />
           <Text style={s.flowText}>Animals stay healthy</Text>
         </View>
       </View>
