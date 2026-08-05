@@ -66,6 +66,12 @@ const ROLE_TABS = {
     { name: 'Vet',       icon: MessageSquare, label: 'Messages',screen: VetMessengerScreen },
     { name: 'Profile',   icon: User,          label: 'Profile', screen: ProfileScreen },
   ],
+  // Admin moderation tools are web-only (data-dense tables/charts, not a
+  // phone task) — a single tab pointing at DashboardScreen's web-only
+  // notice, rather than silently falling back to the Farmer tab set below.
+  Admin: [
+    { name: 'Dashboard', icon: Shield,        label: 'Home',    screen: DashboardScreen },
+  ],
 };
 
 const ROLE_COLORS = {

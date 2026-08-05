@@ -962,6 +962,23 @@ export default function DashboardScreen({ currentUser, onLogout, navigation }) {
       {role === 'Veterinarian' && <VeterinarianDashboard  currentUser={currentUser} navigation={navigation} />}
       {role === 'Supplier'     && <SupplierDashboard      currentUser={currentUser} navigation={navigation} />}
       {role === 'Retailer'     && <RetailerDashboard      currentUser={currentUser} navigation={navigation} />}
+      {(role === 'Admin' || role === 'Police') && (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+          <ShieldCheck size={40} color={COLORS.muted} />
+          <Text style={{ fontSize: 15, fontWeight: '800', color: COLORS.text, marginTop: 14, textAlign: 'center' }}>
+            {role} tools are web-only
+          </Text>
+          <Text style={{ fontSize: 12, color: COLORS.muted, marginTop: 6, textAlign: 'center', lineHeight: 18 }}>
+            {role === 'Admin'
+              ? 'Platform moderation (users, listings, trends) lives in the PFUMA web app, not this mobile app.'
+              : 'Sale clearance and oversight tools live in the PFUMA web app, not this mobile app.'}
+          </Text>
+          <TouchableOpacity onPress={onLogout} activeOpacity={0.8}
+            style={{ marginTop: 20, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 12, backgroundColor: COLORS.light }}>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary }}>Sign Out</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
