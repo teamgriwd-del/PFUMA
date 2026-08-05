@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "app",
-    "slug": "app",
+    "name": "PFUMA",
+    "slug": "pfuma",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -13,6 +13,7 @@
       }
     },
     "android": {
+      "package": "com.griwd.pfuma",
       "adaptiveIcon": {
         "backgroundColor": "#1b5e20",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -20,7 +21,8 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "permissions": [
-        "READ_EXTERNAL_STORAGE"
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -43,6 +45,12 @@
           "backgroundColor": "#1b5e20"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "dbf5ba50-fea2-49e9-949a-fd7c5bc83e40"
+      }
+    },
+    "owner": "teamgriwds-team"
   }
 }

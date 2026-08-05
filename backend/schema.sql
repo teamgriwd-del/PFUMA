@@ -41,6 +41,8 @@ CREATE TABLE IF NOT EXISTS users (
   id_document_path         VARCHAR(300),  -- national ID upload
   credential_document_path VARCHAR(300),  -- DVS license / business reg / land proof upload
   avatar_seed    VARCHAR(80),
+  account_status ENUM('active','suspended') NOT NULL DEFAULT 'active',  -- admin moderation (scammers etc.), separate from verification_status
+  suspension_reason VARCHAR(300),
   created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (verified_by) REFERENCES users(id) ON DELETE SET NULL
 );
@@ -94,8 +96,6 @@ CREATE TABLE IF NOT EXISTS health_events (
   FOREIGN KEY (animal_id)    REFERENCES animals(id) ON DELETE CASCADE,
   FOREIGN KEY (performed_by) REFERENCES users(id)   ON DELETE SET NULL
 );
--- Upgrades an existing database that was created before next_due_date existed.
-ALTER TABLE health_events ADD COLUMN IF NOT EXISTS next_due_date DATE NULL;
 
 -- ── MEDICINE INVENTORY ───────────────────────────────────────
 -- Per-farm medicine cabinet, tracks stock levels.
@@ -135,10 +135,6 @@ CREATE TABLE IF NOT EXISTS marketplace_listings (
   FOREIGN KEY (user_id)   REFERENCES users(id)   ON DELETE CASCADE,
   FOREIGN KEY (animal_id) REFERENCES animals(id) ON DELETE SET NULL
 );
--- Live databases created before these columns existed — MariaDB 10.4 supports
--- ADD COLUMN IF NOT EXISTS, so re-running this file is always safe.
-ALTER TABLE marketplace_listings ADD COLUMN IF NOT EXISTS photo_url VARCHAR(300);
-ALTER TABLE marketplace_listings ADD COLUMN IF NOT EXISTS sold_at TIMESTAMP NULL;
 
 -- ── SALE CLEARANCES ───────────────────────────────────────────
 -- Police sign-off that a livestock sale's papers (ownership, brand,

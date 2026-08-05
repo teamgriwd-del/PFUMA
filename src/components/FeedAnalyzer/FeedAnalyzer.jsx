@@ -5,7 +5,7 @@ import {
   Scale, Clock, BookOpen, ShieldCheck
 } from 'lucide-react';
 
-const API = 'http://localhost:5000';
+import { API } from '../../config';
 
 const DEMO_FEEDS = [
   { id: 1, name: 'Soya Bean Meal',     category: 'protein',   protein_percent: 45.0, energy_mj: 13.5, fibre_percent: 6.0,  calcium_percent: 0.30, phosphorus_percent: 0.65, description: 'High protein supplement — ideal for growing cattle and dairy cows.',      suitable_for: 'Cattle,Goat' },

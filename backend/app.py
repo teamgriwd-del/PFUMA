@@ -167,6 +167,8 @@ def require_auth(fn):
         db.close()
         if not user:
             return jsonify({"error": "User no longer exists"}), 401
+        if user['account_status'] == 'suspended':
+            return jsonify({"error": "This account has been suspended.", "reason": user.get('suspension_reason')}), 403
         g.current_user = user
         return fn(*args, **kwargs)
     return wrapper
@@ -364,6 +366,8 @@ def login():
     db.close()
     if not user or not user['password_hash'] or not bcrypt.checkpw(password.encode(), user['password_hash'].encode()):
         return jsonify({"error": "Invalid phone number or password"}), 401
+    if user['account_status'] == 'suspended':
+        return jsonify({"error": "This account has been suspended.", "reason": user.get('suspension_reason')}), 403
     return jsonify({"token": issue_token(user), "user": public_user_view(user, user)})
 
 
@@ -2079,6 +2083,52 @@ def admin_list_users():
     for r in rows:
         r.pop('password_hash', None)
     return jsonify(rows)
+
+
+@app.route('/admin/users/<int:user_id>/status', methods=['PATCH'])
+@require_auth
+@require_admin
+def admin_set_user_status(user_id):
+    d = request.json or {}
+    new_status = d.get('status')
+    if new_status not in ('active', 'suspended'):
+        return jsonify({"error": "status must be 'active' or 'suspended'"}), 400
+    if user_id == g.current_user['id']:
+        return jsonify({"error": "You can't suspend your own account"}), 400
+
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT id, role FROM users WHERE id=%s", (user_id,))
+    target = c.fetchone()
+    if not target:
+        db.close(); return jsonify({"error": "User not found"}), 404
+    if target['role'] == 'Admin' and new_status == 'suspended':
+        db.close(); return jsonify({"error": "Admin accounts can't be suspended from here"}), 400
+
+    reason = d.get('reason', '').strip() or None if new_status == 'suspended' else None
+    c.execute("UPDATE users SET account_status=%s, suspension_reason=%s WHERE id=%s", (new_status, reason, user_id))
+    db.commit()
+    db.close()
+    return jsonify({"message": f"Account {new_status}"})
+
+
+@app.route('/admin/listings/<int:listing_id>/status', methods=['PATCH'])
+@require_auth
+@require_admin
+def admin_set_listing_status(listing_id):
+    d = request.json or {}
+    new_status = d.get('status')
+    if new_status not in ('withdrawn', 'available'):
+        return jsonify({"error": "status must be 'withdrawn' or 'available'"}), 400
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT id FROM marketplace_listings WHERE id=%s", (listing_id,))
+    if not c.fetchone():
+        db.close(); return jsonify({"error": "Listing not found"}), 404
+    c.execute("UPDATE marketplace_listings SET status=%s WHERE id=%s", (new_status, listing_id))
+    db.commit()
+    db.close()
+    return jsonify({"message": f"Listing {new_status}"})
 
 
 @app.route('/admin/trends', methods=['GET'])

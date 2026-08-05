@@ -23,7 +23,7 @@ import {
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis } from 'recharts';
 import './App.css';
 
-const API = 'http://localhost:5000';
+import { API } from './config';
 
 
 // ── shared helpers ─────────────────────────────────────────────────────────

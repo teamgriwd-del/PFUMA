@@ -5,7 +5,7 @@ import {
   ShoppingCart, Leaf, Pill, Wrench, Wheat, RefreshCw, Camera
 } from 'lucide-react';
 
-const API = 'http://localhost:5000';
+import { API } from '../../config';
 
 const CATEGORIES = [
   { id: 'all',       label: 'All Listings',  icon: ShoppingCart, color: 'bg-gray-800'   },

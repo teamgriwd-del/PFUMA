@@ -2,10 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   ShieldCheck, Users, TrendingUp, Activity, LogOut, Search,
   CheckCircle, XCircle, ShoppingCart, AlertTriangle, Handshake, Package,
+  Ban, RotateCcw,
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
-const API = 'http://localhost:5000';
+import { API } from '../../config';
 
 const StatCard = ({ label, value, icon: Icon, color }) => (
   <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
@@ -52,6 +53,22 @@ const UsersTab = ({ currentUser }) => {
     setBusyId(null);
   };
 
+  const setAccountStatus = async (id, status) => {
+    let reason;
+    if (status === 'suspended') {
+      reason = window.prompt('Reason for suspension (shown to the user, optional):') || '';
+    }
+    setBusyId(id);
+    try {
+      await fetch(`${API}/admin/users/${id}/status`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentUser.token}` },
+        body: JSON.stringify({ status, reason }),
+      });
+      await load();
+    } catch { /* offline */ }
+    setBusyId(null);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3">
@@ -92,6 +109,11 @@ const UsersTab = ({ currentUser }) => {
                   u.verification_status === 'verified' ? 'bg-green-100 text-green-700' :
                   u.verification_status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
                 }`}>{u.verification_status}</span>
+                {u.account_status === 'suspended' && (
+                  <span className="shrink-0 text-[9px] font-black px-2.5 py-1 rounded-full uppercase bg-red-600 text-white" title={u.suspension_reason || ''}>
+                    Suspended
+                  </span>
+                )}
                 {u.verification_status === 'pending' && (
                   <div className="flex gap-1.5 shrink-0">
                     <button onClick={() => resolve(u.id, 'verified')} disabled={busyId === u.id} className="p-1.5 bg-green-50 hover:bg-green-100 text-green-600 rounded-lg transition disabled:opacity-50" aria-label={`Verify ${u.full_name}`}>
@@ -100,6 +122,19 @@ const UsersTab = ({ currentUser }) => {
                     <button onClick={() => resolve(u.id, 'rejected')} disabled={busyId === u.id} className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition disabled:opacity-50" aria-label={`Reject ${u.full_name}`}>
                       <XCircle size={14} />
                     </button>
+                  </div>
+                )}
+                {u.role !== 'Admin' && u.id !== currentUser.id && (
+                  <div className="flex gap-1.5 shrink-0">
+                    {u.account_status === 'suspended' ? (
+                      <button onClick={() => setAccountStatus(u.id, 'active')} disabled={busyId === u.id} className="p-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-lg transition disabled:opacity-50" aria-label={`Reactivate ${u.full_name}`} title="Reactivate">
+                        <RotateCcw size={14} />
+                      </button>
+                    ) : (
+                      <button onClick={() => setAccountStatus(u.id, 'suspended')} disabled={busyId === u.id} className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition disabled:opacity-50" aria-label={`Suspend ${u.full_name}`} title="Suspend (scammer/abuse)">
+                        <Ban size={14} />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -211,6 +246,74 @@ const TrendsTab = ({ currentUser }) => {
   );
 };
 
+const ListingsTab = ({ currentUser }) => {
+  const [listings, setListings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [busyId, setBusyId] = useState(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (search) params.set('q', search);
+    try {
+      const res = await fetch(`${API}/listings?${params}`, { headers: { Authorization: `Bearer ${currentUser.token}` } });
+      if (res.ok) setListings(await res.json());
+    } catch { /* offline — leave empty, no fake fallback */ }
+    setLoading(false);
+  }, [currentUser.token, search]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const takeDown = async (id) => {
+    if (!window.confirm('Remove this listing from the marketplace? It will no longer be visible to buyers.')) return;
+    setBusyId(id);
+    try {
+      await fetch(`${API}/admin/listings/${id}/status`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentUser.token}` },
+        body: JSON.stringify({ status: 'withdrawn' }),
+      });
+      await load();
+    } catch { /* offline */ }
+    setBusyId(null);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="relative max-w-md">
+        <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search live listings by product name…"
+          className="w-full pl-9 pr-4 py-2.5 bg-white rounded-xl border border-gray-200 text-sm font-medium outline-none focus:ring-2 focus:ring-pfuma-green/30" />
+      </div>
+
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+        {loading ? (
+          <p className="text-xs text-gray-400 font-medium italic text-center py-10">Loading…</p>
+        ) : listings.length === 0 ? (
+          <p className="text-xs text-gray-400 font-medium italic text-center py-10">No live listings match.</p>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {listings.map(l => (
+              <div key={l.id} className="flex items-center gap-4 p-4">
+                <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                  <Package size={14} className="text-gray-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-black text-gray-900">{l.product_name} <span className="text-gray-400 font-medium capitalize">· {l.category}</span></p>
+                  <p className="text-[10px] text-gray-500 font-medium">${l.price} · {l.seller_name} · {l.phone} · {l.seller_province || '—'}</p>
+                </div>
+                <button onClick={() => takeDown(l.id)} disabled={busyId === l.id} className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition disabled:opacity-50 shrink-0" aria-label={`Remove ${l.product_name}`} title="Take down (scam/abuse)">
+                  <Ban size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const ACTIVITY_ICON = { signup: Users, listing: ShoppingCart, outbreak: AlertTriangle, cooperative: Handshake };
 
 const ActivityTab = ({ currentUser }) => {
@@ -259,6 +362,7 @@ const ActivityTab = ({ currentUser }) => {
 
 const TABS = [
   { id: 'users', label: 'Users', icon: Users },
+  { id: 'listings', label: 'Listings', icon: Package },
   { id: 'trends', label: 'Trends', icon: TrendingUp },
   { id: 'activity', label: 'Activity', icon: Activity },
 ];
@@ -292,6 +396,7 @@ const AdminDashboard = ({ currentUser, onLogout }) => {
 
       <div className="flex-1 overflow-y-auto p-6">
         {tab === 'users' && <UsersTab currentUser={currentUser} />}
+        {tab === 'listings' && <ListingsTab currentUser={currentUser} />}
         {tab === 'trends' && <TrendsTab currentUser={currentUser} />}
         {tab === 'activity' && <ActivityTab currentUser={currentUser} />}
       </div>

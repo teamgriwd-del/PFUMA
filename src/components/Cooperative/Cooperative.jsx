@@ -4,7 +4,7 @@ import {
   MapPin, ArrowRight, AlertTriangle, Search, LogOut, Crown,
 } from 'lucide-react';
 
-const API = 'http://localhost:5000';
+import { API } from '../../config';
 
 const STATUS_BADGE = {
   open:      'bg-gray-100 text-gray-600',

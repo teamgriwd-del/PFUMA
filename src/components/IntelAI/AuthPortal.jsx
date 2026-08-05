@@ -6,7 +6,7 @@ import {
   Lock, Upload, AlertTriangle, CreditCard, Eye, EyeOff,
 } from 'lucide-react';
 
-const API = 'http://localhost:5000';
+import { API } from '../../config';
 
 // ── Zimbabwe-specific format validation (mirrors backend/app.py so the user
 // sees the same feedback before submitting, not just after a 400 comes back) ──
