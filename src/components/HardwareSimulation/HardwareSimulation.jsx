@@ -8,8 +8,7 @@ import {
   Wifi, WifiOff, ChevronDown, TrendingUp, TrendingDown, Minus, Link2, Plus
 } from 'lucide-react';
 import './HardwareSimulation.css';
-
-const API = 'http://localhost:5000';
+import { API } from '../../config';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const SAFE_ZONE = { lat: -17.3601, lon: 30.1918, radius: 0.005, name: 'Mashonaland Farm A' };

@@ -928,11 +928,13 @@ def _store_iot_reading():
 
 
 @app.route('/api/iot/telemetry', methods=['POST'])
+@limiter.limit("60 per minute")
 def ingest_telemetry():
     return _store_iot_reading()
 
 
 @app.route('/api/iot/alert', methods=['POST'])
+@limiter.limit("60 per minute")
 def ingest_alert():
     return _store_iot_reading()
 

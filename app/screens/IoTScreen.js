@@ -4,6 +4,7 @@ import {
   StatusBar, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Thermometer, Heart, Check, AlertTriangle } from 'lucide-react-native';
 import { COLORS } from '../config';
 
 const ANIMALS = [
@@ -175,7 +176,7 @@ export default function IoTScreen() {
         <Text style={s.sectionLabel}>LIVE VITALS · Updated {tick * 3}s ago</Text>
         <View style={s.vitalsRow}>
           <View style={[s.vitalCard, { borderTopColor: tempColor }]}>
-            <Text style={s.vitalIcon}>🌡</Text>
+            <Thermometer size={22} color={tempColor} style={{ marginBottom: 6 }} />
             <Text style={[s.vitalValue, { color: tempColor }]}>{v.temp}°C</Text>
             <Text style={s.vitalLabel}>Body Temp</Text>
             <Text style={[s.vitalStatus, { color: tempColor }]}>
@@ -184,7 +185,7 @@ export default function IoTScreen() {
             <Text style={s.vitalRef}>Normal: 38–39°C</Text>
           </View>
           <View style={[s.vitalCard, { borderTopColor: hrColor }]}>
-            <Text style={s.vitalIcon}>❤</Text>
+            <Heart size={22} color={hrColor} style={{ marginBottom: 6 }} />
             <Text style={[s.vitalValue, { color: hrColor }]}>{v.hr} bpm</Text>
             <Text style={s.vitalLabel}>Heart Rate</Text>
             <Text style={[s.vitalStatus, { color: hrColor }]}>
@@ -224,7 +225,9 @@ export default function IoTScreen() {
             </Text>
           </View>
           <View style={[s.zoneIcon, { backgroundColor: animal.inZone ? '#dcfce7' : '#fee2e2' }]}>
-            <Text style={{ fontSize: 28 }}>{animal.inZone ? '✓' : '!'}</Text>
+            {animal.inZone
+              ? <Check size={26} color="#15803d" strokeWidth={2.5} />
+              : <AlertTriangle size={24} color="#dc2626" strokeWidth={2.2} />}
           </View>
         </View>
 
