@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PFUMA IoT Hardware — Schematics & Specs</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f172a; color: #e2e8f0; }
+  h1 { text-align:center; padding:28px 0 6px; font-size:26px; color:#4ade80; letter-spacing:1px; }
+  .subtitle { text-align:center; color:#64748b; font-size:13px; margin-bottom:32px; }
+  .page { max-width:1100px; margin:0 auto; padding:0 20px 60px; }
+
+  /* Board cards */
+  .board-card { background:#1e293b; border:1.5px solid #334155; border-radius:18px; padding:28px; margin-bottom:36px; }
+  .board-title { font-size:20px; font-weight:900; color:#f8fafc; margin-bottom:4px; }
+  .board-sub   { font-size:12px; color:#64748b; margin-bottom:20px; }
+
+  /* Two-col layout */
+  .two-col { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  @media(max-width:700px){ .two-col{ grid-template-columns:1fr; } }
+
+  /* Device sketch */
+  .device-wrap { display:flex; flex-direction:column; align-items:center; gap:12px; }
+
+  /* Schematic */
+  svg text { font-family:'Segoe UI',Arial,sans-serif; }
+
+  /* BOM table */
+  table { width:100%; border-collapse:collapse; font-size:12px; margin-top:12px; }
+  th { background:#0f172a; color:#94a3b8; padding:8px 10px; text-align:left; font-size:10px;
+       text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid #334155; }
+  td { padding:8px 10px; border-bottom:1px solid #1e293b; vertical-align:top; color:#e2e8f0; }
+  tr:hover td { background:#1a2540; }
+  .part-link { color:#4ade80; text-decoration:none; font-size:10px; }
+  .price-col { color:#fbbf24; font-weight:700; white-space:nowrap; }
+  .ref-col   { color:#94a3b8; font-weight:700; }
+  .note-col  { color:#64748b; font-size:11px; }
+
+  /* Section labels */
+  .section-head { font-size:10px; font-weight:800; color:#4ade80; text-transform:uppercase;
+                  letter-spacing:1px; margin:20px 0 8px; }
+  .pin-table td:first-child { color:#fbbf24; font-family:monospace; font-size:11px; }
+  .pin-table td:nth-child(2){ color:#f8fafc; font-weight:700; }
+  .pin-table td:nth-child(3){ color:#7dd3fc; font-family:monospace; font-size:11px; }
+  .pin-table td:last-child  { color:#64748b; font-size:11px; }
+
+  /* System diagram */
+  .sys-wrap { background:#0f172a; border-radius:14px; padding:20px; overflow-x:auto; }
+
+  /* Alert box */
+  .alert-box { background:#1a2a1a; border:1px solid #4ade80; border-radius:10px;
+               padding:12px 16px; font-size:12px; color:#86efac; margin-top:16px; line-height:1.8; }
+  .alert-box strong { color:#4ade80; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <h1>PFUMA IoT Hardware Design</h1>
+  <p class="subtitle">PFUMA Livestock Monitoring System · v1.0 · Open in browser to view schematics</p>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- SYSTEM DIAGRAM                                           -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="board-card">
+    <div class="board-title">System Architecture</div>
+    <div class="board-sub">How the two boards connect to each other and to PFUMA</div>
+    <div class="sys-wrap">
+      <svg width="1040" height="200" viewBox="0 0 1040 200">
+        <!-- Collar -->
+        <rect x="10" y="40" width="180" height="130" rx="12" fill="#14532d" stroke="#4ade80" stroke-width="2"/>
+        <text x="100" y="62" fill="#4ade80" font-size="11" font-weight="900" text-anchor="middle">CN-01 COLLAR NODE</text>
+        <text x="100" y="78" fill="#86efac" font-size="9" text-anchor="middle">worn on animal</text>
+        <text x="100" y="100" fill="#bbf7d0" font-size="10" text-anchor="middle">ESP32-WROOM-32</text>
+        <text x="100" y="114" fill="#86efac" font-size="9" text-anchor="middle">DS18B20 · MAX30102</text>
+        <text x="100" y="126" fill="#86efac" font-size="9" text-anchor="middle">MPU-6050 · NEO-6M</text>
+        <text x="100" y="138" fill="#86efac" font-size="9" text-anchor="middle">SX1278 LoRa 433MHz</text>
+        <text x="100" y="152" fill="#fbbf24" font-size="9" text-anchor="middle">Solar + LiPo 3.7V</text>
+        <text x="100" y="164" fill="#64748b" font-size="8" text-anchor="middle">IP54 enclosure · collar strap</text>
+
+        <!-- Arrow LoRa -->
+        <line x1="192" y1="105" x2="310" y2="105" stroke="#4ade80" stroke-width="2" stroke-dasharray="6,3"/>
+        <polygon points="310,100 322,105 310,110" fill="#4ade80"/>
+        <text x="256" y="98" fill="#4ade80" font-size="9" text-anchor="middle">LoRa 433MHz</text>
+        <text x="256" y="116" fill="#64748b" font-size="8" text-anchor="middle">up to 5km</text>
+
+        <!-- Base station -->
+        <rect x="322" y="40" width="180" height="130" rx="12" fill="#1e3a5f" stroke="#7dd3fc" stroke-width="2"/>
+        <text x="412" y="62" fill="#7dd3fc" font-size="11" font-weight="900" text-anchor="middle">BS-01 BASE STATION</text>
+        <text x="412" y="78" fill="#bae6fd" font-size="9" text-anchor="middle">fixed at farm gate/barn</text>
+        <text x="412" y="100" fill="#e0f2fe" font-size="10" text-anchor="middle">ESP32-WROOM-32</text>
+        <text x="412" y="114" fill="#bae6fd" font-size="9" text-anchor="middle">SX1278 LoRa receiver</text>
+        <text x="412" y="126" fill="#bae6fd" font-size="9" text-anchor="middle">SSD1306 OLED 128×64</text>
+        <text x="412" y="138" fill="#bae6fd" font-size="9" text-anchor="middle">4× Status LEDs</text>
+        <text x="412" y="152" fill="#fbbf24" font-size="9" text-anchor="middle">12V DC adapter</text>
+        <text x="412" y="164" fill="#64748b" font-size="8" text-anchor="middle">IP44 junction box</text>
+
+        <!-- Arrow WiFi -->
+        <line x1="504" y1="105" x2="620" y2="105" stroke="#7dd3fc" stroke-width="2" stroke-dasharray="6,3"/>
+        <polygon points="620,100 632,105 620,110" fill="#7dd3fc"/>
+        <text x="562" y="98" fill="#7dd3fc" font-size="9" text-anchor="middle">WiFi / LAN</text>
+        <text x="562" y="116" fill="#64748b" font-size="8" text-anchor="middle">HTTP POST</text>
+
+        <!-- Flask API -->
+        <rect x="632" y="65" width="140" height="80" rx="12" fill="#1a1a2e" stroke="#a78bfa" stroke-width="2"/>
+        <text x="702" y="90" fill="#a78bfa" font-size="11" font-weight="900" text-anchor="middle">FLASK API</text>
+        <text x="702" y="105" fill="#c4b5fd" font-size="9" text-anchor="middle">backend/app.py</text>
+        <text x="702" y="120" fill="#c4b5fd" font-size="9" text-anchor="middle">/api/iot/telemetry</text>
+        <text x="702" y="134" fill="#c4b5fd" font-size="9" text-anchor="middle">/api/iot/alert</text>
+
+        <!-- Arrow API to App -->
+        <line x1="774" y1="105" x2="880" y2="105" stroke="#a78bfa" stroke-width="2" stroke-dasharray="6,3"/>
+        <polygon points="880,100 892,105 880,110" fill="#a78bfa"/>
+        <text x="830" y="98" fill="#a78bfa" font-size="9" text-anchor="middle">WebSocket</text>
+        <text x="830" y="116" fill="#64748b" font-size="8" text-anchor="middle">real-time push</text>
+
+        <!-- PFUMA App -->
+        <rect x="892" y="55" width="140" height="100" rx="12" fill="#1a1205" stroke="#fbbf24" stroke-width="2"/>
+        <text x="962" y="78" fill="#fbbf24" font-size="11" font-weight="900" text-anchor="middle">PFUMA APP</text>
+        <text x="962" y="93" fill="#fde68a" font-size="9" text-anchor="middle">IoTScreen.js</text>
+        <text x="962" y="107" fill="#fde68a" font-size="9" text-anchor="middle">Live vitals display</text>
+        <text x="962" y="121" fill="#fde68a" font-size="9" text-anchor="middle">GPS zone status</text>
+        <text x="962" y="135" fill="#fde68a" font-size="9" text-anchor="middle">Alerts dashboard</text>
+        <text x="962" y="149" fill="#64748b" font-size="8" text-anchor="middle">React Native · Expo</text>
+
+        <!-- Multi-collar note -->
+        <text x="100" y="195" fill="#4ade80" font-size="9" text-anchor="middle">× N collars per farm</text>
+        <text x="412" y="195" fill="#7dd3fc" font-size="9" text-anchor="middle">1 per farm</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- CN-01 COLLAR NODE                                        -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="board-card">
+    <div class="board-title">CN-01 — PFUMA Collar Node</div>
+    <div class="board-sub">Worn on animal. Solar-charged. Transmits live vitals every 10 s via LoRa.</div>
+
+    <div class="two-col">
+      <!-- SCHEMATIC LEFT -->
+      <div>
+        <div class="section-head">Circuit Schematic</div>
+        <svg width="100%" viewBox="0 0 480 560" style="background:#0f172a;border-radius:12px;">
+
+          <!-- Power tree -->
+          <text x="10" y="22" fill="#fbbf24" font-size="10" font-weight="800">POWER</text>
+          <rect x="10"  y="30" width="70" height="34" rx="6" fill="#1a2a0a" stroke="#4ade80" stroke-width="1.5"/>
+          <text x="45"  y="45" fill="#4ade80" font-size="8" text-anchor="middle" font-weight="700">SOLAR</text>
+          <text x="45"  y="56" fill="#86efac" font-size="8" text-anchor="middle">5V · 1W</text>
+
+          <rect x="100" y="30" width="70" height="34" rx="6" fill="#1a1a2e" stroke="#7dd3fc" stroke-width="1.5"/>
+          <text x="135" y="45" fill="#7dd3fc" font-size="8" text-anchor="middle" font-weight="700">TP4056</text>
+          <text x="135" y="56" fill="#bae6fd" font-size="8" text-anchor="middle">Charge ctrl</text>
+
+          <rect x="190" y="30" width="70" height="34" rx="6" fill="#2a1a00" stroke="#fbbf24" stroke-width="1.5"/>
+          <text x="225" y="45" fill="#fbbf24" font-size="8" text-anchor="middle" font-weight="700">LiPo 3.7V</text>
+          <text x="225" y="56" fill="#fde68a" font-size="8" text-anchor="middle">2000mAh</text>
+
+          <rect x="280" y="30" width="70" height="34" rx="6" fill="#1a0a2e" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="315" y="45" fill="#a78bfa" font-size="8" text-anchor="middle" font-weight="700">AMS1117</text>
+          <text x="315" y="56" fill="#c4b5fd" font-size="8" text-anchor="middle">3.3V LDO</text>
+
+          <!-- Power wires -->
+          <line x1="80"  y1="47" x2="100" y2="47" stroke="#4ade80" stroke-width="1.5"/>
+          <line x1="170" y1="47" x2="190" y2="47" stroke="#7dd3fc" stroke-width="1.5"/>
+          <line x1="260" y1="47" x2="280" y2="47" stroke="#fbbf24" stroke-width="1.5"/>
+          <line x1="350" y1="47" x2="380" y2="47" stroke="#a78bfa" stroke-width="1.5"/>
+          <!-- 3V3 rail vertical down -->
+          <line x1="380" y1="47" x2="380" y2="130" stroke="#a78bfa" stroke-width="2" stroke-dasharray="4,2"/>
+          <text x="386" y="95" fill="#a78bfa" font-size="9" font-weight="700">3.3V</text>
+
+          <!-- ESP32 -->
+          <rect x="140" y="110" width="150" height="220" rx="10" fill="#1e293b" stroke="#4ade80" stroke-width="2"/>
+          <text x="215" y="128" fill="#4ade80" font-size="10" font-weight="900" text-anchor="middle">ESP32</text>
+          <text x="215" y="140" fill="#86efac" font-size="8" text-anchor="middle">WROOM-32</text>
+          <!-- GPIO labels on ESP32 -->
+          <text x="152" y="162" fill="#94a3b8" font-size="8">GPIO4</text>
+          <text x="152" y="176" fill="#94a3b8" font-size="8">GPIO16</text>
+          <text x="152" y="190" fill="#94a3b8" font-size="8">GPIO17</text>
+          <text x="152" y="204" fill="#94a3b8" font-size="8">GPIO21</text>
+          <text x="152" y="218" fill="#94a3b8" font-size="8">GPIO22</text>
+          <text x="152" y="232" fill="#94a3b8" font-size="8">GPIO5</text>
+          <text x="152" y="246" fill="#94a3b8" font-size="8">GPIO18</text>
+          <text x="152" y="260" fill="#94a3b8" font-size="8">GPIO19</text>
+          <text x="152" y="274" fill="#94a3b8" font-size="8">GPIO23</text>
+          <text x="152" y="288" fill="#94a3b8" font-size="8">GPIO26</text>
+          <text x="152" y="308" fill="#fbbf24" font-size="8">GPIO34</text>
+          <text x="152" y="320" fill="#fbbf24" font-size="8">GPIO2</text>
+          <!-- Power pins right side -->
+          <text x="248" y="162" fill="#a78bfa" font-size="8">3V3</text>
+          <text x="248" y="174" fill="#64748b" font-size="8">GND</text>
+
+          <!-- DS18B20 -->
+          <rect x="10" y="148" width="90" height="40" rx="7" fill="#14532d" stroke="#4ade80" stroke-width="1.5"/>
+          <text x="55" y="164" fill="#4ade80" font-size="8" text-anchor="middle" font-weight="700">DS18B20</text>
+          <text x="55" y="175" fill="#86efac" font-size="8" text-anchor="middle">Body Temp</text>
+          <text x="55" y="185" fill="#64748b" font-size="7" text-anchor="middle">1-Wire probe</text>
+          <!-- wire from DS18B20 to GPIO4 -->
+          <line x1="100" y1="162" x2="140" y2="162" stroke="#4ade80" stroke-width="1.5"/>
+          <!-- pullup R1 -->
+          <rect x="108" y="153" width="24" height="10" rx="2" fill="#1e293b" stroke="#fbbf24" stroke-width="1"/>
+          <text x="120" y="161" fill="#fbbf24" font-size="7" text-anchor="middle">4.7k</text>
+          <line x1="120" y1="153" x2="120" y2="147" stroke="#fbbf24" stroke-width="1"/>
+          <text x="120" y="144" fill="#a78bfa" font-size="7" text-anchor="middle">3V3</text>
+
+          <!-- GPS -->
+          <rect x="10" y="200" width="90" height="40" rx="7" fill="#0c2a4a" stroke="#7dd3fc" stroke-width="1.5"/>
+          <text x="55" y="216" fill="#7dd3fc" font-size="8" text-anchor="middle" font-weight="700">NEO-6M GPS</text>
+          <text x="55" y="228" fill="#bae6fd" font-size="8" text-anchor="middle">TX → GPIO16</text>
+          <text x="55" y="238" fill="#64748b" font-size="7" text-anchor="middle">UART2 · 9600 baud</text>
+          <line x1="100" y1="214" x2="140" y2="176" stroke="#7dd3fc" stroke-width="1.2"/>
+          <line x1="100" y1="225" x2="140" y2="190" stroke="#7dd3fc" stroke-width="1.2"/>
+
+          <!-- MPU-6050 -->
+          <rect x="10" y="256" width="90" height="40" rx="7" fill="#1a0a2e" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="55" y="272" fill="#a78bfa" font-size="8" text-anchor="middle" font-weight="700">MPU-6050</text>
+          <text x="55" y="283" fill="#c4b5fd" font-size="8" text-anchor="middle">Activity / IMU</text>
+          <text x="55" y="293" fill="#64748b" font-size="7" text-anchor="middle">I2C addr 0x68</text>
+          <line x1="100" y1="270" x2="140" y2="204" stroke="#a78bfa" stroke-width="1.2"/>
+          <line x1="100" y1="278" x2="140" y2="218" stroke="#a78bfa" stroke-width="1.2"/>
+          <!-- I2C labels -->
+          <text x="108" y="198" fill="#64748b" font-size="7">SDA</text>
+          <text x="108" y="212" fill="#64748b" font-size="7">SCL</text>
+
+          <!-- MAX30102 -->
+          <rect x="10" y="310" width="90" height="40" rx="7" fill="#1a0000" stroke="#f87171" stroke-width="1.5"/>
+          <text x="55" y="326" fill="#f87171" font-size="8" text-anchor="middle" font-weight="700">MAX30102</text>
+          <text x="55" y="337" fill="#fca5a5" font-size="8" text-anchor="middle">Heart Rate</text>
+          <text x="55" y="347" fill="#64748b" font-size="7" text-anchor="middle">I2C addr 0x57</text>
+          <!-- same I2C bus -->
+          <line x1="100" y1="326" x2="115" y2="326" x2="115" stroke="#f87171" stroke-width="1.2"/>
+          <line x1="100" y1="326" x2="115" y2="326" stroke="#f87171" stroke-width="1.2"/>
+          <line x1="115" y1="326" x2="115" y2="208" stroke="#f87171" stroke-width="1.2"/>
+          <line x1="115" y1="208" x2="140" y2="208" stroke="#f87171" stroke-width="1.2"/>
+
+          <!-- LoRa -->
+          <rect x="340" y="150" width="110" height="80" rx="7" fill="#0c2a0c" stroke="#4ade80" stroke-width="1.5"/>
+          <text x="395" y="167" fill="#4ade80" font-size="8" text-anchor="middle" font-weight="700">SX1278 LoRa</text>
+          <text x="395" y="178" fill="#86efac" font-size="8" text-anchor="middle">433 MHz · SPI</text>
+          <text x="395" y="190" fill="#86efac" font-size="8" text-anchor="middle">NSS ← GPIO5</text>
+          <text x="395" y="201" fill="#86efac" font-size="8" text-anchor="middle">MOSI← GPIO23</text>
+          <text x="395" y="212" fill="#86efac" font-size="8" text-anchor="middle">MISO→ GPIO19</text>
+          <text x="395" y="222" fill="#86efac" font-size="8" text-anchor="middle">SCK ← GPIO18</text>
+          <!-- SPI wires -->
+          <line x1="290" y1="232" x2="340" y2="205" stroke="#4ade80" stroke-width="1.2"/>
+          <line x1="290" y1="246" x2="340" y2="215" stroke="#4ade80" stroke-width="1.2"/>
+          <line x1="290" y1="260" x2="340" y2="192" stroke="#4ade80" stroke-width="1.2"/>
+          <line x1="290" y1="274" x2="340" y2="201" stroke="#4ade80" stroke-width="1.2"/>
+          <!-- 3V3 to LoRa -->
+          <line x1="380" y1="130" x2="395" y2="148" stroke="#a78bfa" stroke-width="1.5"/>
+          <!-- Antenna -->
+          <rect x="360" y="238" width="70" height="24" rx="5" fill="#1a2a0a" stroke="#4ade80" stroke-width="1"/>
+          <text x="395" y="254" fill="#4ade80" font-size="8" text-anchor="middle">433MHz Antenna</text>
+          <line x1="395" y1="230" x2="395" y2="238" stroke="#4ade80" stroke-width="2"/>
+
+          <!-- Battery ADC divider -->
+          <rect x="340" y="290" width="110" height="50" rx="7" fill="#2a1a00" stroke="#fbbf24" stroke-width="1.5"/>
+          <text x="395" y="306" fill="#fbbf24" font-size="8" text-anchor="middle" font-weight="700">Batt Monitor</text>
+          <text x="395" y="318" fill="#fde68a" font-size="8" text-anchor="middle">R2+R3 divider</text>
+          <text x="395" y="330" fill="#fde68a" font-size="8" text-anchor="middle">100k+100k</text>
+          <text x="395" y="340" fill="#64748b" font-size="7" text-anchor="middle">→ GPIO34 ADC</text>
+          <line x1="290" y1="308" x2="340" y2="308" stroke="#fbbf24" stroke-width="1.5"/>
+
+          <!-- LED -->
+          <rect x="340" y="352" width="80" height="30" rx="6" fill="#0a1a0a" stroke="#4ade80" stroke-width="1"/>
+          <text x="380" y="366" fill="#4ade80" font-size="8" text-anchor="middle">LED Green</text>
+          <text x="380" y="375" fill="#64748b" font-size="7" text-anchor="middle">GPIO2 · 330Ω</text>
+          <line x1="290" y1="320" x2="310" y2="320" x2="310" stroke="#4ade80" stroke-width="1"/>
+          <line x1="290" y1="320" x2="310" y2="320" stroke="#4ade80" stroke-width="1"/>
+          <line x1="310" y1="320" x2="310" y2="362" stroke="#4ade80" stroke-width="1"/>
+          <line x1="310" y1="362" x2="340" y2="362" stroke="#4ade80" stroke-width="1"/>
+
+          <!-- 3V3 rail to sensors -->
+          <line x1="380" y1="130" x2="380" y2="160" stroke="#a78bfa" stroke-width="1.5"/>
+          <line x1="55" y1="148" x2="55" y2="110" stroke="#a78bfa" stroke-width="1" stroke-dasharray="3,2"/>
+          <text x="18" y="108" fill="#a78bfa" font-size="7">3V3 to all</text>
+          <text x="18" y="116" fill="#a78bfa" font-size="7">sensor VCC</text>
+
+          <!-- GND label -->
+          <text x="10" y="400" fill="#64748b" font-size="8">All GND pins → common GND</text>
+
+          <!-- Title -->
+          <text x="240" y="530" fill="#334155" font-size="9" text-anchor="middle">CN-01 PFUMA Collar Node — Schematic Block Diagram</text>
+        </svg>
+      </div>
+
+      <!-- DEVICE SKETCH RIGHT -->
+      <div class="device-wrap">
+        <div class="section-head" style="width:100%">Device Form Factor</div>
+        <svg width="100%" viewBox="0 0 360 460" style="background:#0f172a;border-radius:12px;">
+          <!-- Enclosure body -->
+          <rect x="80" y="60" width="200" height="130" rx="16" fill="#1e293b" stroke="#4ade80" stroke-width="2.5"/>
+          <!-- Solar panel on top -->
+          <rect x="80" y="20" width="200" height="36" rx="8" fill="#1a2a4a" stroke="#7dd3fc" stroke-width="2"/>
+          <text x="180" y="42" fill="#7dd3fc" font-size="10" text-anchor="middle" font-weight="700">Solar Panel  40×70mm  5V 1W</text>
+          <!-- Panel cells grid -->
+          <line x1="120" y1="22" x2="120" y2="54" stroke="#334155" stroke-width="0.7"/>
+          <line x1="160" y1="22" x2="160" y2="54" stroke="#334155" stroke-width="0.7"/>
+          <line x1="200" y1="22" x2="200" y2="54" stroke="#334155" stroke-width="0.7"/>
+          <line x1="240" y1="22" x2="240" y2="54" stroke="#334155" stroke-width="0.7"/>
+          <line x1="82" y1="36" x2="278" y2="36" stroke="#334155" stroke-width="0.7"/>
+
+          <!-- Inside board components labels -->
+          <text x="180" y="85" fill="#4ade80" font-size="11" font-weight="900" text-anchor="middle">PCB 80×50mm</text>
+          <rect x="95"  y="93" width="50" height="20" rx="4" fill="#0f172a" stroke="#a78bfa" stroke-width="1"/>
+          <text x="120" y="107" fill="#a78bfa" font-size="8" text-anchor="middle">ESP32</text>
+          <rect x="155" y="93" width="50" height="20" rx="4" fill="#0f172a" stroke="#4ade80" stroke-width="1"/>
+          <text x="180" y="107" fill="#4ade80" font-size="8" text-anchor="middle">SX1278</text>
+          <rect x="215" y="93" width="50" height="20" rx="4" fill="#0f172a" stroke="#7dd3fc" stroke-width="1"/>
+          <text x="240" y="107" fill="#7dd3fc" font-size="8" text-anchor="middle">NEO-6M</text>
+          <rect x="95"  y="120" width="50" height="20" rx="4" fill="#0f172a" stroke="#f87171" stroke-width="1"/>
+          <text x="120" y="134" fill="#f87171" font-size="8" text-anchor="middle">MAX30102</text>
+          <rect x="155" y="120" width="50" height="20" rx="4" fill="#0f172a" stroke="#a78bfa" stroke-width="1"/>
+          <text x="180" y="134" fill="#a78bfa" font-size="8" text-anchor="middle">MPU-6050</text>
+          <rect x="215" y="120" width="50" height="20" rx="4" fill="#0f172a" stroke="#fbbf24" stroke-width="1"/>
+          <text x="240" y="134" fill="#fbbf24" font-size="8" text-anchor="middle">TP4056</text>
+          <!-- LED indicator -->
+          <circle cx="268" cy="162" r="5" fill="#4ade80" stroke="#86efac" stroke-width="1"/>
+          <text x="268" y="178" fill="#4ade80" font-size="7" text-anchor="middle">LED</text>
+
+          <!-- LiPo battery below board -->
+          <rect x="90" y="200" width="180" height="35" rx="8" fill="#2a1a00" stroke="#fbbf24" stroke-width="1.5"/>
+          <text x="180" y="222" fill="#fbbf24" font-size="10" text-anchor="middle" font-weight="700">LiPo 3.7V 2000mAh</text>
+
+          <!-- DS18B20 probe exits left -->
+          <line x1="80" y1="145" x2="30" y2="145" stroke="#4ade80" stroke-width="3"/>
+          <circle cx="26" cy="145" r="8" fill="#14532d" stroke="#4ade80" stroke-width="2"/>
+          <text x="26" y="162" fill="#4ade80" font-size="7" text-anchor="middle">Temp</text>
+          <text x="26" y="171" fill="#4ade80" font-size="7" text-anchor="middle">probe</text>
+
+          <!-- LoRa antenna exits right -->
+          <line x1="280" y1="100" x2="330" y2="100" stroke="#4ade80" stroke-width="2"/>
+          <line x1="330" y1="100" x2="330" y2="65" stroke="#4ade80" stroke-width="3"/>
+          <text x="344" y="83" fill="#4ade80" font-size="7">LoRa</text>
+          <text x="344" y="93" fill="#4ade80" font-size="7">Ant.</text>
+
+          <!-- Collar straps -->
+          <rect x="60"  y="250" width="20" height="80" rx="5" fill="#334155" stroke="#64748b" stroke-width="1"/>
+          <rect x="280" y="250" width="20" height="80" rx="5" fill="#334155" stroke="#64748b" stroke-width="1"/>
+          <text x="70"  y="320" fill="#64748b" font-size="8" text-anchor="middle" transform="rotate(-90,70,310)">strap</text>
+          <text x="290" y="320" fill="#64748b" font-size="8" text-anchor="middle" transform="rotate(90,290,310)">strap</text>
+
+          <!-- Dimensions -->
+          <line x1="80" y1="250" x2="280" y2="250" stroke="#334155" stroke-width="0.7" stroke-dasharray="3,2"/>
+          <text x="180" y="265" fill="#334155" font-size="9" text-anchor="middle">80mm</text>
+          <line x1="280" y1="60"  x2="320" y2="60"  stroke="#334155" stroke-width="0.7"/>
+          <line x1="280" y1="200" x2="320" y2="200" stroke="#334155" stroke-width="0.7"/>
+          <line x1="310" y1="60"  x2="310" y2="200" stroke="#334155" stroke-width="0.7"/>
+          <text x="325" y="135" fill="#334155" font-size="9">140mm</text>
+
+          <text x="180" y="310" fill="#64748b" font-size="9" text-anchor="middle">IP54 · 25mm Collar Strap Slots</text>
+          <text x="180" y="326" fill="#334155" font-size="8" text-anchor="middle">Total weight ≈ 120g incl. battery</text>
+          <text x="180" y="345" fill="#4ade80" font-size="9" text-anchor="middle" font-weight="700">CN-01  Collar Node</text>
+        </svg>
+
+        <!-- Proteus tip -->
+        <div class="alert-box">
+          <strong>In Proteus:</strong> Use Arduino Mega 2560 as proxy for ESP32.<br>
+          DS18B20 is in the Transducers library.<br>
+          Replace MPU-6050 with 3× POT-HG (pots A1,A2,A3).<br>
+          Replace MAX30102 with 1× POT-HG (pot A0).<br>
+          Add Virtual Terminal on TX0/RX0 — watch live JSON.
+        </div>
+      </div>
+    </div>
+
+    <!-- PIN TABLE -->
+    <div class="section-head">Complete Pin Assignment — ESP32 GPIO</div>
+    <table class="pin-table">
+      <tr><th>GPIO</th><th>Connected To</th><th>Net Name</th><th>Note</th></tr>
+      <tr><td>GPIO2</td><td>Status LED (via 330Ω)</td><td>LED_STATUS</td><td>OUTPUT</td></tr>
+      <tr><td>GPIO4</td><td>DS18B20 DATA</td><td>ONE_WIRE</td><td>4.7kΩ pull-up to 3V3</td></tr>
+      <tr><td>GPIO5</td><td>SX1278 NSS</td><td>LORA_NSS</td><td>SPI chip select, active LOW</td></tr>
+      <tr><td>GPIO12</td><td>SX1278 DIO1</td><td>LORA_DIO1</td><td>Optional</td></tr>
+      <tr><td>GPIO13</td><td>SX1278 DIO2</td><td>LORA_DIO2</td><td>Optional</td></tr>
+      <tr><td>GPIO14</td><td>SX1278 RST</td><td>LORA_RST</td><td>Active LOW reset</td></tr>
+      <tr><td>GPIO16</td><td>NEO-6M TX</td><td>GPS_RX</td><td>UART2 RX on ESP32</td></tr>
+      <tr><td>GPIO17</td><td>NEO-6M RX</td><td>GPS_TX</td><td>UART2 TX on ESP32</td></tr>
+      <tr><td>GPIO18</td><td>SX1278 SCK</td><td>SPI_SCK</td><td>SPI clock</td></tr>
+      <tr><td>GPIO19</td><td>SX1278 MISO</td><td>SPI_MISO</td><td>SPI data from LoRa</td></tr>
+      <tr><td>GPIO21</td><td>MPU-6050 + MAX30102 SDA</td><td>I2C_SDA</td><td>4.7kΩ pull-up to 3V3</td></tr>
+      <tr><td>GPIO22</td><td>MPU-6050 + MAX30102 SCL</td><td>I2C_SCL</td><td>4.7kΩ pull-up to 3V3</td></tr>
+      <tr><td>GPIO23</td><td>SX1278 MOSI</td><td>SPI_MOSI</td><td>SPI data to LoRa</td></tr>
+      <tr><td>GPIO26</td><td>SX1278 DIO0</td><td>LORA_IRQ</td><td>TxDone / RxDone interrupt</td></tr>
+      <tr><td>GPIO34</td><td>Battery divider mid-point</td><td>VBAT_ADC</td><td>INPUT ONLY — 100k+100k divider</td></tr>
+      <tr><td>GPIO35</td><td>MPU-6050 INT</td><td>MPU_INT</td><td>INPUT ONLY</td></tr>
+    </table>
+
+    <!-- BOM -->
+    <div class="section-head" style="margin-top:24px">Bill of Materials — CN-01</div>
+    <table>
+      <tr><th>Ref</th><th>Component</th><th>Exact Part / Model</th><th>Where to Buy (Zimbabwe/online)</th><th>Unit Price USD</th><th>Notes</th></tr>
+      <tr><td class="ref-col">U1</td><td>Microcontroller</td><td>ESP32-WROOM-32D (38-pin devkit)</td><td>AliExpress · Takealot ZA · local electro shop</td><td class="price-col">$4–6</td><td class="note-col">Use 38-pin devkit for breadboarding; bare module for final PCB</td></tr>
+      <tr><td class="ref-col">U2</td><td>GPS Module</td><td>u-blox NEO-6M with ceramic antenna</td><td>AliExpress · Robotics.co.za</td><td class="price-col">$5–8</td><td class="note-col">GY-NEO6MV2 breakout board is easiest</td></tr>
+      <tr><td class="ref-col">U3</td><td>LoRa Transceiver</td><td>AI-Thinker Ra-02 (SX1278) 433MHz</td><td>AliExpress · Communica.co.za</td><td class="price-col">$4–7</td><td class="note-col">Comes with SMA connector. Add 433MHz whip antenna separately.</td></tr>
+      <tr><td class="ref-col">U4</td><td>IMU</td><td>MPU-6050 GY-521 breakout</td><td>AliExpress · local electro</td><td class="price-col">$1–2</td><td class="note-col">Already has onboard 4.7kΩ I2C pull-ups on breakout</td></tr>
+      <tr><td class="ref-col">U5</td><td>Heart Rate Sensor</td><td>MAX30102 breakout module</td><td>AliExpress · Robotics.co.za</td><td class="price-col">$3–5</td><td class="note-col">Module includes onboard decoupling — use as-is</td></tr>
+      <tr><td class="ref-col">U6</td><td>Temp Sensor</td><td>DS18B20 waterproof stainless probe 1m</td><td>AliExpress · Communica.co.za</td><td class="price-col">$2–4</td><td class="note-col">Waterproof version essential — direct contact with animal skin</td></tr>
+      <tr><td class="ref-col">U7</td><td>Charge Controller</td><td>TP4056 with DW01A protection (blue board)</td><td>AliExpress · local electro</td><td class="price-col">$0.50–1</td><td class="note-col">Get the version WITH protection circuit (2-chip version)</td></tr>
+      <tr><td class="ref-col">U8</td><td>LDO Regulator</td><td>AMS1117-3.3 SOT-223</td><td>AliExpress · Communica.co.za</td><td class="price-col">$0.10</td><td class="note-col">Or use LD1117-3.3 — pin compatible</td></tr>
+      <tr><td class="ref-col">BT1</td><td>LiPo Battery</td><td>3.7V 2000mAh JST-PH 2-pin 804040</td><td>AliExpress · DroneShop ZA</td><td class="price-col">$6–10</td><td class="note-col">Check physical size fits enclosure — 40×40×8mm</td></tr>
+      <tr><td class="ref-col">SP1</td><td>Solar Panel</td><td>5V 1W 70×40mm mini solar panel</td><td>AliExpress · Mantech.co.za</td><td class="price-col">$3–5</td><td class="note-col">Epoxy laminated, waterproof. Connect via JST-XH to TP4056 IN.</td></tr>
+      <tr><td class="ref-col">R1</td><td>Pull-up resistor</td><td>4.7kΩ 0.25W through-hole</td><td>Any electronics shop</td><td class="price-col">$0.02</td><td class="note-col">DS18B20 one-wire pull-up (required)</td></tr>
+      <tr><td class="ref-col">R2,R3</td><td>Voltage divider</td><td>100kΩ 0.25W through-hole ×2</td><td>Any electronics shop</td><td class="price-col">$0.02 ea</td><td class="note-col">Battery monitor: 4.2V max → 2.1V into ADC</td></tr>
+      <tr><td class="ref-col">R4</td><td>LED resistor</td><td>330Ω 0.25W through-hole</td><td>Any electronics shop</td><td class="price-col">$0.02</td><td class="note-col"></td></tr>
+      <tr><td class="ref-col">R5,R6</td><td>I2C pull-up ×2</td><td>4.7kΩ 0.25W ×2</td><td>Any electronics shop</td><td class="price-col">$0.02 ea</td><td class="note-col">Skip if using breakout boards (they have onboard pull-ups)</td></tr>
+      <tr><td class="ref-col">C1–C5</td><td>Capacitors</td><td>100nF ×2, 10µF ×2, 100µF ×1</td><td>Any electronics shop</td><td class="price-col">$0.50 set</td><td class="note-col">Decoupling for MCU and LDO</td></tr>
+      <tr><td class="ref-col">LED1</td><td>Status LED</td><td>Green 5mm LED</td><td>Any electronics shop</td><td class="price-col">$0.05</td><td class="note-col"></td></tr>
+      <tr><td class="ref-col">ENC1</td><td>Enclosure</td><td>IP54 ABS 80×50×25mm junction box</td><td>Builders Warehouse ZW · AliExpress</td><td class="price-col">$3–5</td><td class="note-col">Drill holes for probe grommet and SMA antenna passthrough</td></tr>
+      <tr><td class="ref-col">ANT1</td><td>LoRa Antenna</td><td>433MHz SMA 3dBi rubber duck</td><td>AliExpress · Communica.co.za</td><td class="price-col">$2–4</td><td class="note-col">SMA male to fit Ra-02's SMA female</td></tr>
+      <tr><td></td><td colspan="3"><strong>TOTAL PER COLLAR NODE (estimate)</strong></td><td class="price-col"><strong>$35–65</strong></td><td class="note-col">Lower end = AliExpress bulk; upper = local retail</td></tr>
+    </table>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- BS-01 BASE STATION                                       -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="board-card">
+    <div class="board-title">BS-01 — PFUMA Base Station</div>
+    <div class="board-sub">Fixed at farm. Receives all collar LoRa packets. Forwards to PFUMA API via WiFi.</div>
+
+    <div class="two-col">
+      <div>
+        <div class="section-head">Circuit Schematic</div>
+        <svg width="100%" viewBox="0 0 480 420" style="background:#0f172a;border-radius:12px;">
+          <!-- Power supply -->
+          <text x="10" y="22" fill="#fbbf24" font-size="10" font-weight="800">POWER</text>
+          <rect x="10"  y="30" width="80" height="34" rx="6" fill="#1a1a00" stroke="#fbbf24" stroke-width="1.5"/>
+          <text x="50"  y="45" fill="#fbbf24" font-size="8" text-anchor="middle" font-weight="700">12V DC IN</text>
+          <text x="50"  y="56" fill="#fde68a" font-size="8" text-anchor="middle">2.1mm barrel</text>
+          <rect x="105" y="30" width="80" height="34" rx="6" fill="#1a2a0a" stroke="#4ade80" stroke-width="1.5"/>
+          <text x="145" y="45" fill="#4ade80" font-size="8" text-anchor="middle" font-weight="700">LM2596</text>
+          <text x="145" y="56" fill="#86efac" font-size="8" text-anchor="middle">Buck → 5V</text>
+          <rect x="200" y="30" width="80" height="34" rx="6" fill="#1a0a2e" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="240" y="45" fill="#a78bfa" font-size="8" text-anchor="middle" font-weight="700">AMS1117-3.3</text>
+          <text x="240" y="56" fill="#c4b5fd" font-size="8" text-anchor="middle">LDO → 3.3V</text>
+          <line x1="90"  y1="47" x2="105" y2="47" stroke="#fbbf24" stroke-width="1.5"/>
+          <line x1="185" y1="47" x2="200" y2="47" stroke="#4ade80" stroke-width="1.5"/>
+          <line x1="280" y1="47" x2="310" y2="47" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="4,2"/>
+          <text x="320" y="52" fill="#a78bfa" font-size="9" font-weight="700">3.3V rail</text>
+
+          <!-- ESP32 -->
+          <rect x="140" y="100" width="160" height="180" rx="10" fill="#1e293b" stroke="#7dd3fc" stroke-width="2"/>
+          <text x="220" y="118" fill="#7dd3fc" font-size="10" font-weight="900" text-anchor="middle">ESP32</text>
+          <text x="220" y="130" fill="#bae6fd" font-size="8" text-anchor="middle">WROOM-32</text>
+          <text x="152" y="150" fill="#94a3b8" font-size="8">GPIO5</text>
+          <text x="152" y="163" fill="#94a3b8" font-size="8">GPIO14</text>
+          <text x="152" y="176" fill="#94a3b8" font-size="8">GPIO18</text>
+          <text x="152" y="189" fill="#94a3b8" font-size="8">GPIO19</text>
+          <text x="152" y="202" fill="#94a3b8" font-size="8">GPIO23</text>
+          <text x="152" y="215" fill="#94a3b8" font-size="8">GPIO26</text>
+          <text x="152" y="232" fill="#94a3b8" font-size="8">GPIO21</text>
+          <text x="152" y="245" fill="#94a3b8" font-size="8">GPIO22</text>
+          <!-- LED GPIOs -->
+          <text x="248" y="150" fill="#64748b" font-size="8">GPIO2</text>
+          <text x="248" y="163" fill="#64748b" font-size="8">GPIO4</text>
+          <text x="248" y="176" fill="#64748b" font-size="8">GPIO15</text>
+          <text x="248" y="189" fill="#64748b" font-size="8">GPIO13</text>
+          <!-- WiFi chip icon -->
+          <text x="220" y="268" fill="#7dd3fc" font-size="8" text-anchor="middle">WiFi built-in</text>
+          <text x="220" y="278" fill="#bae6fd" font-size="8" text-anchor="middle">→ Flask API</text>
+
+          <!-- LoRa module -->
+          <rect x="10" y="130" width="100" height="80" rx="7" fill="#0c2a0c" stroke="#4ade80" stroke-width="1.5"/>
+          <text x="60"  y="148" fill="#4ade80" font-size="8" text-anchor="middle" font-weight="700">SX1278 LoRa</text>
+          <text x="60"  y="160" fill="#86efac" font-size="8" text-anchor="middle">433 MHz</text>
+          <text x="60"  y="172" fill="#86efac" font-size="8" text-anchor="middle">NSS  → GPIO5</text>
+          <text x="60"  y="183" fill="#86efac" font-size="8" text-anchor="middle">RST  → GPIO14</text>
+          <text x="60"  y="194" fill="#86efac" font-size="8" text-anchor="middle">SCK  → GPIO18</text>
+          <text x="60"  y="205" fill="#86efac" font-size="8" text-anchor="middle">MISO → GPIO19</text>
+          <!-- SPI wires -->
+          <line x1="110" y1="158" x2="140" y2="150" stroke="#4ade80" stroke-width="1.2"/>
+          <line x1="110" y1="167" x2="140" y2="163" stroke="#4ade80" stroke-width="1.2"/>
+          <line x1="110" y1="176" x2="140" y2="176" stroke="#4ade80" stroke-width="1.2"/>
+          <line x1="110" y1="185" x2="140" y2="189" stroke="#4ade80" stroke-width="1.2"/>
+          <!-- Antenna -->
+          <rect x="20" y="218" width="80" height="22" rx="5" fill="#1a2a0a" stroke="#4ade80" stroke-width="1"/>
+          <text x="60"  y="233" fill="#4ade80" font-size="8" text-anchor="middle">433MHz Antenna</text>
+          <line x1="60"  y1="210" x2="60"  y2="218" stroke="#4ade80" stroke-width="2"/>
+
+          <!-- OLED -->
+          <rect x="340" y="100" width="120" height="70" rx="7" fill="#0a1a2e" stroke="#7dd3fc" stroke-width="1.5"/>
+          <text x="400" y="118" fill="#7dd3fc" font-size="8" text-anchor="middle" font-weight="700">SSD1306 OLED</text>
+          <text x="400" y="130" fill="#bae6fd" font-size="8" text-anchor="middle">128×64 pixels</text>
+          <text x="400" y="142" fill="#bae6fd" font-size="8" text-anchor="middle">SDA → GPIO21</text>
+          <text x="400" y="154" fill="#bae6fd" font-size="8" text-anchor="middle">SCL → GPIO22</text>
+          <text x="400" y="165" fill="#64748b" font-size="7" text-anchor="middle">I2C addr 0x3C</text>
+          <line x1="300" y1="232" x2="320" y2="232" x2="320" stroke="#7dd3fc" stroke-width="1.2"/>
+          <line x1="300" y1="232" x2="320" y2="232" stroke="#7dd3fc" stroke-width="1.2"/>
+          <line x1="320" y1="232" x2="320" y2="135" stroke="#7dd3fc" stroke-width="1.2"/>
+          <line x1="320" y1="135" x2="340" y2="135" stroke="#7dd3fc" stroke-width="1.2"/>
+          <line x1="300" y1="245" x2="325" y2="245" stroke="#7dd3fc" stroke-width="1.2"/>
+          <line x1="325" y1="245" x2="325" y2="148" stroke="#7dd3fc" stroke-width="1.2"/>
+          <line x1="325" y1="148" x2="340" y2="148" stroke="#7dd3fc" stroke-width="1.2"/>
+
+          <!-- 4 LEDs -->
+          <rect x="340" y="185" width="120" height="90" rx="7" fill="#0a0a0a" stroke="#334155" stroke-width="1"/>
+          <text x="400" y="200" fill="#94a3b8" font-size="8" text-anchor="middle" font-weight="700">Status LEDs</text>
+          <circle cx="360" cy="218" r="7" fill="#4ade80" stroke="#86efac" stroke-width="1.5"/>
+          <text x="360" y="235" fill="#4ade80" font-size="7" text-anchor="middle">PWR</text>
+          <circle cx="386" cy="218" r="7" fill="#3b82f6" stroke="#93c5fd" stroke-width="1.5"/>
+          <text x="386" y="235" fill="#3b82f6" font-size="7" text-anchor="middle">LoRa</text>
+          <circle cx="412" cy="218" r="7" fill="#fbbf24" stroke="#fde68a" stroke-width="1.5"/>
+          <text x="412" y="235" fill="#fbbf24" font-size="7" text-anchor="middle">WiFi</text>
+          <circle cx="438" cy="218" r="7" fill="#ef4444" stroke="#fca5a5" stroke-width="1.5"/>
+          <text x="438" y="235" fill="#ef4444" font-size="7" text-anchor="middle">Alert</text>
+          <text x="400" y="258" fill="#64748b" font-size="7" text-anchor="middle">GPIO2 · 4 · 15 · 13  via 330Ω</text>
+          <!-- LED wires -->
+          <line x1="300" y1="150" x2="340" y2="210" stroke="#4ade80" stroke-width="1"/>
+          <line x1="300" y1="163" x2="340" y2="218" stroke="#3b82f6" stroke-width="1"/>
+          <line x1="300" y1="176" x2="340" y2="225" stroke="#fbbf24" stroke-width="1"/>
+          <line x1="300" y1="189" x2="340" y2="232" stroke="#ef4444" stroke-width="1"/>
+
+          <!-- 3V3 to modules -->
+          <line x1="310" y1="47" x2="310" y2="100" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="3,2"/>
+          <line x1="310" y1="100" x2="310" y2="108" stroke="#a78bfa" stroke-width="1.5"/>
+          <text x="10"  y="370" fill="#64748b" font-size="8">All GND pins → common GND. All VCC pins → 3.3V rail.</text>
+          <text x="140" y="390" fill="#334155" font-size="9" text-anchor="middle">BS-01 PFUMA Base Station — Schematic Block Diagram</text>
+        </svg>
+      </div>
+
+      <!-- Base station sketch -->
+      <div class="device-wrap">
+        <div class="section-head" style="width:100%">Device Form Factor</div>
+        <svg width="100%" viewBox="0 0 360 420" style="background:#0f172a;border-radius:12px;">
+          <!-- Junction box -->
+          <rect x="60" y="50" width="240" height="200" rx="14" fill="#1e293b" stroke="#7dd3fc" stroke-width="2.5"/>
+          <!-- PCB inside -->
+          <rect x="76" y="66" width="208" height="100" rx="8" fill="#0f172a" stroke="#334155" stroke-width="1"/>
+          <!-- Components on PCB -->
+          <rect x="82"  y="72" width="50" height="22" rx="4" fill="#0a1525" stroke="#a78bfa" stroke-width="1"/>
+          <text x="107" y="87" fill="#a78bfa" font-size="8" text-anchor="middle">ESP32</text>
+          <rect x="142" y="72" width="50" height="22" rx="4" fill="#0a250a" stroke="#4ade80" stroke-width="1"/>
+          <text x="167" y="87" fill="#4ade80" font-size="8" text-anchor="middle">SX1278</text>
+          <rect x="202" y="72" width="76" height="22" rx="4" fill="#050d1a" stroke="#7dd3fc" stroke-width="1"/>
+          <text x="240" y="87" fill="#7dd3fc" font-size="8" text-anchor="middle">SSD1306 OLED</text>
+          <!-- OLED screen details -->
+          <rect x="204" y="74" width="72" height="18" rx="3" fill="#0a1a2e"/>
+          <text x="240" y="86" fill="#4ade80" font-size="6" text-anchor="middle">Bessie  [1/2]</text>
+          <text x="240" y="93" fill="#bae6fd" font-size="5" text-anchor="middle">38.5°C  72bpm  IN ZONE</text>
+
+          <rect x="82"  y="102" width="60" height="22" rx="4" fill="#1a1200" stroke="#fbbf24" stroke-width="1"/>
+          <text x="112" y="117" fill="#fbbf24" font-size="8" text-anchor="middle">LM2596</text>
+          <rect x="152" y="102" width="60" height="22" rx="4" fill="#1a0a2e" stroke="#a78bfa" stroke-width="1"/>
+          <text x="182" y="117" fill="#a78bfa" font-size="8" text-anchor="middle">AMS1117</text>
+          <!-- 4 LEDs -->
+          <circle cx="236" cy="113" r="5" fill="#4ade80"/>
+          <circle cx="252" cy="113" r="5" fill="#3b82f6"/>
+          <circle cx="268" cy="113" r="5" fill="#fbbf24"/>
+          <circle cx="284" cy="113" r="5" fill="#ef4444"/>
+
+          <!-- DC jack left -->
+          <rect x="40" y="138" width="20" height="24" rx="4" fill="#2a1a00" stroke="#fbbf24" stroke-width="1.5"/>
+          <text x="50" y="152" fill="#fbbf24" font-size="6" text-anchor="middle">12V</text>
+          <text x="50" y="161" fill="#fbbf24" font-size="6" text-anchor="middle">IN</text>
+          <!-- LoRa antenna right -->
+          <line x1="300" y1="138" x2="330" y2="138" stroke="#4ade80" stroke-width="2"/>
+          <line x1="330" y1="138" x2="330" y2="50" stroke="#4ade80" stroke-width="3"/>
+          <text x="345" y="70" fill="#4ade80" font-size="7">LoRa</text>
+          <text x="345" y="80" fill="#4ade80" font-size="7">Ant.</text>
+          <!-- WiFi note -->
+          <text x="180" y="194" fill="#7dd3fc" font-size="9" text-anchor="middle">WiFi: connects to farm router</text>
+          <text x="180" y="207" fill="#64748b" font-size="8" text-anchor="middle">→ sends data to PFUMA API</text>
+          <!-- Cable entry -->
+          <circle cx="300" cy="240" r="8" fill="#0f172a" stroke="#64748b" stroke-width="1.5"/>
+          <text x="300" y="258" fill="#64748b" font-size="7" text-anchor="middle">cable</text>
+          <text x="300" y="267" fill="#64748b" font-size="7" text-anchor="middle">entry</text>
+          <!-- Mounting holes -->
+          <circle cx="76"  cy="66"  r="4" fill="#0f172a" stroke="#334155"/>
+          <circle cx="284" cy="66"  r="4" fill="#0f172a" stroke="#334155"/>
+          <circle cx="76"  cy="164" r="4" fill="#0f172a" stroke="#334155"/>
+          <circle cx="284" cy="164" r="4" fill="#0f172a" stroke="#334155"/>
+          <!-- Dimensions -->
+          <line x1="60"  y1="260" x2="300" y2="260" stroke="#334155" stroke-width="0.8" stroke-dasharray="3,2"/>
+          <text x="180" y="272" fill="#334155" font-size="9" text-anchor="middle">120mm</text>
+          <text x="180" y="310" fill="#64748b" font-size="9" text-anchor="middle">IP44 · Outdoor rated</text>
+          <text x="180" y="326" fill="#64748b" font-size="8" text-anchor="middle">Mount on post or barn wall</text>
+          <text x="180" y="350" fill="#7dd3fc" font-size="9" text-anchor="middle" font-weight="700">BS-01  Base Station</text>
+        </svg>
+
+        <div class="alert-box">
+          <strong>In Proteus:</strong> Second instance of Arduino Mega 2560.<br>
+          Connect VT2 (Virtual Terminal) to TX0/RX0.<br>
+          Two Proteus instances talk via COMPIM virtual serial bridge — one is collar, one is base station.<br>
+          <strong>In KiCad:</strong> Clone the ESP32 symbol, reassign GPIO per BS-01 pin table below.
+        </div>
+      </div>
+    </div>
+
+    <!-- BS-01 BOM -->
+    <div class="section-head" style="margin-top:24px">Bill of Materials — BS-01</div>
+    <table>
+      <tr><th>Ref</th><th>Component</th><th>Exact Part</th><th>Where to Buy</th><th>Price USD</th><th>Notes</th></tr>
+      <tr><td class="ref-col">U1</td><td>Microcontroller</td><td>ESP32-WROOM-32D devkit 38-pin</td><td>AliExpress · Takealot ZA</td><td class="price-col">$4–6</td><td class="note-col">Same as collar node — order in bulk</td></tr>
+      <tr><td class="ref-col">U2</td><td>LoRa Transceiver</td><td>AI-Thinker Ra-02 SX1278 433MHz</td><td>AliExpress</td><td class="price-col">$4–7</td><td class="note-col">Same module as collar node</td></tr>
+      <tr><td class="ref-col">U3</td><td>OLED Display</td><td>SSD1306 0.96" 128×64 I2C (4-pin)</td><td>AliExpress · Communica.co.za</td><td class="price-col">$2–4</td><td class="note-col">Blue or white display. I2C address 0x3C.</td></tr>
+      <tr><td class="ref-col">U4</td><td>Buck Converter</td><td>LM2596 adjustable module (with pot)</td><td>AliExpress · local electro</td><td class="price-col">$1–2</td><td class="note-col">Set output to 5V before connecting. Trim pot CW to increase voltage.</td></tr>
+      <tr><td class="ref-col">U5</td><td>LDO Regulator</td><td>AMS1117-3.3 SOT-223</td><td>AliExpress</td><td class="price-col">$0.10</td><td class="note-col"></td></tr>
+      <tr><td class="ref-col">LED1–4</td><td>Status LEDs</td><td>5mm Green · Blue · Yellow · Red</td><td>Any electronics shop</td><td class="price-col">$0.05 ea</td><td class="note-col">PWR / LoRa RX / WiFi / Alert</td></tr>
+      <tr><td class="ref-col">R1–4</td><td>LED resistors</td><td>330Ω 0.25W ×4</td><td>Any electronics shop</td><td class="price-col">$0.02 ea</td><td class="note-col"></td></tr>
+      <tr><td class="ref-col">CN1</td><td>DC Power Jack</td><td>5.5/2.1mm barrel connector (panel mount)</td><td>Any electronics shop</td><td class="price-col">$0.30</td><td class="note-col">12V 1A adapter powers the whole station</td></tr>
+      <tr><td class="ref-col">ENC1</td><td>Enclosure</td><td>IP44 ABS 120×80×50mm junction box</td><td>Builders Warehouse ZW</td><td class="price-col">$4–6</td><td class="note-col">Drill SMA hole on side, DC jack on bottom, 4 LED holes on front</td></tr>
+      <tr><td class="ref-col">ANT1</td><td>LoRa Antenna</td><td>433MHz SMA 3dBi rubber duck</td><td>AliExpress</td><td class="price-col">$2–4</td><td class="note-col">Mount outside enclosure via SMA bulkhead</td></tr>
+      <tr><td class="ref-col">PSU1</td><td>Power Adapter</td><td>12V 1A DC adapter (5.5/2.1mm)</td><td>Any electro shop / Builders Warehouse</td><td class="price-col">$5–8</td><td class="note-col">Standard CCTV-type power supply</td></tr>
+      <tr><td></td><td colspan="3"><strong>TOTAL PER BASE STATION (estimate)</strong></td><td class="price-col"><strong>$25–50</strong></td><td class="note-col">1 base station covers the whole farm</td></tr>
+    </table>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <!-- TOTAL COST SUMMARY                                       -->
+  <!-- ═══════════════════════════════════════════════════════ -->
+  <div class="board-card">
+    <div class="board-title">Cost Summary — Full Farm Deployment</div>
+    <div class="board-sub">Estimates in USD. Order from AliExpress for lowest cost; allow 3–4 weeks shipping to Zimbabwe.</div>
+    <table>
+      <tr><th>Item</th><th>Qty</th><th>Unit Cost</th><th>Total</th><th>Notes</th></tr>
+      <tr><td>CN-01 Collar Node</td><td>2 (pilot herd)</td><td class="price-col">$45</td><td class="price-col">$90</td><td class="note-col">Scale up as herd grows — 1 collar per animal</td></tr>
+      <tr><td>BS-01 Base Station</td><td>1</td><td class="price-col">$35</td><td class="price-col">$35</td><td class="note-col">1 covers up to 5km radius</td></tr>
+      <tr><td>PCB Manufacturing (JLCPCB)</td><td>5 each design</td><td class="price-col">$5/5pcs</td><td class="price-col">$10</td><td class="note-col">Export Gerbers from KiCad → upload to jlcpcb.com</td></tr>
+      <tr><td>3D printed enclosures / tools</td><td>—</td><td class="price-col">—</td><td class="price-col">$15</td><td class="note-col">Drill, glue gun, heat shrink, cable ties</td></tr>
+      <tr><td><strong>TOTAL PILOT (2 collars + 1 base)</strong></td><td></td><td></td><td class="price-col"><strong>~$150</strong></td><td class="note-col">Full livestock IoT monitoring for pilot herd</td></tr>
+    </table>
+  </div>
+
+</div>
+</body>
+</html>

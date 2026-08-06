@@ -1,0 +1,248 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui,-apple-system,'Segoe UI',sans-serif; background: #fcfcfb; color: #0b0b0b; }
+  .sheet { width: 1600px; padding: 40px; }
+  .titleblock { background: linear-gradient(120deg, #14532d 0%, #1b5e20 45%, #2a78d6 100%); color: white;
+    padding: 24px 30px; border-radius: 10px; margin-bottom: 20px; }
+  .titleblock h1 { margin: 0; font-size: 30px; font-weight: 800; }
+  .titleblock p { margin: 4px 0 0 0; font-size: 14px; opacity: 0.92; }
+  .board { background: white; border: 1px solid #e1e0d9; border-radius: 10px; padding: 20px; }
+  .note { margin-top: 16px; font-size: 12px; color: #52514e; line-height: 1.6; }
+  .note b { color: #0b0b0b; }
+</style></head>
+<body>
+<div class="sheet">
+  <div class="titleblock">
+    <h1>PFUMA BS-01 — Base Station Wiring Diagram</h1>
+    <p>Real components, real pin-level wiring — matches hardware/HARDWARE_DESIGN.md &sect;2.3 exactly.</p>
+  </div>
+  <div class="board">
+    <svg viewBox="0 0 1300 640" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="system-ui,-apple-system,Segoe UI,sans-serif"><rect x="480" y="140" width="260" height="380" rx="6" fill="#eef1f5" stroke="#1a1a1a" stroke-width="1.6"/>
+<text x="610.0" y="156" font-size="11.5" font-weight="800" fill="#0b0b0b" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif">ESP32-WROOM-32
+(38-pin DevKit)</text>
+<line x1="480" y1="182.22222222222223" x2="466" y2="182.22222222222223" stroke="#52514e" stroke-width="1.2"/>
+<text x="463" y="185.22222222222223" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">3V3</text>
+<line x1="480" y1="224.44444444444446" x2="466" y2="224.44444444444446" stroke="#52514e" stroke-width="1.2"/>
+<text x="463" y="227.44444444444446" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">GND</text>
+<line x1="480" y1="266.66666666666663" x2="466" y2="266.66666666666663" stroke="#52514e" stroke-width="1.2"/>
+<text x="463" y="269.66666666666663" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">IO22
+(SCL)</text>
+<line x1="480" y1="308.8888888888889" x2="466" y2="308.8888888888889" stroke="#52514e" stroke-width="1.2"/>
+<text x="463" y="311.8888888888889" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">IO21
+(SDA)</text>
+<line x1="480" y1="351.1111111111111" x2="466" y2="351.1111111111111" stroke="#52514e" stroke-width="1.2"/>
+<text x="463" y="354.1111111111111" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">IO2
+(PWR LED)</text>
+<line x1="480" y1="393.3333333333333" x2="466" y2="393.3333333333333" stroke="#52514e" stroke-width="1.2"/>
+<text x="463" y="396.3333333333333" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">IO4
+(LoRa LED)</text>
+<line x1="480" y1="435.55555555555554" x2="466" y2="435.55555555555554" stroke="#52514e" stroke-width="1.2"/>
+<text x="463" y="438.55555555555554" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">IO15
+(WiFi LED)</text>
+<line x1="480" y1="477.77777777777777" x2="466" y2="477.77777777777777" stroke="#52514e" stroke-width="1.2"/>
+<text x="463" y="480.77777777777777" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">IO27
+(Alert LED)</text>
+<line x1="740" y1="187.5" x2="754" y2="187.5" stroke="#52514e" stroke-width="1.2"/>
+<text x="757" y="190.5" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">GND</text>
+<line x1="740" y1="235.0" x2="754" y2="235.0" stroke="#52514e" stroke-width="1.2"/>
+<text x="757" y="238.0" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">IO19
+(MISO)</text>
+<line x1="740" y1="282.5" x2="754" y2="282.5" stroke="#52514e" stroke-width="1.2"/>
+<text x="757" y="285.5" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">IO23
+(MOSI)</text>
+<line x1="740" y1="330.0" x2="754" y2="330.0" stroke="#52514e" stroke-width="1.2"/>
+<text x="757" y="333.0" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">IO18
+(SCK)</text>
+<line x1="740" y1="377.5" x2="754" y2="377.5" stroke="#52514e" stroke-width="1.2"/>
+<text x="757" y="380.5" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">IO5
+(NSS)</text>
+<line x1="740" y1="425.0" x2="754" y2="425.0" stroke="#52514e" stroke-width="1.2"/>
+<text x="757" y="428.0" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">IO14
+(RST)</text>
+<line x1="740" y1="472.5" x2="754" y2="472.5" stroke="#52514e" stroke-width="1.2"/>
+<text x="757" y="475.5" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">IO26
+(DIO0)</text>
+<rect x="40" y="60" width="140" height="60" rx="6" fill="#eef1f5" stroke="#1a1a1a" stroke-width="1.6"/>
+<text x="110.0" y="76" font-size="11.5" font-weight="800" fill="#0b0b0b" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif">12V DC Jack
+5.5/2.1mm</text>
+<line x1="180" y1="80.0" x2="194" y2="80.0" stroke="#52514e" stroke-width="1.2"/>
+<text x="197" y="83.0" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">+</text>
+<line x1="180" y1="100.0" x2="194" y2="100.0" stroke="#52514e" stroke-width="1.2"/>
+<text x="197" y="103.0" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">-</text>
+<rect x="220" y="40" width="150" height="90" rx="6" fill="#eef1f5" stroke="#1a1a1a" stroke-width="1.6"/>
+<text x="295.0" y="56" font-size="11.5" font-weight="800" fill="#0b0b0b" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif">LM2596 Buck
+12V -> 5V</text>
+<line x1="220" y1="70.0" x2="206" y2="70.0" stroke="#52514e" stroke-width="1.2"/>
+<text x="203" y="73.0" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">IN+</text>
+<line x1="220" y1="100.0" x2="206" y2="100.0" stroke="#52514e" stroke-width="1.2"/>
+<text x="203" y="103.0" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">IN-</text>
+<line x1="370" y1="70.0" x2="384" y2="70.0" stroke="#52514e" stroke-width="1.2"/>
+<text x="387" y="73.0" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">OUT+</text>
+<line x1="370" y1="100.0" x2="384" y2="100.0" stroke="#52514e" stroke-width="1.2"/>
+<text x="387" y="103.0" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">OUT-</text>
+<rect x="220" y="160" width="150" height="80" rx="6" fill="#eef1f5" stroke="#1a1a1a" stroke-width="1.6"/>
+<text x="295.0" y="176" font-size="11.5" font-weight="800" fill="#0b0b0b" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif">AMS1117-3.3
+LDO Regulator</text>
+<line x1="220" y1="186.66666666666666" x2="206" y2="186.66666666666666" stroke="#52514e" stroke-width="1.2"/>
+<text x="203" y="189.66666666666666" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">VIN</text>
+<line x1="220" y1="213.33333333333331" x2="206" y2="213.33333333333331" stroke="#52514e" stroke-width="1.2"/>
+<text x="203" y="216.33333333333331" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">GND</text>
+<line x1="370" y1="200.0" x2="384" y2="200.0" stroke="#52514e" stroke-width="1.2"/>
+<text x="387" y="203.0" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">3.3V</text>
+<rect x="860" y="140" width="170" height="220" rx="6" fill="#eef1f5" stroke="#1a1a1a" stroke-width="1.6"/>
+<text x="945.0" y="156" font-size="11.5" font-weight="800" fill="#0b0b0b" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif">SX1278 / Ra-02
+LoRa 433MHz</text>
+<line x1="860" y1="164.44444444444446" x2="846" y2="164.44444444444446" stroke="#52514e" stroke-width="1.2"/>
+<text x="843" y="167.44444444444446" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">3.3V</text>
+<line x1="860" y1="188.88888888888889" x2="846" y2="188.88888888888889" stroke="#52514e" stroke-width="1.2"/>
+<text x="843" y="191.88888888888889" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">GND</text>
+<line x1="860" y1="213.33333333333331" x2="846" y2="213.33333333333331" stroke="#52514e" stroke-width="1.2"/>
+<text x="843" y="216.33333333333331" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">MISO</text>
+<line x1="860" y1="237.77777777777777" x2="846" y2="237.77777777777777" stroke="#52514e" stroke-width="1.2"/>
+<text x="843" y="240.77777777777777" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">MOSI</text>
+<line x1="860" y1="262.22222222222223" x2="846" y2="262.22222222222223" stroke="#52514e" stroke-width="1.2"/>
+<text x="843" y="265.22222222222223" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">SCK</text>
+<line x1="860" y1="286.66666666666663" x2="846" y2="286.66666666666663" stroke="#52514e" stroke-width="1.2"/>
+<text x="843" y="289.66666666666663" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">NSS</text>
+<line x1="860" y1="311.1111111111111" x2="846" y2="311.1111111111111" stroke="#52514e" stroke-width="1.2"/>
+<text x="843" y="314.1111111111111" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">RST</text>
+<line x1="860" y1="335.55555555555554" x2="846" y2="335.55555555555554" stroke="#52514e" stroke-width="1.2"/>
+<text x="843" y="338.55555555555554" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">DIO0</text>
+<line x1="945.0" y1="140" x2="945.0" y2="126" stroke="#52514e" stroke-width="1.2"/>
+<text x="945.0" y="122" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">ANT (onboard connector)</text>
+<rect x="1100" y="100" width="90" height="40" rx="6" fill="#eef1f5" stroke="#1a1a1a" stroke-width="1.6"/>
+<text x="1145.0" y="116" font-size="11.5" font-weight="800" fill="#0b0b0b" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif">SMA Antenna
+433MHz whip</text>
+<line x1="1100" y1="120.0" x2="1086" y2="120.0" stroke="#52514e" stroke-width="1.2"/>
+<text x="1083" y="123.0" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="end" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">ANT</text>
+<rect x="40" y="240" width="150" height="90" rx="6" fill="#eef1f5" stroke="#1a1a1a" stroke-width="1.6"/>
+<text x="115.0" y="256" font-size="11.5" font-weight="800" fill="#0b0b0b" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif">SSD1306 OLED
+128x64 (0x3C)</text>
+<line x1="190" y1="258.0" x2="204" y2="258.0" stroke="#52514e" stroke-width="1.2"/>
+<text x="207" y="261.0" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">GND</text>
+<line x1="190" y1="276.0" x2="204" y2="276.0" stroke="#52514e" stroke-width="1.2"/>
+<text x="207" y="279.0" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">VCC</text>
+<line x1="190" y1="294.0" x2="204" y2="294.0" stroke="#52514e" stroke-width="1.2"/>
+<text x="207" y="297.0" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">SCL</text>
+<line x1="190" y1="312.0" x2="204" y2="312.0" stroke="#52514e" stroke-width="1.2"/>
+<text x="207" y="315.0" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">SDA</text>
+<rect x="40" y="400" width="220" height="110" rx="6" fill="#eef1f5" stroke="#1a1a1a" stroke-width="1.6"/>
+<text x="150.0" y="416" font-size="11.5" font-weight="800" fill="#0b0b0b" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif">4x Status LEDs
+PWR / LoRa / WiFi / Alert</text>
+<line x1="84.0" y1="400" x2="84.0" y2="386" stroke="#52514e" stroke-width="1.2"/>
+<text x="84.0" y="382" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">PWR</text>
+<line x1="128.0" y1="400" x2="128.0" y2="386" stroke="#52514e" stroke-width="1.2"/>
+<text x="128.0" y="382" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">LoRa</text>
+<line x1="172.0" y1="400" x2="172.0" y2="386" stroke="#52514e" stroke-width="1.2"/>
+<text x="172.0" y="382" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">WiFi</text>
+<line x1="216.0" y1="400" x2="216.0" y2="386" stroke="#52514e" stroke-width="1.2"/>
+<text x="216.0" y="382" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">Alert</text>
+<line x1="84.0" y1="510" x2="84.0" y2="524" stroke="#52514e" stroke-width="1.2"/>
+<text x="84.0" y="534" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">GND1</text>
+<line x1="128.0" y1="510" x2="128.0" y2="524" stroke="#52514e" stroke-width="1.2"/>
+<text x="128.0" y="534" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">GND2</text>
+<line x1="172.0" y1="510" x2="172.0" y2="524" stroke="#52514e" stroke-width="1.2"/>
+<text x="172.0" y="534" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">GND3</text>
+<line x1="216.0" y1="510" x2="216.0" y2="524" stroke="#52514e" stroke-width="1.2"/>
+<text x="216.0" y="534" font-size="8.5" font-weight="400" fill="#52514e" text-anchor="middle" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">GND4</text>
+<line x1="20" y1="100" x2="1280" y2="100" stroke="#c0392b" stroke-width="2.2"/>
+<text x="26" y="94" font-size="9" font-weight="700" fill="#c0392b" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">3V3_RAIL</text>
+<line x1="20" y1="600" x2="1280" y2="600" stroke="#1a1a1a" stroke-width="2.2"/>
+<text x="26" y="594" font-size="9" font-weight="700" fill="#1a1a1a" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">GND</text>
+<polyline points="194,80.0 200.0,80.0 200.0,70.0 206,70.0" fill="none" stroke="#c0392b" stroke-width="1.8" stroke-linejoin="round"/>
+<circle cx="194" cy="80.0" r="2.2" fill="#c0392b"/>
+<circle cx="206" cy="70.0" r="2.2" fill="#c0392b"/>
+<polyline points="194,100.0 206,100.0" fill="none" stroke="#1a1a1a" stroke-width="1.8" stroke-linejoin="round"/>
+<circle cx="194" cy="100.0" r="2.2" fill="#1a1a1a"/>
+<circle cx="206" cy="100.0" r="2.2" fill="#1a1a1a"/>
+<polyline points="384,70.0 384,120 206,120 206,186.66666666666666" fill="none" stroke="#c0392b" stroke-width="1.8" stroke-linejoin="round"/>
+<circle cx="384" cy="70.0" r="2.2" fill="#c0392b"/>
+<circle cx="206" cy="186.66666666666666" r="2.2" fill="#c0392b"/>
+<polyline points="384,100.0 384,126 206,126 206,213.33333333333331" fill="none" stroke="#1a1a1a" stroke-width="1.8" stroke-linejoin="round"/>
+<circle cx="384" cy="100.0" r="2.2" fill="#1a1a1a"/>
+<circle cx="206" cy="213.33333333333331" r="2.2" fill="#1a1a1a"/>
+<line x1="384" y1="200.0" x2="384" y2="100" stroke="#c0392b" stroke-width="1.8"/>
+<circle cx="384" cy="100" r="2.6" fill="#c0392b"/>
+<line x1="466" y1="182.22222222222223" x2="466" y2="100" stroke="#c0392b" stroke-width="1.8"/>
+<circle cx="466" cy="100" r="2.6" fill="#c0392b"/>
+<line x1="846" y1="164.44444444444446" x2="846" y2="100" stroke="#c0392b" stroke-width="1.8"/>
+<circle cx="846" cy="100" r="2.6" fill="#c0392b"/>
+<line x1="204" y1="276.0" x2="204" y2="100" stroke="#c0392b" stroke-width="1.8"/>
+<circle cx="204" cy="100" r="2.6" fill="#c0392b"/>
+<line x1="466" y1="224.44444444444446" x2="466" y2="600" stroke="#1a1a1a" stroke-width="1.8"/>
+<circle cx="466" cy="600" r="2.6" fill="#1a1a1a"/>
+<polyline points="754,187.5 830,187.5 830,600" fill="none" stroke="#1a1a1a" stroke-width="1.8" stroke-linejoin="round"/>
+<circle cx="754" cy="187.5" r="2.2" fill="#1a1a1a"/>
+<circle cx="830" cy="600" r="2.6" fill="#1a1a1a"/>
+<line x1="846" y1="188.88888888888889" x2="846" y2="600" stroke="#1a1a1a" stroke-width="1.8"/>
+<circle cx="846" cy="600" r="2.6" fill="#1a1a1a"/>
+<line x1="204" y1="258.0" x2="204" y2="600" stroke="#1a1a1a" stroke-width="1.8"/>
+<circle cx="204" cy="600" r="2.6" fill="#1a1a1a"/>
+<polyline points="754,235.0 760,235.0 760,213.33333333333331 846,213.33333333333331" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-linejoin="round"/>
+<circle cx="754" cy="235.0" r="2.2" fill="#7c3aed"/>
+<circle cx="846" cy="213.33333333333331" r="2.2" fill="#7c3aed"/>
+<polyline points="754,282.5 772,282.5 772,237.77777777777777 846,237.77777777777777" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-linejoin="round"/>
+<circle cx="754" cy="282.5" r="2.2" fill="#7c3aed"/>
+<circle cx="846" cy="237.77777777777777" r="2.2" fill="#7c3aed"/>
+<polyline points="754,330.0 784,330.0 784,262.22222222222223 846,262.22222222222223" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-linejoin="round"/>
+<circle cx="754" cy="330.0" r="2.2" fill="#7c3aed"/>
+<circle cx="846" cy="262.22222222222223" r="2.2" fill="#7c3aed"/>
+<polyline points="754,377.5 796,377.5 796,286.66666666666663 846,286.66666666666663" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-linejoin="round"/>
+<circle cx="754" cy="377.5" r="2.2" fill="#7c3aed"/>
+<circle cx="846" cy="286.66666666666663" r="2.2" fill="#7c3aed"/>
+<polyline points="754,425.0 808,425.0 808,311.1111111111111 846,311.1111111111111" fill="none" stroke="#c2185b" stroke-width="1.8" stroke-linejoin="round"/>
+<circle cx="754" cy="425.0" r="2.2" fill="#c2185b"/>
+<circle cx="846" cy="311.1111111111111" r="2.2" fill="#c2185b"/>
+<polyline points="754,472.5 820,472.5 820,335.55555555555554 846,335.55555555555554" fill="none" stroke="#c2185b" stroke-width="1.8" stroke-linejoin="round"/>
+<circle cx="754" cy="472.5" r="2.2" fill="#c2185b"/>
+<circle cx="846" cy="335.55555555555554" r="2.2" fill="#c2185b"/>
+<polyline points="945.0,126 1015.5,126 1015.5,120.0 1086,120.0" fill="none" stroke="#9aa0a6" stroke-width="2.2" stroke-linejoin="round"/>
+<circle cx="945.0" cy="126" r="2.2" fill="#9aa0a6"/>
+<circle cx="1086" cy="120.0" r="2.2" fill="#9aa0a6"/>
+<polyline points="204,294.0 330,294.0 330,266.66666666666663 466,266.66666666666663" fill="none" stroke="#2a78d6" stroke-width="1.8" stroke-linejoin="round"/>
+<circle cx="204" cy="294.0" r="2.2" fill="#2a78d6"/>
+<circle cx="466" cy="266.66666666666663" r="2.2" fill="#2a78d6"/>
+<polyline points="204,312.0 345,312.0 345,308.8888888888889 466,308.8888888888889" fill="none" stroke="#2a78d6" stroke-width="1.8" stroke-linejoin="round"/>
+<circle cx="204" cy="312.0" r="2.2" fill="#2a78d6"/>
+<circle cx="466" cy="308.8888888888889" r="2.2" fill="#2a78d6"/>
+<text x="400" y="355" font-size="8.5" font-weight="400" fill="#2a78d6" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">R5/R6 4.7kOhm I2C pull-ups to 3V3_RAIL</text>
+<polyline points="466,351.1111111111111 275.0,351.1111111111111 275.0,386 84.0,386" fill="none" stroke="#c2185b" stroke-width="1.8" stroke-linejoin="round"/>
+<circle cx="466" cy="351.1111111111111" r="2.2" fill="#c2185b"/>
+<circle cx="84.0" cy="386" r="2.2" fill="#c2185b"/>
+<polyline points="466,393.3333333333333 297.0,393.3333333333333 297.0,386 128.0,386" fill="none" stroke="#c2185b" stroke-width="1.8" stroke-linejoin="round"/>
+<circle cx="466" cy="393.3333333333333" r="2.2" fill="#c2185b"/>
+<circle cx="128.0" cy="386" r="2.2" fill="#c2185b"/>
+<polyline points="466,435.55555555555554 319.0,435.55555555555554 319.0,386 172.0,386" fill="none" stroke="#c2185b" stroke-width="1.8" stroke-linejoin="round"/>
+<circle cx="466" cy="435.55555555555554" r="2.2" fill="#c2185b"/>
+<circle cx="172.0" cy="386" r="2.2" fill="#c2185b"/>
+<polyline points="466,477.77777777777777 341.0,477.77777777777777 341.0,386 216.0,386" fill="none" stroke="#c2185b" stroke-width="1.8" stroke-linejoin="round"/>
+<circle cx="466" cy="477.77777777777777" r="2.2" fill="#c2185b"/>
+<circle cx="216.0" cy="386" r="2.2" fill="#c2185b"/>
+<text x="300" y="570" font-size="8.5" font-weight="400" fill="#c2185b" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif" stroke="#fcfcfb" stroke-width="3" paint-order="stroke">R1-R4 330 Ohm current-limit resistors (one per LED)</text>
+<line x1="84.0" y1="524" x2="84.0" y2="600" stroke="#1a1a1a" stroke-width="1.8"/>
+<circle cx="84.0" cy="600" r="2.6" fill="#1a1a1a"/>
+<line x1="128.0" y1="524" x2="128.0" y2="600" stroke="#1a1a1a" stroke-width="1.8"/>
+<circle cx="128.0" cy="600" r="2.6" fill="#1a1a1a"/>
+<line x1="172.0" y1="524" x2="172.0" y2="600" stroke="#1a1a1a" stroke-width="1.8"/>
+<circle cx="172.0" cy="600" r="2.6" fill="#1a1a1a"/>
+<line x1="216.0" y1="524" x2="216.0" y2="600" stroke="#1a1a1a" stroke-width="1.8"/>
+<circle cx="216.0" cy="600" r="2.6" fill="#1a1a1a"/>
+<line x1="900" y1="420" x2="922" y2="420" stroke="#c0392b" stroke-width="2.4"/>
+<text x="928" y="423" font-size="9.5" font-weight="400" fill="#52514e" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif">3.3V power</text>
+<line x1="900" y1="436" x2="922" y2="436" stroke="#1a1a1a" stroke-width="2.4"/>
+<text x="928" y="439" font-size="9.5" font-weight="400" fill="#52514e" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif">Ground</text>
+<line x1="900" y1="452" x2="922" y2="452" stroke="#2a78d6" stroke-width="2.4"/>
+<text x="928" y="455" font-size="9.5" font-weight="400" fill="#52514e" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif">I2C (OLED)</text>
+<line x1="900" y1="468" x2="922" y2="468" stroke="#7c3aed" stroke-width="2.4"/>
+<text x="928" y="471" font-size="9.5" font-weight="400" fill="#52514e" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif">SPI (LoRa)</text>
+<line x1="900" y1="484" x2="922" y2="484" stroke="#c2185b" stroke-width="2.4"/>
+<text x="928" y="487" font-size="9.5" font-weight="400" fill="#52514e" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif">Misc / control</text>
+<line x1="900" y1="500" x2="922" y2="500" stroke="#9aa0a6" stroke-width="2.4"/>
+<text x="928" y="503" font-size="9.5" font-weight="400" fill="#52514e" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif">RF (antenna)</text>
+<text x="900" y="410" font-size="10" font-weight="800" fill="#0b0b0b" text-anchor="start" font-family="system-ui,-apple-system,Segoe UI,sans-serif">Wire colours</text></svg>
+  </div>
+  <div class="note"><b>Build notes:</b> Same wiring conventions as CN-01. The base station has no battery/solar/sensor chain — it runs off a 12V DC adapter through a buck converter, and drives an OLED status display plus 4 indicator LEDs instead of body sensors.</div>
+</div>
+</body></html>
