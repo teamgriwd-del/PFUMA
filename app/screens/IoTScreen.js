@@ -1,32 +1,19 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   StatusBar, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Thermometer, Heart, Check, AlertTriangle } from 'lucide-react-native';
+import { Thermometer, Heart, Check, AlertTriangle, Radio } from 'lucide-react-native';
 import { COLORS } from '../config';
+import { authFetch } from '../api';
 
-const ANIMALS = [
-  {
-    id: 101, name: 'Bessie', species: 'Cattle', breed: 'Brahman',
-    tagId: 'ZIM-882', collarId: 'COL-007',
-    baseTemp: 38.5, baseHr: 68, zone: 'North Paddock', inZone: true,
-    battery: 82, signal: 4,
-  },
-  {
-    id: 102, name: 'Thunder', species: 'Cattle', breed: 'Angus',
-    tagId: 'ZIM-104', collarId: 'COL-012',
-    baseTemp: 38.8, baseHr: 74, zone: 'South Paddock', inZone: false,
-    battery: 47, signal: 3,
-  },
-];
-
-const ALERTS = [
-  { id: 1, animal: 'Thunder', type: 'zone', msg: 'Left South Paddock boundary — possible breach', severity: 'critical', time: '14:22' },
-  { id: 2, animal: 'Bessie',  type: 'temp', msg: 'Temperature elevated: 39.1°C — monitor closely',  severity: 'warning',  time: '12:08' },
-];
-
+// Real device data always takes priority. This local jitter generator only
+// drives the display for an animal with no paired collar (or no reading in
+// the last LIVE_FRESHNESS_MS) — always visibly labelled "DEMO DATA", never
+// shown as "LIVE" the way it used to be. Mirrors the web app's
+// HardwareSimulation.jsx real-data-first pattern.
+const LIVE_FRESHNESS_MS = 20000;
 const ACTIVITY_LABELS = ['Grazing', 'Walking', 'Resting', 'Running'];
 
 function jitter(base, range) {
@@ -72,16 +59,26 @@ function SignalDots({ level }) {
   );
 }
 
-export default function IoTScreen() {
-  const [selectedId, setSelectedId] = useState(101);
-  const [vitals, setVitals] = useState({
-    101: { temp: 38.5, hr: 68, activity: 'Grazing'   },
-    102: { temp: 38.8, hr: 74, activity: 'Walking'   },
-  });
+// LoRa RSSI (dBm) → a rough 1–4 bar count for the same signal-dots UI. Real
+// hardware reports actual RSSI; there's no equivalent for demo mode.
+function rssiToBars(rssi) {
+  if (rssi == null) return 0;
+  if (rssi > -70) return 4;
+  if (rssi > -85) return 3;
+  if (rssi > -100) return 2;
+  return 1;
+}
+
+export default function IoTScreen({ currentUser }) {
+  const [animals, setAnimals] = useState([]);
+  const [devices, setDevices] = useState([]); // this farmer's paired collars
+  const [selectedId, setSelectedId] = useState(null);
+  const [readings, setReadings] = useState([]); // recent real readings for selected animal
+  const [demoVitals, setDemoVitals] = useState({}); // fallback per animal when no live device
   const [tick, setTick] = useState(0);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const demoBase = useRef({}); // stable per-animal demo baseline, seeded once
 
-  // Pulse animation for the live indicator
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
@@ -93,15 +90,55 @@ export default function IoTScreen() {
     return () => loop.stop();
   }, []);
 
-  // Simulate live sensor data every 3 seconds
+  const loadAnimals = useCallback(async () => {
+    try {
+      const res = await authFetch(currentUser, '/animals');
+      if (res.ok) {
+        const rows = await res.json();
+        setAnimals(rows);
+        if (rows.length > 0) setSelectedId(prev => prev ?? rows[0].id);
+      }
+    } catch { /* offline — leave empty, no fake fallback */ }
+  }, [currentUser?.token]);
+
+  const loadDevices = useCallback(async () => {
+    try {
+      const res = await authFetch(currentUser, '/iot-devices');
+      if (res.ok) setDevices(await res.json());
+    } catch { /* offline */ }
+  }, [currentUser?.token]);
+
+  useEffect(() => { loadAnimals(); loadDevices(); }, [loadAnimals, loadDevices]);
+
+  const loadReadings = useCallback(async () => {
+    if (!selectedId) return;
+    try {
+      const res = await authFetch(currentUser, `/animals/${selectedId}/iot-readings?limit=6`);
+      if (res.ok) setReadings(await res.json());
+      else setReadings([]);
+    } catch { setReadings([]); }
+  }, [selectedId, currentUser?.token]);
+
+  useEffect(() => {
+    loadReadings();
+    const id = setInterval(loadReadings, 8000);
+    return () => clearInterval(id);
+  }, [loadReadings]);
+
+  // Demo fallback tick — only actually used for whichever animal currently
+  // has no fresh live reading (computed below).
   useEffect(() => {
     const id = setInterval(() => {
-      setVitals(prev => {
+      setDemoVitals(prev => {
         const updated = { ...prev };
-        ANIMALS.forEach(a => {
+        animals.forEach(a => {
+          if (!demoBase.current[a.id]) {
+            demoBase.current[a.id] = { temp: 37.8 + Math.random() * 1.2, hr: 60 + Math.random() * 20 };
+          }
+          const base = demoBase.current[a.id];
           updated[a.id] = {
-            temp:     jitter(a.baseTemp, 0.3),
-            hr:       Math.round(jitter(a.baseHr, 5)),
+            temp: jitter(base.temp, 0.3),
+            hr: Math.round(jitter(base.hr, 5)),
             activity: ACTIVITY_LABELS[Math.floor(Math.random() * ACTIVITY_LABELS.length)],
           };
         });
@@ -110,15 +147,58 @@ export default function IoTScreen() {
       setTick(t => t + 1);
     }, 3000);
     return () => clearInterval(id);
-  }, []);
+  }, [animals]);
 
-  const animal  = ANIMALS.find(a => a.id === selectedId);
-  const v       = vitals[selectedId];
-  const alerts  = ALERTS.filter(al => al.animal === animal.name);
-  const allAlerts = ALERTS;
+  const animal = animals.find(a => a.id === selectedId);
+  const device = devices.find(d => d.animal_id === selectedId);
+  const latest = readings[0];
+  const isLive = !!latest && (Date.now() - new Date(latest.received_at).getTime()) < LIVE_FRESHNESS_MS;
+
+  if (!animal) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }}>
+        <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
+        <View style={s.header}>
+          <View>
+            <Text style={s.headerSub}>PFUMA</Text>
+            <Text style={s.headerTitle}>IoT Monitor</Text>
+          </View>
+        </View>
+        <View style={{ padding: 24, alignItems: 'center', marginTop: 40 }}>
+          <Radio size={40} color={COLORS.muted} strokeWidth={1.5} />
+          <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.muted, marginTop: 12, textAlign: 'center' }}>
+            Register an animal in your Herd to see sensor data here.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const v = isLive
+    ? { temp: parseFloat(latest.temp_c), hr: latest.heart_rate, activity: latest.activity || 'Unknown' }
+    : (demoVitals[selectedId] || { temp: 38.5, hr: 68, activity: 'Grazing' });
+
+  const inZone = isLive ? !!latest.in_zone : true;
+  const battery = isLive ? latest.battery_pct : null;
+  const signalBars = isLive ? rssiToBars(latest.rssi) : 0;
 
   const tempColor = v.temp >= 39.5 ? '#ef4444' : v.temp >= 39.0 ? '#f59e0b' : COLORS.primary;
   const hrColor   = v.hr   >= 90   ? '#ef4444' : v.hr   >= 80   ? '#f59e0b' : COLORS.primary;
+
+  const trendPoints = isLive
+    ? [...readings].reverse().map(r => parseFloat(r.temp_c))
+    : [v.temp, v.temp, v.temp, v.temp, v.temp, v.temp]; // flat demo placeholder, not fabricated history
+
+  const liveAlerts = isLive
+    ? readings.filter(r => r.fever_alert || r.theft_alert).map(r => ({
+        id: r.id,
+        type: r.fever_alert ? 'Health' : 'Security',
+        msg: r.fever_alert
+          ? `Fever detected — ${parseFloat(r.temp_c).toFixed(1)}°C`
+          : 'Left the registered safe zone',
+        time: new Date(r.received_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      }))
+    : [];
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }}>
@@ -129,11 +209,11 @@ export default function IoTScreen() {
         <View>
           <Text style={s.headerSub}>PFUMA</Text>
           <Text style={s.headerTitle}>IoT Monitor</Text>
-          <Text style={s.headerDesc}>Live animal sensor telemetry</Text>
+          <Text style={s.headerDesc}>{isLive ? 'Live collar telemetry' : 'No live collar — showing demo data'}</Text>
         </View>
-        <View style={s.liveChip}>
-          <Animated.View style={[s.liveDot, { transform: [{ scale: pulseAnim }] }]} />
-          <Text style={s.liveText}>LIVE</Text>
+        <View style={[s.liveChip, !isLive && { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
+          {isLive && <Animated.View style={[s.liveDot, { transform: [{ scale: pulseAnim }] }]} />}
+          <Text style={s.liveText}>{isLive ? 'LIVE' : 'DEMO'}</Text>
         </View>
       </View>
 
@@ -142,19 +222,19 @@ export default function IoTScreen() {
         {/* Animal selector */}
         <Text style={s.sectionLabel}>SELECT ANIMAL</Text>
         <View style={s.animalSelector}>
-          {ANIMALS.map(a => (
+          {animals.map(a => (
             <TouchableOpacity
               key={a.id}
               style={[s.animalTab, selectedId === a.id && s.animalTabActive]}
-              onPress={() => setSelectedId(a.id)}
+              onPress={() => { setSelectedId(a.id); setReadings([]); }}
               activeOpacity={0.8}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <View style={[s.animalDot, { backgroundColor: a.inZone ? '#4ade80' : '#ef4444' }]} />
+                <View style={[s.animalDot, { backgroundColor: devices.some(d => d.animal_id === a.id) ? '#4ade80' : '#d1d5db' }]} />
                 <Text style={[s.animalTabName, selectedId === a.id && { color: '#fff' }]}>{a.name}</Text>
               </View>
               <Text style={[s.animalTabSub, selectedId === a.id && { color: 'rgba(255,255,255,0.7)' }]}>
-                {a.breed} · #{a.tagId}
+                {a.breed || a.species} · #{a.tag_id || 'no tag'}
               </Text>
             </TouchableOpacity>
           ))}
@@ -164,16 +244,20 @@ export default function IoTScreen() {
         <View style={s.collarCard}>
           <View style={{ flex: 1 }}>
             <Text style={s.collarName}>{animal.name}</Text>
-            <Text style={s.collarSub}>{animal.breed} · {animal.species} · Collar {animal.collarId}</Text>
+            <Text style={s.collarSub}>
+              {animal.breed} · {animal.species} · {device ? `Collar ${device.device_serial}` : 'No collar paired'}
+            </Text>
           </View>
-          <View style={{ alignItems: 'flex-end', gap: 6 }}>
-            <SignalDots level={animal.signal} />
-            <BatteryBar pct={animal.battery} />
-          </View>
+          {isLive && (
+            <View style={{ alignItems: 'flex-end', gap: 6 }}>
+              <SignalDots level={signalBars} />
+              {battery != null && <BatteryBar pct={battery} />}
+            </View>
+          )}
         </View>
 
         {/* Live Vitals */}
-        <Text style={s.sectionLabel}>LIVE VITALS · Updated {tick * 3}s ago</Text>
+        <Text style={s.sectionLabel}>{isLive ? `LIVE VITALS · Updated ${Math.round((Date.now() - new Date(latest.received_at).getTime()) / 1000)}s ago` : `DEMO VITALS · Simulated, updates ${tick > 0 ? 'every 3s' : 'shortly'}`}</Text>
         <View style={s.vitalsRow}>
           <View style={[s.vitalCard, { borderTopColor: tempColor }]}>
             <Thermometer size={22} color={tempColor} style={{ marginBottom: 6 }} />
@@ -212,38 +296,39 @@ export default function IoTScreen() {
 
         {/* GPS / Zone */}
         <Text style={s.sectionLabel}>GPS & ZONE STATUS</Text>
-        <View style={[s.zoneCard, animal.inZone ? s.zoneCardSafe : s.zoneCardAlert]}>
+        <View style={[s.zoneCard, inZone ? s.zoneCardSafe : s.zoneCardAlert]}>
           <View style={{ flex: 1 }}>
-            <Text style={[s.zoneStatus, { color: animal.inZone ? '#15803d' : '#dc2626' }]}>
-              {animal.inZone ? 'In Safe Zone' : 'OUTSIDE SAFE ZONE'}
+            <Text style={[s.zoneStatus, { color: inZone ? '#15803d' : '#dc2626' }]}>
+              {isLive ? (inZone ? 'In Safe Zone' : 'OUTSIDE SAFE ZONE') : 'No live GPS'}
             </Text>
-            <Text style={s.zoneName}>{animal.zone}</Text>
+            <Text style={s.zoneName}>{isLive ? (inZone ? 'Within registered boundary' : 'Boundary breach') : 'Pair a collar for real location data'}</Text>
             <Text style={s.zoneCoord}>
-              {animal.inZone
-                ? 'Collar GPS within registered paddock boundary'
-                : 'Movement detected outside designated paddock — verify location'}
+              {isLive
+                ? (inZone ? 'Collar GPS within registered paddock boundary' : 'Movement detected outside designated paddock — verify location')
+                : 'This animal has no paired collar reporting recently.'}
             </Text>
           </View>
-          <View style={[s.zoneIcon, { backgroundColor: animal.inZone ? '#dcfce7' : '#fee2e2' }]}>
-            {animal.inZone
-              ? <Check size={26} color="#15803d" strokeWidth={2.5} />
-              : <AlertTriangle size={24} color="#dc2626" strokeWidth={2.2} />}
+          <View style={[s.zoneIcon, { backgroundColor: isLive ? (inZone ? '#dcfce7' : '#fee2e2') : '#f3f4f6' }]}>
+            {isLive
+              ? (inZone ? <Check size={26} color="#15803d" strokeWidth={2.5} /> : <AlertTriangle size={24} color="#dc2626" strokeWidth={2.2} />)
+              : <Radio size={22} color={COLORS.muted} strokeWidth={2} />}
           </View>
         </View>
 
         {/* Sensor History strip */}
-        <Text style={s.sectionLabel}>SENSOR TREND (SIMULATED)</Text>
+        <Text style={s.sectionLabel}>{isLive ? 'SENSOR TREND — REAL READINGS' : 'SENSOR TREND (SIMULATED)'}</Text>
         <View style={s.trendCard}>
-          <Text style={s.trendTitle}>Temperature — last 6 readings</Text>
+          <Text style={s.trendTitle}>Temperature — last {trendPoints.length} readings</Text>
           <View style={s.trendBars}>
-            {[38.3, 38.6, 38.5, 38.9, 38.7, v.temp].map((t, i) => {
+            {trendPoints.map((t, i) => {
               const h = Math.max(10, ((t - 37.5) / 2) * 60);
               const c = t >= 39.5 ? '#ef4444' : t >= 39.0 ? '#f59e0b' : COLORS.primary;
+              const isLast = i === trendPoints.length - 1;
               return (
                 <View key={i} style={s.trendBarCol}>
                   <Text style={[s.trendBarVal, { color: c }]}>{t.toFixed(1)}</Text>
-                  <View style={[s.trendBar, { height: h, backgroundColor: i === 5 ? c : c + '88' }]} />
-                  <Text style={s.trendBarX}>{i === 5 ? 'Now' : `-${(5 - i) * 3}m`}</Text>
+                  <View style={[s.trendBar, { height: h, backgroundColor: isLast ? c : c + '88' }]} />
+                  <Text style={s.trendBarX}>{isLast ? 'Now' : ''}</Text>
                 </View>
               );
             })}
@@ -251,18 +336,18 @@ export default function IoTScreen() {
         </View>
 
         {/* Alerts */}
-        <Text style={s.sectionLabel}>ALL SENSOR ALERTS</Text>
-        {allAlerts.length === 0 ? (
+        <Text style={s.sectionLabel}>SENSOR ALERTS</Text>
+        {liveAlerts.length === 0 ? (
           <View style={s.noAlerts}>
-            <Text style={s.noAlertsText}>No active alerts — all animals nominal</Text>
+            <Text style={s.noAlertsText}>{isLive ? 'No active alerts — nominal' : 'No live collar — nothing to alert on'}</Text>
           </View>
         ) : (
-          allAlerts.map(al => (
-            <View key={al.id} style={[s.alertCard, al.severity === 'critical' ? s.alertCritical : s.alertWarning]}>
-              <View style={[s.alertDot, { backgroundColor: al.severity === 'critical' ? '#ef4444' : '#f59e0b' }]} />
+          liveAlerts.map(al => (
+            <View key={al.id} style={[s.alertCard, al.type === 'Security' ? s.alertCritical : s.alertWarning]}>
+              <View style={[s.alertDot, { backgroundColor: al.type === 'Security' ? '#ef4444' : '#f59e0b' }]} />
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
-                  <Text style={s.alertAnimal}>{al.animal}</Text>
+                  <Text style={s.alertAnimal}>{animal.name}</Text>
                   <Text style={s.alertTime}>{al.time}</Text>
                 </View>
                 <Text style={s.alertMsg}>{al.msg}</Text>
@@ -275,10 +360,9 @@ export default function IoTScreen() {
         <Text style={s.sectionLabel}>FLEET SUMMARY</Text>
         <View style={s.fleetCard}>
           {[
-            { label: 'Collars Online',  value: ANIMALS.length,                          color: COLORS.primary },
-            { label: 'In Safe Zone',    value: ANIMALS.filter(a => a.inZone).length,    color: '#16a34a' },
-            { label: 'Active Alerts',   value: allAlerts.length,                         color: '#ef4444' },
-            { label: 'Avg Battery',     value: `${Math.round(ANIMALS.reduce((s, a) => s + a.battery, 0) / ANIMALS.length)}%`, color: '#2563eb' },
+            { label: 'Animals',        value: animals.length,                                   color: COLORS.primary },
+            { label: 'Collars Paired', value: devices.length,                                    color: '#2563eb' },
+            { label: 'This Animal',    value: isLive ? 'Live' : 'Demo',                           color: isLive ? '#16a34a' : '#9ca3af' },
           ].map(stat => (
             <View key={stat.label} style={s.fleetStat}>
               <Text style={[s.fleetStatValue, { color: stat.color }]}>{stat.value}</Text>
@@ -316,7 +400,6 @@ const s = StyleSheet.create({
 
   vitalsRow:     { flexDirection: 'row', gap: 10, marginBottom: 12 },
   vitalCard:     { flex: 1, backgroundColor: '#fff', borderRadius: 16, padding: 16, borderTopWidth: 4, elevation: 2, alignItems: 'center' },
-  vitalIcon:     { fontSize: 22, marginBottom: 6 },
   vitalValue:    { fontSize: 24, fontWeight: '900', marginBottom: 2 },
   vitalLabel:    { fontSize: 10, color: '#9ca3af', fontWeight: '700', textTransform: 'uppercase', marginBottom: 4 },
   vitalStatus:   { fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
