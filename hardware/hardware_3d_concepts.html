@@ -338,10 +338,118 @@ footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);color:v
     svg.appendChild(svgEl('path', {d:pathFromPts(pts), fill:color, opacity:0.5}));
   }
 
+  // ---- new primitives for real component detail ----
+  function isoEllipsePts(P, cx, cz, y, r, segments){
+    segments = segments || 24;
+    const pts = [];
+    for(let i=0;i<segments;i++){
+      const a = (i/segments)*Math.PI*2;
+      pts.push(P(cx+r*Math.cos(a), y, cz+r*Math.sin(a)));
+    }
+    return pts;
+  }
+  // vertical-axis cylinder (jack barrels, connector collars, antenna bases)
+  function drawCylinder(svg, P, opts){
+    const {cx,cz,r,yB,yT,color} = opts;
+    const baseRGB = parseRGB(color);
+    const top = isoEllipsePts(P,cx,cz,yT,r);
+    const bot = isoEllipsePts(P,cx,cz,yB,r);
+    let li=0, ri=0;
+    top.forEach((p,i)=>{ if(p[0]<top[li][0]) li=i; if(p[0]>top[ri][0]) ri=i; });
+    const g = svgEl('g',{});
+    g.appendChild(svgEl('path',{d:pathFromPts([top[li],top[ri],bot[ri],bot[li]]), fill:shade(baseRGB,-0.28), stroke:'rgba(0,0,0,0.3)','stroke-width':0.5}));
+    g.appendChild(svgEl('path',{d:pathFromPts(top), fill:shade(baseRGB,0.14), stroke:'rgba(0,0,0,0.3)','stroke-width':0.5}));
+    svg.appendChild(g);
+  }
+  // small dot pins along an edge — reads as a real pin header row
+  function drawPinRow(svg, P, opts){
+    const {x0,x1,z,y,count,color} = opts;
+    for(let i=0;i<count;i++){
+      const t = count===1 ? 0 : i/(count-1);
+      const p = P(x0+(x1-x0)*t, y, z);
+      svg.appendChild(svgEl('circle',{cx:p[0].toFixed(1),cy:p[1].toFixed(1),r:1.0, fill:color||'#c9a34e'}));
+    }
+  }
+  // grid lines on a top face — for the solar panel's cell divisions
+  function drawGridLines(svg, P, opts){
+    const {x0,x1,z0,z1,y,cols,rows,color} = opts;
+    for(let i=1;i<cols;i++){
+      const x = x0+(x1-x0)*i/cols;
+      const a=P(x,y,z0), b=P(x,y,z1);
+      svg.appendChild(svgEl('line',{x1:a[0].toFixed(1),y1:a[1].toFixed(1),x2:b[0].toFixed(1),y2:b[1].toFixed(1), stroke:color, 'stroke-width':0.5, opacity:0.55}));
+    }
+    for(let j=1;j<rows;j++){
+      const z = z0+(z1-z0)*j/rows;
+      const a=P(x0,y,z), b=P(x1,y,z);
+      svg.appendChild(svgEl('line',{x1:a[0].toFixed(1),y1:a[1].toFixed(1),x2:b[0].toFixed(1),y2:b[1].toFixed(1), stroke:color, 'stroke-width':0.5, opacity:0.55}));
+    }
+  }
+  // antenna: gold SMA connector collar + black rubber whip, matches the
+  // real Ra-02 reference photo in hardware/actual_equipment/
   function drawAntenna(svg, P, x, z, yBase, height, color){
-    const bx = P(x,yBase,z), tx = P(x,yBase+height,z);
-    svg.appendChild(svgEl('line', {x1:bx[0],y1:bx[1],x2:tx[0],y2:tx[1], stroke: color, 'stroke-width':2.4, 'stroke-linecap':'round'}));
-    svg.appendChild(svgEl('circle', {cx:tx[0],cy:tx[1],r:2.6, fill: color}));
+    drawCylinder(svg, P, {cx:x, cz:z, r:1.6, yB:yBase, yT:yBase+2.2, color:'#d4af5a'});
+    const bx = P(x,yBase+2.2,z), tx = P(x,yBase+height,z);
+    svg.appendChild(svgEl('line', {x1:bx[0].toFixed(1),y1:bx[1].toFixed(1),x2:tx[0].toFixed(1),y2:tx[1].toFixed(1), stroke: color, 'stroke-width':3, 'stroke-linecap':'round'}));
+    svg.appendChild(svgEl('circle', {cx:tx[0].toFixed(1),cy:tx[1].toFixed(1),r:2.4, fill: color}));
+  }
+
+  // ---- composite component drawings (real detail, not plain blocks) ----
+  function drawESP32(svg, P, o){
+    drawBlock(svg, P, {x0:o.x0,x1:o.x1,z0:o.z0,z1:o.z1,yB:o.yB,yT:o.yT, color:'#14171b', label:o.label, sub:o.sub, leader:o.leader});
+    const cx0=o.x0+(o.x1-o.x0)*0.16, cx1=o.x1-(o.x1-o.x0)*0.42, cz0=o.z0+(o.z1-o.z0)*0.22, cz1=o.z1-(o.z1-o.z0)*0.22;
+    drawBlock(svg, P, {x0:cx0,x1:cx1,z0:cz0,z1:cz1,yB:o.yT,yT:o.yT+1.1, color:'#9aa2ab'}); // RF shield can
+    drawPinRow(svg, P, {x0:o.x0+1,x1:o.x1-1,z:o.z0+0.4,y:o.yT,count:9});
+    drawPinRow(svg, P, {x0:o.x0+1,x1:o.x1-1,z:o.z1-0.4,y:o.yT,count:9});
+  }
+
+  function drawLoRaModule(svg, P, o){
+    drawBlock(svg, P, {x0:o.x0,x1:o.x1,z0:o.z0,z1:o.z1,yB:o.yB,yT:o.yT, color:'#23262a', label:o.label, sub:o.sub, leader:o.leader}); // metal shield-can body
+    drawPinRow(svg, P, {x0:o.x0+0.6,x1:o.x1-0.6,z:o.z1-0.35,y:o.yB,count:8});
+  }
+
+  function drawGPS(svg, P, o){
+    drawBlock(svg, P, {x0:o.x0,x1:o.x1,z0:o.z0,z1:o.z1,yB:o.yB,yT:o.yT, color:'#2f6fa8', label:o.label, sub:o.sub, leader:o.leader});
+    const pad = (o.x1-o.x0)*0.16;
+    drawBlock(svg, P, {x0:o.x0+pad,x1:o.x1-pad,z0:o.z0+pad,z1:o.z1-pad,yB:o.yT,yT:o.yT+1, color:'#c9a34e'}); // ceramic patch antenna
+  }
+
+  function drawIMUSensor(svg, P, o){
+    drawBlock(svg, P, {x0:o.x0,x1:o.x1,z0:o.z0,z1:o.z1,yB:o.yB,yT:o.yT, color:o.color, label:o.label, sub:o.sub, leader:o.leader});
+    const cx=(o.x0+o.x1)/2, cz=(o.z0+o.z1)/2, w=(o.x1-o.x0)*0.3;
+    drawBlock(svg, P, {x0:cx-w,x1:cx+w,z0:cz-w,z1:cz+w,yB:o.yT,yT:o.yT+0.8, color:'#141414'}); // chip package
+  }
+
+  function drawTP4056(svg, P, o){
+    drawBlock(svg, P, {x0:o.x0,x1:o.x1,z0:o.z0,z1:o.z1,yB:o.yB,yT:o.yT, color:'#1c56a0', label:o.label, sub:o.sub, leader:o.leader});
+    drawBlock(svg, P, {x0:o.x0-1.4,x1:o.x0+0.4,z0:o.z0+1,z1:o.z0+3.2,yB:o.yB+0.6,yT:o.yT-0.6, color:'#9aa2ab'}); // micro-USB nub
+    drawBlock(svg, P, {x0:o.x0+2,x1:o.x0+5,z0:o.z0+2,z1:o.z0+5,yB:o.yT,yT:o.yT+0.8, color:'#141414'}); // charge IC
+  }
+
+  function drawBattery(svg, P, o){
+    drawBlock(svg, P, {x0:o.x0,x1:o.x1,z0:o.z0,z1:o.z1,yB:o.yB,yT:o.yT, color:'#1a1a1a', label:o.label, sub:o.sub, leader:o.leader});
+    drawBlock(svg, P, {x0:o.x0+(o.x1-o.x0)*0.2,x1:o.x1-(o.x1-o.x0)*0.2,z0:o.z0+(o.z1-o.z0)*0.15,z1:o.z1-(o.z1-o.z0)*0.15,yB:o.yT,yT:o.yT+0.4, color:'#e8e2d0'}); // label sticker
+    const wireStart = P(o.x1,o.yT-1,o.z0+1), wireMid = P(o.x1+4,o.yT-2,o.z0+0.5), wireEnd = P(o.x1+7,o.yT-3,o.z0+1.5);
+    svg.appendChild(svgEl('path',{d:`M${wireStart[0].toFixed(1)},${wireStart[1].toFixed(1)} L${wireMid[0].toFixed(1)},${wireMid[1].toFixed(1)} L${wireEnd[0].toFixed(1)},${wireEnd[1].toFixed(1)}`, fill:'none', stroke:'#c0392b', 'stroke-width':1.4, 'stroke-linecap':'round'}));
+  }
+
+  function drawOLED(svg, P, o){
+    drawBlock(svg, P, {x0:o.x0,x1:o.x1,z0:o.z0,z1:o.z1,yB:o.yB,yT:o.yT, color:'#e9e4d6', label:o.label, sub:o.sub, leader:o.leader}); // PCB
+    const pad=(o.x1-o.x0)*0.1;
+    drawBlock(svg, P, {x0:o.x0+pad,x1:o.x1-pad,z0:o.z0+pad*0.6,z1:o.z1-pad*2.4,yB:o.yT,yT:o.yT+0.6, color:'#0a0a0a'}); // screen
+    drawPinRow(svg, P, {x0:o.x0+2,x1:o.x1-2,z:o.z1-0.4,y:o.yT,count:4});
+  }
+
+  function drawBuckConverter(svg, P, o){
+    drawBlock(svg, P, {x0:o.x0,x1:o.x1,z0:o.z0,z1:o.z1,yB:o.yB,yT:o.yT, color:'#1c56a0', label:o.label, sub:o.sub, leader:o.leader});
+    drawCylinder(svg, P, {cx:o.x0+(o.x1-o.x0)*0.28, cz:o.z0+(o.z1-o.z0)*0.35, r:2.1, yB:o.yT, yT:o.yT+2.2, color:'#2b2b2b'}); // inductor
+    drawBlock(svg, P, {x0:o.x0+(o.x1-o.x0)*0.55,x1:o.x0+(o.x1-o.x0)*0.75,z0:o.z0+(o.z1-o.z0)*0.5,z1:o.z0+(o.z1-o.z0)*0.75,yB:o.yT,yT:o.yT+1, color:'#4a6fa5'}); // trimmer pot
+  }
+
+  function drawDCJack(svg, P, o){
+    drawBlock(svg, P, {x0:o.x0,x1:o.x1,z0:o.z0,z1:o.z1,yB:o.yB,yT:o.yT, color:'#8a8f96', label:o.label, sub:o.sub, leader:o.leader});
+    const cz=(o.z0+o.z1)/2, cy=(o.yB+o.yT)/2;
+    const p = P(o.x1,cy,cz);
+    svg.appendChild(svgEl('circle',{cx:p[0].toFixed(1),cy:p[1].toFixed(1),r:1.6, fill:'#141414'})); // barrel hole
   }
 
   // =========================================================
@@ -355,19 +463,19 @@ footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);color:v
     // base PCB
     drawBlock(svg, P, {x0:0,x1:80,z0:0,z1:50,yB:0,yT:2, color:pcb});
     // components (approximate real relative placement)
-    drawBlock(svg, P, {x0:6,x1:26,z0:2,z1:15,yB:2,yT:9,  color:'#3a6ea5', label:'NEO-6M', sub:'GPS · UART2', leader:[-48,-18]});
-    drawBlock(svg, P, {x0:26,x1:52,z0:16,z1:36,yB:2,yT:6, color:'#3a3f47', label:'ESP32-WROOM-32', sub:'U1 · 38-pin', leader:[10,-4]});
-    drawBlock(svg, P, {x0:58,x1:75,z0:5,z1:19,yB:2,yT:7,  color:'#274a36', label:'SX1278 LoRa', sub:'U3 · 433MHz', leader:[46,-10]});
+    drawGPS(svg, P, {x0:6,x1:26,z0:2,z1:15,yB:2,yT:9,  label:'NEO-6M', sub:'GPS · UART2', leader:[-48,-18]});
+    drawESP32(svg, P, {x0:26,x1:52,z0:16,z1:36,yB:2,yT:6, label:'ESP32-WROOM-32', sub:'U1 · 38-pin', leader:[10,-4]});
+    drawLoRaModule(svg, P, {x0:58,x1:75,z0:5,z1:19,yB:2,yT:7,  label:'SX1278 LoRa', sub:'U3 · 433MHz', leader:[46,-10]});
     drawAntenna(svg, P, 80, 12, 7, 22, '#1a1a1a');
-    drawBlock(svg, P, {x0:27,x1:37,z0:38,z1:47,yB:2,yT:5, color:'#5b3aa5', label:'MPU-6050', sub:'IMU · 0x68', leader:[-4,26]});
-    drawBlock(svg, P, {x0:39,x1:49,z0:38,z1:47,yB:2,yT:5, color:'#a53a6e', label:'MAX30102', sub:'HR · 0x57', leader:[36,20]});
-    drawBlock(svg, P, {x0:4,x1:22,z0:36,z1:49,yB:2,yT:6.5, color:'#2e3a4a', label:'TP4056', sub:'+ protection', leader:[-62,26]});
-    drawBlock(svg, P, {x0:2,x1:20,z0:17,z1:34,yB:2,yT:10, color:'#1c1c1c', label:'LiPo 2000mAh', sub:'BT1 · JST-PH', leader:[-66,-4]});
+    drawIMUSensor(svg, P, {x0:27,x1:37,z0:38,z1:47,yB:2,yT:5, color:'#5b3aa5', label:'MPU-6050', sub:'IMU · 0x68', leader:[-4,26]});
+    drawIMUSensor(svg, P, {x0:39,x1:49,z0:38,z1:47,yB:2,yT:5, color:'#a53a6e', label:'MAX30102', sub:'HR · 0x57', leader:[36,20]});
+    drawTP4056(svg, P, {x0:6,x1:22,z0:36,z1:49,yB:2,yT:6.5, label:'TP4056', sub:'+ protection', leader:[-62,26]});
+    drawBattery(svg, P, {x0:2,x1:20,z0:17,z1:34,yB:2,yT:10, label:'LiPo 2000mAh', sub:'BT1 · JST-PH', leader:[-66,-4]});
     drawBlock(svg, P, {x0:57,x1:65,z0:39,z1:48,yB:2,yT:4.5, color:'#8a8f96', label:'DS18B20 conn.', sub:'1-Wire → probe', leader:[40,30]});
     drawBlock(svg, P, {x0:50,x1:53,z0:9,z1:12,yB:2,yT:4, color:'#38d17a', label:'LED1', sub:'status', leader:[30,-40]});
 
     const legend = document.getElementById('cn01-board-legend');
-    [['#3a6ea5','GPS'],['#3a3f47','MCU'],['#274a36','LoRa'],['#5b3aa5','IMU'],['#a53a6e','HR sensor'],['#2e3a4a','Charger'],['#1c1c1c','Battery'],['#8a8f96','DS18B20 conn.']]
+    [['#2f6fa8','GPS'],['#14171b','MCU'],['#23262a','LoRa'],['#5b3aa5','IMU'],['#a53a6e','HR sensor'],['#1c56a0','Charger'],['#1a1a1a','Battery'],['#8a8f96','DS18B20 conn.']]
       .forEach(([c,l])=>{ const s=document.createElement('span'); s.innerHTML=`<i style="background:${c}"></i>${l}`; legend.appendChild(s); });
   }
 
@@ -380,19 +488,19 @@ footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);color:v
     const pcb = rgbStr(parseRGB(cvar('--pcb')));
     drawFloor(svg, P, 100, 70, rgbStr(parseRGB(cvar('--floor'))));
     drawBlock(svg, P, {x0:0,x1:100,z0:0,z1:70,yB:0,yT:2, color:pcb});
-    drawBlock(svg, P, {x0:32,x1:62,z0:22,z1:48,yB:2,yT:6, color:'#3a3f47', label:'ESP32-WROOM-32', sub:'U1 · 38-pin', leader:[10,-4]});
-    drawBlock(svg, P, {x0:70,x1:90,z0:10,z1:30,yB:2,yT:7, color:'#274a36', label:'SX1278 LoRa', sub:'U2 · 433MHz', leader:[52,-12]});
+    drawESP32(svg, P, {x0:32,x1:62,z0:22,z1:48,yB:2,yT:6, label:'ESP32-WROOM-32', sub:'U1 · 38-pin', leader:[10,-4]});
+    drawLoRaModule(svg, P, {x0:70,x1:90,z0:10,z1:30,yB:2,yT:7, label:'SX1278 LoRa', sub:'U2 · 433MHz', leader:[52,-12]});
     drawAntenna(svg, P, 96, 18, 7, 24, '#1a1a1a');
-    drawBlock(svg, P, {x0:6,x1:32,z0:10,z1:30,yB:2,yT:6, color:'#141414', label:'SSD1306 OLED', sub:'U3 · 128×64 I2C', leader:[-66,-16]});
-    drawBlock(svg, P, {x0:6,x1:30,z0:36,z1:58,yB:2,yT:6.5, color:'#2e3a4a', label:'LM2596', sub:'12V→5V buck', leader:[-70,16]});
-    drawBlock(svg, P, {x0:0,x1:9,z0:26,z1:42,yB:2,yT:6, color:'#8a8f96', label:'12V DC Jack', sub:'CN1', leader:[-46,44]});
+    drawOLED(svg, P, {x0:6,x1:32,z0:10,z1:30,yB:2,yT:6, label:'SSD1306 OLED', sub:'U3 · 128×64 I2C', leader:[-66,-16]});
+    drawBuckConverter(svg, P, {x0:6,x1:30,z0:36,z1:58,yB:2,yT:6.5, label:'LM2596', sub:'12V→5V buck', leader:[-70,16]});
+    drawDCJack(svg, P, {x0:0,x1:9,z0:26,z1:42,yB:2,yT:6, label:'12V DC Jack', sub:'CN1', leader:[-46,44]});
     const ledColors = [['#38d17a','PWR'],['#3a6ea5','LoRa'],['#e2b64a','WiFi'],['#ef6a5f','Alert']];
     ledColors.forEach(([c,l],i)=>{
       drawBlock(svg, P, {x0:36+i*7,x1:39+i*7,z0:52,z1:55,yB:2,yT:4.5, color:c, label:i===0?'Status LEDs':null, sub:i===0?'PWR/LoRa/WiFi/Alert':null, leader:i===0?[0,42]:null});
     });
 
     const legend = document.getElementById('bs01-board-legend');
-    [['#3a3f47','MCU'],['#274a36','LoRa'],['#141414','OLED'],['#2e3a4a','Buck conv.'],['#8a8f96','DC jack'],['#38d17a','LED · PWR'],['#3a6ea5','LED · LoRa'],['#e2b64a','LED · WiFi'],['#ef6a5f','LED · Alert']]
+    [['#14171b','MCU'],['#23262a','LoRa'],['#e9e4d6','OLED'],['#1c56a0','Buck conv.'],['#8a8f96','DC jack'],['#38d17a','LED · PWR'],['#3a6ea5','LED · LoRa'],['#e2b64a','LED · WiFi'],['#ef6a5f','LED · Alert']]
       .forEach(([c,l])=>{ const s=document.createElement('span'); s.innerHTML=`<i style="background:${c}"></i>${l}`; legend.appendChild(s); });
   }
 
@@ -403,14 +511,14 @@ footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);color:v
     const svg = document.getElementById('cn01-case');
     const P = makeProjector(4.6, 300, 195);
     const green = rgbStr(parseRGB(cvar('--green')));
-    const gold = rgbStr(parseRGB(cvar('--gold')));
     drawFloor(svg, P, 80, 50, rgbStr(parseRGB(cvar('--floor'))));
 
     // main pod body (chamfered box, rounded look via corner-cut silhouette)
     drawBlock(svg, P, {x0:2,x1:78,z0:4,z1:46,yB:0,yT:20, color:'#e7e2d6'});
 
-    // solar panel recessed into top
+    // solar panel recessed into top, with real cell grid lines
     drawBlock(svg, P, {x0:10,x1:68,z0:9,z1:41,yB:20,yT:21.4, color:'#1c3b63', label:'Solar Panel', sub:'top face, flush-mounted', leader:[-4,-52]});
+    drawGridLines(svg, P, {x0:10,x1:68,z0:9,z1:41,y:21.4,cols:6,rows:4,color:'#0a1c33'});
 
     // PFUMA wordmark plate on front face (approx, as a small light block)
     drawBlock(svg, P, {x0:26,x1:54,z0:46,z1:46.6,yB:9,yT:13, color:green, label:'PFUMA', sub:'brand plate, front face', leader:[54,10]});
@@ -422,7 +530,10 @@ footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);color:v
     // top-down camera angle, called out in the caption text instead.
 
     // probe grommet + cable (DS18B20) exiting the rear, curling to the floor
-    drawBlock(svg, P, {x0:76,x1:78.4,z0:22,z1:28,yB:6,yT:9, color:'#2b2b2b', label:'Probe grommet', sub:'DS18B20 exits here', leader:[42,-4]});
+    drawCylinder(svg, P, {cx:77.5, cz:25, r:1.6, yB:6, yT:9, color:'#2b2b2b'});
+    const gt = P(77.5,9,25);
+    const glab = svgEl('text',{x:(gt[0]+42).toFixed(1),y:(gt[1]-4).toFixed(1), class:'iso-label'}); glab.textContent='Probe grommet'; svg.appendChild(glab);
+    const glab2 = svgEl('text',{x:(gt[0]+42).toFixed(1),y:(gt[1]+7).toFixed(1), class:'iso-label-sub'}); glab2.textContent='DS18B20 exits here'; svg.appendChild(glab2);
     const cablePts = [P(78.4,7,25), P(90,4,25), P(96,1,32), P(92,0.5,40)];
     svg.appendChild(svgEl('path', {
       d:'M'+cablePts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' L'),
@@ -455,7 +566,6 @@ footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);color:v
     ledColors.forEach((c,i)=>{
       drawBlock(svg, P, {x0:46+i*6,x1:49+i*6,z0:66,z1:66.6,yB:15,yT:16.6, color:c});
     });
-    const lt = svgEl('text', {}); // label group for LEDs
     const legendPos = P(58,20,66);
     const t3 = svgEl('text', {x:legendPos[0], y:legendPos[1]-30, class:'iso-label', 'text-anchor':'middle'});
     t3.textContent = 'Status LEDs';
@@ -475,7 +585,7 @@ footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);color:v
     svg.appendChild(t5);
 
     // DC jack on side face
-    drawBlock(svg, P, {x0:98,x1:98.6,z0:44,z1:52,yB:10,yT:16, color:'#141414', label:'12V DC jack', sub:'rear panel', leader:[30,20]});
+    drawDCJack(svg, P, {x0:98,x1:98.6,z0:44,z1:52,yB:10,yT:16, label:'12V DC jack', sub:'rear panel', leader:[30,20]});
 
     const t = svgEl('text', {x:44, y:470, class:'iso-label-sub', 'text-anchor':'middle'});
     t.textContent = '120 × 80 × 40mm · ABS project box · indoor mount';
@@ -500,3 +610,4 @@ footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);color:v
   mo.observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
 })();
 </script>
+
