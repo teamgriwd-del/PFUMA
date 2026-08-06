@@ -25,10 +25,11 @@ const CAT_COLOR = {
   medicine:  '#1565c0', equipment: '#6a1b9a', all: '#333',
 };
 
-const PostModal = ({ visible, onClose, onSubmit, error }) => {
-  const [form, setForm] = useState({ product_name:'', category:'livestock', price:'', unit:'head', quantity:'1', location:'', description:'' });
+const PostModal = ({ visible, onClose, onSubmit, error, animals }) => {
+  const [form, setForm] = useState({ product_name:'', category:'livestock', price:'', unit:'head', quantity:'1', location:'', description:'', animal_id:'' });
   const [photo, setPhoto] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState(null);
   const set = (k,v) => setForm(p => ({ ...p, [k]: v }));
 
   const pickPhoto = async () => {
@@ -43,11 +44,16 @@ const PostModal = ({ visible, onClose, onSubmit, error }) => {
   };
 
   const submit = async () => {
+    setFormError(null);
     if (!form.product_name.trim() || !form.price) return;
+    if (form.category === 'livestock' && !form.animal_id) {
+      setFormError('Select which registered animal this listing is for — livestock listings must be linked to a real animal so Police can clear the sale.');
+      return;
+    }
     setSubmitting(true);
     const ok = await onSubmit(form, photo);
     setSubmitting(false);
-    if (ok) { setForm({ product_name:'', category:'livestock', price:'', unit:'head', quantity:'1', location:'', description:'' }); setPhoto(null); onClose(); }
+    if (ok) { setForm({ product_name:'', category:'livestock', price:'', unit:'head', quantity:'1', location:'', description:'', animal_id:'' }); setPhoto(null); onClose(); }
   };
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -58,6 +64,7 @@ const PostModal = ({ visible, onClose, onSubmit, error }) => {
             <TouchableOpacity onPress={onClose}><X size={20} color={COLORS.muted} /></TouchableOpacity>
           </View>
           {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
+          {formError ? <Text style={styles.errorBanner}>{formError}</Text> : null}
           <ScrollView showsVerticalScrollIndicator={false}>
             <TouchableOpacity style={styles.photoPicker} onPress={pickPhoto} activeOpacity={0.8}>
               {photo ? (
@@ -105,6 +112,27 @@ const PostModal = ({ visible, onClose, onSubmit, error }) => {
                 })}
               </View>
             </View>
+            {form.category === 'livestock' && (
+              <View style={styles.formField}>
+                <Text style={styles.formLabel}>Which Animal? *</Text>
+                {animals && animals.length > 0 ? (
+                  <View style={styles.catRow}>
+                    {animals.map(a => {
+                      const active = form.animal_id === String(a.id);
+                      return (
+                        <TouchableOpacity key={a.id} activeOpacity={0.8}
+                          style={[styles.catChip, active && { backgroundColor: COLORS.primary, borderColor: COLORS.primary }]}
+                          onPress={() => { set('animal_id', String(a.id)); set('product_name', `${a.name} — ${a.breed || ''} ${a.species}`.trim()); }}>
+                          <Text style={[styles.catChipText, active && { color: '#fff' }]}>{a.name} ({a.species})</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <Text style={styles.photoPickerText}>Register an animal in your Herd first — livestock listings must be linked to one.</Text>
+                )}
+              </View>
+            )}
             <TouchableOpacity style={styles.submitBtn} onPress={submit} disabled={submitting} activeOpacity={0.8}>
               {submitting ? <ActivityIndicator color="#fff" /> : (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -179,6 +207,7 @@ const resolveImageUrl = (url) => (url && url.startsWith('/uploads/')) ? `${API}$
 
 export default function MarketplaceScreen({ currentUser }) {
   const [listings,   setListings]   = useState([]);
+  const [myAnimals,  setMyAnimals]  = useState([]); // for the "Which Animal?" picker on livestock listings
   const [search,     setSearch]     = useState('');
   const [category,   setCategory]   = useState('all');
   const [loading,    setLoading]    = useState(false);
@@ -189,6 +218,16 @@ export default function MarketplaceScreen({ currentUser }) {
   const [bidAmount,  setBidAmount]  = useState('');
   const [orderTarget, setOrderTarget] = useState(null); // medicine/equipment listing being ordered
   const [orderQty,    setOrderQty]    = useState('');
+
+  useEffect(() => {
+    if (currentUser?.role !== 'Farmer') return;
+    (async () => {
+      try {
+        const res = await authFetch(currentUser, '/animals');
+        if (res.ok) setMyAnimals(await res.json());
+      } catch { /* offline — livestock picker just shows the empty state */ }
+    })();
+  }, [currentUser?.token]);
 
   const load = useCallback(async (refresh = false) => {
     if (refresh) setRefreshing(true); else setLoading(true);
@@ -214,6 +253,7 @@ export default function MarketplaceScreen({ currentUser }) {
       fd.append('quantity', form.quantity);
       fd.append('location', form.location);
       fd.append('description', form.description);
+      if (form.animal_id) fd.append('animal_id', form.animal_id);
       fd.append('photo', photo);
       res = await authFetch(currentUser, '/listings', { method: 'POST', body: fd });
       data = await res.json().catch(() => ({}));
@@ -357,7 +397,7 @@ export default function MarketplaceScreen({ currentUser }) {
         }
       />
 
-      <PostModal visible={showPost} onClose={() => { setShowPost(false); setPostError(null); }} onSubmit={handlePost} error={postError} />
+      <PostModal visible={showPost} onClose={() => { setShowPost(false); setPostError(null); }} onSubmit={handlePost} error={postError} animals={myAnimals} />
 
       {/* Bid amount modal */}
       <Modal visible={!!bidTarget} animationType="fade" transparent onRequestClose={() => setBidTarget(null)}>

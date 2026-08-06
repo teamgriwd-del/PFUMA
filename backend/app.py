@@ -1113,6 +1113,13 @@ def add_listing():
     category = d.get('category', 'livestock')
     animal_id = d.get('animal_id') or None
 
+    # Livestock listings exist to carry a verified digital passport — one
+    # without a linked, owned animal record would skip police clearance
+    # below entirely (needs_clearance is keyed off animal_id being set),
+    # so a real animal_id is mandatory here, not just checked when present.
+    if category == 'livestock' and not animal_id:
+        return jsonify({"error": "A livestock listing must be linked to one of your registered animals"}), 400
+
     if animal_id:
         db = get_db(); c = db.cursor()
         c.execute("SELECT owner_id FROM animals WHERE id=%s", (animal_id,))
