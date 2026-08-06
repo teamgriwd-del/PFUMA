@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
-  StyleSheet, StatusBar, KeyboardAvoidingView, Platform, Linking,
+  StyleSheet, StatusBar, KeyboardAvoidingView, Platform, Linking, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -9,27 +9,7 @@ import {
   Siren, Stethoscope, Pill, Sprout, Store, Users, ArrowLeft, Phone,
 } from 'lucide-react-native';
 import { COLORS } from '../config';
-
-// ── Platform-wide contact directory ─────────────────────────────────────────
-const CONTACTS = [
-  // Veterinary officers
-  { id: 'v1', type: 'Vet',      name: 'Dr. T. Moyo',          role: 'DVS Duty Officer',         province: 'Mashonaland West',  avatar: 'TM', color: COLORS.primary, online: true,  speciality: 'Tick-borne Diseases' },
-  { id: 'v2', type: 'Vet',      name: 'Dr. R. Chikwanda',     role: 'Regional Vet Officer',     province: 'Harare',            avatar: 'RC', color: '#1565c0',       online: true,  speciality: 'Reproductive Health' },
-  { id: 'v3', type: 'Vet',      name: 'Dr. S. Ndlovu',        role: 'Emergency Response',       province: 'Bulawayo',          avatar: 'SN', color: '#6a1b9a',       online: false, speciality: 'FMD & CBPP' },
-  { id: 'v4', type: 'Vet',      name: 'DVS Emergency Line',   role: 'Ministry of Agriculture',  province: 'National',          icon: Siren,  color: '#c62828',       online: true,  speciality: 'All Emergencies' },
-
-  // Suppliers
-  { id: 's1', type: 'Supplier', name: 'AgroChem Zim',         role: 'Medicine & Vaccine Supplier', province: 'Harare',         avatar: 'AC', color: COLORS.gold,     online: true,  speciality: 'Vaccines, dewormers & vitamins' },
-  { id: 's2', type: 'Supplier', name: 'VetDirect Wholesale',  role: 'Animal Health Distributor', province: 'Bulawayo',          avatar: 'VD', color: '#e65100',       online: false, speciality: 'Bulk medicine & feed orders' },
-
-  // Other farmers
-  { id: 'f1', type: 'Farmer',   name: 'P. Banda',             role: 'Dairy Farmer',             province: 'Mashonaland East',  avatar: 'PB', color: '#16a34a',       online: true,  speciality: 'Dairy herd management' },
-  { id: 'f2', type: 'Farmer',   name: 'L. Sibanda',           role: 'Poultry & Goat Farmer',    province: 'Matabeleland South',avatar: 'LS', color: '#65a30d',       online: false, speciality: 'Small livestock & feed swaps' },
-
-  // Retailers / buyers
-  { id: 'r1', type: 'Retailer', name: 'Harare Meat Wholesalers', role: 'Livestock Buyer',       province: 'Harare',            avatar: 'HM', color: COLORS.purple,   online: true,  speciality: 'Beef cattle & feedlot buyer' },
-  { id: 'r2', type: 'Retailer', name: 'Bulawayo Livestock Market', role: 'Auction House',       province: 'Bulawayo',          avatar: 'BL', color: '#7c3aed',       online: true,  speciality: 'Weekly cattle auctions' },
-];
+import { authFetch, authJson } from '../api';
 
 const ROLE_META = {
   Vet:      { icon: Stethoscope, color: COLORS.primary, label: 'Vets' },
@@ -38,6 +18,23 @@ const ROLE_META = {
   Retailer: { icon: Store,       color: COLORS.purple,  label: 'Retailers' },
 };
 
+// Backend role string → the local grouping key used above.
+const TYPE_BY_ROLE = { Veterinarian: 'Vet', Supplier: 'Supplier', Farmer: 'Farmer', Retailer: 'Retailer' };
+
+// Maps a /users directory row (redacted per-viewer by the backend) into the
+// contact card shape this screen renders.
+function userToContact(u) {
+  const type = TYPE_BY_ROLE[u.role] || 'Farmer';
+  const initials = (u.full_name || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+  return {
+    id: u.id, type, name: u.full_name,
+    role: u.org_name || u.role,
+    province: u.province || 'Zimbabwe',
+    speciality: u.speciality || u.supply_categories || u.trading_areas || '',
+    avatar: initials, color: ROLE_META[type].color, phone: u.phone,
+  };
+}
+
 const FILTERS = [
   { key: 'All',      label: 'All',       icon: Users },
   { key: 'Vet',      label: 'Vets',      icon: Stethoscope },
@@ -45,42 +42,6 @@ const FILTERS = [
   { key: 'Farmer',   label: 'Farmers',   icon: Sprout },
   { key: 'Retailer', label: 'Retailers', icon: Store },
 ];
-
-const AUTO_RESPONSES = {
-  Vet: {
-    Emergency: [
-      'HIGH PRIORITY: Your case has been flagged. A duty officer is being notified. Please isolate the animal immediately.',
-      'Case registered. Expected response within 15 minutes. Do not move the animal or remove any discharge material.',
-    ],
-    Vaccination: [
-      "Vaccination request received. Please confirm the animal's current weight and last vaccination date.",
-      'Your vaccination schedule has been reviewed. A certificate will be issued within 24 hours.',
-    ],
-    'Trade Certification': [
-      'Trade certification request received. A health inspection must be conducted before certificate issuance.',
-      'Your export health certificate is being processed. Estimated: 2-3 working days.',
-    ],
-    General: [
-      'Message received. A vet officer will respond shortly.',
-      'Thank you for contacting PFUMA Vet Services. We aim to respond within 1 hour.',
-    ],
-  },
-  Supplier: [
-    "Thanks for reaching out! That item is in stock — would you like a quote?",
-    'Order noted. We can dispatch within 2 business days to your district.',
-    "Sure thing — let me check our warehouse and confirm pricing shortly.",
-  ],
-  Farmer: [
-    'Hey, thanks for the message! Let me check with my herd and get back to you.',
-    'Sounds good — happy to help. What breed are you looking for?',
-    "I'll ask around the village too, will update you soon.",
-  ],
-  Retailer: [
-    "Thanks for reaching out — could you share the animal's weight and health passport?",
-    'We can offer a competitive price for that grade. Can you send a few photos?',
-    "Noted — I'll review and come back with a bid shortly.",
-  ],
-};
 
 const CATEGORIES = ['Emergency', 'Vaccination', 'Trade Certification', 'General'];
 const CAT_COLORS  = { Emergency: '#c62828', Vaccination: COLORS.primary, 'Trade Certification': '#1565c0', General: '#555' };
@@ -98,7 +59,6 @@ const ContactCard = ({ contact, onPress }) => {
         {contact.icon
           ? <contact.icon size={20} color="#fff" />
           : <Text style={s.avatarText}>{contact.avatar}</Text>}
-        <View style={[s.onlineDot, { backgroundColor: contact.online ? '#4caf50' : '#aaa' }]} />
       </View>
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
@@ -120,41 +80,102 @@ const ContactCard = ({ contact, onPress }) => {
 
 export default function VetMessengerScreen({ currentUser, route }) {
   const [activeFilter, setActiveFilter]     = useState(route?.params?.filter || 'All');
+  const [directory, setDirectory]           = useState([]);
+  const [loadingDirectory, setLoadingDirectory] = useState(true);
   const [selectedContact, setSelectedContact] = useState(null);
+  const [conversationId, setConversationId] = useState(null);
   const [messages, setMessages]             = useState([]);
+  const [loadingMsgs, setLoadingMsgs]       = useState(false);
+  const [sendError, setSendError]           = useState(null);
   const [input, setInput]                   = useState('');
   const [category, setCategory]             = useState('General');
   const scrollRef = useRef(null);
 
-  const openContact = (c) => {
+  // Real user directory — every verified user can message any other verified
+  // user directly (see backend/app.py create_conversation).
+  useEffect(() => {
+    if (!currentUser?.token) { setLoadingDirectory(false); return; }
+    (async () => {
+      setLoadingDirectory(true);
+      try {
+        const res = await authFetch(currentUser, '/users');
+        if (res.ok) {
+          const rows = await res.json();
+          setDirectory(rows.filter(u => u.id !== currentUser.id).map(userToContact));
+        }
+      } catch { /* leave directory empty — screen still renders */ }
+      setLoadingDirectory(false);
+    })();
+  }, [currentUser?.token]);
+
+  const openContact = async (c) => {
     setSelectedContact(c);
     setCategory('General');
-    setMessages([
-      { id: 1, text: `Hi, I'm ${c.name.split(' ')[0]}${c.role ? ` from ${c.role}` : ''}. How can I help?`, from: 'them', time: now() },
-    ]);
+    setConversationId(null);
+    setMessages([]);
+    setSendError(null);
+    setLoadingMsgs(true);
+    // 'General' conversations are reused across visits (see backend) — this
+    // both starts a new thread and re-opens the existing one transparently.
+    const { ok, data } = await authJson(currentUser, '/conversations', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ other_user_id: c.id, category: 'General' }),
+    });
+    if (ok) {
+      setConversationId(data.id);
+      const msgsRes = await authJson(currentUser, `/conversations/${data.id}/messages`);
+      if (msgsRes.ok) {
+        setMessages(msgsRes.data.map(m => ({
+          id: m.id, text: m.message, from: m.sender_id === currentUser.id ? 'me' : 'them',
+          time: new Date(m.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        })));
+      }
+    } else {
+      setSendError(data.error || 'Could not start this conversation.');
+    }
+    setLoadingMsgs(false);
   };
 
-  const sendMessage = () => {
+  const sendMessage = async () => {
     const text = input.trim();
     if (!text || !selectedContact) return;
-    const userMsg = { id: Date.now(), text, from: 'me', time: now() };
-    setMessages(prev => [...prev, userMsg]);
     setInput('');
+    setSendError(null);
 
-    const replies = selectedContact.type === 'Vet'
-      ? (AUTO_RESPONSES.Vet[category] || AUTO_RESPONSES.Vet.General)
-      : (AUTO_RESPONSES[selectedContact.type] || AUTO_RESPONSES.Farmer);
-    const reply = replies[Math.floor(Math.random() * replies.length)];
-    setTimeout(() => {
-      setMessages(prev => [...prev, { id: Date.now() + 1, text: reply, from: 'them', time: now() }]);
-    }, 1200);
+    // Category chips only matter the first time a thread is created — the
+    // backend files Emergency/Vaccination/Trade Certification as distinct
+    // threads from General, so switching categories before the very first
+    // message here starts the matching thread instead of the General one.
+    let convId = conversationId;
+    if (category !== 'General' && messages.length === 0) {
+      const { ok, data } = await authJson(currentUser, '/conversations', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ other_user_id: selectedContact.id, category }),
+      });
+      if (!ok) { setSendError(data.error || 'Could not start this conversation.'); return; }
+      convId = data.id;
+      setConversationId(convId);
+    }
+    if (!convId) { setSendError('No conversation open.'); return; }
+
+    const optimistic = { id: `local-${Date.now()}`, text, from: 'me', time: now() };
+    setMessages(prev => [...prev, optimistic]);
+
+    const { ok, data } = await authJson(currentUser, `/conversations/${convId}/messages`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text }),
+    });
+    if (!ok) {
+      setMessages(prev => prev.filter(m => m.id !== optimistic.id));
+      setSendError(data.error || 'Message failed to send — try again.');
+      setInput(text);
+    }
   };
 
   // ── Contact directory view ────────────────────────────────────────────────
   if (!selectedContact) {
     const groups = activeFilter === 'All'
-      ? Object.keys(ROLE_META).map(type => ({ type, meta: ROLE_META[type], contacts: CONTACTS.filter(c => c.type === type) }))
-      : [{ type: activeFilter, meta: ROLE_META[activeFilter], contacts: CONTACTS.filter(c => c.type === activeFilter) }];
+      ? Object.keys(ROLE_META).map(type => ({ type, meta: ROLE_META[type], contacts: directory.filter(c => c.type === type) }))
+      : [{ type: activeFilter, meta: ROLE_META[activeFilter], contacts: directory.filter(c => c.type === activeFilter) }];
 
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.bg }}>
@@ -207,7 +228,13 @@ export default function VetMessengerScreen({ currentUser, route }) {
             </View>
           )}
 
-          {groups.map(g => (
+          {loadingDirectory ? (
+            <ActivityIndicator color={COLORS.primary} style={{ marginVertical: 24 }} />
+          ) : directory.length === 0 ? (
+            <Text style={{ color: COLORS.muted, fontStyle: 'italic', textAlign: 'center', paddingVertical: 24 }}>
+              No other verified PFUMA users found yet.
+            </Text>
+          ) : groups.map(g => g.contacts.length === 0 ? null : (
             <View key={g.type}>
               <View style={s.sectionLabelRow}>
                 <g.meta.icon size={12} color="#9ca3af" strokeWidth={2.5} />
@@ -261,10 +288,7 @@ export default function VetMessengerScreen({ currentUser, route }) {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={s.chatName}>{selectedContact.name}</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-            <View style={[s.statusDot, { backgroundColor: selectedContact.online ? '#4ade80' : 'rgba(255,255,255,0.4)' }]} />
-            <Text style={s.chatStatus}>{selectedContact.online ? 'Online now' : 'Away'} · {selectedContact.speciality}</Text>
-          </View>
+          <Text style={s.chatStatus}>{selectedContact.role}{selectedContact.speciality ? ` · ${selectedContact.speciality}` : ''}</Text>
         </View>
       </View>
 
@@ -298,6 +322,12 @@ export default function VetMessengerScreen({ currentUser, route }) {
         contentContainerStyle={{ padding: 16, paddingBottom: 8 }}
         onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
       >
+        {loadingMsgs ? <ActivityIndicator color={selectedContact.color} style={{ marginVertical: 20 }} /> : null}
+        {!loadingMsgs && messages.length === 0 ? (
+          <Text style={{ color: COLORS.muted, fontStyle: 'italic', textAlign: 'center', marginTop: 20 }}>
+            No messages yet — say hello to {selectedContact.name.split(' ')[0]}.
+          </Text>
+        ) : null}
         {messages.map(msg => (
           <View key={msg.id} style={[s.msgRow, msg.from === 'me' && s.msgRowUser]}>
             {msg.from === 'them' && (
@@ -317,6 +347,7 @@ export default function VetMessengerScreen({ currentUser, route }) {
 
       {/* Input bar */}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        {sendError ? <Text style={s.errorBanner}>{sendError}</Text> : null}
         <View style={s.inputBar}>
           <TextInput
             style={s.textInput}
@@ -382,6 +413,7 @@ const s = StyleSheet.create({
   avatarSm:        { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
   chatName:        { color: '#fff', fontSize: 15, fontWeight: '900' },
   statusDot:       { width: 6, height: 6, borderRadius: 3 },
+  errorBanner:     { backgroundColor: '#ffebee', color: COLORS.danger, fontSize: 12, fontWeight: '700', padding: 10, textAlign: 'center' },
   chatStatus:      { color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '600' },
 
   catRow:          { backgroundColor: '#fff', paddingHorizontal: 14, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },

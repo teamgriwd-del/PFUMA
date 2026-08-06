@@ -1,10 +1,13 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import pfumaMark          from './assets/pfuma-mark.png';
 import DiseaseDetection  from './components/DiseaseDetection/DiseaseDetection';
 import AnimalProfile     from './components/AnimalProfile/AnimalProfile';
 import HealthManagement  from './components/HealthManagement/HealthManagement';
 import VetCommunication  from './components/VetCommunication/VetCommunication';
 import Marketplace       from './components/Marketplace/Marketplace';
 import FeedAnalyzer      from './components/FeedAnalyzer/FeedAnalyzer';
+import Cooperative       from './components/Cooperative/Cooperative';
+import AdminDashboard    from './components/Admin/AdminDashboard';
 import Jinda      from './components/IntelAI/PfumaIntelAI';
 import AuthPortal        from './components/IntelAI/AuthPortal';
 import ErrorBoundary     from './components/ErrorBoundary';
@@ -15,56 +18,13 @@ import {
   Truck, BarChart3, Globe, AlertTriangle, CheckCircle, ChevronRight,
   Zap, Clock, ArrowRight, Tag, Pill, MapPin, FileText,
   RefreshCw, DollarSign, Target, Box, PhoneCall, Star, Wheat, Store,
-  Sprout, Check, Syringe, Shield, UserPlus, X, Menu
+  Sprout, Check, Syringe, Shield, UserPlus, X, Menu, Eye, EyeOff, Handshake,
 } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis } from 'recharts';
 import './App.css';
 
 import { API } from './config';
 
-// ── seed data ──────────────────────────────────────────────────────────────
-const INITIAL_ANIMALS = [
-  {
-    id: 101, name: 'Bessie', species: 'Cattle', breed: 'Brahman',
-    birthDate: '2023-10-15', age: '2y 4m', tagId: 'ZIM-882', brandId: 'AR-MP',
-    sireId: 'S-505', damId: 'D-202', birthWeight: 35, currentWeight: 420,
-    imageUrl: 'https://images.unsplash.com/photo-1546445317-29f4545e9d53?auto=format&fit=crop&q=80&w=800',
-    weightHistory: [
-      { month: 'Oct', weight: 35 }, { month: 'Dec', weight: 85 }, { month: 'Feb', weight: 150 },
-      { month: 'Apr', weight: 210 }, { month: 'Jun', weight: 280 }, { month: 'Aug', weight: 350 },
-      { month: 'Oct', weight: 420 }
-    ],
-    forSale: false, costToDate: 120
-  },
-  {
-    id: 102, name: 'Thunder', species: 'Cattle', breed: 'Angus',
-    birthDate: '2024-05-20', age: '1y 9m', tagId: 'ZIM-104', brandId: 'AR-MP',
-    sireId: 'S-900', damId: 'D-111', birthWeight: 32, currentWeight: 380,
-    imageUrl: 'https://images.unsplash.com/photo-1596733430284-f7437764b1a9?auto=format&fit=crop&q=80&w=800',
-    weightHistory: [
-      { month: 'May', weight: 32 }, { month: 'Jul', weight: 90 }, { month: 'Sep', weight: 160 },
-      { month: 'Nov', weight: 240 }, { month: 'Jan', weight: 310 }, { month: 'Mar', weight: 380 }
-    ],
-    forSale: true, costToDate: 95
-  }
-];
-const INITIAL_LOGS = [
-  { id: 1, animalId: 101, animal: 'Bessie', action: 'FMD Vaccine (Annual)',  date: '2/15/2026, 10:30 AM' },
-  { id: 2, animalId: 103, animal: 'Snowy',  action: 'Diagnostic: Healthy',  date: '2/28/2026, 2:15 PM' }
-];
-const INITIAL_INVENTORY = [
-  { id: 1, name: 'Oxytetracycline (LA)', stock: 500,  unit: 'ml', min: 100, supplier: 'AgroChem Zim', price: 25 },
-  { id: 2, name: 'Buparvaquone',         stock: 120,  unit: 'ml', min: 50,  supplier: 'VetDirect',   price: 85 },
-  { id: 3, name: 'Albendazole',          stock: 1000, unit: 'ml', min: 200, supplier: 'AgroChem Zim', price: 15 }
-];
-const HERD_GROWTH = [
-  { month: 'Jan', value: 920 }, { month: 'Feb', value: 980 }, { month: 'Mar', value: 1050 },
-  { month: 'Apr', value: 1120 }, { month: 'May', value: 1180 }, { month: 'Jun', value: 1250 },
-];
-const NEARBY_FARMERS = [
-  { id: 'f1', name: 'P. Banda',   role: 'Dairy Farmer',          province: 'Mashonaland East',   avatar: 'PB', color: 'bg-green-600', online: true  },
-  { id: 'f2', name: 'L. Sibanda', role: 'Poultry & Goat Farmer', province: 'Matabeleland South', avatar: 'LS', color: 'bg-lime-600',  online: false },
-];
 
 // ── shared helpers ─────────────────────────────────────────────────────────
 const greet = () => {
@@ -155,26 +115,58 @@ const SectionLabel = ({ children }) => (
 );
 
 // ── FARMER DASHBOARD ───────────────────────────────────────────────────────
-const FarmerDashboard = ({ animals, auditLog, inventory, notifications, setActiveTab, onListAnimal }) => {
+const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFarmers, currentUser, setActiveTab, onListAnimal }) => {
+  const [outbreaks, setOutbreaks] = useState([]);
+
+  useEffect(() => {
+    if (!currentUser?.token) return;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/outbreaks`, { headers: { Authorization: `Bearer ${currentUser.token}` } });
+        if (res.ok) setOutbreaks(await res.json());
+      } catch { /* offline — leave empty, no fake fallback */ }
+    })();
+  }, [currentUser?.token]);
+
   const totalValue  = animals.reduce((acc, a) => acc + 500 + a.currentWeight * 1.5, 0);
   const forSale     = animals.filter(a => a.forSale).length;
   const lowStock    = inventory.filter(i => i.stock <= i.min);
-  const critAlerts  = notifications.filter(n => n.type === 'Critical');
+  // Real outbreak reports in the farmer's own province (filed by a Vet/Police
+  // officer) — replaces the old static/fake "critical alert" content.
+  const critAlerts  = outbreaks.map(o => ({
+    id: `outbreak-${o.id}`, title: `${o.disease_name} Outbreak`,
+    msg: `${o.district ? `${o.district}, ` : ''}${o.province}. ${o.details || ''}`.trim(),
+    type: 'Critical', time: new Date(o.created_at).toLocaleDateString(),
+  }));
 
-  // compute overdue vaccines across all animals
+  // Compute overdue vaccines across all animals — a milestone only counts as
+  // overdue if the farmer hasn't actually logged it in health_events (or
+  // logged it with a next_due_date that's now in the past). Age-past-due
+  // alone isn't enough: that would flag every already-vaccinated animal
+  // forever, since it never checked what was actually administered.
   const overdueVaccines = useMemo(() => {
     const rows = [];
     animals.forEach(a => {
       if (!a.birthDate) return;
       const birth = new Date(a.birthDate);
+      const animalLog = auditLog.filter(e => e.animalId === a.id);
       (HEALTH_PROTOCOLS[a.species]?.vaccines || []).forEach(v => {
         const due = new Date(birth);
         due.setDate(birth.getDate() + v.age);
-        if (new Date() > due) rows.push({ animal: a.name, vaccine: v.name });
+        if (new Date() <= due) return;
+
+        const logged = animalLog
+          .filter(e => e.eventType?.toLowerCase().startsWith(v.name.toLowerCase()))
+          .sort((x, y) => new Date(y.eventDate) - new Date(x.eventDate))[0];
+        if (!logged) { rows.push({ animal: a.name, vaccine: v.name }); return; }
+        if (logged.nextDueDate && new Date(logged.nextDueDate) < new Date()) {
+          rows.push({ animal: a.name, vaccine: v.name });
+        }
+        // Logged with no next_due_date, or next_due_date still in the future — current.
       });
     });
     return rows.slice(0, 4);
-  }, [animals]);
+  }, [animals, auditLog]);
 
   const priorityRows = [
     ...overdueVaccines.map(v => ({
@@ -362,25 +354,6 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, setActiv
             )}
           </div>
 
-          {/* Herd Value Trend */}
-          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-            <div className="flex items-center gap-2 mb-1">
-              <TrendingUp size={15} className="text-pfuma-green" />
-              <h3 className="text-sm font-black text-gray-800">Herd Value Trend</h3>
-            </div>
-            <p className="text-[11px] text-gray-400 font-medium mb-3">Estimated total herd value over the last 6 months</p>
-            <div className="h-32">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={HERD_GROWTH} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
-                  <XAxis dataKey="month" fontSize={9} tick={{ fill: '#bbb' }} tickLine={false} axisLine={false} />
-                  <YAxis fontSize={9} tick={{ fill: '#bbb' }} tickLine={false} axisLine={false} />
-                  <Tooltip contentStyle={{ borderRadius: 10, border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', fontSize: 11 }} formatter={v => [`$${v.toLocaleString()}`, 'Herd value']} cursor={{ fill: 'rgba(27,94,32,0.05)' }} />
-                  <Bar dataKey="value" fill="#1b5e20" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
           {/* Medicine cabinet */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
             <div className="flex justify-between items-center mb-1">
@@ -421,10 +394,12 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, setActiv
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
             <h3 className="text-sm font-black text-gray-800 mb-4">Disease Alerts Near You</h3>
             <div className="space-y-3">
-              {notifications.map(n => (
-                <div key={n.id} className={`p-3.5 rounded-xl border-l-4 ${n.type === 'Critical' ? 'bg-red-50 border-red-500' : 'bg-blue-50 border-blue-400'}`}>
+              {critAlerts.length === 0 ? (
+                <p className="text-[11px] text-gray-400 font-medium italic text-center py-3">No active outbreaks reported in {currentUser?.province || 'your province'}.</p>
+              ) : critAlerts.map(n => (
+                <div key={n.id} className="p-3.5 rounded-xl border-l-4 bg-red-50 border-red-500">
                   <div className="flex items-start gap-2">
-                    <AlertTriangle size={13} className={`shrink-0 mt-0.5 ${n.type === 'Critical' ? 'text-red-500' : 'text-blue-500'}`} />
+                    <AlertTriangle size={13} className="shrink-0 mt-0.5 text-red-500" />
                     <div>
                       <p className="text-[11px] font-black text-gray-800">{n.title}</p>
                       <p className="text-[10px] text-gray-500 font-medium mt-0.5">{n.msg}</p>
@@ -490,23 +465,26 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, setActiv
               <h3 className="text-sm font-black text-gray-800">Farmers Near You</h3>
             </div>
             <p className="text-[11px] text-gray-400 font-medium mb-4">Connect with other PFUMA farmers to swap tips, feed, or breeding stock.</p>
-            <div className="space-y-2">
-              {NEARBY_FARMERS.map(f => (
-                <div key={f.id} className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-xl">
-                  <div className={`relative w-10 h-10 rounded-full flex items-center justify-center text-white font-black text-xs shrink-0 ${f.color}`}>
-                    {f.avatar}
-                    <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white ${f.online ? 'bg-green-400' : 'bg-gray-300'}`} />
+            {nearbyFarmers.length === 0 ? (
+              <p className="text-xs text-gray-400 italic font-medium text-center py-4">No other registered farmers nearby yet</p>
+            ) : (
+              <div className="space-y-2">
+                {nearbyFarmers.map(f => (
+                  <div key={f.id} className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-xl">
+                    <div className="relative w-10 h-10 rounded-full flex items-center justify-center text-white font-black text-xs shrink-0 bg-pfuma-green">
+                      {(f.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-black text-gray-800 truncate">{f.name}</p>
+                      <p className="text-[10px] text-gray-400 font-medium truncate">{f.org || 'Farmer'} · {f.province}</p>
+                    </div>
+                    <button onClick={() => setActiveTab('vet')} className="w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center text-pfuma-green hover:bg-green-50 transition shrink-0" aria-label={`Message ${f.name}`}>
+                      <MessageSquare size={13} />
+                    </button>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[11px] font-black text-gray-800 truncate">{f.name}</p>
-                    <p className="text-[10px] text-gray-400 font-medium truncate">{f.role} · {f.province}</p>
-                  </div>
-                  <button onClick={() => setActiveTab('vet')} className="w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center text-pfuma-green hover:bg-green-50 transition shrink-0" aria-label={`Message ${f.name}`}>
-                    <MessageSquare size={13} />
-                  </button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -519,22 +497,73 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, setActiv
 
 // ── VETERINARIAN DASHBOARD ─────────────────────────────────────────────────
 const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUser }) => {
-  const FARMS = [
-    { name: 'Kumar Farms',       animals: 24, status: 'Verified', province: 'Mashonaland West', alert: false },
-    { name: 'Moyo Livestock',    animals: 18, status: 'Verified', province: 'Mashonaland West', alert: true  },
-    { name: 'ZimAgro Enterprise',animals: 45, status: 'Verified', province: 'Mashonaland West', alert: false },
-    { name: 'Central Paddock',   animals: 12, status: 'Pending',  province: 'Mashonaland East', alert: false },
-  ];
+  const [farms, setFarms] = useState([]);
+  const [reportingHealth, setReportingHealth] = useState([]);
+  const [certQueue, setCertQueue] = useState(0);
+  const [outbreaks, setOutbreaks] = useState([]);
+  const [vetRequests, setVetRequests] = useState([]);
+  const [claimBusyId, setClaimBusyId] = useState(null);
+  const [showReportForm, setShowReportForm] = useState(false);
+  const [reportForm, setReportForm] = useState({ disease_name: '', district: '', details: '', affected_farms: '', animals_at_risk: '' });
+  const [reportBusy, setReportBusy] = useState(false);
 
-  const NETWORK_HEALTH = [
-    { day: 'Mon', sync: 94 },
-    { day: 'Tue', sync: 96 },
-    { day: 'Wed', sync: 91 },
-    { day: 'Thu', sync: 97 },
-    { day: 'Fri', sync: 98 },
-    { day: 'Sat', sync: 99 },
-    { day: 'Sun', sync: 99 },
-  ];
+  const loadVetData = useCallback(async () => {
+    if (!currentUser?.token) return;
+    const headers = { Authorization: `Bearer ${currentUser.token}` };
+    try {
+      const res = await fetch(`${API}/vet/farm-registry`, { headers });
+      if (res.ok) setFarms(await res.json());
+    } catch { /* offline — leave empty, no fake fallback */ }
+    try {
+      const res = await fetch(`${API}/vet/reporting-health`, { headers });
+      if (res.ok) setReportingHealth(await res.json());
+    } catch { /* offline */ }
+    try {
+      const res = await fetch(`${API}/vet/cert-queue`, { headers });
+      if (res.ok) setCertQueue((await res.json()).pending);
+    } catch { /* offline */ }
+    try {
+      const res = await fetch(`${API}/outbreaks`, { headers });
+      if (res.ok) setOutbreaks(await res.json());
+    } catch { /* offline */ }
+    try {
+      const res = await fetch(`${API}/vet-requests?status=open`, { headers });
+      if (res.ok) setVetRequests(await res.json());
+    } catch { /* offline */ }
+  }, [currentUser?.token]);
+
+  useEffect(() => { loadVetData(); }, [loadVetData]);
+
+  const claimVetRequest = async (reqId) => {
+    setClaimBusyId(reqId);
+    try {
+      const res = await fetch(`${API}/vet-requests/${reqId}/claim`, {
+        method: 'PATCH', headers: { Authorization: `Bearer ${currentUser.token}` },
+      });
+      if (res.ok) await loadVetData();
+    } catch { /* offline */ }
+    setClaimBusyId(null);
+  };
+
+  const submitOutbreak = async (e) => {
+    e.preventDefault();
+    if (!reportForm.disease_name.trim()) return;
+    setReportBusy(true);
+    try {
+      const res = await fetch(`${API}/outbreaks`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentUser.token}` },
+        body: JSON.stringify(reportForm),
+      });
+      if (res.ok) {
+        setShowReportForm(false);
+        setReportForm({ disease_name: '', district: '', details: '', affected_farms: '', animals_at_risk: '' });
+        await loadVetData();
+      }
+    } catch { /* offline */ }
+    setReportBusy(false);
+  };
+
+  const activeOutbreak = outbreaks[0];
 
   return (
     <div className="p-6 bg-pfuma-slate space-y-6 text-left overflow-y-auto h-full">
@@ -547,20 +576,23 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
             <h2 className="text-2xl font-black text-white leading-tight">{greet()}, Dr. {currentUser?.name?.split(' ').pop() || 'Officer'}</h2>
             <p className="text-gray-400 text-sm font-medium mt-1">Provincial veterinary oversight — outbreaks, certifications, and farmer case management</p>
           </div>
-          <div className="flex items-center gap-2 bg-red-600 text-white px-5 py-3 rounded-2xl shrink-0 animate-pulse">
-            <Globe size={16} />
-            <span className="text-xs font-black uppercase tracking-widest">FMD Quarantine Active</span>
-          </div>
+          {activeOutbreak && (
+            <div className="flex items-center gap-2 bg-red-600 text-white px-5 py-3 rounded-2xl shrink-0 animate-pulse">
+              <Globe size={16} />
+              <span className="text-xs font-black uppercase tracking-widest">{activeOutbreak.disease_name} Outbreak Active</span>
+            </div>
+          )}
         </div>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Active Outbreaks',  value: '1',   sub: 'FMD — Chegutu District',          icon: AlertTriangle, iconColor: 'text-red-500',   accent: 'bg-red-500/10 border-red-500/20',   textColor: 'text-red-400' },
-          { label: 'Cert. Queue',       value: '12',  sub: 'Awaiting your sign-off',           icon: FileText,      iconColor: 'text-yellow-400', accent: 'bg-white/5 border-white/10',       textColor: 'text-white'   },
-          { label: 'Farms Under Watch', value: '4',   sub: 'Mashonaland West registry',        icon: MapPin,        iconColor: 'text-blue-400',   accent: 'bg-white/5 border-white/10',       textColor: 'text-white'   },
-          { label: 'Reporting Rate',    value: '99%', sub: 'Farms filing records on time',    icon: RefreshCw,     iconColor: 'text-green-400',  accent: 'bg-white/5 border-white/10',       textColor: 'text-white'   },
+          { label: 'Active Outbreaks',  value: outbreaks.length, sub: activeOutbreak ? `${activeOutbreak.disease_name} — ${activeOutbreak.district || activeOutbreak.province}` : 'None reported',
+            icon: AlertTriangle, iconColor: outbreaks.length ? 'text-red-500' : 'text-gray-500', accent: outbreaks.length ? 'bg-red-500/10 border-red-500/20' : 'bg-white/5 border-white/10', textColor: outbreaks.length ? 'text-red-400' : 'text-white' },
+          { label: 'Cert. Queue',       value: certQueue, sub: 'Unread trade certification requests', icon: FileText,      iconColor: 'text-yellow-400', accent: 'bg-white/5 border-white/10',       textColor: 'text-white'   },
+          { label: 'Farms Under Watch', value: farms.length, sub: `${currentUser?.province || 'Your province'} registry`,        icon: MapPin,        iconColor: 'text-blue-400',   accent: 'bg-white/5 border-white/10',       textColor: 'text-white'   },
+          { label: 'Reporting Rate',    value: reportingHealth.length ? `${reportingHealth[reportingHealth.length - 1].sync}%` : '—', sub: 'Farms with a health event logged today',    icon: RefreshCw,     iconColor: 'text-green-400',  accent: 'bg-white/5 border-white/10',       textColor: 'text-white'   },
         ].map(k => (
           <div key={k.label} className={`${k.accent} border rounded-2xl p-5`}>
             <div className="flex justify-between items-start mb-2">
@@ -577,29 +609,57 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
 
         {/* Outbreak alert */}
         <div className="col-span-1 space-y-5">
-          <div className="bg-red-600/10 border border-red-500/30 rounded-2xl p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <AlertTriangle size={16} className="text-red-400 animate-pulse" />
-              <h3 className="text-sm font-black text-red-300">Active Outbreak</h3>
+          <div className={`${activeOutbreak ? 'bg-red-600/10 border-red-500/30' : 'bg-white/5 border-white/10'} border rounded-2xl p-5`}>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle size={16} className={activeOutbreak ? 'text-red-400 animate-pulse' : 'text-gray-500'} />
+                <h3 className={`text-sm font-black ${activeOutbreak ? 'text-red-300' : 'text-white'}`}>Active Outbreak</h3>
+              </div>
+              <button onClick={() => setShowReportForm(p => !p)} className="text-[10px] font-black text-pfuma-green hover:underline uppercase">Report →</button>
             </div>
-            <h4 className="text-lg font-black text-white mb-1">Foot & Mouth Disease</h4>
-            <p className="text-[11px] text-gray-400 font-medium mb-4">Confirmed in Chegutu District, Mashonaland West. Movement ban in effect.</p>
-            <div className="space-y-2 text-[11px]">
-              {[
-                { k: 'Status',         v: 'CRITICAL — Active' },
-                { k: 'Affected farms', v: '3 confirmed' },
-                { k: 'Animals at risk',v: '~200 cattle' },
-                { k: 'Restriction',    v: 'No livestock movement' },
-              ].map(r => (
-                <div key={r.k} className="flex justify-between items-center border-b border-white/5 pb-1.5">
-                  <span className="text-gray-500 font-bold">{r.k}</span>
-                  <span className="text-gray-300 font-black">{r.v}</span>
+            {activeOutbreak ? (
+              <>
+                <h4 className="text-lg font-black text-white mb-1">{activeOutbreak.disease_name}</h4>
+                <p className="text-[11px] text-gray-400 font-medium mb-4">
+                  Confirmed in {activeOutbreak.district ? `${activeOutbreak.district}, ` : ''}{activeOutbreak.province}. {activeOutbreak.details}
+                </p>
+                <div className="space-y-2 text-[11px]">
+                  {[
+                    { k: 'Status',          v: activeOutbreak.status.toUpperCase() },
+                    { k: 'Affected farms',  v: activeOutbreak.affected_farms || '—' },
+                    { k: 'Animals at risk', v: activeOutbreak.animals_at_risk || '—' },
+                    { k: 'Reported by',     v: activeOutbreak.reported_by_name },
+                  ].map(r => (
+                    <div key={r.k} className="flex justify-between items-center border-b border-white/5 pb-1.5">
+                      <span className="text-gray-500 font-bold">{r.k}</span>
+                      <span className="text-gray-300 font-black">{r.v}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <button onClick={() => setActiveTab('vet')} className="mt-4 w-full py-3 bg-red-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-700 transition flex items-center justify-center gap-2">
-              <PhoneCall size={13} /> Issue Emergency Advisory
-            </button>
+                <button onClick={() => setActiveTab('vet')} className="mt-4 w-full py-3 bg-red-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-700 transition flex items-center justify-center gap-2">
+                  <PhoneCall size={13} /> Issue Emergency Advisory
+                </button>
+              </>
+            ) : (
+              <p className="text-[11px] text-gray-500 font-medium">No active outbreaks reported in {currentUser?.province || 'your province'}.</p>
+            )}
+            {showReportForm && (
+              <form onSubmit={submitOutbreak} className="mt-4 space-y-2 border-t border-white/10 pt-4">
+                <input required placeholder="Disease name *" value={reportForm.disease_name} onChange={e => setReportForm(p => ({ ...p, disease_name: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50" />
+                <input placeholder="District" value={reportForm.district} onChange={e => setReportForm(p => ({ ...p, district: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50" />
+                <input placeholder="Affected farms (number)" type="number" value={reportForm.affected_farms} onChange={e => setReportForm(p => ({ ...p, affected_farms: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50" />
+                <input placeholder="Animals at risk, e.g. ~200 cattle" value={reportForm.animals_at_risk} onChange={e => setReportForm(p => ({ ...p, animals_at_risk: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50" />
+                <textarea placeholder="Restriction / notes" rows={2} value={reportForm.details} onChange={e => setReportForm(p => ({ ...p, details: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50 resize-none" />
+                <button type="submit" disabled={reportBusy} className="w-full py-2.5 bg-red-600 text-white rounded-lg text-[11px] font-black uppercase hover:bg-red-700 transition disabled:opacity-50">
+                  {reportBusy ? 'Reporting…' : 'File Outbreak Report'}
+                </button>
+              </form>
+            )}
           </div>
 
           {/* Quick actions */}
@@ -631,23 +691,53 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
               </div>
             </div>
             <div className="space-y-3">
-              {FARMS.map((farm, i) => (
-                <button key={i} onClick={() => setActiveTab('vet')} className="w-full flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-transparent hover:border-pfuma-green transition text-left">
-                  <div className="w-10 h-10 bg-gray-800 rounded-xl flex items-center justify-center font-black text-pfuma-green text-sm shrink-0">{farm.name[0]}</div>
+              {farms.length === 0 ? (
+                <p className="text-[11px] text-gray-500 font-medium italic text-center py-6">No registered farmers in {currentUser?.province || 'your province'} yet.</p>
+              ) : farms.map(farm => (
+                <button key={farm.id} onClick={() => setActiveTab('vet')} className="w-full flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-transparent hover:border-pfuma-green transition text-left">
+                  <div className="w-10 h-10 bg-gray-800 rounded-xl flex items-center justify-center font-black text-pfuma-green text-sm shrink-0">{(farm.full_name || '?')[0]}</div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <p className="text-sm font-black text-white">{farm.name}</p>
-                      {farm.alert && <span className="text-[9px] font-black bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full uppercase">Alert</span>}
-                    </div>
-                    <p className="text-[10px] text-gray-500 font-medium">{farm.province} · {farm.animals} animals</p>
+                    <p className="text-sm font-black text-white mb-0.5">{farm.full_name}</p>
+                    <p className="text-[10px] text-gray-500 font-medium">{farm.org_name} · {farm.animal_count} animal{farm.animal_count !== 1 ? 's' : ''}</p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className={`text-[9px] font-black px-2.5 py-1 rounded-full uppercase ${farm.status === 'Verified' ? 'bg-pfuma-green/20 text-green-400' : 'bg-orange-400/20 text-orange-400'}`}>{farm.status}</span>
+                    <span className={`text-[9px] font-black px-2.5 py-1 rounded-full uppercase ${farm.verification_status === 'verified' ? 'bg-pfuma-green/20 text-green-400' : 'bg-orange-400/20 text-orange-400'}`}>{farm.verification_status}</span>
                     <MessageSquare size={14} className="text-gray-500 hover:text-pfuma-green transition" />
                   </div>
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Group vet requests from communal farmer cooperatives */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <Handshake size={15} className="text-pfuma-sprout" />
+              <h3 className="text-sm font-black text-white">Group Vet Requests — {currentUser?.province || 'Your Province'}</h3>
+            </div>
+            <p className="text-[11px] text-gray-500 font-medium mb-4">Open requests from farmer cooperatives — one trip can serve a whole dip-tank group at once.</p>
+            {vetRequests.length === 0 ? (
+              <p className="text-[11px] text-gray-500 font-medium italic text-center py-4">No open group requests right now.</p>
+            ) : (
+              <div className="space-y-3">
+                {vetRequests.map(r => (
+                  <div key={r.id} className="p-3.5 bg-white/5 border border-white/10 rounded-xl">
+                    <p className="text-xs font-black text-white leading-snug">{r.reason}</p>
+                    <p className="text-[10px] text-gray-500 font-medium mt-1">
+                      {r.cooperative_name} · {r.district ? `${r.district}, ` : ''}{r.province}{r.dip_tank_location ? ` · ${r.dip_tank_location}` : ''}
+                    </p>
+                    <p className="text-[10px] text-gray-500 font-medium">Requested by {r.requested_by_name}{r.preferred_date ? ` · wants ${new Date(r.preferred_date).toDateString()}` : ''}</p>
+                    <button
+                      onClick={() => claimVetRequest(r.id)}
+                      disabled={claimBusyId === r.id}
+                      className="mt-2 px-3 py-1.5 bg-pfuma-green text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition disabled:opacity-50"
+                    >
+                      {claimBusyId === r.id ? 'Claiming…' : 'Claim'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Provincial network health */}
@@ -656,10 +746,10 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
               <RefreshCw size={15} className="text-pfuma-sprout" />
               <h3 className="text-sm font-black text-white">Provincial Reporting Health</h3>
             </div>
-            <p className="text-[11px] text-gray-500 font-medium mb-4">Share of farms filing records — last 7 days</p>
+            <p className="text-[11px] text-gray-500 font-medium mb-4">Share of {currentUser?.province || 'your province'}'s farmers who logged a health event — last 7 days</p>
             <div className="h-32">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={NETWORK_HEALTH} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
+                <AreaChart data={reportingHealth} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
                   <defs>
                     <linearGradient id="netHealth" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%"  stopColor="#22c55e" stopOpacity={0.4} />
@@ -668,8 +758,8 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
                   <XAxis dataKey="day" fontSize={9} tick={{ fill: '#6b7280' }} tickLine={false} axisLine={false} />
-                  <YAxis domain={[80, 100]} fontSize={9} tick={{ fill: '#6b7280' }} tickLine={false} axisLine={false} />
-                  <Tooltip contentStyle={{ borderRadius: 10, border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.3)', fontSize: 11, background: '#1e293b', color: '#fff' }} formatter={v => [`${v}%`, 'Sync rate']} />
+                  <YAxis domain={[0, 100]} fontSize={9} tick={{ fill: '#6b7280' }} tickLine={false} axisLine={false} />
+                  <Tooltip contentStyle={{ borderRadius: 10, border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.3)', fontSize: 11, background: '#1e293b', color: '#fff' }} formatter={v => [`${v}%`, 'Reporting rate']} />
                   <Area type="monotone" dataKey="sync" stroke="#22c55e" fill="url(#netHealth)" strokeWidth={2.5} dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -683,20 +773,42 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
 
 // ── SUPPLIER DASHBOARD ─────────────────────────────────────────────────────
 const SupplierDashboard = ({ inventory, setActiveTab, currentUser }) => {
-  const ORDERS = [
-    { id: 'ORD-441', farm: 'Moyo Livestock',    item: 'Oxytetracycline (LA)', qty: '200ml', status: 'Dispatched', urgent: false },
-    { id: 'ORD-442', farm: 'ZimAgro Enterprise', item: 'FMD Vaccine',           qty: '50 doses', status: 'Pending',    urgent: true  },
-    { id: 'ORD-443', farm: 'Kumar Farms',        item: 'Buparvaquone (Butalex)',qty: '100ml',    status: 'Pending',    urgent: true  },
-    { id: 'ORD-444', farm: 'Central Paddock',    item: 'Albendazole Drench',    qty: '500ml',    status: 'Delivered',  urgent: false },
-  ];
-  const DEMAND_DATA = [
-    { week: 'W1', orders: 8 }, { week: 'W2', orders: 12 }, { week: 'W3', orders: 9 },
-    { week: 'W4', orders: 18 }, { week: 'W5', orders: 14 }, { week: 'W6', orders: 22 },
-  ];
+  const [orders, setOrders] = useState([]);
+  const [demand, setDemand] = useState([]);
+  const [fulfillmentRate, setFulfillmentRate] = useState(null);
+  const [busyOrderId, setBusyOrderId] = useState(null);
 
-  const pending    = ORDERS.filter(o => o.status === 'Pending').length;
-  const dispatched = ORDERS.filter(o => o.status === 'Dispatched').length;
-  const delivered  = ORDERS.filter(o => o.status === 'Delivered').length;
+  const loadSupplierData = useCallback(async () => {
+    if (!currentUser?.token) return;
+    const headers = { Authorization: `Bearer ${currentUser.token}` };
+    try {
+      const res = await fetch(`${API}/orders/mine`, { headers });
+      if (res.ok) setOrders(await res.json());
+    } catch { /* offline — leave empty, no fake fallback */ }
+    try {
+      const res = await fetch(`${API}/supplier/demand`, { headers });
+      if (res.ok) setDemand(await res.json());
+    } catch { /* offline */ }
+    try {
+      const res = await fetch(`${API}/supplier/fulfillment-rate`, { headers });
+      if (res.ok) setFulfillmentRate((await res.json()).rate);
+    } catch { /* offline */ }
+  }, [currentUser?.token]);
+
+  useEffect(() => { loadSupplierData(); }, [loadSupplierData]);
+
+  const advanceOrder = async (order, action) => {
+    setBusyOrderId(order.id);
+    try {
+      const res = await fetch(`${API}/orders/${order.id}/${action}`, { method: 'PATCH', headers: { Authorization: `Bearer ${currentUser.token}` } });
+      if (res.ok) await loadSupplierData();
+    } catch { /* offline */ }
+    setBusyOrderId(null);
+  };
+
+  const pending    = orders.filter(o => o.status === 'pending').length;
+  const dispatched = orders.filter(o => o.status === 'dispatched').length;
+  const delivered  = orders.filter(o => o.status === 'delivered').length;
 
   return (
     <div className="p-6 bg-pfuma-cream space-y-6 text-left overflow-y-auto h-full">
@@ -735,7 +847,7 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser }) => {
           { label: 'Pending Orders',   value: pending,     sub: 'Need dispatch today',              icon: Clock,       iconColor: 'text-pfuma-gold', accent: pending ? 'bg-pfuma-gold/10 border-pfuma-gold/30' : 'bg-white border-gray-100', textColor: pending ? 'text-amber-700' : 'text-gray-900' },
           { label: 'In Transit',       value: dispatched,  sub: 'On the way to farmers',            icon: Truck,       iconColor: 'text-blue-500',   accent: 'bg-white border-gray-100', textColor: 'text-gray-900' },
           { label: 'Delivered',        value: delivered,   sub: 'Completed this week',              icon: CheckCircle, iconColor: 'text-green-500',  accent: 'bg-white border-gray-100', textColor: 'text-gray-900' },
-          { label: 'Fulfillment Rate', value: '92%',       sub: 'Monthly on-time delivery',         icon: Target,      iconColor: 'text-purple-500', accent: 'bg-white border-gray-100', textColor: 'text-gray-900' },
+          { label: 'Fulfillment Rate', value: fulfillmentRate === null ? '—' : `${fulfillmentRate}%`, sub: fulfillmentRate === null ? 'No resolved orders yet' : 'Delivered vs. dispatched+delivered+cancelled', icon: Target,      iconColor: 'text-purple-500', accent: 'bg-white border-gray-100', textColor: 'text-gray-900' },
         ].map(k => (
           <div key={k.label} className={`${k.accent} border rounded-2xl p-5`}>
             <div className="flex justify-between items-start mb-2"><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{k.label}</p><k.icon size={16} className={k.iconColor} /></div>
@@ -757,23 +869,32 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser }) => {
               </div>
             </div>
             <div className="space-y-3">
-              {ORDERS.map(o => (
-                <div key={o.id} className={`flex items-center gap-4 p-4 rounded-2xl border-2 ${o.urgent && o.status === 'Pending' ? 'bg-pfuma-gold/10 border-pfuma-gold/30' : 'bg-gray-50 border-gray-100'}`}>
+              {orders.length === 0 ? (
+                <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-2xl">
+                  <Package size={32} className="mx-auto text-gray-300 mb-3" />
+                  <p className="text-sm font-black text-gray-400">No orders yet</p>
+                  <p className="text-[11px] text-gray-400 font-medium mt-1">Farmers can order from your medicine/equipment listings</p>
+                </div>
+              ) : orders.map(o => (
+                <div key={o.id} className={`flex items-center gap-4 p-4 rounded-2xl border-2 ${o.status === 'pending' ? 'bg-pfuma-gold/10 border-pfuma-gold/30' : 'bg-gray-50 border-gray-100'}`}>
                   <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
                     <Package size={18} className="text-pfuma-gold" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <p className="text-xs font-black text-gray-800">{o.farm}</p>
-                      {o.urgent && o.status === 'Pending' && <span className="text-[9px] font-black text-amber-700 bg-pfuma-gold/15 px-2 py-0.5 rounded-full uppercase">Urgent</span>}
-                    </div>
-                    <p className="text-[10px] text-gray-500 font-medium">{o.item} · {o.qty} · Order {o.id}</p>
+                    <p className="text-xs font-black text-gray-800 mb-0.5">{o.farmer_name}</p>
+                    <p className="text-[10px] text-gray-500 font-medium">{o.product_name} · {Number(o.quantity)} · Order #{o.id}</p>
                   </div>
                   <span className={`text-[10px] font-black px-3 py-1.5 rounded-full uppercase shrink-0 ${
-                    o.status === 'Pending'    ? 'bg-pfuma-gold/15 text-amber-700' :
-                    o.status === 'Dispatched' ? 'bg-blue-100 text-blue-700' :
-                    'bg-green-100 text-green-700'
+                    o.status === 'pending'    ? 'bg-pfuma-gold/15 text-amber-700' :
+                    o.status === 'dispatched' ? 'bg-blue-100 text-blue-700' :
+                    o.status === 'delivered'  ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
                   }`}>{o.status}</span>
+                  {o.status === 'pending' && (
+                    <button onClick={() => advanceOrder(o, 'dispatch')} disabled={busyOrderId === o.id} className="shrink-0 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-black uppercase hover:bg-blue-700 transition disabled:opacity-50">Dispatch</button>
+                  )}
+                  {o.status === 'dispatched' && (
+                    <button onClick={() => advanceOrder(o, 'deliver')} disabled={busyOrderId === o.id} className="shrink-0 px-3 py-1.5 bg-green-600 text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition disabled:opacity-50">Mark Delivered</button>
+                  )}
                 </div>
               ))}
             </div>
@@ -785,10 +906,15 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser }) => {
           {/* Demand chart */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
             <h3 className="text-sm font-black text-gray-800 mb-1">Order Demand (6 Weeks)</h3>
-            <p className="text-[11px] text-gray-400 font-medium mb-4">Volume is up 22% this week — stock accordingly</p>
+            <p className="text-[11px] text-gray-400 font-medium mb-4">Your real order volume, by week</p>
+            {demand.length === 0 ? (
+              <div className="h-36 flex items-center justify-center">
+                <p className="text-[11px] text-gray-400 font-medium italic">No orders yet to chart</p>
+              </div>
+            ) : (
             <div className="h-36">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={DEMAND_DATA} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
+                <AreaChart data={demand} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
                   <defs>
                     <linearGradient id="dg" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%"  stopColor="#ca8a04" stopOpacity={0.3} />
@@ -802,16 +928,7 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser }) => {
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-          </div>
-
-          {/* Demand insight */}
-          <div className="bg-pfuma-slate rounded-2xl p-5 relative overflow-hidden">
-            <Truck className="absolute -bottom-4 -right-4 w-28 h-28 opacity-10 text-pfuma-gold" aria-hidden="true" />
-            <div className="relative z-10">
-              <div className="flex items-center gap-2 mb-2"><TrendingUp size={14} className="text-pfuma-gold" /><p className="text-[11px] font-black text-pfuma-gold uppercase tracking-wide">Demand Spike</p></div>
-              <p className="text-white text-sm font-black mb-1">Mashonaland Central</p>
-              <p className="text-gray-400 text-[11px] font-medium leading-relaxed">14% increase in vaccine requirements this week. Consider pre-positioning Buparvaquone for January Disease season.</p>
-            </div>
+            )}
           </div>
 
           {/* Contact a farmer */}
@@ -829,20 +946,34 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser }) => {
 };
 
 // ── RETAILER DASHBOARD ─────────────────────────────────────────────────────
-const RetailerDashboard = ({ animals, setActiveTab, currentUser }) => {
-  const listings = animals.filter(a => a.forSale);
-  const PRICE_DATA = [
-    { month: 'Jan', price: 480 }, { month: 'Feb', price: 510 }, { month: 'Mar', price: 495 },
-    { month: 'Apr', price: 540 }, { month: 'May', price: 565 }, { month: 'Jun', price: 590 },
-  ];
-  const RECENT_BIDS = [
-    { animal: 'Thunder', bidder: 'ZimAgro Ltd', amount: 620, time: '2h ago' },
-    { animal: 'Bessie',  bidder: 'Farm Direct', amount: 850, time: '5h ago' },
-  ];
+const RetailerDashboard = ({ setActiveTab, currentUser }) => {
+  const [listings,   setListings]   = useState([]);
+  const [priceTrend, setPriceTrend] = useState([]);
+  const [myBids,     setMyBids]     = useState([]);
+
+  useEffect(() => {
+    if (!currentUser?.token) return;
+    const headers = { Authorization: `Bearer ${currentUser.token}` };
+    (async () => {
+      try {
+        const res = await fetch(`${API}/listings?category=livestock`, { headers });
+        if (res.ok) setListings(await res.json());
+      } catch { /* offline — leave empty, no fake fallback */ }
+      try {
+        const res = await fetch(`${API}/listings/price-trend`, { headers });
+        if (res.ok) setPriceTrend(await res.json());
+      } catch { /* offline */ }
+      try {
+        const res = await fetch(`${API}/bids/mine`, { headers });
+        if (res.ok) setMyBids(await res.json());
+      } catch { /* offline */ }
+    })();
+  }, [currentUser?.token]);
+
   const CATEGORY_DATA = useMemo(() => {
     const counts = {};
-    listings.forEach(a => { counts[a.species] = (counts[a.species] || 0) + 1; });
-    return Object.entries(counts).map(([species, count]) => ({ species, count }));
+    listings.forEach(l => { counts[l.category] = (counts[l.category] || 0) + 1; });
+    return Object.entries(counts).map(([category, count]) => ({ category, count }));
   }, [listings]);
 
   return (
@@ -882,9 +1013,9 @@ const RetailerDashboard = ({ animals, setActiveTab, currentUser }) => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Active Listings',    value: listings.length,                           sub: 'Verified with health passports',   icon: Tag,        iconColor: 'text-pfuma-plum' },
-          { label: 'Avg. Price / Unit',  value: listings.length ? `$${Math.round(listings.reduce((a, l) => a + 500 + l.currentWeight * 1.5, 0) / listings.length).toLocaleString()}` : '$—', sub: 'Estimated market value',          icon: DollarSign, iconColor: 'text-green-500'  },
-          { label: 'Total Listing Value',value: `$${listings.reduce((a, l) => a + 500 + l.currentWeight * 1.5, 0).toLocaleString()}`, sub: 'Combined herd value on market', icon: TrendingUp, iconColor: 'text-blue-500'   },
-          { label: 'Market Sentiment',   value: 'BULLISH',                                 sub: 'Prices trending upward +10%',      icon: Activity,   iconColor: 'text-pfuma-gold', textColor: 'text-pfuma-plum', accent: 'bg-pfuma-plum/10 border-pfuma-plum/30' },
+          { label: 'Avg. Asking Price',  value: listings.length ? `$${Math.round(listings.reduce((a, l) => a + Number(l.price), 0) / listings.length).toLocaleString()}` : '$—', sub: 'Real seller-set prices',          icon: DollarSign, iconColor: 'text-green-500'  },
+          { label: 'Total Listing Value',value: `$${listings.reduce((a, l) => a + Number(l.price), 0).toLocaleString()}`, sub: 'Combined asking price on market', icon: TrendingUp, iconColor: 'text-blue-500'   },
+          { label: 'Sales, Last 6mo',    value: priceTrend.reduce((a, m) => a + Number(m.sales), 0), sub: 'Livestock listings marked sold',   icon: Activity,   iconColor: 'text-pfuma-gold', textColor: 'text-pfuma-plum', accent: 'bg-pfuma-plum/10 border-pfuma-plum/30' },
         ].map(k => (
           <div key={k.label} className={`${k.accent || 'bg-white border-gray-100'} border rounded-2xl p-5`}>
             <div className="flex justify-between items-start mb-2"><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{k.label}</p><k.icon size={16} className={k.iconColor} /></div>
@@ -914,27 +1045,27 @@ const RetailerDashboard = ({ animals, setActiveTab, currentUser }) => {
               </div>
             ) : (
               <div className="space-y-4">
-                {listings.map(a => (
-                  <button key={a.id} onClick={() => setActiveTab('profile')} className="w-full flex items-center gap-5 p-4 bg-gray-50 rounded-2xl border-2 border-transparent hover:border-pfuma-plum hover:shadow-md transition group text-left">
+                {listings.map(l => (
+                  <button key={l.id} onClick={() => setActiveTab('marketplace')} className="w-full flex items-center gap-5 p-4 bg-gray-50 rounded-2xl border-2 border-transparent hover:border-pfuma-plum hover:shadow-md transition group text-left">
                     <div className="w-20 h-20 rounded-2xl overflow-hidden bg-gray-200 shrink-0 relative">
-                      <img src={a.imageUrl} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition duration-700" alt={a.name} />
+                      <img src={l.photo_url ? `${API}${l.photo_url}` : IMAGE_BY_SPECIES.Cattle} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition duration-700" alt={l.product_name} />
                       <div className="absolute top-2 left-2 bg-pfuma-gold text-[8px] font-black text-white px-1.5 py-0.5 rounded-full uppercase">Certified</div>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h4 className="text-sm font-black text-gray-900">{a.name}</h4>
+                        <h4 className="text-sm font-black text-gray-900">{l.product_name}</h4>
                         <span className="text-[9px] font-black bg-pfuma-plum/15 text-pfuma-plum px-2 py-0.5 rounded-full uppercase">For Sale</span>
                       </div>
-                      <p className="text-[11px] text-gray-500 font-medium mb-2">{a.breed} · {a.species} · {a.age} · {a.currentWeight}kg</p>
+                      <p className="text-[11px] text-gray-500 font-medium mb-2">{l.seller_name} · {l.location || l.seller_province}</p>
                       <div className="flex items-center gap-2">
                         <ShieldCheck size={12} className="text-pfuma-plum" />
-                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-wide">Verified Health Passport · Tag #{a.tagId}</span>
+                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-wide">Verified Health Passport</span>
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-[10px] text-gray-400 font-bold uppercase">Est. Value</p>
-                      <p className="text-xl font-black text-pfuma-plum">${(500 + a.currentWeight * 1.5).toLocaleString()}</p>
-                      <button className="mt-2 px-4 py-1.5 bg-pfuma-plum text-white text-[10px] font-black rounded-lg uppercase hover:bg-violet-700 transition">Bid</button>
+                      <p className="text-[10px] text-gray-400 font-bold uppercase">Asking Price</p>
+                      <p className="text-xl font-black text-pfuma-plum">${Number(l.price).toLocaleString()}</p>
+                      <span className="inline-block mt-2 px-4 py-1.5 bg-pfuma-plum text-white text-[10px] font-black rounded-lg uppercase group-hover:bg-violet-700 transition">Bid on Marketplace →</span>
                     </div>
                   </button>
                 ))}
@@ -945,30 +1076,36 @@ const RetailerDashboard = ({ animals, setActiveTab, currentUser }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Price trend chart */}
             <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-              <h3 className="text-sm font-black text-gray-800 mb-1">Cattle Price Trend (USD / head)</h3>
-              <p className="text-[11px] text-gray-400 font-medium mb-4">Market pricing for Mashonaland West verified livestock, last 6 months</p>
-              <div className="h-36">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={PRICE_DATA} margin={{ top: 0, right: 0, bottom: 0, left: -10 }}>
-                    <defs>
-                      <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor="#7c3aed" stopOpacity={0.2} />
-                        <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <XAxis dataKey="month" fontSize={9} tick={{ fill: '#bbb' }} tickLine={false} axisLine={false} />
-                    <YAxis fontSize={9} tick={{ fill: '#bbb' }} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
-                    <Tooltip contentStyle={{ borderRadius: 10, border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', fontSize: 11 }} formatter={v => [`$${v}`, 'Price/head']} />
-                    <Area type="monotone" dataKey="price" stroke="#7c3aed" fill="url(#pg)" strokeWidth={2.5} dot={false} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+              <h3 className="text-sm font-black text-gray-800 mb-1">Livestock Price Trend (USD / head)</h3>
+              <p className="text-[11px] text-gray-400 font-medium mb-4">Average price of livestock sales actually completed on PFUMA, last 6 months</p>
+              {priceTrend.length === 0 ? (
+                <div className="h-36 flex items-center justify-center">
+                  <p className="text-[11px] text-gray-400 font-medium italic">No completed sales yet — chart fills in as bids are accepted</p>
+                </div>
+              ) : (
+                <div className="h-36">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={priceTrend} margin={{ top: 0, right: 0, bottom: 0, left: -10 }}>
+                      <defs>
+                        <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%"  stopColor="#7c3aed" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <XAxis dataKey="month" fontSize={9} tick={{ fill: '#bbb' }} tickLine={false} axisLine={false} />
+                      <YAxis fontSize={9} tick={{ fill: '#bbb' }} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
+                      <Tooltip contentStyle={{ borderRadius: 10, border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', fontSize: 11 }} formatter={v => [`$${Math.round(v)}`, 'Avg price/head']} />
+                      <Area type="monotone" dataKey="avg_price" stroke="#7c3aed" fill="url(#pg)" strokeWidth={2.5} dot={false} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
 
             {/* Listings by category */}
             <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
               <h3 className="text-sm font-black text-gray-800 mb-1">Listings by Category</h3>
-              <p className="text-[11px] text-gray-400 font-medium mb-4">Marketplace supply breakdown by species</p>
+              <p className="text-[11px] text-gray-400 font-medium mb-4">Marketplace supply breakdown</p>
               {CATEGORY_DATA.length === 0 ? (
                 <div className="h-36 flex items-center justify-center">
                   <p className="text-[11px] text-gray-400 font-medium italic">No active listings to chart yet</p>
@@ -978,7 +1115,7 @@ const RetailerDashboard = ({ animals, setActiveTab, currentUser }) => {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={CATEGORY_DATA} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                      <XAxis dataKey="species" fontSize={9} tick={{ fill: '#bbb' }} tickLine={false} axisLine={false} />
+                      <XAxis dataKey="category" fontSize={9} tick={{ fill: '#bbb' }} tickLine={false} axisLine={false} />
                       <YAxis allowDecimals={false} fontSize={9} tick={{ fill: '#bbb' }} tickLine={false} axisLine={false} />
                       <Tooltip contentStyle={{ borderRadius: 10, border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', fontSize: 11 }} formatter={v => [v, 'Listings']} />
                       <Bar dataKey="count" fill="#ca8a04" radius={[6, 6, 0, 0]} />
@@ -995,18 +1132,19 @@ const RetailerDashboard = ({ animals, setActiveTab, currentUser }) => {
           {/* Recent bids */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
             <h3 className="text-sm font-black text-gray-800 mb-4">Recent Bids</h3>
-            {RECENT_BIDS.length === 0 ? (
+            {myBids.length === 0 ? (
               <p className="text-xs text-gray-400 italic font-medium text-center py-4">No bids placed yet</p>
             ) : (
               <div className="space-y-3">
-                {RECENT_BIDS.map((b, i) => (
-                  <div key={i} className="p-3.5 bg-pfuma-plum/10 border border-pfuma-plum/20 rounded-xl">
+                {myBids.map(b => (
+                  <div key={b.id} className="p-3.5 bg-pfuma-plum/10 border border-pfuma-plum/20 rounded-xl">
                     <div className="flex justify-between items-start mb-1">
-                      <p className="text-xs font-black text-gray-800">{b.animal}</p>
-                      <p className="text-sm font-black text-pfuma-plum">${b.amount}</p>
+                      <p className="text-xs font-black text-gray-800">{b.product_name}</p>
+                      <p className="text-sm font-black text-pfuma-plum">${Number(b.amount).toLocaleString()}</p>
                     </div>
-                    <p className="text-[10px] text-gray-500 font-medium">{b.bidder}</p>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">{b.time}</p>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">
+                      {b.status === 'accepted' ? 'Accepted ✓' : b.status === 'declined' ? 'Declined' : 'Pending'} · {new Date(b.created_at).toLocaleDateString()}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -1084,6 +1222,7 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
   const [officerForm,    setOfficerForm]    = useState(EMPTY_OFFICER_FORM);
   const [officerBusy,    setOfficerBusy]    = useState(false);
   const [officerError,   setOfficerError]   = useState('');
+  const [showOfficerPassword, setShowOfficerPassword] = useState(false);
   const setOfficerField = (k, v) => setOfficerForm(p => ({ ...p, [k]: v }));
 
   const authHeaders = { Authorization: `Bearer ${currentUser?.token}` };
@@ -1269,9 +1408,16 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
             </label>
             <label className="text-[11px] text-gray-400 font-bold space-y-1 block">
               Temporary Password *
-              <input required type="password" value={officerForm.password} onChange={e => setOfficerField('password', e.target.value)}
-                placeholder="At least 8 characters — share it with them"
-                className="w-full mt-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs font-medium text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50" />
+              <div className="relative mt-1">
+                <input required type={showOfficerPassword ? 'text' : 'password'} value={officerForm.password} onChange={e => setOfficerField('password', e.target.value)}
+                  placeholder="At least 8 characters — share it with them"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2 pr-9 text-xs font-medium text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50" />
+                <button type="button" tabIndex={-1} onClick={() => setShowOfficerPassword(v => !v)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                  aria-label={showOfficerPassword ? 'Hide password' : 'Show password'}>
+                  {showOfficerPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
             </label>
           </div>
 
@@ -1403,6 +1549,12 @@ const NAV_SECTIONS = {
         { tab: 'vet',         icon: MessageSquare,   label: 'Messenger',     desc: 'Vets, suppliers, farmers & retailers' },
       ]
     },
+    {
+      section: 'Community',
+      items: [
+        { tab: 'cooperative', icon: Handshake,       label: 'Cooperative',   desc: 'Shared dip tank & group vet requests' },
+      ]
+    },
   ],
   Veterinarian: [
     {
@@ -1508,15 +1660,29 @@ const IMAGE_BY_SPECIES = {
   Pig:    'https://images.unsplash.com/photo-1516467508483-a7212febe31a?auto=format&fit=crop&q=80&w=800',
 };
 
+// A real uploaded photo is stored as a relative /uploads/... path (needs the
+// API origin prefixed); the species stock fallback is already a full URL.
+const resolveImageUrl = (url) => (url && url.startsWith('/uploads/')) ? `${API}${url}` : url;
+
 // Maps a scoped /animals row from the backend into the shape the rest of the
 // app's components already expect (camelCase, weightHistory, etc).
 const animalFromApi = (a) => ({
   id: a.id, name: a.name, species: a.species, breed: a.breed,
   birthDate: a.birth_date, tagId: a.tag_id, brandId: a.brand_id,
   sireId: a.sire_id, damId: a.dam_id, birthWeight: a.birth_weight, currentWeight: a.current_weight,
-  imageUrl: a.image_url || IMAGE_BY_SPECIES[a.species] || IMAGE_BY_SPECIES.Cattle,
+  imageUrl: resolveImageUrl(a.image_url) || IMAGE_BY_SPECIES[a.species] || IMAGE_BY_SPECIES.Cattle,
   weightHistory: (a.weight_history || []).map(w => ({ month: w.month_label, weight: w.weight_kg })),
   forSale: !!a.for_sale, costToDate: a.cost_to_date || 0,
+});
+
+// Maps a /health-events row into the shape the audit-log UI expects.
+const auditLogFromApi = (e) => ({
+  id: e.id, animalId: e.animal_id, animal: e.animal_name || '',
+  eventType: e.event_type,
+  action: e.notes ? `${e.event_type} — ${e.notes}` : e.event_type,
+  date: new Date(e.event_date).toLocaleString(),
+  eventDate: e.event_date,       // raw, parseable — used for recurrence math
+  nextDueDate: e.next_due_date,  // farmer/vet-set or auto-computed next occurrence, or null
 });
 
 // ── APP ────────────────────────────────────────────────────────────────────
@@ -1526,8 +1692,9 @@ function App() {
   const [animals,     setAnimals]     = useState([]);
   const [activeTab,   setActiveTab]   = useState('dashboard');
   const [completedTasks, setCompletedTasks] = useState([]);
-  const [auditLog,    setAuditLog]    = useState(INITIAL_LOGS);
+  const [auditLog,    setAuditLog]    = useState([]);
   const [inventory,   setInventory]   = useState([]);
+  const [nearbyFarmers, setNearbyFarmers] = useState([]);
   const [notifications] = useState([
     { id: 1, title: 'January Disease Alert', msg: 'Chegutu Area — increased tick counts detected.', type: 'Critical', time: '1h ago' },
     { id: 2, title: 'Vaccine Recall',         msg: 'Lot #992 Oxytetracycline recalled by supplier.',  type: 'Info',     time: '4h ago' },
@@ -1541,16 +1708,28 @@ function App() {
   }), [currentUser?.token]);
 
   const loadUserData = useCallback(async (user) => {
+    const headers = { Authorization: `Bearer ${user.token}` };
     try {
-      const res = await fetch(`${API}/animals`, { headers: { Authorization: `Bearer ${user.token}` } });
+      const res = await fetch(`${API}/animals`, { headers });
       if (res.ok) setAnimals((await res.json()).map(animalFromApi));
     } catch { /* offline — keep whatever is already loaded */ }
+    try {
+      const res = await fetch(`${API}/health-events`, { headers });
+      if (res.ok) setAuditLog((await res.json()).map(auditLogFromApi));
+    } catch { /* offline */ }
     if (user.role === 'Farmer') {
       try {
-        const res = await fetch(`${API}/inventory/${user.id}`, { headers: { Authorization: `Bearer ${user.token}` } });
+        const res = await fetch(`${API}/inventory/${user.id}`, { headers });
         if (res.ok) {
           const data = await res.json();
           setInventory(data.map(i => ({ id: i.id, name: i.medicine_name, stock: Number(i.stock), unit: i.unit, min: Number(i.min_stock), supplier: i.supplier, price: Number(i.price_usd) })));
+        }
+      } catch { /* offline */ }
+      try {
+        const res = await fetch(`${API}/users?role=Farmer`, { headers });
+        if (res.ok) {
+          const users = await res.json();
+          setNearbyFarmers(users.filter(u => u.id !== user.id).slice(0, 5).map(u => ({ id: u.id, name: u.full_name, org: u.org_name, province: u.province })));
         }
       } catch { /* offline */ }
     }
@@ -1599,26 +1778,69 @@ function App() {
     setInventory([]);
   };
 
-  const addAnimal = async (newAnimal) => {
-    const imageUrl = IMAGE_BY_SPECIES[newAnimal.species] || IMAGE_BY_SPECIES.Cattle;
+  // Returns { ok, error } so the registration form can show a real error and
+  // stay open on failure, instead of silently fabricating a local animal.
+  const addAnimal = async (newAnimal, photoFile) => {
     try {
-      const res = await authFetch('/animals', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...newAnimal, image_url: imageUrl }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        const weightHistory = [{ month: 'Initial', weight: parseFloat(newAnimal.birthWeight) || 0 }];
-        setAnimals(prev => [{ ...newAnimal, id: data.id, imageUrl, weightHistory, costToDate: 50, forSale: false }, ...prev]);
+      let res;
+      if (photoFile) {
+        const fd = new FormData();
+        Object.entries(newAnimal).forEach(([k, v]) => { if (v !== undefined && v !== null) fd.append(k, v); });
+        fd.append('photo', photoFile);
+        res = await authFetch('/animals', { method: 'POST', body: fd });
+      } else {
+        res = await authFetch('/animals', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newAnimal),
+        });
       }
-    } catch { /* offline — add locally so the demo still flows */
-      const weightHistory = [{ month: 'Initial', weight: parseFloat(newAnimal.birthWeight) || 0 }];
-      setAnimals(prev => [{ ...newAnimal, id: Date.now(), imageUrl, weightHistory, costToDate: 50, forSale: false }, ...prev]);
+      const data = await res.json();
+      if (!res.ok) return { ok: false, error: data.error || 'Could not register animal.' };
+      await loadUserData(currentUser); // refetch so the real (server-resolved) photo/id are shown
+      setActiveTab('profile');
+      return { ok: true };
+    } catch {
+      return { ok: false, error: 'Could not reach the PFUMA API. Is the Flask backend running?' };
     }
-    setActiveTab('profile');
   };
 
-  const addAuditLog    = (entry)    => setAuditLog(prev => [entry, ...prev]);
+  const addAuditLog = async (entry) => {
+    if (!entry.animalId || !entry.eventType) {
+      setAuditLog(prev => [entry, ...prev]);
+      return { ok: true };
+    }
+    try {
+      const res = await authFetch('/health-events', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          animal_id: entry.animalId, event_type: entry.eventType, notes: entry.notes || '',
+          event_date: entry.eventDate || undefined, next_due_date: entry.nextDueDate || null,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: data.error || 'Could not save this to your records — try again.' };
+      setAuditLog(prev => [data.event ? auditLogFromApi(data.event) : entry, ...prev]);
+      return { ok: true };
+    } catch {
+      return { ok: false, error: 'Offline — this could not be saved. It will not appear after a refresh.' };
+    }
+  };
+
+  const deductInventoryItem = async (itemId, dose) => {
+    try {
+      const res = await authFetch(`/inventory/${itemId}/deduct`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dose }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, error: data.error || 'Could not update stock — try again.' };
+      setInventory(prev => prev.map(i => i.id === itemId ? { ...i, stock: Number(data.new_stock) } : i));
+      return { ok: true };
+    } catch {
+      return { ok: false, error: 'Offline — stock was not updated.' };
+    }
+  };
+
   const handleListAnimal = async (id) => {
     setAnimals(prev => prev.map(a => a.id === id ? { ...a, forSale: !a.forSale } : a));
     try { await authFetch(`/animals/${id}/sale`, { method: 'PATCH' }); } catch { /* offline — local toggle already applied */ }
@@ -1626,6 +1848,10 @@ function App() {
 
   if (!sessionChecked) return null;
   if (!currentUser) return <AuthPortal onLogin={handleLoginSuccess} />;
+  // Admin doesn't fit the client-facing Farmer/Vet/Supplier/Retailer/Police
+  // shell at all — a separate full-page dashboard, bypassing the normal
+  // sidebar/nav entirely.
+  if (currentUser.role === 'Admin') return <AdminDashboard currentUser={currentUser} onLogout={handleSignOut} />;
 
   const role        = currentUser.role;
   const navSections = NAV_SECTIONS[role] || NAV_SECTIONS.Farmer;
@@ -1655,9 +1881,9 @@ function App() {
 
         {/* Logo */}
         <div className="px-6 pt-6 pb-4 flex items-center gap-3">
-          <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center text-pfuma-green font-black text-2xl shadow-lg shrink-0">P</div>
+          <img src={pfumaMark} alt="PFUMA" className="w-10 h-10 rounded-xl shadow-lg shrink-0 object-cover" />
           <div className="flex-1">
-            <span className="text-base font-black tracking-tighter block leading-none">PFUMA</span>
+            <span className="text-base font-extrabold tracking-tight block leading-none">PFUMA</span>
           </div>
           <button
             onClick={() => setIsMobileNavOpen(false)}
@@ -1729,8 +1955,8 @@ function App() {
           >
             <Menu size={20} />
           </button>
-          <div className="w-7 h-7 bg-yellow-400 rounded-lg flex items-center justify-center text-pfuma-green font-black text-sm shadow shrink-0">P</div>
-          <span className="text-sm font-black text-gray-900 tracking-tight">PFUMA</span>
+          <img src={pfumaMark} alt="PFUMA" className="w-7 h-7 rounded-lg shadow shrink-0 object-cover" />
+          <span className="text-sm font-extrabold text-gray-900 tracking-tight">PFUMA</span>
         </div>
 
         {/* Notification bell */}
@@ -1768,19 +1994,20 @@ function App() {
         <div className={`flex-1 ${activeTab === 'vet' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           {activeTab === 'dashboard' && (
             <ErrorBoundary>
-              {role === 'Farmer'       && <FarmerDashboard      animals={animals} auditLog={auditLog} inventory={inventory} notifications={notifications} setActiveTab={setActiveTab} onListAnimal={handleListAnimal} />}
+              {role === 'Farmer'       && <FarmerDashboard      animals={animals} auditLog={auditLog} inventory={inventory} notifications={notifications} nearbyFarmers={nearbyFarmers} currentUser={currentUser} setActiveTab={setActiveTab} onListAnimal={handleListAnimal} />}
               {role === 'Veterinarian' && <VeterinarianDashboard animals={animals} notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} />}
               {role === 'Supplier'     && <SupplierDashboard     inventory={inventory} setActiveTab={setActiveTab} currentUser={currentUser} />}
-              {role === 'Retailer'     && <RetailerDashboard     animals={animals} setActiveTab={setActiveTab} currentUser={currentUser} />}
+              {role === 'Retailer'     && <RetailerDashboard     setActiveTab={setActiveTab} currentUser={currentUser} />}
               {role === 'Police'       && <PoliceDashboard       notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} />}
             </ErrorBoundary>
           )}
           {activeTab === 'profile'     && <ErrorBoundary><AnimalProfile animals={animals} onAddAnimal={addAnimal} auditLog={auditLog} currentUser={currentUser} onListAnimal={handleListAnimal} /></ErrorBoundary>}
-          {activeTab === 'health'      && <ErrorBoundary><HealthManagement animals={animals} completedTasks={completedTasks} setCompletedTasks={setCompletedTasks} auditLog={auditLog} setAuditLog={setAuditLog} inventory={inventory} setInventory={setInventory} /></ErrorBoundary>}
+          {activeTab === 'health'      && <ErrorBoundary><HealthManagement animals={animals} completedTasks={completedTasks} setCompletedTasks={setCompletedTasks} auditLog={auditLog} onAddAuditLog={addAuditLog} inventory={inventory} onDeductInventory={deductInventoryItem} /></ErrorBoundary>}
           {activeTab === 'disease'     && <ErrorBoundary><DiseaseDetection animals={animals} onAddAuditLog={addAuditLog} /></ErrorBoundary>}
           {activeTab === 'vet'         && <ErrorBoundary><VetCommunication animals={animals} currentUser={currentUser} /></ErrorBoundary>}
           {activeTab === 'marketplace' && <ErrorBoundary><Marketplace currentUser={currentUser} animals={animals} onListAnimal={handleListAnimal} /></ErrorBoundary>}
-          {activeTab === 'feed'        && <ErrorBoundary><FeedAnalyzer /></ErrorBoundary>}
+          {activeTab === 'feed'        && <ErrorBoundary><FeedAnalyzer currentUser={currentUser} animals={animals} onUpdateAnimal={(id, patch) => setAnimals(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a))} /></ErrorBoundary>}
+          {activeTab === 'cooperative' && <ErrorBoundary><Cooperative currentUser={currentUser} /></ErrorBoundary>}
         </div>
 
         <Jinda setActiveTab={setActiveTab} animals={animals} currentUser={currentUser} />

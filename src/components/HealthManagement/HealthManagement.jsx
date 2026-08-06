@@ -59,14 +59,21 @@ const InfoRow = ({ label, value, sub }) => (
   </div>
 );
 
+// The mating/insemination date is persisted as a regular health event so the
+// Pregnancy Tracker survives a refresh instead of resetting to blank.
+const MATING_EVENT = 'Mating / Insemination';
+
 // ── main ───────────────────────────────────────────────────────────────────
-const HealthManagement = ({ animals, completedTasks, setCompletedTasks, auditLog, setAuditLog, inventory, setInventory }) => {
+const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onDeductInventory }) => {
   const [selectedAnimalId, setSelectedAnimalId] = useState('');
   const [gestationStart, setGestationStart]     = useState('');
+  const [matingSaving, setMatingSaving]         = useState(false);
   const [selectedMeds, setSelectedMeds]         = useState('Oxytetracycline (LA)');
   const [activeInfoTab, setActiveInfoTab]       = useState('lifecycle');
   const [feedbackMsg, setFeedbackMsg]           = useState(null);
   const [showMedDetail, setShowMedDetail]       = useState(false);
+  const [showLogForm, setShowLogForm]           = useState(false);
+  const [logForm, setLogForm] = useState({ eventType: '', eventDate: '', nextDueDate: '', notes: '' });
   const feedbackTimerRef = useRef(null);
 
   useEffect(() => () => { if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current); }, []);
@@ -75,6 +82,15 @@ const HealthManagement = ({ animals, completedTasks, setCompletedTasks, auditLog
     () => animals.find(a => a.id === parseInt(selectedAnimalId, 10)),
     [animals, selectedAnimalId]
   );
+
+  // Pre-fill the mating date from the real record when switching animals,
+  // instead of always starting blank — auditLog is newest-first so the
+  // first match is the most recently logged mating date for this animal.
+  useEffect(() => {
+    if (!selectedAnimal) { setGestationStart(''); return; }
+    const lastMating = auditLog.find(e => e.animalId === selectedAnimal.id && e.eventType === MATING_EVENT);
+    setGestationStart(lastMating?.eventDate ? new Date(lastMating.eventDate).toISOString().slice(0, 10) : '');
+  }, [selectedAnimal?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const showFeedback = (msg, type = 'success') => {
     if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
@@ -122,30 +138,105 @@ const HealthManagement = ({ animals, completedTasks, setCompletedTasks, auditLog
     return (med.maxDose ? Math.min(dose, med.maxDose) : dose).toFixed(1);
   };
 
+  // Merges the birth-date-triggered vaccine schedule with recurring items
+  // (dips, and any vaccine with an intervalDays) and, for anything already
+  // logged at least once, reads its real due date from the persisted audit
+  // log instead of the static from-birth table — so a farmer who dipped
+  // last Tuesday sees "next dip due" computed from that actual date, and a
+  // recurring item that comes due again shows as due again instead of being
+  // stuck "Completed" forever.
   const getDynamicSchedule = (animal) => {
     if (!animal?.birthDate) return [];
     const birth = new Date(animal.birthDate);
     if (isNaN(birth.getTime())) return [];
-    return (HEALTH_PROTOCOLS[animal.species]?.vaccines || []).map(v => {
-      const dueDate = new Date(birth);
-      dueDate.setDate(birth.getDate() + v.age);
-      const now = new Date();
+    const now = new Date();
+    const protocol = HEALTH_PROTOCOLS[animal.species];
+    const items = [...(protocol?.vaccines || []), ...(protocol?.dips || [])];
+
+    return items.map(v => {
       const taskId = `${animal.id}-${v.name}`;
-      const isCompleted = completedTasks.includes(taskId);
+      // auditLog is newest-first, so the first match is the most recent time
+      // this exact item was logged for this animal.
+      const lastEvent = auditLog.find(e => e.animalId === animal.id && e.eventType === v.name);
+
+      let dueDate, isCompleted;
+      if (!lastEvent) {
+        dueDate = new Date(birth);
+        dueDate.setDate(birth.getDate() + v.age);
+        isCompleted = false;
+      } else if (v.intervalDays) {
+        dueDate = lastEvent.nextDueDate
+          ? new Date(lastEvent.nextDueDate)
+          : new Date(new Date(lastEvent.eventDate).getTime() + v.intervalDays * 86400000);
+        isCompleted = dueDate > now; // recurring item due again reads as due, not stuck "Completed"
+      } else {
+        dueDate = new Date(birth);
+        dueDate.setDate(birth.getDate() + v.age);
+        isCompleted = true; // one-off item (type: 'Once'/'Protocol') — done means done
+      }
+
       const daysUntil = Math.ceil((dueDate - now) / (1000 * 60 * 60 * 24));
       const status = isCompleted ? 'Completed' : now > dueDate ? 'Overdue' : daysUntil <= 14 ? 'Due Soon' : 'Upcoming';
-      return { ...v, dueDate: dueDate.toDateString(), daysUntil, status, taskId };
+      return { ...v, dueDate: dueDate.toDateString(), daysUntil, status, taskId, lastDone: lastEvent?.date || null };
     });
   };
 
-  const handleCompleteTask = (taskName, taskId) => {
-    if (completedTasks.includes(taskId) || !selectedAnimal) return;
-    setCompletedTasks([...completedTasks, taskId]);
-    setAuditLog([{ id: Date.now(), animalId: selectedAnimal.id, animal: selectedAnimal.name, action: taskName, date: new Date().toLocaleString() }, ...auditLog]);
-    showFeedback(`✓ ${taskName} marked done for ${selectedAnimal.name}.`);
+  const handleCompleteTask = async (task) => {
+    if (!selectedAnimal || task.status === 'Completed') return;
+    const nextDueDate = task.intervalDays
+      ? new Date(Date.now() + task.intervalDays * 86400000).toISOString().slice(0, 10)
+      : null;
+    const result = await onAddAuditLog({
+      id: Date.now(), animalId: selectedAnimal.id, animal: selectedAnimal.name,
+      eventType: task.name, nextDueDate, date: new Date().toLocaleString(),
+    });
+    if (!result.ok) { showFeedback(result.error || 'Could not save — try again.', 'error'); return; }
+    showFeedback(
+      nextDueDate
+        ? `✓ ${task.name} logged for ${selectedAnimal.name} — next due ${new Date(nextDueDate).toDateString()}.`
+        : `✓ ${task.name} marked done for ${selectedAnimal.name}.`
+    );
   };
 
-  const deductInventory = () => {
+  // Free-form logging for anything not on the fixed schedule — an ad-hoc
+  // dip, a vet visit, a mid-cycle booster — with a real "day it happened"
+  // and an optional "next due" the farmer sets themselves.
+  const handleLogCustomEvent = async (e) => {
+    e.preventDefault();
+    if (!selectedAnimal || !logForm.eventType.trim()) return;
+    const result = await onAddAuditLog({
+      id: Date.now(), animalId: selectedAnimal.id, animal: selectedAnimal.name,
+      eventType: logForm.eventType.trim(),
+      eventDate: logForm.eventDate || undefined,
+      nextDueDate: logForm.nextDueDate || null,
+      notes: logForm.notes || '',
+      date: new Date().toLocaleString(),
+    });
+    if (!result.ok) { showFeedback(result.error || 'Could not save — try again.', 'error'); return; }
+    setLogForm({ eventType: '', eventDate: '', nextDueDate: '', notes: '' });
+    setShowLogForm(false);
+    showFeedback(`✓ Logged "${logForm.eventType.trim()}" for ${selectedAnimal.name}.`);
+  };
+
+  const handleSetMatingDate = async (dateStr) => {
+    setGestationStart(dateStr);
+    if (!selectedAnimal || !dateStr) return;
+    const period = HEALTH_PROTOCOLS[selectedAnimal.species]?.gestation || 283;
+    const expectedBirth = new Date(dateStr);
+    expectedBirth.setDate(expectedBirth.getDate() + period);
+    setMatingSaving(true);
+    const result = await onAddAuditLog({
+      id: Date.now(), animalId: selectedAnimal.id, animal: selectedAnimal.name,
+      eventType: MATING_EVENT, eventDate: dateStr,
+      nextDueDate: expectedBirth.toISOString().slice(0, 10),
+      date: new Date().toLocaleString(),
+    });
+    setMatingSaving(false);
+    if (!result.ok) { showFeedback(result.error || 'Could not save mating date — try again.', 'error'); return; }
+    showFeedback(`✓ Mating date saved for ${selectedAnimal.name} — expected birth ${expectedBirth.toDateString()}.`);
+  };
+
+  const deductInventory = async () => {
     if (!selectedAnimal?.currentWeight || selectedAnimal.currentWeight <= 0) {
       showFeedback('Animal weight not recorded. Update the animal profile first.', 'error'); return;
     }
@@ -153,8 +244,16 @@ const HealthManagement = ({ animals, completedTasks, setCompletedTasks, auditLog
     const item = inventory.find(i => i.name === selectedMeds);
     if (!item) { showFeedback(`${selectedMeds} is not in the medicine cabinet.`, 'error'); return; }
     if (item.stock < dose) { showFeedback(`Insufficient stock. Only ${item.stock.toFixed(1)}ml left.`, 'error'); return; }
-    setInventory(inventory.map(i => i.name === selectedMeds ? { ...i, stock: parseFloat((i.stock - dose).toFixed(1)) } : i));
-    setAuditLog([{ id: Date.now(), animalId: selectedAnimal.id, animal: selectedAnimal.name, action: `Treatment: ${selectedMeds} (${dose}ml)`, date: new Date().toLocaleString() }, ...auditLog]);
+
+    const deductResult = await onDeductInventory(item.id, dose);
+    if (!deductResult.ok) { showFeedback(deductResult.error || 'Could not update stock — try again.', 'error'); return; }
+
+    const logResult = await onAddAuditLog({
+      id: Date.now(), animalId: selectedAnimal.id, animal: selectedAnimal.name,
+      eventType: `Treatment: ${selectedMeds}`, notes: `${dose}ml administered`,
+      date: new Date().toLocaleString(),
+    });
+    if (!logResult.ok) { showFeedback(logResult.error || 'Stock updated, but the treatment record could not be saved.', 'error'); return; }
     showFeedback(`${dose}ml of ${selectedMeds} administered and deducted from cabinet.`);
   };
 
@@ -336,14 +435,25 @@ const HealthManagement = ({ animals, completedTasks, setCompletedTasks, auditLog
                     <label className="text-[10px] font-black text-gray-500 uppercase block mb-1.5" htmlFor="gest-date">
                       Mating / Insemination Date
                     </label>
-                    <input
-                      id="gest-date"
-                      type="date"
-                      max={new Date().toISOString().split('T')[0]}
-                      className="w-full p-3 bg-gray-50 rounded-xl border-2 border-transparent font-bold text-sm outline-none focus:border-pfuma-green transition"
-                      value={gestationStart}
-                      onChange={e => setGestationStart(e.target.value)}
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        id="gest-date"
+                        type="date"
+                        max={new Date().toISOString().split('T')[0]}
+                        className="flex-1 p-3 bg-gray-50 rounded-xl border-2 border-transparent font-bold text-sm outline-none focus:border-pfuma-green transition"
+                        value={gestationStart}
+                        onChange={e => setGestationStart(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSetMatingDate(gestationStart)}
+                        disabled={!gestationStart || matingSaving}
+                        className="px-4 rounded-xl bg-pfuma-green text-white text-xs font-black uppercase tracking-wide hover:bg-green-700 transition disabled:opacity-40 shrink-0"
+                      >
+                        {matingSaving ? '…' : 'Save'}
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-gray-400 font-medium mt-1.5">Saved so it's still here next time you open this animal — not just a one-off calculator.</p>
 
                     {gestationInfo && (
                       <div className={`mt-3 p-4 rounded-2xl ${gestationInfo.isOverdue ? 'bg-red-50 border border-red-200' : gestationInfo.isUrgent ? 'bg-orange-50 border border-orange-200' : 'bg-green-50 border border-green-200'}`}>
@@ -494,8 +604,8 @@ const HealthManagement = ({ animals, completedTasks, setCompletedTasks, auditLog
               <div>
                 <SectionHeader
                   icon={ShieldCheck}
-                  title="Vaccination Schedule"
-                  description={`Required and recommended vaccines for ${selectedAnimal.name} (${selectedAnimal.species}), calculated from its birth date. Overdue vaccines need immediate attention.`}
+                  title="Vaccination & Dipping Schedule"
+                  description={`Required vaccines and tick-control dipping for ${selectedAnimal.name} (${selectedAnimal.species}). One-off vaccines are calculated from its birth date; dips and recurring boosters are calculated from the last time you logged one.`}
                 />
               </div>
               {/* Progress summary */}
@@ -521,7 +631,10 @@ const HealthManagement = ({ animals, completedTasks, setCompletedTasks, auditLog
                       </div>
                       <div>
                         <p className="text-xs font-black text-gray-800 leading-snug">{task.name}</p>
-                        <p className="text-[10px] text-gray-400 font-medium mt-0.5">{task.dueDate}</p>
+                        <p className="text-[10px] text-gray-400 font-medium mt-0.5">
+                          {task.intervalDays ? 'Next due: ' : ''}{task.dueDate}
+                        </p>
+                        {task.lastDone && <p className="text-[10px] text-gray-400 font-medium">Last done: {task.lastDone}</p>}
                         {task.notes && <p className="text-[10px] text-gray-400 italic mt-0.5">{task.notes}</p>}
                         {task.status !== 'Completed' && (
                           <p className={`text-[10px] font-black mt-1 uppercase ${statusLabel(task.status)}`}>
@@ -536,7 +649,7 @@ const HealthManagement = ({ animals, completedTasks, setCompletedTasks, auditLog
                       ? <CheckCircle size={16} className="text-pfuma-green shrink-0 mt-0.5" />
                       : (
                         <button
-                          onClick={() => handleCompleteTask(task.name, task.taskId)}
+                          onClick={() => handleCompleteTask(task)}
                           className={`shrink-0 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide transition ml-2 ${
                             task.status === 'Overdue'  ? 'bg-red-600 text-white hover:bg-red-700' :
                             task.status === 'Due Soon' ? 'bg-orange-500 text-white hover:bg-orange-600' :
@@ -551,6 +664,55 @@ const HealthManagement = ({ animals, completedTasks, setCompletedTasks, auditLog
                 ))}
               </div>
             )}
+
+            {/* ── Log a custom health event (anything off the fixed schedule) ── */}
+            <div className="mt-5 pt-5 border-t border-gray-100">
+              {!showLogForm ? (
+                <button
+                  onClick={() => setShowLogForm(true)}
+                  className="w-full py-3 rounded-xl border-2 border-dashed border-gray-200 text-xs font-black uppercase tracking-widest text-gray-500 hover:border-pfuma-green hover:text-pfuma-green transition"
+                >
+                  + Log a different treatment or dip
+                </button>
+              ) : (
+                <form onSubmit={handleLogCustomEvent} className="bg-gray-50 rounded-2xl p-4 space-y-3">
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                    Log something not on the schedule above — e.g. an extra dip, a vet visit, an off-cycle booster
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[9px] font-black text-gray-400 uppercase mb-1">What was done *</label>
+                      <input type="text" required placeholder="e.g. Dipping (Tick Control)" className="w-full p-2.5 bg-white rounded-lg border-2 border-transparent focus:border-pfuma-green outline-none text-xs font-bold"
+                        value={logForm.eventType} onChange={e => setLogForm(f => ({ ...f, eventType: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-black text-gray-400 uppercase mb-1">Day it was done</label>
+                      <input type="date" max={new Date().toISOString().slice(0, 10)} className="w-full p-2.5 bg-white rounded-lg border-2 border-transparent focus:border-pfuma-green outline-none text-xs font-bold"
+                        value={logForm.eventDate} onChange={e => setLogForm(f => ({ ...f, eventDate: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-black text-gray-400 uppercase mb-1">Next due (optional)</label>
+                      <input type="date" min={new Date().toISOString().slice(0, 10)} className="w-full p-2.5 bg-white rounded-lg border-2 border-transparent focus:border-pfuma-green outline-none text-xs font-bold"
+                        value={logForm.nextDueDate} onChange={e => setLogForm(f => ({ ...f, nextDueDate: e.target.value }))} />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-black text-gray-400 uppercase mb-1">Notes</label>
+                      <input type="text" placeholder="optional" className="w-full p-2.5 bg-white rounded-lg border-2 border-transparent focus:border-pfuma-green outline-none text-xs font-bold"
+                        value={logForm.notes} onChange={e => setLogForm(f => ({ ...f, notes: e.target.value }))} />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="submit" className="flex-1 py-2.5 bg-pfuma-green text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-green-700 transition">
+                      Save Record
+                    </button>
+                    <button type="button" onClick={() => { setShowLogForm(false); setLogForm({ eventType: '', eventDate: '', nextDueDate: '', notes: '' }); }}
+                      className="px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-gray-700 transition">
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           </div>
         </div>
       )}

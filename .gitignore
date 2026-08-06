@@ -43,3 +43,6 @@ yarn-error.log*
 # Local scratch
 *.tmp
 *.bak
+
+# Runtime user uploads (photos, ID/credential docs) — never commit these
+backend/uploads/

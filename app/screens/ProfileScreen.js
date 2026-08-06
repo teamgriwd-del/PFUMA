@@ -1,44 +1,61 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Linking } from 'react-native';
+import {
+  Users, ShoppingCart, Wheat, Stethoscope, Pill, AlertTriangle,
+  Store, Sprout, LogOut, ChevronRight,
+} from 'lucide-react-native';
 import { COLORS, API } from '../config';
+import { authFetch } from '../api';
+import pfumaMark from '../assets/pfuma-mark.png';
 
-const MenuItem = ({ emoji, label, desc, color, onPress }) => (
+const MenuItem = ({ icon: Icon, label, desc, color, onPress }) => (
   <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.8}>
     <View style={[styles.menuIcon, { backgroundColor: color + '22' }]}>
-      <Text style={{ fontSize: 22 }}>{emoji}</Text>
+      <Icon size={20} color={color} strokeWidth={2.2} />
     </View>
     <View style={{ flex: 1 }}>
       <Text style={styles.menuLabel}>{label}</Text>
       {desc ? <Text style={styles.menuDesc}>{desc}</Text> : null}
     </View>
-    <Text style={{ color: '#ccc', fontSize: 18 }}>›</Text>
+    <ChevronRight size={18} color="#ccc" />
   </TouchableOpacity>
 );
 
-const ROLE_EMOJI  = { Farmer: '🌾', Veterinarian: '🩺', Supplier: '💊', Retailer: '🏪' };
-const ROLE_COLOR  = { Farmer: COLORS.primary, Veterinarian: '#1e293b', Supplier: '#ea580c', Retailer: '#6d28d9' };
+const ROLE_ICON  = { Farmer: Sprout, Veterinarian: Stethoscope, Supplier: Pill, Retailer: Store };
+const ROLE_COLOR = { Farmer: COLORS.primary, Veterinarian: '#1e293b', Supplier: '#ea580c', Retailer: '#6d28d9' };
 
 export default function ProfileScreen({ navigation, currentUser, onLogout }) {
   const role      = currentUser?.role || 'Farmer';
   const headerBg  = ROLE_COLOR[role]  || COLORS.primary;
-  const emoji     = ROLE_EMOJI[role]  || '🌾';
+  const RoleIcon  = ROLE_ICON[role]   || Sprout;
+  const [stats, setStats] = useState({ animals: 0, listings: 0, messages: 0 });
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    (async () => {
+      try {
+        const res = await authFetch(currentUser, `/dashboard/${currentUser.id}`);
+        if (res.ok) setStats(await res.json());
+      } catch { /* offline — leave zeros, no fake numbers */ }
+    })();
+  }, [currentUser?.id]);
 
   return (
     <ScrollView style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: headerBg }]}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{emoji}</Text>
+          <RoleIcon size={36} color={headerBg} strokeWidth={2.2} />
         </View>
         <Text style={styles.userName}>{currentUser?.name || 'User'}</Text>
         <Text style={styles.userRole}>{role} · {currentUser?.province || 'Zimbabwe'}</Text>
         {currentUser?.org ? <Text style={styles.userOrg}>{currentUser.org}</Text> : null}
         <View style={styles.userStats}>
-          <View style={styles.userStat}><Text style={styles.userStatVal}>2</Text><Text style={styles.userStatLabel}>Animals</Text></View>
+          <View style={styles.userStat}><Text style={styles.userStatVal}>{stats.animals ?? 0}</Text><Text style={styles.userStatLabel}>Animals</Text></View>
           <View style={styles.statDivider} />
-          <View style={styles.userStat}><Text style={styles.userStatVal}>1</Text><Text style={styles.userStatLabel}>Listed</Text></View>
+          <View style={styles.userStat}><Text style={styles.userStatVal}>{stats.listings ?? 0}</Text><Text style={styles.userStatLabel}>Listed</Text></View>
           <View style={styles.statDivider} />
-          <View style={styles.userStat}><Text style={styles.userStatVal}>2</Text><Text style={styles.userStatLabel}>Events</Text></View>
+          <View style={styles.userStat}><Text style={styles.userStatVal}>{stats.messages ?? 0}</Text><Text style={styles.userStatLabel}>Events</Text></View>
         </View>
       </View>
 
@@ -46,9 +63,9 @@ export default function ProfileScreen({ navigation, currentUser, onLogout }) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>My Farm</Text>
         <View style={styles.menuCard}>
-          <MenuItem emoji="🐄" label="Herd Registry"   desc="View and manage your animals"     color={COLORS.primary} onPress={() => navigation.navigate('Herd')} />
-          <MenuItem emoji="🛒" label="My Listings"     desc="Animals and products for sale"     color="#e65100"       onPress={() => navigation.navigate('Market')} />
-          <MenuItem emoji="🌾" label="Feed Analyzer"   desc="Check livestock nutrition"          color="#558b2f"       onPress={() => navigation.navigate('Feed')} />
+          <MenuItem icon={Users}        label="Herd Registry"   desc="View and manage your animals"     color={COLORS.primary} onPress={() => navigation.navigate('Herd')} />
+          <MenuItem icon={ShoppingCart} label="My Listings"     desc="Animals and products for sale"     color="#e65100"       onPress={() => navigation.navigate('Market')} />
+          <MenuItem icon={Wheat}        label="Feed Analyzer"   desc="Check livestock nutrition"          color="#558b2f"       onPress={() => navigation.navigate('Feed')} />
         </View>
       </View>
 
@@ -56,9 +73,9 @@ export default function ProfileScreen({ navigation, currentUser, onLogout }) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Connect</Text>
         <View style={styles.menuCard}>
-          <MenuItem emoji="🩺" label="Contact a Vet"   desc="DVS Duty Officer — Dr T. Moyo"     color="#1565c0"       onPress={() => Linking.openURL('tel:+263242706331')} />
-          <MenuItem emoji="💊" label="Order Medicines" desc="AgroChem Zim · VetDirect"           color="#6a1b9a"       onPress={() => Linking.openURL('tel:+263774000004')} />
-          <MenuItem emoji="🚨" label="DVS Emergency"   desc="+263 242 706331 · Harare HQ"        color={COLORS.danger} onPress={() => Linking.openURL('tel:+263242706331')} />
+          <MenuItem icon={Stethoscope} label="Contact a Vet"   desc="DVS Duty Officer — Dr T. Moyo"     color="#1565c0"       onPress={() => Linking.openURL('tel:+263242706331')} />
+          <MenuItem icon={Pill}        label="Order Medicines" desc="AgroChem Zim · VetDirect"           color="#6a1b9a"       onPress={() => Linking.openURL('tel:+263774000004')} />
+          <MenuItem icon={AlertTriangle} label="DVS Emergency" desc="+263 242 706331 · Harare HQ"        color={COLORS.danger} onPress={() => Linking.openURL('tel:+263242706331')} />
         </View>
       </View>
 
@@ -84,9 +101,9 @@ export default function ProfileScreen({ navigation, currentUser, onLogout }) {
             onPress={onLogout}
             activeOpacity={0.8}
           >
-            <Text style={{ fontSize: 22 }}>🚪</Text>
+            <LogOut size={20} color="#dc2626" strokeWidth={2.2} />
             <Text style={{ fontSize: 14, fontWeight: '800', color: '#dc2626', flex: 1 }}>Sign Out</Text>
-            <Text style={{ color: '#fca5a5', fontSize: 18 }}>›</Text>
+            <ChevronRight size={18} color="#fca5a5" />
           </TouchableOpacity>
         </View>
       )}
@@ -94,12 +111,12 @@ export default function ProfileScreen({ navigation, currentUser, onLogout }) {
       {/* About */}
       <View style={[styles.section, { marginBottom: 40 }]}>
         <View style={styles.aboutCard}>
-          <View style={styles.aboutLogo}><Text style={styles.aboutLogoText}>R</Text></View>
+          <View style={styles.aboutLogo}><Image source={pfumaMark} style={styles.aboutLogoImg} /></View>
           <Text style={styles.aboutName}>PFUMA</Text>
           <Text style={styles.aboutTagline}>Zimbabwe's Livestock Intelligence Platform</Text>
           <Text style={styles.aboutDesc}>Built by Arnold Mapindu &amp; Addy · 2026{'\n'}React Native (Expo) · Flask API · MySQL</Text>
           <View style={styles.stakeholderRow}>
-            {['🌾 Farmer','🩺 Vet','💊 Supplier','🏪 Retailer'].map(s => (
+            {['Farmer', 'Vet', 'Supplier', 'Retailer'].map(s => (
               <View key={s} style={styles.stakeholderChip}><Text style={styles.stakeholderText}>{s}</Text></View>
             ))}
           </View>
@@ -113,7 +130,6 @@ const styles = StyleSheet.create({
   container:      { flex: 1, backgroundColor: COLORS.bg },
   header:         { backgroundColor: COLORS.primary, padding: 24, paddingTop: 56, alignItems: 'center', paddingBottom: 32 },
   avatar:         { width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.yellow, alignItems: 'center', justifyContent: 'center', marginBottom: 12, elevation: 6 },
-  avatarText:     { fontSize: 40 },
   userName:       { color: '#fff', fontSize: 22, fontWeight: '900' },
   userRole:       { color: '#a5d6a7', fontSize: 13, fontWeight: '600', marginTop: 4 },
   userOrg:        { color: '#a5d6a7', fontSize: 12, fontWeight: '600', marginTop: 2 },
@@ -134,8 +150,8 @@ const styles = StyleSheet.create({
   apiLabel:       { fontSize: 14, fontWeight: '800', color: COLORS.text },
   apiUrl:         { fontSize: 11, color: COLORS.muted, marginTop: 2 },
   aboutCard:      { backgroundColor: COLORS.primary, borderRadius: 20, padding: 24, alignItems: 'center' },
-  aboutLogo:      { width: 52, height: 52, backgroundColor: COLORS.yellow, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginBottom: 12, elevation: 4 },
-  aboutLogoText:  { color: COLORS.primary, fontSize: 30, fontWeight: '900' },
+  aboutLogo:      { width: 52, height: 52, backgroundColor: '#fff', borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginBottom: 12, elevation: 4, padding: 8 },
+  aboutLogoImg:   { width: '100%', height: '100%', resizeMode: 'contain' },
   aboutName:      { color: '#fff', fontSize: 20, fontWeight: '900' },
   aboutTagline:   { color: '#a5d6a7', fontSize: 12, marginTop: 4, marginBottom: 8 },
   aboutDesc:      { color: '#a5d6a7', fontSize: 11, textAlign: 'center', lineHeight: 18, marginBottom: 16 },

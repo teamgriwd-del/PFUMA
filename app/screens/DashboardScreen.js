@@ -1,49 +1,28 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, StatusBar,
+  View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Globe, Sprout, Pill, Store, Stethoscope, AlertTriangle, CheckCircle, Check,
   MessageSquare, ShieldCheck, Wifi, Package, PhoneCall, HeartPulse, ShoppingCart,
-  ArrowRight, Users, Wheat, Wallet, Syringe, ListChecks, Compass, Tag, TrendingUp, Truck,
+  ArrowRight, Users, Wheat, Wallet, Syringe, ListChecks, Compass, Tag, TrendingUp, Truck, Beef,
 } from 'lucide-react-native';
-import { COLORS } from '../config';
+import { COLORS, FONTS, API } from '../config';
+import { authFetch } from '../api';
+import pfumaMark from '../assets/pfuma-mark.png';
 
-// ── seed data (mirrors web App.jsx) ────────────────────────────────────────
-const ANIMALS = [
-  { id: 101, name: 'Bessie',  species: 'Cattle', breed: 'Brahman', age: '2y 4m', tagId: 'ZIM-882',
-    birthDate: '2023-10-15', currentWeight: 420, forSale: false, costToDate: 120 },
-  { id: 102, name: 'Thunder', species: 'Cattle', breed: 'Angus',   age: '1y 9m', tagId: 'ZIM-104',
-    birthDate: '2024-05-20', currentWeight: 380, forSale: true,  costToDate: 95 },
-];
+// A real uploaded photo is a relative /uploads/... path; a species stock
+// fallback (assigned server-side) is already a full URL.
+const resolveImageUrl = (url) => (url && url.startsWith('/uploads/')) ? `${API}${url}` : url;
+
+// Regional disease-alert bulletin content — not per-user/animal data, left
+// as static informational content (same treatment as the web app).
 const NOTIFICATIONS = [
   { id: 1, title: 'January Disease Alert', msg: 'Chegutu Area — increased tick counts detected.', type: 'Critical', time: '1h ago' },
   { id: 2, title: 'Vaccine Recall',         msg: 'Lot #992 Oxytetracycline recalled by supplier.',  type: 'Info',     time: '4h ago' },
 ];
-const INVENTORY = [
-  { id: 1, name: 'Oxytetracycline (LA)', stock: 500,  unit: 'ml', min: 100, supplier: 'AgroChem Zim' },
-  { id: 2, name: 'Buparvaquone',         stock: 120,  unit: 'ml', min: 50,  supplier: 'VetDirect' },
-  { id: 3, name: 'Albendazole',          stock: 1000, unit: 'ml', min: 200, supplier: 'AgroChem Zim' },
-];
-const ORDERS = [
-  { id: 'ORD-441', farm: 'Moyo Livestock',     item: 'Oxytetracycline (LA)',   qty: '200ml',    status: 'Dispatched', urgent: false },
-  { id: 'ORD-442', farm: 'ZimAgro Enterprise', item: 'FMD Vaccine',            qty: '50 doses', status: 'Pending',    urgent: true  },
-  { id: 'ORD-443', farm: 'Kumar Farms',         item: 'Buparvaquone (Butalex)',qty: '100ml',    status: 'Pending',    urgent: true  },
-  { id: 'ORD-444', farm: 'Central Paddock',     item: 'Albendazole Drench',    qty: '500ml',    status: 'Delivered',  urgent: false },
-];
-const FARMS = [
-  { name: 'Kumar Farms',        animals: 24, status: 'Verified', province: 'Mashonaland West', alert: false },
-  { name: 'Moyo Livestock',     animals: 18, status: 'Verified', province: 'Mashonaland West', alert: true  },
-  { name: 'ZimAgro Enterprise', animals: 45, status: 'Verified', province: 'Mashonaland West', alert: false },
-  { name: 'Central Paddock',    animals: 12, status: 'Pending',  province: 'Mashonaland East', alert: false },
-];
-const RECENT_BIDS = [
-  { animal: 'Thunder', bidder: 'ZimAgro Ltd', amount: 620, time: '2h ago' },
-  { animal: 'Bessie',  bidder: 'Farm Direct', amount: 850, time: '5h ago' },
-];
-
 const VACCINE_SCHEDULES = {
   Cattle: [
     { name: 'FMD Vaccine (Annual)',     age: 180 },
@@ -51,27 +30,6 @@ const VACCINE_SCHEDULES = {
     { name: 'Blackleg Vaccine',         age: 90  },
   ],
 };
-
-const NETWORK_HEALTH = [
-  { day: 'Mon', sync: 94 }, { day: 'Tue', sync: 96 }, { day: 'Wed', sync: 91 },
-  { day: 'Thu', sync: 97 }, { day: 'Fri', sync: 98 }, { day: 'Sat', sync: 99 }, { day: 'Sun', sync: 99 },
-];
-const DEMAND_DATA = [
-  { week: 'W1', orders: 8 }, { week: 'W2', orders: 12 }, { week: 'W3', orders: 9 },
-  { week: 'W4', orders: 18 }, { week: 'W5', orders: 14 }, { week: 'W6', orders: 22 },
-];
-const PRICE_DATA = [
-  { month: 'Jan', price: 480 }, { month: 'Feb', price: 510 }, { month: 'Mar', price: 495 },
-  { month: 'Apr', price: 540 }, { month: 'May', price: 565 }, { month: 'Jun', price: 590 },
-];
-const HERD_GROWTH = [
-  { month: 'Jan', value: 920 }, { month: 'Feb', value: 980 }, { month: 'Mar', value: 1050 },
-  { month: 'Apr', value: 1120 }, { month: 'May', value: 1180 }, { month: 'Jun', value: 1250 },
-];
-const NEARBY_FARMERS = [
-  { id: 'f1', name: 'P. Banda',   role: 'Dairy Farmer',          province: 'Mashonaland East',   avatar: 'PB', color: '#16a34a', online: true  },
-  { id: 'f2', name: 'L. Sibanda', role: 'Poultry & Goat Farmer', province: 'Matabeleland South', avatar: 'LS', color: '#65a30d', online: false },
-];
 
 const greet = () => {
   const h = new Date().getHours();
@@ -214,11 +172,39 @@ const StakeholderMap = () => (
 );
 
 // ── FARMER DASHBOARD ────────────────────────────────────────────────────────
-function FarmerDashboard({ currentUser, animals, navigation }) {
-  const [localAnimals, setLocalAnimals] = useState(animals);
+function FarmerDashboard({ currentUser, navigation }) {
+  const [localAnimals, setLocalAnimals] = useState([]);
+  const [inventory, setInventory]       = useState([]);
+  const [nearbyFarmers, setNearbyFarmers] = useState([]);
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    (async () => {
+      try {
+        const res = await authFetch(currentUser, '/animals');
+        if (res.ok) setLocalAnimals((await res.json()).map(a => ({
+          id: a.id, name: a.name, species: a.species, breed: a.breed, age: a.age,
+          tagId: a.tag_id, birthDate: a.birth_date, currentWeight: a.current_weight,
+          forSale: !!a.for_sale, imageUrl: resolveImageUrl(a.image_url),
+        })));
+      } catch { /* offline — leave empty, no fake fallback */ }
+      try {
+        const res = await authFetch(currentUser, `/inventory/${currentUser.id}`);
+        if (res.ok) setInventory((await res.json()).map(i => ({ id: i.id, name: i.medicine_name, stock: Number(i.stock), unit: i.unit, min: Number(i.min_stock), supplier: i.supplier })));
+      } catch { /* offline */ }
+      try {
+        const res = await authFetch(currentUser, '/users?role=Farmer');
+        if (res.ok) {
+          const users = await res.json();
+          setNearbyFarmers(users.filter(u => u.id !== currentUser.id).slice(0, 5).map(u => ({ id: u.id, name: u.full_name, org: u.org_name, province: u.province })));
+        }
+      } catch { /* offline */ }
+    })();
+  }, [currentUser?.id]);
+
   const forSale    = localAnimals.filter(a => a.forSale).length;
   const critAlerts = NOTIFICATIONS.filter(n => n.type === 'Critical');
-  const lowStock   = INVENTORY.filter(i => i.stock <= i.min);
+  const lowStock   = inventory.filter(i => i.stock <= i.min);
   const totalValue = localAnimals.reduce((acc, a) => acc + 500 + a.currentWeight * 1.5, 0);
 
   const overdueVaccines = useMemo(() => {
@@ -250,8 +236,16 @@ function FarmerDashboard({ currentUser, animals, navigation }) {
     })),
   ];
 
-  const toggleSale = (id) =>
-    setLocalAnimals(prev => prev.map(a => a.id === id ? { ...a, forSale: !a.forSale } : a));
+  // Listing ON requires a price, set via the same flow as the Herd screen —
+  // this widget only handles the real, no-price-needed "unlist" action;
+  // turning a listing on routes to Herd where that price modal already lives.
+  const toggleSale = async (animal) => {
+    if (!animal.forSale) { navigation.navigate('Herd'); return; }
+    const res = await authFetch(currentUser, `/animals/${animal.id}/sale`, { method: 'PATCH' });
+    if (!res.ok) return;
+    const data = await res.json().catch(() => ({}));
+    setLocalAnimals(prev => prev.map(a => a.id === animal.id ? { ...a, forSale: !!data.for_sale } : a));
+  };
 
   return (
     <ScrollView style={s.bg} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
@@ -366,7 +360,7 @@ function FarmerDashboard({ currentUser, animals, navigation }) {
         </Text>
         {localAnimals.length === 0 ? (
           <View style={s.emptyInner}>
-            <Text style={{ fontSize: 36 }}>🐄</Text>
+            <Beef size={32} color={COLORS.muted} strokeWidth={1.5} />
             <Text style={s.emptyInnerText}>No animals registered yet</Text>
           </View>
         ) : localAnimals.map(a => (
@@ -383,7 +377,7 @@ function FarmerDashboard({ currentUser, animals, navigation }) {
             </View>
             <TouchableOpacity
               style={[s.listBtn, a.forSale && s.listBtnActive]}
-              onPress={() => toggleSale(a.id)}
+              onPress={() => toggleSale(a)}
               activeOpacity={0.8}
             >
               <Text style={[s.listBtnText, a.forSale && s.listBtnTextActive]}>
@@ -395,16 +389,10 @@ function FarmerDashboard({ currentUser, animals, navigation }) {
       </View>
 
       {/* Herd Value Trend */}
-      <SectionLabel icon={TrendingUp}>HERD VALUE TREND (6 MONTHS)</SectionLabel>
-      <View style={s.panel}>
-        <Text style={s.panelDesc}>Estimated total herd value over the last 6 months</Text>
-        <MiniBarChart data={HERD_GROWTH} labelKey="month" valueKey="value" color={COLORS.primary} />
-      </View>
-
       {/* Medicine Cabinet */}
       <SectionLabel icon={Pill}>MEDICINE CABINET</SectionLabel>
       <View style={s.panel}>
-        {INVENTORY.map(item => {
+        {inventory.map(item => {
           const isLow = item.stock <= item.min;
           const pct   = Math.min(100, (item.stock / 1000) * 100);
           return (
@@ -440,15 +428,18 @@ function FarmerDashboard({ currentUser, animals, navigation }) {
       <SectionLabel icon={Users}>FARMERS NEAR YOU</SectionLabel>
       <View style={s.panel}>
         <Text style={s.panelDesc}>Connect with other PFUMA farmers to swap tips, feed, or breeding stock.</Text>
-        {NEARBY_FARMERS.map(f => (
+        {nearbyFarmers.length === 0 ? (
+          <View style={s.emptyInner}>
+            <Text style={s.emptyInnerText}>No other registered farmers nearby yet</Text>
+          </View>
+        ) : nearbyFarmers.map(f => (
           <View key={f.id} style={s.peerRow}>
-            <View style={[s.peerAvatar, { backgroundColor: f.color }]}>
-              <Text style={s.peerAvatarText}>{f.avatar}</Text>
-              <View style={[s.peerDot, { backgroundColor: f.online ? '#4caf50' : '#aaa' }]} />
+            <View style={[s.peerAvatar, { backgroundColor: COLORS.primary }]}>
+              <Text style={s.peerAvatarText}>{(f.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}</Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={s.peerName}>{f.name}</Text>
-              <Text style={s.peerSub}>{f.role} · {f.province}</Text>
+              <Text style={s.peerSub}>{f.org || 'Farmer'} · {f.province}</Text>
             </View>
             <TouchableOpacity style={s.peerMsgBtn} onPress={() => navigation.navigate('Vet', { filter: 'Farmer' })} activeOpacity={0.8}>
               <MessageSquare size={13} color={COLORS.primary} />
@@ -466,6 +457,34 @@ function FarmerDashboard({ currentUser, animals, navigation }) {
 function VeterinarianDashboard({ currentUser, navigation }) {
   const province = currentUser?.province || 'Mashonaland West';
   const lastName  = currentUser?.name?.split(' ').pop() || 'Officer';
+  const [farms, setFarms] = useState([]);
+  const [reportingHealth, setReportingHealth] = useState([]);
+  const [certQueue, setCertQueue] = useState(0);
+  const [outbreaks, setOutbreaks] = useState([]);
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    (async () => {
+      try {
+        const res = await authFetch(currentUser, '/vet/farm-registry');
+        if (res.ok) setFarms(await res.json());
+      } catch { /* offline — leave empty, no fake fallback */ }
+      try {
+        const res = await authFetch(currentUser, '/vet/reporting-health');
+        if (res.ok) setReportingHealth(await res.json());
+      } catch { /* offline */ }
+      try {
+        const res = await authFetch(currentUser, '/vet/cert-queue');
+        if (res.ok) setCertQueue((await res.json()).pending);
+      } catch { /* offline */ }
+      try {
+        const res = await authFetch(currentUser, '/outbreaks');
+        if (res.ok) setOutbreaks(await res.json());
+      } catch { /* offline */ }
+    })();
+  }, [currentUser?.id]);
+
+  const activeOutbreak = outbreaks[0];
 
   return (
     <ScrollView style={[s.bg, { backgroundColor: COLORS.slate }]} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
@@ -476,10 +495,12 @@ function VeterinarianDashboard({ currentUser, navigation }) {
           <View style={s.bannerIconBadge}>
             <Stethoscope size={22} color="#fff" />
           </View>
-          <View style={[s.bannerAlert, s.bannerAlertRow, { backgroundColor: 'rgba(220,38,38,0.4)' }]}>
-            <Globe size={14} color="#fff" />
-            <Text style={s.bannerAlertText}>FMD QUARANTINE ACTIVE</Text>
-          </View>
+          {activeOutbreak && (
+            <View style={[s.bannerAlert, s.bannerAlertRow, { backgroundColor: 'rgba(220,38,38,0.4)' }]}>
+              <Globe size={14} color="#fff" />
+              <Text style={s.bannerAlertText}>{activeOutbreak.disease_name.toUpperCase()} OUTBREAK ACTIVE</Text>
+            </View>
+          )}
         </View>
         <Text style={[s.bannerEyebrow, { color: '#86efac' }]}>Authority Dashboard · {province}</Text>
         <Text style={s.bannerTitle}>{greet()}, Dr. {lastName}</Text>
@@ -488,44 +509,47 @@ function VeterinarianDashboard({ currentUser, navigation }) {
 
       {/* KPIs */}
       <View style={s.kpiRow}>
-        <KpiCard label="Active Outbreaks"  value="1"   sub="FMD — Chegutu District"       accent="#1a0a0a" textColor="#f87171" borderColor="#7f1d1d"
+        <KpiCard label="Active Outbreaks"  value={String(outbreaks.length)} sub={activeOutbreak ? `${activeOutbreak.disease_name} — ${activeOutbreak.district || activeOutbreak.province}` : 'None reported'}
+          accent={outbreaks.length ? '#1a0a0a' : '#1e293b'} textColor={outbreaks.length ? '#f87171' : '#f8fafc'} borderColor={outbreaks.length ? '#7f1d1d' : '#334155'}
           icon={AlertTriangle} iconColor="#f87171" iconBg="rgba(248,113,113,0.12)" />
-        <KpiCard label="Cert. Queue"       value="12"  sub="Awaiting your sign-off"        accent="#1e293b" textColor="#f8fafc" borderColor="#334155"
+        <KpiCard label="Cert. Queue"       value={String(certQueue)}  sub="Unread trade certification requests"        accent="#1e293b" textColor="#f8fafc" borderColor="#334155"
           icon={ShieldCheck} iconColor="#4ade80" iconBg="rgba(74,222,128,0.12)" />
       </View>
       <View style={s.kpiRow}>
-        <KpiCard label="Farms Under Watch" value="4"   sub="Mashonaland West registry"     accent="#1e293b" textColor="#f8fafc" borderColor="#334155"
+        <KpiCard label="Farms Under Watch" value={String(farms.length)}   sub={`${province} registry`}     accent="#1e293b" textColor="#f8fafc" borderColor="#334155"
           icon={Users} iconColor="#7dd3fc" iconBg="rgba(125,211,252,0.12)" />
-        <KpiCard label="Node Sync"         value="99%" sub="PFUMA mesh network online"   accent="#1e293b" textColor="#4ade80" borderColor="#334155"
+        <KpiCard label="Reporting Rate"    value={reportingHealth.length ? `${reportingHealth[reportingHealth.length - 1].sync}%` : '—'} sub="Farms with a health event today"   accent="#1e293b" textColor="#4ade80" borderColor="#334155"
           icon={Wifi} iconColor="#4ade80" iconBg="rgba(74,222,128,0.12)" />
       </View>
 
       {/* Active Outbreak */}
       <SectionLabel light icon={AlertTriangle}>ACTIVE OUTBREAK</SectionLabel>
-      <View style={[s.panel, { backgroundColor: '#1a0a0a', borderColor: '#7f1d1d', borderWidth: 1 }]}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-          <AlertTriangle size={14} color="#f87171" />
-          <Text style={{ color: '#f87171', fontSize: 13, fontWeight: '700' }}>CRITICAL — Active</Text>
-        </View>
-        <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900', marginBottom: 4 }}>Foot & Mouth Disease</Text>
-        <Text style={{ color: '#94a3b8', fontSize: 12, marginBottom: 14, lineHeight: 18 }}>
-          Confirmed in Chegutu District, Mashonaland West. Movement ban in effect.
-        </Text>
-        {[
-          ['Status',          'CRITICAL — Active'],
-          ['Affected farms',  '3 confirmed'],
-          ['Animals at risk', '~200 cattle'],
-          ['Restriction',     'No livestock movement'],
-        ].map(([k, v]) => (
-          <View key={k} style={s.infoRow}>
-            <Text style={{ color: '#64748b', fontSize: 12, fontWeight: '600' }}>{k}</Text>
-            <Text style={{ color: '#e2e8f0', fontSize: 12, fontWeight: '800' }}>{v}</Text>
-          </View>
-        ))}
-        <TouchableOpacity style={[s.primaryBtn, { backgroundColor: '#dc2626', marginTop: 14 }]} activeOpacity={0.8}>
-          <PhoneCall size={14} color="#fff" />
-          <Text style={s.primaryBtnText}>Issue Emergency Advisory</Text>
-        </TouchableOpacity>
+      <View style={[s.panel, activeOutbreak ? { backgroundColor: '#1a0a0a', borderColor: '#7f1d1d', borderWidth: 1 } : { backgroundColor: '#1e293b', borderColor: '#334155', borderWidth: 1 }]}>
+        {activeOutbreak ? (
+          <>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              <AlertTriangle size={14} color="#f87171" />
+              <Text style={{ color: '#f87171', fontSize: 13, fontWeight: '700' }}>{activeOutbreak.status.toUpperCase()}</Text>
+            </View>
+            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900', marginBottom: 4 }}>{activeOutbreak.disease_name}</Text>
+            <Text style={{ color: '#94a3b8', fontSize: 12, marginBottom: 14, lineHeight: 18 }}>
+              Confirmed in {activeOutbreak.district ? `${activeOutbreak.district}, ` : ''}{activeOutbreak.province}. {activeOutbreak.details}
+            </Text>
+            {[
+              ['Status',          activeOutbreak.status.toUpperCase()],
+              ['Affected farms',  activeOutbreak.affected_farms || '—'],
+              ['Animals at risk', activeOutbreak.animals_at_risk || '—'],
+              ['Reported by',     activeOutbreak.reported_by_name],
+            ].map(([k, v]) => (
+              <View key={k} style={s.infoRow}>
+                <Text style={{ color: '#64748b', fontSize: 12, fontWeight: '600' }}>{k}</Text>
+                <Text style={{ color: '#e2e8f0', fontSize: 12, fontWeight: '800' }}>{v}</Text>
+              </View>
+            ))}
+          </>
+        ) : (
+          <Text style={{ color: '#64748b', fontSize: 12, lineHeight: 18 }}>No active outbreaks reported in {province}.</Text>
+        )}
       </View>
 
       {/* Quick Actions */}
@@ -546,32 +570,31 @@ function VeterinarianDashboard({ currentUser, navigation }) {
         <Text style={{ color: '#64748b', fontSize: 11, marginBottom: 12, lineHeight: 16 }}>
           Farms under your provincial oversight. Tap to open a consultation.
         </Text>
-        {FARMS.map((farm, i) => (
-          <View key={i} style={s.farmRow}>
+        {farms.length === 0 ? (
+          <Text style={{ color: '#64748b', fontSize: 12, fontStyle: 'italic', textAlign: 'center', paddingVertical: 12 }}>No registered farmers in {province} yet.</Text>
+        ) : farms.map(farm => (
+          <View key={farm.id} style={s.farmRow}>
             <View style={s.farmAvatar}>
-              <Text style={s.farmAvatarText}>{farm.name[0]}</Text>
+              <Text style={s.farmAvatarText}>{(farm.full_name || '?')[0]}</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={[s.farmName, { color: '#f8fafc' }]}>{farm.name}</Text>
-                {farm.alert && <Text style={s.farmAlertBadge}>Alert</Text>}
-              </View>
-              <Text style={[s.farmSub, { color: '#64748b' }]}>{farm.province} · {farm.animals} animals</Text>
+              <Text style={[s.farmName, { color: '#f8fafc' }]}>{farm.full_name}</Text>
+              <Text style={[s.farmSub, { color: '#64748b' }]}>{farm.org_name} · {farm.animal_count} animal{farm.animal_count !== 1 ? 's' : ''}</Text>
             </View>
-            <Text style={[s.statusBadge, farm.status === 'Verified' ? s.statusVerified : s.statusPending]}>
-              {farm.status}
+            <Text style={[s.statusBadge, farm.verification_status === 'verified' ? s.statusVerified : s.statusPending]}>
+              {farm.verification_status}
             </Text>
           </View>
         ))}
       </View>
 
-      {/* Provincial Network Health */}
-      <SectionLabel light icon={Wifi}>PROVINCIAL NETWORK HEALTH</SectionLabel>
+      {/* Provincial Reporting Health */}
+      <SectionLabel light icon={Wifi}>PROVINCIAL REPORTING HEALTH</SectionLabel>
       <View style={[s.panel, { backgroundColor: '#1e293b', borderColor: '#334155', borderWidth: 1 }]}>
         <Text style={{ color: '#64748b', fontSize: 11, marginBottom: 4, lineHeight: 16 }}>
-          PFUMA mesh node sync rate — last 7 days
+          Share of {province}'s farmers who logged a health event — last 7 days
         </Text>
-        <MiniBarChart data={NETWORK_HEALTH} labelKey="day" valueKey="sync" color={COLORS.sprout} light />
+        <MiniBarChart data={reportingHealth} labelKey="day" valueKey="sync" color={COLORS.sprout} light />
       </View>
     </ScrollView>
   );
@@ -579,9 +602,41 @@ function VeterinarianDashboard({ currentUser, navigation }) {
 
 // ── SUPPLIER DASHBOARD ──────────────────────────────────────────────────────
 function SupplierDashboard({ currentUser, navigation }) {
-  const pending    = ORDERS.filter(o => o.status === 'Pending').length;
-  const dispatched = ORDERS.filter(o => o.status === 'Dispatched').length;
-  const delivered  = ORDERS.filter(o => o.status === 'Delivered').length;
+  const [orders, setOrders] = useState([]);
+  const [demand, setDemand] = useState([]);
+  const [fulfillmentRate, setFulfillmentRate] = useState(null);
+  const [busyOrderId, setBusyOrderId] = useState(null);
+
+  const loadSupplierData = useCallback(async () => {
+    if (!currentUser?.id) return;
+    try {
+      const res = await authFetch(currentUser, '/orders/mine');
+      if (res.ok) setOrders(await res.json());
+    } catch { /* offline — leave empty, no fake fallback */ }
+    try {
+      const res = await authFetch(currentUser, '/supplier/demand');
+      if (res.ok) setDemand(await res.json());
+    } catch { /* offline */ }
+    try {
+      const res = await authFetch(currentUser, '/supplier/fulfillment-rate');
+      if (res.ok) setFulfillmentRate((await res.json()).rate);
+    } catch { /* offline */ }
+  }, [currentUser?.id]);
+
+  useEffect(() => { loadSupplierData(); }, [loadSupplierData]);
+
+  const advanceOrder = async (order, action) => {
+    setBusyOrderId(order.id);
+    try {
+      const res = await authFetch(currentUser, `/orders/${order.id}/${action}`, { method: 'PATCH' });
+      if (res.ok) await loadSupplierData();
+    } catch { /* offline */ }
+    setBusyOrderId(null);
+  };
+
+  const pending    = orders.filter(o => o.status === 'pending').length;
+  const dispatched = orders.filter(o => o.status === 'dispatched').length;
+  const delivered  = orders.filter(o => o.status === 'delivered').length;
 
   return (
     <ScrollView style={s.bg} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
@@ -620,7 +675,7 @@ function SupplierDashboard({ currentUser, navigation }) {
           <Pill size={16} color={COLORS.gold} />
           <Text style={s.flowText}>You fulfill & dispatch</Text>
           <ArrowRight size={12} color={COLORS.gold} />
-          <Text style={{ fontSize: 16 }}>🐄</Text>
+          <Beef size={16} color={COLORS.gold} />
           <Text style={s.flowText}>Animals stay healthy</Text>
         </View>
       </View>
@@ -635,30 +690,41 @@ function SupplierDashboard({ currentUser, navigation }) {
       <View style={s.kpiRow}>
         <KpiCard label="Delivered"       value={delivered} sub="Completed this week"
           icon={CheckCircle} iconColor="#16a34a" iconBg="#f0fdf4" />
-        <KpiCard label="Fulfillment Rate" value="92%"     sub="Monthly on-time delivery"
+        <KpiCard label="Fulfillment Rate" value={fulfillmentRate === null ? '—' : `${fulfillmentRate}%`}     sub={fulfillmentRate === null ? 'No resolved orders yet' : 'Delivered vs. resolved orders'}
           icon={TrendingUp} iconColor={COLORS.gold} iconBg={COLORS.goldBg} />
       </View>
 
       {/* Active Orders */}
       <SectionLabel icon={Package}>ACTIVE ORDERS</SectionLabel>
       <View style={s.panel}>
-        {ORDERS.map(o => (
-          <View key={o.id} style={[s.orderRow, o.urgent && o.status === 'Pending' && { backgroundColor: COLORS.goldBg, borderColor: '#fde68a' }]}>
+        {orders.length === 0 ? (
+          <Text style={{ color: COLORS.muted, fontSize: 12, fontStyle: 'italic', textAlign: 'center', paddingVertical: 16 }}>
+            No orders yet — farmers can order from your medicine/equipment listings.
+          </Text>
+        ) : orders.map(o => (
+          <View key={o.id} style={[s.orderRow, o.status === 'pending' && { backgroundColor: COLORS.goldBg, borderColor: '#fde68a' }]}>
             <View style={s.orderIconWrap}>
               <Package size={20} color={COLORS.gold} />
             </View>
             <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                <Text style={s.orderFarm}>{o.farm}</Text>
-                {o.urgent && o.status === 'Pending' && <Text style={s.urgentBadge}>Urgent</Text>}
-              </View>
-              <Text style={s.orderDetail}>{o.item} · {o.qty} · {o.id}</Text>
+              <Text style={s.orderFarm}>{o.farmer_name}</Text>
+              <Text style={s.orderDetail}>{o.product_name} · {Number(o.quantity)} · #{o.id}</Text>
             </View>
             <Text style={[s.orderStatus,
-              o.status === 'Pending'    ? { color: '#b45309', backgroundColor: COLORS.goldBg } :
-              o.status === 'Dispatched' ? { color: '#1d4ed8', backgroundColor: '#eff6ff' } :
+              o.status === 'pending'    ? { color: '#b45309', backgroundColor: COLORS.goldBg } :
+              o.status === 'dispatched' ? { color: '#1d4ed8', backgroundColor: '#eff6ff' } :
               { color: '#15803d', backgroundColor: '#f0fdf4' },
             ]}>{o.status}</Text>
+            {o.status === 'pending' && (
+              <TouchableOpacity onPress={() => advanceOrder(o, 'dispatch')} disabled={busyOrderId === o.id} style={s.orderActionBtn} activeOpacity={0.8}>
+                <Text style={s.orderActionBtnText}>Dispatch</Text>
+              </TouchableOpacity>
+            )}
+            {o.status === 'dispatched' && (
+              <TouchableOpacity onPress={() => advanceOrder(o, 'deliver')} disabled={busyOrderId === o.id} style={[s.orderActionBtn, { backgroundColor: '#16a34a' }]} activeOpacity={0.8}>
+                <Text style={s.orderActionBtnText}>Deliver</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ))}
       </View>
@@ -666,8 +732,12 @@ function SupplierDashboard({ currentUser, navigation }) {
       {/* Order Demand Trend */}
       <SectionLabel icon={TrendingUp}>ORDER DEMAND (6 WEEKS)</SectionLabel>
       <View style={s.panel}>
-        <Text style={s.panelDesc}>Weekly order volume across your farmer network</Text>
-        <MiniBarChart data={DEMAND_DATA} labelKey="week" valueKey="orders" color={COLORS.gold} />
+        <Text style={s.panelDesc}>Your real weekly order volume</Text>
+        {demand.length === 0 ? (
+          <Text style={{ color: COLORS.muted, fontSize: 12, fontStyle: 'italic', textAlign: 'center', paddingVertical: 16 }}>No orders yet to chart</Text>
+        ) : (
+          <MiniBarChart data={demand} labelKey="week" valueKey="orders" color={COLORS.gold} />
+        )}
       </View>
 
       {/* Message a farmer */}
@@ -683,8 +753,29 @@ function SupplierDashboard({ currentUser, navigation }) {
 
 // ── RETAILER DASHBOARD ──────────────────────────────────────────────────────
 function RetailerDashboard({ currentUser, navigation }) {
-  const listings    = ANIMALS.filter(a => a.forSale);
-  const totalValue  = listings.reduce((a, l) => a + 500 + l.currentWeight * 1.5, 0);
+  const [listings, setListings]     = useState([]);
+  const [priceTrend, setPriceTrend] = useState([]);
+  const [myBids, setMyBids]         = useState([]);
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    (async () => {
+      try {
+        const res = await authFetch(currentUser, '/listings?category=livestock');
+        if (res.ok) setListings(await res.json());
+      } catch { /* offline — leave empty, no fake fallback */ }
+      try {
+        const res = await authFetch(currentUser, '/listings/price-trend');
+        if (res.ok) setPriceTrend(await res.json());
+      } catch { /* offline */ }
+      try {
+        const res = await authFetch(currentUser, '/bids/mine');
+        if (res.ok) setMyBids(await res.json());
+      } catch { /* offline */ }
+    })();
+  }, [currentUser?.id]);
+
+  const totalValue  = listings.reduce((a, l) => a + Number(l.price), 0);
   const avgPrice    = listings.length ? Math.round(totalValue / listings.length) : 0;
 
   return (
@@ -738,9 +829,9 @@ function RetailerDashboard({ currentUser, navigation }) {
           icon={Wallet} iconColor={COLORS.purple} iconBg={COLORS.purpleBg} />
       </View>
       <View style={s.kpiRow}>
-        <KpiCard label="Total Listing Value" value={`$${totalValue.toLocaleString()}`}  sub="Combined herd value on market"
+        <KpiCard label="Total Listing Value" value={`$${totalValue.toLocaleString()}`}  sub="Combined asking price on market"
           icon={Tag} iconColor={COLORS.purple} iconBg={COLORS.purpleBg} />
-        <KpiCard label="Market Sentiment"    value="BULLISH"                            sub="Prices trending upward +10%"  accent="#f5f3ff" textColor={COLORS.purple} borderColor="#c4b5fd"
+        <KpiCard label="Sales, Last 6mo"     value={priceTrend.reduce((a, m) => a + Number(m.sales), 0)} sub="Livestock listings marked sold"  accent="#f5f3ff" textColor={COLORS.purple} borderColor="#c4b5fd"
           icon={TrendingUp} iconColor={COLORS.purple} iconBg="#ede9fe" />
       </View>
 
@@ -754,48 +845,59 @@ function RetailerDashboard({ currentUser, navigation }) {
             <Text style={s.emptyInnerText}>No listings yet</Text>
             <Text style={[s.emptyInnerText, { fontSize: 11, marginTop: 4 }]}>Farmers can list animals from their Herd Registry</Text>
           </View>
-        ) : listings.map(a => (
-          <View key={a.id} style={s.listingRow}>
+        ) : listings.map(l => (
+          <View key={l.id} style={s.listingRow}>
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                <Text style={{ fontSize: 15, fontWeight: '900', color: '#1a1a1a' }}>{a.name}</Text>
+                <Text style={{ fontSize: 15, fontWeight: '900', color: '#1a1a1a' }}>{l.product_name}</Text>
                 <Text style={s.certBadge}>Certified</Text>
               </View>
-              <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>{a.breed} · {a.species} · {a.age} · {a.currentWeight}kg</Text>
+              <Text style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>{l.seller_name} · {l.location || l.seller_province}</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <ShieldCheck size={12} color="#555" />
-                <Text style={{ fontSize: 11, color: '#555', fontWeight: '700' }}>Verified Health Passport · Tag #{a.tagId}</Text>
+                <Text style={{ fontSize: 11, color: '#555', fontWeight: '700' }}>Verified Health Passport</Text>
               </View>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={{ fontSize: 10, color: '#888', fontWeight: '700', textTransform: 'uppercase' }}>Est. Value</Text>
-              <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.purple }}>${(500 + a.currentWeight * 1.5).toLocaleString()}</Text>
-              <TouchableOpacity style={s.bidBtn} activeOpacity={0.8}>
-                <Text style={s.bidBtnText}>Bid</Text>
+              <Text style={{ fontSize: 10, color: '#888', fontWeight: '700', textTransform: 'uppercase' }}>Asking Price</Text>
+              <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.purple }}>${Number(l.price).toLocaleString()}</Text>
+              <TouchableOpacity style={s.bidBtn} activeOpacity={0.8} onPress={() => navigation.navigate('Market')}>
+                <Text style={s.bidBtnText}>Bid on Market</Text>
               </TouchableOpacity>
             </View>
           </View>
         ))}
       </View>
 
-      {/* Cattle Price Trend */}
-      <SectionLabel icon={TrendingUp}>CATTLE PRICE TREND</SectionLabel>
+      {/* Livestock Price Trend */}
+      <SectionLabel icon={TrendingUp}>LIVESTOCK PRICE TREND</SectionLabel>
       <View style={s.panel}>
-        <Text style={s.panelDesc}>Average per-head price over the last 6 months</Text>
-        <MiniBarChart data={PRICE_DATA} labelKey="month" valueKey="price" color={COLORS.purple} />
+        <Text style={s.panelDesc}>Average price of livestock sales actually completed on PFUMA, last 6 months</Text>
+        {priceTrend.length === 0 ? (
+          <View style={s.emptyInner}>
+            <Text style={s.emptyInnerText}>No completed sales yet</Text>
+          </View>
+        ) : (
+          <MiniBarChart data={priceTrend} labelKey="month" valueKey="avg_price" color={COLORS.purple} />
+        )}
       </View>
 
       {/* Recent Bids */}
       <SectionLabel icon={Wallet}>RECENT BIDS</SectionLabel>
       <View style={s.panel}>
-        {RECENT_BIDS.map((b, i) => (
-          <View key={i} style={s.bidRow}>
+        {myBids.length === 0 ? (
+          <View style={s.emptyInner}>
+            <Text style={s.emptyInnerText}>No bids placed yet</Text>
+          </View>
+        ) : myBids.map(b => (
+          <View key={b.id} style={s.bidRow}>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 13, fontWeight: '900', color: '#1a1a1a' }}>{b.animal}</Text>
-              <Text style={{ fontSize: 11, color: '#666' }}>{b.bidder}</Text>
-              <Text style={{ fontSize: 10, color: '#aaa', fontWeight: '700', textTransform: 'uppercase', marginTop: 2 }}>{b.time}</Text>
+              <Text style={{ fontSize: 13, fontWeight: '900', color: '#1a1a1a' }}>{b.product_name}</Text>
+              <Text style={{ fontSize: 10, color: '#aaa', fontWeight: '700', textTransform: 'uppercase', marginTop: 2 }}>
+                {b.status === 'accepted' ? 'Accepted ✓' : b.status === 'declined' ? 'Declined' : 'Pending'} · {new Date(b.created_at).toLocaleDateString()}
+              </Text>
             </View>
-            <Text style={{ fontSize: 16, fontWeight: '900', color: COLORS.purple }}>${b.amount}</Text>
+            <Text style={{ fontSize: 16, fontWeight: '900', color: COLORS.purple }}>${Number(b.amount).toLocaleString()}</Text>
           </View>
         ))}
       </View>
@@ -843,7 +945,7 @@ export default function DashboardScreen({ currentUser, onLogout, navigation }) {
       {/* Top bar */}
       <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.topBar}>
         <View style={s.logoRow}>
-          <View style={s.logoBox}><Text style={s.logoText}>P</Text></View>
+          <Image source={pfumaMark} style={s.logoBox} />
           <View>
             <Text style={s.logoName}>PFUMA</Text>
             <Text style={s.logoTagline}>Zimbabwe's Livestock Platform</Text>
@@ -856,10 +958,27 @@ export default function DashboardScreen({ currentUser, onLogout, navigation }) {
       </LinearGradient>
 
       {/* Role dashboard */}
-      {role === 'Farmer'       && <FarmerDashboard       currentUser={currentUser} animals={ANIMALS} navigation={navigation} />}
+      {role === 'Farmer'       && <FarmerDashboard       currentUser={currentUser} navigation={navigation} />}
       {role === 'Veterinarian' && <VeterinarianDashboard  currentUser={currentUser} navigation={navigation} />}
       {role === 'Supplier'     && <SupplierDashboard      currentUser={currentUser} navigation={navigation} />}
       {role === 'Retailer'     && <RetailerDashboard      currentUser={currentUser} navigation={navigation} />}
+      {(role === 'Admin' || role === 'Police') && (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+          <ShieldCheck size={40} color={COLORS.muted} />
+          <Text style={{ fontSize: 15, fontWeight: '800', color: COLORS.text, marginTop: 14, textAlign: 'center' }}>
+            {role} tools are web-only
+          </Text>
+          <Text style={{ fontSize: 12, color: COLORS.muted, marginTop: 6, textAlign: 'center', lineHeight: 18 }}>
+            {role === 'Admin'
+              ? 'Platform moderation (users, listings, trends) lives in the PFUMA web app, not this mobile app.'
+              : 'Sale clearance and oversight tools live in the PFUMA web app, not this mobile app.'}
+          </Text>
+          <TouchableOpacity onPress={onLogout} activeOpacity={0.8}
+            style={{ marginTop: 20, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 12, backgroundColor: COLORS.light }}>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.primary }}>Sign Out</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -869,10 +988,9 @@ const s = StyleSheet.create({
   bg:              { flex: 1, backgroundColor: COLORS.bg },
   topBar:          { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14 },
   logoRow:         { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  logoBox:         { width: 38, height: 38, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  logoText:        { color: '#fff', fontSize: 18, fontWeight: '900' },
-  logoName:        { color: '#fff', fontSize: 14, fontWeight: '900' },
-  logoTagline:     { color: 'rgba(255,255,255,0.65)', fontSize: 9, fontWeight: '600' },
+  logoBox:         { width: 38, height: 38, borderRadius: 12 },
+  logoName:        { color: '#fff', fontSize: 14, fontFamily: FONTS.extrabold },
+  logoTagline:     { color: 'rgba(255,255,255,0.65)', fontSize: 9, fontFamily: FONTS.semibold },
   userName:        { color: '#fff', fontSize: 13, fontWeight: '800', maxWidth: 120 },
   userRole:        { color: '#fbc02d', fontSize: 9, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
 
@@ -964,6 +1082,8 @@ const s = StyleSheet.create({
   orderDetail:     { fontSize: 11, color: '#9ca3af', marginTop: 2 },
   urgentBadge:     { fontSize: 9, fontWeight: '800', color: '#b45309', backgroundColor: COLORS.goldBg, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20, textTransform: 'uppercase', overflow: 'hidden' },
   orderStatus:     { fontSize: 10, fontWeight: '800', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, textTransform: 'uppercase', overflow: 'hidden' },
+  orderActionBtn:     { marginLeft: 8, backgroundColor: '#2563eb', paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10 },
+  orderActionBtnText: { color: '#fff', fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
 
   listingRow:      { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 14, marginBottom: 12, backgroundColor: '#f9fafb', borderWidth: 1.5, borderColor: '#e5e7eb', gap: 10 },
   certBadge:       { fontSize: 9, fontWeight: '800', backgroundColor: COLORS.gold, color: '#fff', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20, overflow: 'hidden' },

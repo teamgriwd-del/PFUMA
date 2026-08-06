@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
+  View, Text, Image, ScrollView, TouchableOpacity,
   StyleSheet, ActivityIndicator, RefreshControl
 } from 'react-native';
-import { API, COLORS } from '../config';
+import { COLORS, FONTS } from '../config';
+import { authFetch } from '../api';
+import pfumaMark from '../assets/pfuma-mark.png';
 
-const DEMO_STATS   = { animals: 2, listings: 1, messages: 2, total_value: 1400 };
-const DEMO_ALERTS  = [
+// Regional disease-alert bulletin content — not per-user/animal data, so
+// (unlike the DEMO_* arrays removed from this screen) this is left as a
+// static informational list, same as the web app's equivalent notifications.
+const ALERTS  = [
   { id: 1, title: 'January Disease Alert', msg: 'Chegutu — tick counts rising. Check your herd.', type: 'Critical' },
   { id: 2, title: 'Vaccine Recall',         msg: 'Lot #992 Oxytetracycline recalled by supplier.',  type: 'Info' },
-];
-const DEMO_EVENTS  = [
-  { id: 1, animal_name: 'Bessie',  event_type: 'FMD Vaccine (Annual)',  event_date: '2026-02-15' },
 ];
 
 const greet = () => {
@@ -36,34 +37,27 @@ const QuickBtn = ({ emoji, label, color, onPress }) => (
   </TouchableOpacity>
 );
 
-export default function HomeScreen({ navigation }) {
-  const [stats,    setStats]    = useState(DEMO_STATS);
-  const [alerts,   setAlerts]   = useState(DEMO_ALERTS);
-  const [events,   setEvents]   = useState(DEMO_EVENTS);
+export default function HomeScreen({ navigation, currentUser }) {
+  const [stats,    setStats]    = useState({ animals: 0, listings: 0, messages: 0, total_value: 0 });
+  const [events,   setEvents]   = useState([]);
   const [loading,  setLoading]  = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = async (refresh = false) => {
+    if (!currentUser?.id) return;
     if (refresh) setRefreshing(true); else setLoading(true);
     try {
-      const [sRes, aRes] = await Promise.all([
-        fetch(`${API}/dashboard/1`),
-        fetch(`${API}/animals?owner_id=1`),
+      const [sRes, hRes] = await Promise.all([
+        authFetch(currentUser, `/dashboard/${currentUser.id}`),
+        authFetch(currentUser, '/health-events'),
       ]);
       if (sRes.ok) setStats(await sRes.json());
-      if (aRes.ok) {
-        const animals = await aRes.json();
-        // flatten all health events from all animals
-        const evts = animals.flatMap(a =>
-          (a.health_events || []).map(e => ({ ...e, animal_name: a.name }))
-        ).slice(0, 5);
-        if (evts.length) setEvents(evts);
-      }
-    } catch { /* stay on demo data */ }
+      if (hRes.ok) setEvents((await hRes.json()).slice(0, 5).map(e => ({ ...e, animal_name: e.animal_name })));
+    } catch { /* offline — leave whatever was last loaded, no fake fallback */ }
     finally { setLoading(false); setRefreshing(false); }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [currentUser?.id]);
 
   return (
     <ScrollView
@@ -77,9 +71,7 @@ export default function HomeScreen({ navigation }) {
           <Text style={styles.appName}>PFUMA</Text>
           <Text style={styles.tagline}>Zimbabwe's Livestock Intelligence Platform</Text>
         </View>
-        <View style={styles.logoBox}>
-          <Text style={styles.logoText}>P</Text>
-        </View>
+        <Image source={pfumaMark} style={styles.logoBox} />
       </View>
 
       {loading ? <ActivityIndicator color={COLORS.primary} style={{ margin: 20 }} /> : null}
@@ -109,7 +101,7 @@ export default function HomeScreen({ navigation }) {
       {/* ── Disease Alerts ── */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>⚠ Disease Alerts Near You</Text>
-        {alerts.map(a => (
+        {ALERTS.map(a => (
           <View key={a.id} style={[styles.alertCard, { borderLeftColor: a.type === 'Critical' ? COLORS.danger : '#1565c0' }]}>
             <View style={[styles.alertDot, { backgroundColor: a.type === 'Critical' ? COLORS.danger : '#1565c0' }]} />
             <View style={{ flex: 1 }}>
@@ -130,7 +122,7 @@ export default function HomeScreen({ navigation }) {
             <View style={styles.eventDot} />
             <View style={{ flex: 1 }}>
               <Text style={styles.eventAction}>{e.event_type}</Text>
-              <Text style={styles.eventMeta}>{e.animal_name} · {String(e.event_date).slice(0, 10)}</Text>
+              <Text style={styles.eventMeta}>{e.animal_name} · {new Date(e.event_date).toLocaleDateString()}</Text>
             </View>
           </View>
         ))}
@@ -143,10 +135,9 @@ const styles = StyleSheet.create({
   container:     { flex: 1, backgroundColor: COLORS.bg },
   header:        { backgroundColor: COLORS.primary, padding: 24, paddingTop: 56, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   greet:         { color: '#a5d6a7', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
-  appName:       { color: '#fff', fontSize: 26, fontWeight: '900', marginTop: 4, letterSpacing: -0.5 },
+  appName:       { color: '#fff', fontSize: 26, fontFamily: FONTS.extrabold, marginTop: 4, letterSpacing: -0.5 },
   tagline:       { color: '#a5d6a7', fontSize: 11, fontWeight: '600', marginTop: 2 },
-  logoBox:       { width: 44, height: 44, backgroundColor: COLORS.yellow, borderRadius: 14, alignItems: 'center', justifyContent: 'center', elevation: 4 },
-  logoText:      { color: COLORS.primary, fontSize: 26, fontWeight: '900' },
+  logoBox:       { width: 44, height: 44, borderRadius: 14, elevation: 4 },
   section:       { marginHorizontal: 16, marginTop: 20 },
   sectionTitle:  { fontSize: 14, fontWeight: '800', color: COLORS.text, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
   statsRow:      { flexDirection: 'row', gap: 8 },

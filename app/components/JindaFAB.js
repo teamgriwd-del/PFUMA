@@ -5,6 +5,7 @@ import {
   Animated, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Bot, X, Send } from 'lucide-react-native';
 import { COLORS } from '../config';
 
 const { width } = Dimensions.get('window');
@@ -98,7 +99,7 @@ export default function JindaFAB() {
       {!open && (
         <Animated.View style={[s.fab, { transform: [{ scale: pulseAnim }] }]}>
           <TouchableOpacity style={s.fabInner} onPress={() => setOpen(true)} activeOpacity={0.85}>
-            <Text style={s.fabEmoji}>🤖</Text>
+            <Bot size={26} color="#fff" strokeWidth={2} />
             <View style={s.fabOnlineDot} />
           </TouchableOpacity>
         </Animated.View>
@@ -113,7 +114,7 @@ export default function JindaFAB() {
             <View style={s.header}>
               <View style={s.headerLeft}>
                 <View style={s.aiAvatar}>
-                  <Text style={{ fontSize: 22 }}>🤖</Text>
+                  <Bot size={22} color={COLORS.primary} strokeWidth={2} />
                 </View>
                 <View>
                   <Text style={s.headerName}>Jinda</Text>
@@ -121,7 +122,7 @@ export default function JindaFAB() {
                 </View>
               </View>
               <TouchableOpacity style={s.closeBtn} onPress={() => setOpen(false)} activeOpacity={0.8}>
-                <Text style={s.closeBtnText}>✕</Text>
+                <X size={16} color="#fff" strokeWidth={2.5} />
               </TouchableOpacity>
             </View>
 
@@ -161,7 +162,7 @@ export default function JindaFAB() {
               {messages.map(msg => (
                 <View key={msg.id} style={[s.msgRow, msg.from === 'user' && s.msgRowUser]}>
                   {msg.from === 'ai' && (
-                    <View style={s.msgAiAvatar}><Text style={{ fontSize: 14 }}>🤖</Text></View>
+                    <View style={s.msgAiAvatar}><Bot size={14} color={COLORS.primary} strokeWidth={2.2} /></View>
                   )}
                   <View style={[s.bubble, msg.from === 'user' ? s.bubbleUser : s.bubbleAi]}>
                     <Text style={[s.bubbleText, msg.from === 'user' && { color: '#fff' }]}>{msg.text}</Text>
@@ -191,7 +192,7 @@ export default function JindaFAB() {
                   activeOpacity={0.8}
                   disabled={!input.trim()}
                 >
-                  <Text style={s.sendBtnText}>➤</Text>
+                  <Send size={18} color="#fff" strokeWidth={2.2} />
                 </TouchableOpacity>
               </View>
             </KeyboardAvoidingView>

@@ -2,32 +2,61 @@
   "expo": {
     "name": "PFUMA",
     "slug": "pfuma",
-    "scheme": "pfuma",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "primaryColor": "#1B5E20",
-    "backgroundColor": "#F6FAF6",
-    "description": "PFUMA — five roles, one shared livestock record. Register animals, track health, consult a vet, and sell only once police have cleared the listing.",
     "ios": {
-      "bundleIdentifier": "zw.co.griwd.pfuma",
-      "buildNumber": "1",
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "PFUMA needs access to your photos so you can attach a real photo of an animal or listing."
+      }
     },
     "android": {
-      "package": "zw.co.griwd.pfuma",
-      "versionCode": 1,
+      "package": "com.griwd.pfuma",
       "adaptiveIcon": {
-        "backgroundColor": "#1B5E20",
+        "backgroundColor": "#1b5e20",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "edgeToEdgeEnabled": true
+      "permissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "PFUMA needs access to your photos so you can attach a real photo of an animal or listing."
+        }
+      ],
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "backgroundColor": "#1b5e20"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "dbf5ba50-fea2-49e9-949a-fd7c5bc83e40"
+      }
+    },
+    "owner": "teamgriwds-team",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/dbf5ba50-fea2-49e9-949a-fd7c5bc83e40"
     }
   }
 }

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Search, Plus, MapPin, Phone, ShieldCheck, Package,
   Tag, Filter, X, CheckCircle, AlertTriangle, ArrowRight,
-  ShoppingCart, Leaf, Pill, Wrench, Wheat, RefreshCw
+  ShoppingCart, Leaf, Pill, Wrench, Wheat, RefreshCw, Camera
 } from 'lucide-react';
 
 import { API } from '../../config';
@@ -31,24 +31,26 @@ const CAT_BADGE = {
   equipment: 'bg-purple-100 text-purple-700',
 };
 
-// Demo data shown when API is offline
-const DEMO_LISTINGS = [
-  { id: 1, product_name: 'Thunder — Angus Cattle',  category: 'livestock', price: 770,  unit: 'head', quantity: 1,   location: 'Zvimba, Mashonaland West', seller_name: 'Arnold Mapindu',  phone: '+263 77 100 0001', seller_province: 'Mashonaland West', description: 'Healthy 1y 9m Angus bull. DVS certified. Verified health passport.', status: 'available' },
-  { id: 2, product_name: 'Soya Bean Meal',          category: 'feed',      price: 450,  unit: 'kg',   quantity: 500, location: 'Harare',                    seller_name: 'John Moyo',       phone: '+263 77 200 0002', seller_province: 'Harare',             description: 'High quality soya meal, 45% protein.',                       status: 'available' },
-  { id: 3, product_name: 'Maize Grain',             category: 'feed',      price: 320,  unit: 'kg',   quantity: 1000,location: 'Bulawayo',                   seller_name: 'Grace Ndlovu',    phone: '+263 77 300 0003', seller_province: 'Bulawayo',           description: 'Fresh maize grain, harvested this season.',                 status: 'available' },
-  { id: 4, product_name: 'Oxytetracycline (LA)',    category: 'medicine',  price: 25,   unit: 'ml',   quantity: 200, location: 'Harare',                    seller_name: 'AgroChem Zim',    phone: '+263 77 400 0004', seller_province: 'Harare',             description: 'Long-acting antibiotic. 200ml bottles. DVS approved.',      status: 'available' },
-  { id: 5, product_name: 'Borehole Water Pump',     category: 'equipment', price: 1200, unit: 'unit', quantity: 3,   location: 'Gweru',                     seller_name: 'ZimAgro Ltd',     phone: '+263 77 500 0005', seller_province: 'Midlands',           description: 'Solar-powered borehole pump, 3000L/hr capacity.',           status: 'available' },
-  { id: 6, product_name: 'Fresh Butternuts',        category: 'produce',   price: 80,   unit: 'kg',   quantity: 200, location: 'Marondera',                 seller_name: 'Chipo Farms',     phone: '+263 77 600 0006', seller_province: 'Mashonaland East',   description: 'Fresh butternuts, ready for market.',                       status: 'available' },
-];
-
 const PostForm = ({ currentUser, onSubmit, onCancel, animals }) => {
   const [form, setForm] = useState({ product_name: '', category: 'livestock', price: '', unit: 'head', quantity: '1', location: currentUser?.district ? `${currentUser.district}, ${currentUser.province}` : (currentUser?.province || ''), description: '', animal_id: '' });
+  const [photoFile, setPhotoFile]       = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [submitting, setSubmitting]     = useState(false);
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-  const handleSubmit = (e) => {
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.product_name.trim() || !form.price) return;
-    onSubmit({ ...form, price: parseFloat(form.price), quantity: parseFloat(form.quantity) });
+    setSubmitting(true);
+    await onSubmit({ ...form, price: parseFloat(form.price), quantity: parseFloat(form.quantity) }, photoFile);
+    setSubmitting(false);
   };
 
   const inputCls = 'w-full p-3 bg-gray-50 rounded-xl border-2 border-transparent focus:border-pfuma-green outline-none font-medium text-sm transition';
@@ -116,8 +118,20 @@ const PostForm = ({ currentUser, onSubmit, onCancel, animals }) => {
           <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Description</label>
           <textarea className={inputCls + ' resize-none'} rows={3} placeholder="Describe your item — condition, certification, delivery options..." value={form.description} onChange={e => set('description', e.target.value)} />
         </div>
-        <button type="submit" className="w-full py-3.5 bg-pfuma-green text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-green-700 transition shadow-md flex items-center justify-center gap-2">
-          <CheckCircle size={15} /> Post Listing
+        <div>
+          <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Photo (optional)</label>
+          <label htmlFor="listing-photo" className="flex items-center gap-4 cursor-pointer">
+            <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-50 border-2 border-dashed border-gray-200 flex items-center justify-center shrink-0">
+              {photoPreview
+                ? <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                : <Camera size={18} className="text-gray-300" />}
+            </div>
+            <span className="text-xs font-black text-pfuma-green hover:underline">{photoPreview ? 'Change photo' : 'Upload a photo'}</span>
+            <input id="listing-photo" type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+          </label>
+        </div>
+        <button type="submit" disabled={submitting} className="w-full py-3.5 bg-pfuma-green text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-green-700 transition shadow-md flex items-center justify-center gap-2 disabled:opacity-50">
+          <CheckCircle size={15} /> {submitting ? 'Posting…' : 'Post Listing'}
         </button>
       </form>
     </div>
@@ -132,6 +146,8 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal }) => {
   const [search, setSearch]         = useState('');
   const [showForm, setShowForm]     = useState(false);
   const [feedback, setFeedback]     = useState(null);
+  const [openBidsId, setOpenBidsId] = useState(null);
+  const [bidsByListing, setBidsByListing] = useState({});
 
   const fetchListings = useCallback(async () => {
     setLoading(true);
@@ -145,9 +161,8 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal }) => {
       setListings(data);
       setApiOnline(true);
     } catch {
-      // API offline — use demo data
-      const filtered = activeCategory === 'all' ? DEMO_LISTINGS : DEMO_LISTINGS.filter(l => l.category === activeCategory);
-      setListings(filtered);
+      // API offline — show a real empty/error state, no fabricated listings
+      setListings([]);
       setApiOnline(false);
     } finally {
       setLoading(false);
@@ -156,28 +171,51 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal }) => {
 
   useEffect(() => { fetchListings(); }, [fetchListings]);
 
-  const handlePost = async (formData) => {
+  const handlePost = async (formData, photoFile) => {
     const needsClearance = formData.category === 'livestock' && formData.animal_id;
-    let message = needsClearance
-      ? 'Listing submitted for police clearance — it will appear here once approved.'
-      : 'Listing posted successfully.';
     try {
-      const res = await fetch(`${API}/listings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentUser?.token}` },
-        body: JSON.stringify(formData),
-      });
+      let res;
+      if (photoFile) {
+        const fd = new FormData();
+        Object.entries(formData).forEach(([k, v]) => { if (v !== undefined && v !== null) fd.append(k, v); });
+        fd.append('photo', photoFile);
+        res = await fetch(`${API}/listings`, { method: 'POST', headers: { Authorization: `Bearer ${currentUser?.token}` }, body: fd });
+      } else {
+        res = await fetch(`${API}/listings`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentUser?.token}` },
+          body: JSON.stringify(formData),
+        });
+      }
       const data = await res.json();
       if (!res.ok) { setFeedback(data.error || 'Could not post — try again.'); setShowForm(false); setTimeout(() => setFeedback(null), 4000); return; }
-      if (data.message) message = data.message;
-    } catch { /* offline — reflect locally */ }
-    // Only show it immediately if it doesn't need clearance — a real clearance-gated
-    // listing only becomes visible once Police approves it via the backend.
-    if (!needsClearance) {
-      setListings(prev => [{ id: Date.now(), ...formData, seller_name: currentUser?.name || 'You', phone: currentUser?.phone || '', seller_province: currentUser?.province || '', status: 'available' }, ...prev]);
+      setFeedback(data.message || (needsClearance
+        ? 'Listing submitted for police clearance — it will appear here once approved.'
+        : 'Listing posted successfully.'));
+      await fetchListings();
+    } catch {
+      setFeedback('Could not reach the PFUMA API — the listing was not posted.');
     }
     setShowForm(false);
-    setFeedback(message);
+    setTimeout(() => setFeedback(null), 4000);
+  };
+
+  const handleOrder = async (listing) => {
+    if (!currentUser) return;
+    const qty = window.prompt(`How many ${listing.unit} of "${listing.product_name}" do you need?`, '1');
+    if (!qty || isNaN(Number(qty)) || Number(qty) <= 0) return;
+    try {
+      const res = await fetch(`${API}/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentUser.token}` },
+        body: JSON.stringify({ listing_id: listing.id, quantity: Number(qty) }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setFeedback(data.error || 'Could not place order — try again.'); }
+      else { setFeedback(`Order placed with ${listing.seller_name} — they'll dispatch it soon.`); }
+    } catch {
+      setFeedback('Offline — your order could not be sent. Try again once the API is reachable.');
+    }
     setTimeout(() => setFeedback(null), 4000);
   };
 
@@ -198,6 +236,35 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal }) => {
       setFeedback('Offline — your offer could not be sent. Try again once the API is reachable.');
     }
     setTimeout(() => setFeedback(null), 4000);
+  };
+
+  const toggleBids = async (listing) => {
+    if (openBidsId === listing.id) { setOpenBidsId(null); return; }
+    setOpenBidsId(listing.id);
+    try {
+      const res = await fetch(`${API}/listings/${listing.id}/bids`, { headers: { Authorization: `Bearer ${currentUser?.token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setBidsByListing(prev => ({ ...prev, [listing.id]: data }));
+      }
+    } catch { /* leave whatever was last loaded */ }
+  };
+
+  const acceptBid = async (listing, bid) => {
+    try {
+      const res = await fetch(`${API}/listings/${listing.id}/bids/${bid.id}/accept`, {
+        method: 'PATCH', headers: { Authorization: `Bearer ${currentUser?.token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) { setFeedback(data.error || 'Could not accept this bid.'); setTimeout(() => setFeedback(null), 4000); return; }
+      setFeedback(`Accepted USD ${Number(bid.amount).toLocaleString()} — listing marked sold.`);
+      setTimeout(() => setFeedback(null), 4000);
+      setOpenBidsId(null);
+      await fetchListings();
+    } catch {
+      setFeedback('Could not reach the PFUMA API — bid not accepted.');
+      setTimeout(() => setFeedback(null), 4000);
+    }
   };
 
   const filtered = listings.filter(l =>
@@ -307,7 +374,12 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal }) => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {filtered.map(listing => (
-            <div key={listing.id} className={`bg-white rounded-2xl border-2 shadow-sm hover:shadow-md transition flex flex-col ${CAT_COLORS[listing.category] || 'border-gray-100'}`}>
+            <div key={listing.id} className={`bg-white rounded-2xl border-2 shadow-sm hover:shadow-md transition flex flex-col overflow-hidden ${CAT_COLORS[listing.category] || 'border-gray-100'}`}>
+              {listing.photo_url && (
+                <div className="w-full h-36 bg-gray-100">
+                  <img src={`${API}${listing.photo_url}`} alt={listing.product_name} className="w-full h-full object-cover" />
+                </div>
+              )}
               {/* Card header */}
               <div className="p-5 flex-1">
                 <div className="flex items-start justify-between gap-2 mb-3">
@@ -363,12 +435,45 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal }) => {
                       <Phone size={11} /> Call
                     </a>
                   )}
-                  <button onClick={() => handleBid(listing)} className="flex items-center gap-1.5 px-4 py-2 bg-pfuma-green text-white rounded-xl text-[10px] font-black uppercase hover:bg-green-700 transition shadow-sm">
-                    <ArrowRight size={12} />
-                    {currentUser?.role === 'Retailer' ? 'Bid' : 'Enquire'}
-                  </button>
+                  {listing.user_id === currentUser?.id ? (
+                    <button onClick={() => toggleBids(listing)} className="flex items-center gap-1.5 px-4 py-2 bg-gray-800 text-white rounded-xl text-[10px] font-black uppercase hover:bg-gray-900 transition shadow-sm">
+                      <Tag size={12} /> {openBidsId === listing.id ? 'Hide Bids' : 'View Bids'}
+                    </button>
+                  ) : listing.category !== 'livestock' && currentUser?.role === 'Farmer' ? (
+                    <button onClick={() => handleOrder(listing)} className="flex items-center gap-1.5 px-4 py-2 bg-pfuma-green text-white rounded-xl text-[10px] font-black uppercase hover:bg-green-700 transition shadow-sm">
+                      <ArrowRight size={12} /> Order
+                    </button>
+                  ) : (
+                    <button onClick={() => handleBid(listing)} className="flex items-center gap-1.5 px-4 py-2 bg-pfuma-green text-white rounded-xl text-[10px] font-black uppercase hover:bg-green-700 transition shadow-sm">
+                      <ArrowRight size={12} />
+                      {currentUser?.role === 'Retailer' ? 'Bid' : 'Enquire'}
+                    </button>
+                  )}
                 </div>
               </div>
+
+              {/* Bids — only the listing owner sees/accepts these */}
+              {listing.user_id === currentUser?.id && openBidsId === listing.id && (
+                <div className="px-5 pb-5 pt-1 border-t border-gray-100 space-y-2">
+                  {(bidsByListing[listing.id] || []).length === 0 ? (
+                    <p className="text-[11px] text-gray-400 italic font-medium py-2">No bids yet on this listing.</p>
+                  ) : (
+                    bidsByListing[listing.id].map(bid => (
+                      <div key={bid.id} className="flex items-center justify-between gap-2 p-2.5 bg-gray-50 rounded-xl">
+                        <div className="min-w-0">
+                          <p className="text-xs font-black text-gray-800 truncate">{bid.bidder_name} · USD {Number(bid.amount).toLocaleString()}</p>
+                          <p className="text-[10px] text-gray-400 font-bold uppercase">{bid.status}</p>
+                        </div>
+                        {bid.status === 'pending' && listing.status !== 'sold' && (
+                          <button onClick={() => acceptBid(listing, bid)} className="shrink-0 px-3 py-1.5 bg-pfuma-green text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition">
+                            Accept
+                          </button>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>

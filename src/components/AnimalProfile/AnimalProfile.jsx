@@ -3,7 +3,7 @@ import { BREED_PROFILES } from '../HealthManagement/healthData';
 import {
   PlusCircle, ChevronRight, Users, ShieldCheck, X,
   TrendingUp, Tag, ArrowLeft, Calendar, Weight,
-  Info, CheckCircle, Edit3, BarChart2
+  Info, CheckCircle, Edit3, BarChart2, Camera, AlertTriangle
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import './AnimalProfile.css';
@@ -129,14 +129,29 @@ const RegistrationForm = ({ onSubmit, onCancel }) => {
     name: '', species: 'Cattle', breed: '', birthDate: '',
     tagId: '', brandId: '', sireId: '', damId: '', birthWeight: ''
   });
+  const [photoFile, setPhotoFile]       = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [submitting, setSubmitting]     = useState(false);
+  const [error, setError]               = useState('');
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-  const handleSubmit = (e) => {
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const bw = parseFloat(form.birthWeight);
     if (!form.name.trim() || !form.birthDate || isNaN(bw) || bw <= 0) return;
     const age = calculateAge(form.birthDate);
-    onSubmit({ ...form, id: Date.now(), age, birthWeight: bw, currentWeight: bw });
+    setSubmitting(true);
+    setError('');
+    const result = await onSubmit({ ...form, age, birthWeight: bw, currentWeight: bw }, photoFile);
+    setSubmitting(false);
+    if (!result?.ok) setError(result?.error || 'Could not register animal — try again.');
   };
 
   const Field = ({ id, label, required, children }) => (
@@ -177,7 +192,7 @@ const RegistrationForm = ({ onSubmit, onCancel }) => {
                 </Field>
                 <Field id="f-species" label="Species">
                   <select id="f-species" className={inputCls + ' appearance-none'} value={form.species} onChange={e => set('species', e.target.value)}>
-                    {['Cattle','Goat','Sheep','Pig'].map(s => <option key={s}>{s}</option>)}
+                    {['Cattle','Goat'].map(s => <option key={s}>{s}</option>)}
                   </select>
                 </Field>
                 <Field id="f-breed" label="Breed">
@@ -205,6 +220,22 @@ const RegistrationForm = ({ onSubmit, onCancel }) => {
               </div>
             </div>
 
+            {/* Photo */}
+            <div>
+              <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-4 pb-2 border-b">Photo <span className="text-gray-400 font-medium normal-case tracking-normal">(optional — a stock photo is used if you skip this)</span></h4>
+              <label htmlFor="f-photo" className="flex items-center gap-4 cursor-pointer">
+                <div className="w-20 h-20 rounded-2xl overflow-hidden bg-gray-100 border-2 border-dashed border-gray-200 flex items-center justify-center shrink-0">
+                  {photoPreview
+                    ? <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
+                    : <Camera size={22} className="text-gray-300" />}
+                </div>
+                <span className="text-xs font-black text-pfuma-green hover:underline">
+                  {photoPreview ? 'Change photo' : 'Upload a photo'}
+                </span>
+                <input id="f-photo" type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+              </label>
+            </div>
+
             {/* Ownership */}
             <div>
               <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-4 pb-2 border-b">Ownership & Pedigree <span className="text-gray-400 font-medium normal-case tracking-normal">(optional)</span></h4>
@@ -218,8 +249,14 @@ const RegistrationForm = ({ onSubmit, onCancel }) => {
               </div>
             </div>
 
-            <button type="submit" className="w-full py-4 bg-pfuma-green text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg hover:bg-green-700 transition flex items-center justify-center gap-2">
-              <CheckCircle size={16} /> Register Animal
+            {error && (
+              <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3 text-[11px] text-red-700 font-bold">
+                <AlertTriangle size={14} className="shrink-0 mt-0.5" /> {error}
+              </div>
+            )}
+
+            <button type="submit" disabled={submitting} className="w-full py-4 bg-pfuma-green text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg hover:bg-green-700 transition flex items-center justify-center gap-2 disabled:opacity-50">
+              <CheckCircle size={16} /> {submitting ? 'Registering…' : 'Register Animal'}
             </button>
           </form>
         </div>
@@ -237,9 +274,10 @@ const AnimalProfile = ({ animals, onAddAnimal, auditLog, onListAnimal }) => {
 
   const selectedAnimal = animals.find(a => a.id === selectedAnimalId);
 
-  const handleRegister = (data) => {
-    onAddAnimal(data);
-    setIsRegistering(false);
+  const handleRegister = async (data, photoFile) => {
+    const result = await onAddAnimal(data, photoFile);
+    if (result?.ok) setIsRegistering(false);
+    return result;
   };
 
   // Registration form

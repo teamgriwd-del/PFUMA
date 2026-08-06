@@ -1,5 +1,15 @@
 @import "tailwindcss";
 
+/* Self-hosted (no external CDN call — matters for a live demo on unreliable
+   wifi). Plus Jakarta Sans: a warm geometric-humanist grotesk, deliberately
+   not Inter — Inter is the de-facto "this was AI-generated" signal now that
+   every template/generator defaults to it. */
+@import "@fontsource/plus-jakarta-sans/400.css";
+@import "@fontsource/plus-jakarta-sans/500.css";
+@import "@fontsource/plus-jakarta-sans/600.css";
+@import "@fontsource/plus-jakarta-sans/700.css";
+@import "@fontsource/plus-jakarta-sans/800.css";
+
 @theme {
   --color-pfuma-green: #1b5e20;
   --color-pfuma-teal: #008080;
@@ -8,10 +18,11 @@
   --color-pfuma-slate: #0f172a;
   --color-pfuma-plum: #7c3aed;
   --color-pfuma-cream: #f6faf6;
+  --font-sans: "Plus Jakarta Sans", system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
 
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: "Plus Jakarta Sans", system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
 
 body {
