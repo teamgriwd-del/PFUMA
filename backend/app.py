@@ -807,6 +807,163 @@ def toggle_sale(animal_id):
     return jsonify({"for_sale": bool(row['for_sale']), "message": "Listing status updated ✅"})
 
 
+# ── IOT DEVICES ───────────────────────────────────────────────
+# Pairing bookkeeping for physical collars/base stations — see IOT_HARDWARE_GUIDE.md
+# for how a farmer physically sets up the hardware and finds their device's serial.
+@app.route('/iot-devices', methods=['GET'])
+@require_auth
+def get_iot_devices():
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT d.*, a.name AS animal_name, a.species
+        FROM iot_devices d LEFT JOIN animals a ON d.animal_id = a.id
+        WHERE d.owner_id = %s ORDER BY d.paired_at DESC
+    """, (g.current_user['id'],))
+    rows = c.fetchall()
+    db.close()
+    return jsonify(rows)
+
+
+@app.route('/iot-devices/pair', methods=['POST'])
+@require_auth
+@require_role('Farmer')
+def pair_iot_device():
+    d = request.json
+    serial = (d.get('device_serial') or '').strip()
+    if not serial:
+        return jsonify({"error": "device_serial is required"}), 400
+    animal_id = d.get('animal_id')
+
+    db = get_db()
+    c = db.cursor()
+    if animal_id:
+        c.execute("SELECT owner_id FROM animals WHERE id=%s", (animal_id,))
+        animal = c.fetchone()
+        if not animal or animal['owner_id'] != g.current_user['id']:
+            db.close(); return jsonify({"error": "You can only pair a device to your own animal"}), 403
+
+    c.execute("SELECT owner_id FROM iot_devices WHERE device_serial=%s", (serial,))
+    existing = c.fetchone()
+    if existing:
+        db.close()
+        if existing['owner_id'] == g.current_user['id']:
+            return jsonify({"error": "You've already paired this device"}), 409
+        return jsonify({"error": "This device serial is already claimed by another account"}), 409
+
+    c.execute("INSERT INTO iot_devices (device_serial, animal_id, owner_id) VALUES (%s,%s,%s)",
+              (serial, animal_id, g.current_user['id']))
+    device_id = c.lastrowid
+    db.commit()
+    db.close()
+    return jsonify({"id": device_id, "message": "Device paired ✅"})
+
+
+@app.route('/iot-devices/<int:device_id>', methods=['PATCH'])
+@require_auth
+def update_iot_device(device_id):
+    d = request.json
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT owner_id FROM iot_devices WHERE id=%s", (device_id,))
+    device = c.fetchone()
+    if not device:
+        db.close(); return jsonify({"error": "Device not found"}), 404
+    if device['owner_id'] != g.current_user['id']:
+        db.close(); return jsonify({"error": "You can only manage your own devices"}), 403
+
+    animal_id = d.get('animal_id')
+    if animal_id:
+        c.execute("SELECT owner_id FROM animals WHERE id=%s", (animal_id,))
+        animal = c.fetchone()
+        if not animal or animal['owner_id'] != g.current_user['id']:
+            db.close(); return jsonify({"error": "You can only pair a device to your own animal"}), 403
+
+    c.execute("UPDATE iot_devices SET animal_id=%s WHERE id=%s", (animal_id, device_id))
+    db.commit()
+    db.close()
+    return jsonify({"message": "Device updated ✅"})
+
+
+# Telemetry intake for real base-station hardware (see base_station.ino).
+# Authenticated by device serial rather than a user JWT, since firmware can't
+# hold a farmer's login session. The base station's own serial (X-Station-ID
+# header) must be paired, AND the collar's serial (JSON "id" field) must
+# separately be paired — each device is claimed independently in the app.
+def _store_iot_reading():
+    d = request.json or {}
+    station_id = request.headers.get('X-Station-ID') or d.get('station_id')
+    collar_id = d.get('id')
+    if not collar_id:
+        return jsonify({"error": "Missing collar id"}), 400
+
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT id FROM iot_devices WHERE device_serial=%s", (station_id,))
+    station = c.fetchone()
+    if not station:
+        db.close()
+        return jsonify({"error": "Unrecognized base station — pair this device serial in the app first"}), 404
+
+    c.execute("SELECT id FROM iot_devices WHERE device_serial=%s", (collar_id,))
+    collar = c.fetchone()
+    if not collar:
+        db.close()
+        return jsonify({"error": "Unrecognized collar — pair this device serial in the app first"}), 404
+
+    c.execute("""
+        INSERT INTO iot_readings
+            (device_id, temp_c, heart_rate, latitude, longitude, gps_accuracy,
+             activity, move_mag, in_zone, battery_pct, fever_alert, theft_alert,
+             packet_no, rssi)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+    """, (
+        collar['id'], d.get('temp'), d.get('hr'), d.get('lat'), d.get('lon'), d.get('gpsAcc'),
+        d.get('activity'), d.get('move'), bool(d.get('inZone')), d.get('batt'),
+        bool(d.get('fever')), bool(d.get('theft')), d.get('pkt'), d.get('rssi'),
+    ))
+    db.commit()
+    db.close()
+    return jsonify({"received": True})
+
+
+@app.route('/api/iot/telemetry', methods=['POST'])
+def ingest_telemetry():
+    return _store_iot_reading()
+
+
+@app.route('/api/iot/alert', methods=['POST'])
+def ingest_alert():
+    return _store_iot_reading()
+
+
+# Real reading history for the app's IoT Monitor tab. Falls back to the
+# built-in demo simulator (HardwareSimulation.jsx) on the frontend when an
+# animal has no paired device or no recent readings.
+@app.route('/animals/<int:animal_id>/iot-readings', methods=['GET'])
+@require_auth
+def get_iot_readings(animal_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT owner_id FROM animals WHERE id=%s", (animal_id,))
+    animal = c.fetchone()
+    if not animal:
+        db.close(); return jsonify({"error": "Animal not found"}), 404
+    if g.current_user['role'] not in ('Veterinarian', 'Police') and animal['owner_id'] != g.current_user['id']:
+        db.close(); return jsonify({"error": "Not authorized to view this animal's readings"}), 403
+
+    limit = min(int(request.args.get('limit', 20)), 100)
+    c.execute("""
+        SELECT r.* FROM iot_readings r
+        JOIN iot_devices d ON r.device_id = d.id
+        WHERE d.animal_id = %s
+        ORDER BY r.received_at DESC LIMIT %s
+    """, (animal_id, limit))
+    rows = c.fetchall()
+    db.close()
+    return jsonify(rows)
+
+
 # ── HEALTH EVENTS ─────────────────────────────────────────────
 @app.route('/animals/<int:animal_id>/health', methods=['GET'])
 @require_auth

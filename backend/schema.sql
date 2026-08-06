@@ -369,6 +369,46 @@ CREATE TABLE IF NOT EXISTS feeding_plans (
   INDEX idx_feeding_plans_animal (animal_id)
 );
 
+-- ── IOT DEVICES ────────────────────────────────────────────────
+-- Physical collar/base-station pairing: a farmer claims a device by
+-- its printed serial number from the app's IoT tab.
+CREATE TABLE IF NOT EXISTS iot_devices (
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  device_serial VARCHAR(60) NOT NULL UNIQUE,
+  animal_id     INT,                   -- FK → animals.id (NULL until attached to an animal)
+  owner_id      INT NOT NULL,          -- FK → users.id (farmer who paired it)
+  paired_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (animal_id) REFERENCES animals(id) ON DELETE SET NULL,
+  FOREIGN KEY (owner_id)  REFERENCES users(id)   ON DELETE CASCADE
+);
+
+-- ── IOT READINGS ───────────────────────────────────────────────
+-- Real telemetry from a paired physical collar, as decoded by the base
+-- station firmware and posted to /api/iot/telemetry or /api/iot/alert.
+-- Distinct from the app's built-in demo simulator (HardwareSimulation.jsx),
+-- which is used whenever a device has no real readings yet.
+CREATE TABLE IF NOT EXISTS iot_readings (
+  id           INT AUTO_INCREMENT PRIMARY KEY,
+  device_id    INT NOT NULL,          -- FK → iot_devices.id (the collar)
+  temp_c       DECIMAL(4,1),
+  heart_rate   INT,
+  latitude     DECIMAL(9,6),
+  longitude    DECIMAL(9,6),
+  gps_accuracy DECIMAL(5,1),
+  activity     VARCHAR(20),
+  move_mag     INT,
+  in_zone      BOOLEAN,
+  battery_pct  INT,
+  fever_alert  BOOLEAN DEFAULT FALSE,
+  theft_alert  BOOLEAN DEFAULT FALSE,
+  packet_no    INT,
+  rssi         INT,                   -- LoRa signal strength in dBm, as seen by the base station
+  received_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (device_id) REFERENCES iot_devices(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_iot_readings_device_time ON iot_readings (device_id, received_at DESC);
+
+
 -- ── SEED DATA ─────────────────────────────────────────────────
 -- Demo password for every seeded account below: Pfuma2026!
 -- (bcrypt hash generated once — do not reuse this hash pattern for real accounts)

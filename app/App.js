@@ -13,7 +13,7 @@ import {
 } from '@expo-google-fonts/plus-jakarta-sans';
 import {
   Home, Users, ShoppingCart, Wheat, MessageSquare,
-  User, ClipboardList, Package, Store, Shield,
+  User, ClipboardList, Package, Store, Shield, Radio,
 } from 'lucide-react-native';
 import { COLORS, FONTS } from './config';
 
@@ -26,6 +26,7 @@ import MarketplaceScreen  from './screens/MarketplaceScreen';
 import FeedAnalyzerScreen from './screens/FeedAnalyzerScreen';
 import VetMessengerScreen from './screens/VetMessengerScreen';
 import ProfileScreen      from './screens/ProfileScreen';
+import IoTScreen          from './screens/IoTScreen';
 import JindaFAB    from './components/JindaFAB';
 
 const Tab = createBottomTabNavigator();
@@ -36,12 +37,14 @@ const ROLE_TABS = {
     { name: 'Herd',      icon: Users,         label: 'Herd',    screen: HerdScreen },
     { name: 'Market',    icon: ShoppingCart,  label: 'Market',  screen: MarketplaceScreen },
     { name: 'Feed',      icon: Wheat,         label: 'Feed',    screen: FeedAnalyzerScreen },
+    { name: 'IoT',       icon: Radio,         label: 'IoT',     screen: IoTScreen },
     { name: 'Vet',       icon: MessageSquare, label: 'Messages',screen: VetMessengerScreen },
     { name: 'Profile',   icon: User,          label: 'More',    screen: ProfileScreen },
   ],
   Veterinarian: [
     { name: 'Dashboard', icon: ClipboardList, label: 'Home',    screen: DashboardScreen },
     { name: 'Herd',      icon: Users,         label: 'Animals', screen: HerdScreen },
+    { name: 'IoT',       icon: Radio,         label: 'IoT',     screen: IoTScreen },
     { name: 'Market',    icon: ShoppingCart,  label: 'Market',  screen: MarketplaceScreen },
     { name: 'Vet',       icon: MessageSquare, label: 'Messages',screen: VetMessengerScreen },
     { name: 'Profile',   icon: User,          label: 'More',    screen: ProfileScreen },

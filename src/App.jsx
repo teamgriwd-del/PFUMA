@@ -7,6 +7,7 @@ import VetCommunication  from './components/VetCommunication/VetCommunication';
 import Marketplace       from './components/Marketplace/Marketplace';
 import FeedAnalyzer      from './components/FeedAnalyzer/FeedAnalyzer';
 import Cooperative       from './components/Cooperative/Cooperative';
+import HardwareSimulation from './components/HardwareSimulation/HardwareSimulation';
 import AdminDashboard    from './components/Admin/AdminDashboard';
 import Jinda      from './components/IntelAI/PfumaIntelAI';
 import AuthPortal        from './components/IntelAI/AuthPortal';
@@ -18,7 +19,7 @@ import {
   Truck, BarChart3, Globe, AlertTriangle, CheckCircle, ChevronRight,
   Zap, Clock, ArrowRight, Tag, Pill, MapPin, FileText,
   RefreshCw, DollarSign, Target, Box, PhoneCall, Star, Wheat, Store,
-  Sprout, Check, Syringe, Shield, UserPlus, X, Menu, Eye, EyeOff, Handshake,
+  Sprout, Check, Syringe, Shield, UserPlus, X, Menu, Eye, EyeOff, Handshake, Radio,
 } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis } from 'recharts';
 import './App.css';
@@ -1540,6 +1541,7 @@ const NAV_SECTIONS = {
         { tab: 'health',      icon: HeartPulse,      label: 'Lifecycle',     desc: 'Vaccines & health protocols' },
         { tab: 'disease',     icon: Stethoscope,     label: 'Diagnostics',   desc: 'AI disease checker' },
         { tab: 'feed',        icon: Wheat,           label: 'Feed Analyzer', desc: 'Livestock nutrition database' },
+        { tab: 'iot',         icon: Radio,           label: 'IoT Monitor',   desc: 'Live collar sensor data' },
       ]
     },
     {
@@ -1577,6 +1579,12 @@ const NAV_SECTIONS = {
       items: [
         { tab: 'vet',         icon: MessageSquare,   label: 'Messenger',     desc: 'Vets, suppliers, farmers & retailers' },
         { tab: 'marketplace', icon: Store,           label: 'Marketplace',   desc: 'Monitor trade & listings' },
+      ]
+    },
+    {
+      section: 'Surveillance',
+      items: [
+        { tab: 'iot',         icon: Radio,           label: 'IoT Stream',    desc: 'Live herd health sensors' },
       ]
     },
   ],
@@ -1631,6 +1639,12 @@ const NAV_SECTIONS = {
       items: [
         { tab: 'marketplace', icon: Store,           label: 'Marketplace',   desc: 'Monitor livestock trade activity' },
         { tab: 'vet',         icon: MessageSquare,   label: 'Messenger',     desc: 'Vets, suppliers, farmers & retailers' },
+      ]
+    },
+    {
+      section: 'Surveillance',
+      items: [
+        { tab: 'iot',         icon: Radio,           label: 'IoT Monitor',   desc: 'Theft & geofence alerts' },
       ]
     },
   ],
@@ -2008,6 +2022,7 @@ function App() {
           {activeTab === 'marketplace' && <ErrorBoundary><Marketplace currentUser={currentUser} animals={animals} onListAnimal={handleListAnimal} /></ErrorBoundary>}
           {activeTab === 'feed'        && <ErrorBoundary><FeedAnalyzer currentUser={currentUser} animals={animals} onUpdateAnimal={(id, patch) => setAnimals(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a))} /></ErrorBoundary>}
           {activeTab === 'cooperative' && <ErrorBoundary><Cooperative currentUser={currentUser} /></ErrorBoundary>}
+          {activeTab === 'iot'         && <ErrorBoundary><HardwareSimulation animals={animals} currentUser={currentUser} /></ErrorBoundary>}
         </div>
 
         <Jinda setActiveTab={setActiveTab} animals={animals} currentUser={currentUser} />

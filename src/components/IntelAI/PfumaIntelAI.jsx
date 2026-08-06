@@ -50,7 +50,8 @@ const Jinda = ({ setActiveTab, animals, currentUser }) => {
       health: ['vaccine', 'health', 'lifecycle', 'born', 'pregnant', 'gestation', 'weaning', 'calendar', 'dosage', 'inventory', 'medicine', 'stock'],
       diagnostics: ['sick', 'symptoms', 'illness', 'check', 'diagnose', 'disease', 'medicine', 'radar', 'outbreak'],
       vet: ['vet', 'doctor', 'advisor', 'expert', 'help', 'emergency', 'outbreak', 'agritex'],
-      marketplace: ['sell', 'buy', 'market', 'listing', 'price', 'clearance', 'permit', 'trade']
+      marketplace: ['sell', 'buy', 'market', 'listing', 'price', 'clearance', 'permit', 'trade'],
+      iot: ['live', 'sensor', 'tracker', 'gps', 'collar', 'telemetry', 'iot', 'geofence']
     },
     quickTips: [
       "Follow the 5-5-4 dipping schedule to prevent January Disease.",
@@ -171,7 +172,7 @@ const Jinda = ({ setActiveTab, animals, currentUser }) => {
     // 10. Theft & Security Logic
     if (lowerText.includes('thief') || lowerText.includes('stole') || lowerText.includes('where') || lowerText.includes('security') || lowerText.includes('mbavha')) {
         return {
-          text: "Report it to the police straight away, then flag the animal here so its record shows as disputed. Because every listing needs police clearance before buyers can see it, a stolen beast on your record is very hard for anyone else to sell on.",
+          text: "If the animal is wearing a PFUMA collar, check the IoT Monitor — a boundary breach or an unusual movement pattern is logged with a timestamp and location. Then report it to the police and flag the animal here so its record shows as disputed. Because every listing needs police clearance before buyers can see it, a stolen beast on your record is very hard for anyone else to sell on.",
           type: 'info'
         };
     }
