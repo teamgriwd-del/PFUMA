@@ -54,7 +54,7 @@ def architecture_svg():
     ]
     bottom_boxes = [
         ("Data Layer", "MySQL — users, animals, clearances, bids", "#e7f7ef", "#0f8a53", INK),
-        ("Compliance Layer", "Cited Zimbabwean law — Acts mapped to features", "#e7f7ef", "#0f8a53", INK),
+        ("IoT Layer", "ESP32 collar + base station — pairing & telemetry", "#e7f7ef", "#0f8a53", INK),
     ]
 
     box_w = (W - gap * (len(top_boxes) - 1)) / len(top_boxes)
@@ -99,7 +99,7 @@ def architecture_svg():
         svg.append(f'<text x="{cx:.1f}" y="{bottom_y + 52}" text-anchor="middle" font-size="9" '
                     f'fill="{INK_SECONDARY}">{line2}</text>')
 
-    # connectors from Auth layer (index 1) down to Data layer, and Police layer (index 3) down to Compliance layer
+    # connectors from Auth layer (index 1) down to Data layer, and Police layer (index 3) down to IoT layer
     svg.append(f'<path d="M{top_centers[1]:.1f},{top_y + box_h} L{top_centers[1]:.1f},{top_y + box_h + 22} '
                 f'L{bottom_centers[0]:.1f},{top_y + box_h + 22} L{bottom_centers[0]:.1f},{bottom_y}" '
                 f'fill="none" stroke="{INK_MUTED}" stroke-width="1.6" marker-end="url(#arrow)"/>')
@@ -262,9 +262,9 @@ html = f"""<!doctype html>
       <p>A React (Vite) web app and Expo mobile app share a Flask/MySQL backend with JWT
       authentication, bcrypt password hashing, and per-owner data scoping. An AI compliance
       assistant (Jinda) answers legal/health questions from researched Zimbabwean law and
-      refuses to leak other users' data. Every livestock listing is gated behind a police
-      sale-clearance step before any buyer can see it. The system architecture is shown at
-      right &mdash; note the Police Clearance Layer.</p>
+      refuses to leak other users' data. ESP32/LoRa IoT hardware pairs collars and base
+      stations to a farmer's account for herd health and anti-theft monitoring. The system
+      architecture is shown at right &mdash; note the Police Clearance Layer.</p>
       <div class="stat-row">
         <div class="stat"><div class="v">{ROLES}</div><div class="l">stakeholder roles</div></div>
         <div class="stat"><div class="v">{API_ENDPOINTS}</div><div class="l">backend API endpoints</div></div>
@@ -290,8 +290,8 @@ html = f"""<!doctype html>
         <tr><td>Auth (bcrypt + JWT), per-role &amp; per-owner data scoping</td><td><span class="tag real">Real</span></td></tr>
         <tr><td>Police signup review + sale-clearance workflow</td><td><span class="tag real">Real</span></td></tr>
         <tr><td>AI compliance assistant, role-aware data guard</td><td><span class="tag real">Real</span></td></tr>
-        <tr><td>Marketplace listing, bidding &amp; movement-permit records</td><td><span class="tag real">Real</span></td></tr>
-        <tr><td>Weighted diagnostics engine + lifecycle compliance tracking</td><td><span class="tag real">Real</span></td></tr>
+        <tr><td>IoT device pairing + telemetry intake endpoint</td><td><span class="tag real">Real</span></td></tr>
+        <tr><td>Live IoT sensor dashboard (continuous reading history)</td><td><span class="tag sim">Simulated</span></td></tr>
       </table>
 
       <h2>Analysis</h2>
