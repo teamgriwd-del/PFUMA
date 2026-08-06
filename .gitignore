@@ -27,6 +27,8 @@ venv/
 .env
 .env.*
 *.local
+# ...but the template carries no secrets and every contributor needs it
+!.env.example
 
 # Editor & OS
 .vscode/
