@@ -1,12 +1,139 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  StatusBar, Animated,
+  StatusBar, Animated, TextInput, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Thermometer, Heart, Check, AlertTriangle, Radio } from 'lucide-react-native';
+import { Thermometer, Heart, Check, AlertTriangle, Radio, RadioTower, Tag, Link2, Plus, ShieldCheck } from 'lucide-react-native';
 import { COLORS } from '../config';
-import { authFetch } from '../api';
+import { authFetch, authJson } from '../api';
+
+const DEVICE_TYPES = [
+  { id: 'base_station', label: 'Base Station', icon: RadioTower, hint: 'One per farm — the fixed box near your router.', placeholder: 'e.g. BS-01-HNO' },
+  { id: 'collar',       label: 'Collar',       icon: Tag,        hint: 'One per animal — worn on the animal.',          placeholder: 'e.g. CN-014ZVI' },
+];
+
+// Farmer-only device pairing card — mirrors the web app's DevicePairingPanel.
+function PairingPanel({ currentUser, animals, devices, onPaired }) {
+  const [deviceType, setDeviceType] = useState('base_station');
+  const [serial, setSerial] = useState('');
+  const [animalId, setAnimalId] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [feedback, setFeedback] = useState(null);
+
+  if (currentUser?.role !== 'Farmer') return null;
+  const activeType = DEVICE_TYPES.find(t => t.id === deviceType);
+
+  const pair = async () => {
+    if (!serial.trim()) return;
+    setBusy(true);
+    const { ok, data } = await authJson(currentUser, '/iot-devices/pair', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        device_serial: serial.trim(),
+        device_type: deviceType,
+        animal_id: deviceType === 'collar' ? (animalId || null) : null,
+      }),
+    });
+    setFeedback(ok ? `${activeType.label} paired.` : (data.error || 'Could not pair — try again.'));
+    if (ok) { setSerial(''); setAnimalId(''); onPaired(); }
+    setBusy(false);
+    setTimeout(() => setFeedback(null), 3500);
+  };
+
+  return (
+    <View style={p.card}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+        <Link2 size={14} color={COLORS.primary} />
+        <Text style={p.title}>Paired Devices</Text>
+      </View>
+      <Text style={p.subtitle}>Claim a physical collar or base station by its printed serial number.</Text>
+
+      {devices.length > 0 && (
+        <View style={{ gap: 6, marginBottom: 12 }}>
+          {devices.map(dv => {
+            const TypeIcon = dv.device_type === 'base_station' ? RadioTower : Tag;
+            return (
+              <View key={dv.id} style={p.deviceRow}>
+                <View style={p.deviceIconBox}><TypeIcon size={13} color="#6b7280" /></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={p.deviceSerial}>{dv.device_serial}</Text>
+                  <Text style={p.deviceMeta}>
+                    {dv.device_type === 'base_station' ? 'Base Station' : (dv.animal_name ? `Collar · ${dv.animal_name}` : 'Collar · unattached')}
+                  </Text>
+                </View>
+                <ShieldCheck size={13} color={COLORS.primary} />
+              </View>
+            );
+          })}
+        </View>
+      )}
+
+      {feedback && <Text style={p.feedback}>{feedback}</Text>}
+
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
+        {DEVICE_TYPES.map(t => {
+          const active = deviceType === t.id;
+          return (
+            <TouchableOpacity key={t.id} activeOpacity={0.8}
+              onPress={() => { setDeviceType(t.id); setAnimalId(''); }}
+              style={[p.typeBtn, active && { backgroundColor: COLORS.primary }]}>
+              <t.icon size={13} color={active ? '#fff' : '#6b7280'} />
+              <Text style={[p.typeBtnText, active && { color: '#fff' }]}>{t.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+      <Text style={p.hint}>{activeType.hint}</Text>
+
+      <TextInput
+        style={p.input} placeholder={`Serial (${activeType.placeholder})`}
+        placeholderTextColor="#bbb" value={serial} onChangeText={setSerial}
+      />
+      {deviceType === 'collar' && animals.length > 0 && (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+          {animals.map(a => {
+            const active = animalId === String(a.id);
+            return (
+              <TouchableOpacity key={a.id} activeOpacity={0.8}
+                onPress={() => setAnimalId(active ? '' : String(a.id))}
+                style={[p.animalChip, active && { backgroundColor: COLORS.primary, borderColor: COLORS.primary }]}>
+                <Text style={[p.animalChipText, active && { color: '#fff' }]}>{a.name}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
+      <TouchableOpacity style={p.pairBtn} onPress={pair} disabled={busy} activeOpacity={0.8}>
+        {busy ? <ActivityIndicator color="#fff" /> : (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Plus size={14} color="#fff" strokeWidth={2.5} />
+            <Text style={p.pairBtnText}>Pair {activeType.label}</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const p = StyleSheet.create({
+  card:        { backgroundColor: '#fff', borderRadius: 16, padding: 16, elevation: 2, marginBottom: 16 },
+  title:       { fontSize: 14, fontWeight: '900', color: '#111827' },
+  subtitle:    { fontSize: 11, color: '#9ca3af', fontWeight: '500', marginBottom: 12 },
+  deviceRow:   { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#f9fafb', borderRadius: 12, padding: 10 },
+  deviceIconBox:{ width: 26, height: 26, borderRadius: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center' },
+  deviceSerial:{ fontSize: 11, fontWeight: '900', color: '#111827' },
+  deviceMeta:  { fontSize: 10, color: '#9ca3af', fontWeight: '600', marginTop: 1 },
+  feedback:    { fontSize: 11, fontWeight: '700', color: COLORS.primary, backgroundColor: '#f0fdf4', borderWidth: 1, borderColor: '#bbf7d0', borderRadius: 10, padding: 8, marginBottom: 10 },
+  typeBtn:     { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderRadius: 12, backgroundColor: '#f9fafb' },
+  typeBtnText: { fontSize: 10, fontWeight: '900', color: '#6b7280', textTransform: 'uppercase' },
+  hint:        { fontSize: 10, color: '#9ca3af', fontWeight: '500', marginBottom: 10, lineHeight: 15 },
+  input:       { backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, fontSize: 13, fontWeight: '600', color: '#111827', marginBottom: 10 },
+  animalChip:  { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: '#e5e7eb' },
+  animalChipText:{ fontSize: 11, fontWeight: '700', color: '#6b7280' },
+  pairBtn:     { backgroundColor: COLORS.primary, borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
+  pairBtnText: { color: '#fff', fontSize: 13, fontWeight: '900' },
+});
 
 // Real device data always takes priority. This local jitter generator only
 // drives the display for an animal with no paired collar (or no reading in
@@ -164,12 +291,15 @@ export default function IoTScreen({ currentUser }) {
             <Text style={s.headerTitle}>IoT Monitor</Text>
           </View>
         </View>
-        <View style={{ padding: 24, alignItems: 'center', marginTop: 40 }}>
-          <Radio size={40} color={COLORS.muted} strokeWidth={1.5} />
-          <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.muted, marginTop: 12, textAlign: 'center' }}>
-            Register an animal in your Herd to see sensor data here.
-          </Text>
-        </View>
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 110 }}>
+          <View style={{ padding: 24, alignItems: 'center', marginBottom: 8 }}>
+            <Radio size={40} color={COLORS.muted} strokeWidth={1.5} />
+            <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.muted, marginTop: 12, textAlign: 'center' }}>
+              Register an animal in your Herd to see sensor data here.
+            </Text>
+          </View>
+          <PairingPanel currentUser={currentUser} animals={animals} devices={devices} onPaired={loadDevices} />
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -358,10 +488,10 @@ export default function IoTScreen({ currentUser }) {
 
         {/* Fleet summary */}
         <Text style={s.sectionLabel}>FLEET SUMMARY</Text>
-        <View style={s.fleetCard}>
+        <View style={[s.fleetCard, { marginBottom: 16 }]}>
           {[
             { label: 'Animals',        value: animals.length,                                   color: COLORS.primary },
-            { label: 'Collars Paired', value: devices.length,                                    color: '#2563eb' },
+            { label: 'Collars Paired', value: devices.filter(d => d.device_type === 'collar').length, color: '#2563eb' },
             { label: 'This Animal',    value: isLive ? 'Live' : 'Demo',                           color: isLive ? '#16a34a' : '#9ca3af' },
           ].map(stat => (
             <View key={stat.label} style={s.fleetStat}>
@@ -370,6 +500,8 @@ export default function IoTScreen({ currentUser }) {
             </View>
           ))}
         </View>
+
+        <PairingPanel currentUser={currentUser} animals={animals} devices={devices} onPaired={loadDevices} />
 
       </ScrollView>
     </SafeAreaView>
