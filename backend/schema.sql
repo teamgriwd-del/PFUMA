@@ -148,6 +148,20 @@ CREATE TABLE IF NOT EXISTS sale_clearances (
   movement_permit_number VARCHAR(80),
   officer_id    INT,                   -- FK → users.id (Police, once resolved)
   notes         TEXT,
+  -- Traditional-authority attestation. In communal areas a sale is cleared by
+  -- the village head (Sabuku) or chief (Mambo) BEFORE police verify it. The
+  -- leader gets no account — the seller records the clearance and the officer
+  -- verifies it, which is how it already works on paper.
+  -- Commercial farms on title deed have no traditional authority, so
+  -- 'not_applicable' with a reason is a valid, explicit answer.
+  leader_clearance ENUM('attested','not_applicable') NULL,
+  leader_type      ENUM('Sabuku','Mambo') NULL,
+  leader_name      VARCHAR(120),
+  leader_village   VARCHAR(120),        -- village / ward the leader presides over
+  leader_cleared_on DATE,
+  leader_reference VARCHAR(80),         -- reference on the written clearance, if any
+  leader_document_path VARCHAR(300),    -- photo of the written clearance
+  leader_na_reason VARCHAR(200),        -- why no traditional clearance applies
   created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   resolved_at   TIMESTAMP NULL,
   FOREIGN KEY (animal_id)  REFERENCES animals(id) ON DELETE CASCADE,
@@ -155,6 +169,18 @@ CREATE TABLE IF NOT EXISTS sale_clearances (
   FOREIGN KEY (seller_id)  REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (officer_id) REFERENCES users(id) ON DELETE SET NULL
 );
+
+-- Upgrades a database that predates traditional-authority attestation.
+-- MariaDB supports ADD COLUMN IF NOT EXISTS, so this is safe to re-run.
+ALTER TABLE sale_clearances
+  ADD COLUMN IF NOT EXISTS leader_clearance ENUM('attested','not_applicable') NULL,
+  ADD COLUMN IF NOT EXISTS leader_type      ENUM('Sabuku','Mambo') NULL,
+  ADD COLUMN IF NOT EXISTS leader_name      VARCHAR(120),
+  ADD COLUMN IF NOT EXISTS leader_village   VARCHAR(120),
+  ADD COLUMN IF NOT EXISTS leader_cleared_on DATE,
+  ADD COLUMN IF NOT EXISTS leader_reference VARCHAR(80),
+  ADD COLUMN IF NOT EXISTS leader_document_path VARCHAR(300),
+  ADD COLUMN IF NOT EXISTS leader_na_reason VARCHAR(200);
 
 -- ── MARKETPLACE BIDS ──────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS bids (
@@ -221,8 +247,8 @@ CREATE TABLE IF NOT EXISTS conversations (
   FOREIGN KEY (user_b_id) REFERENCES users(id)   ON DELETE CASCADE,
   FOREIGN KEY (animal_id) REFERENCES animals(id) ON DELETE SET NULL
 );
-CREATE INDEX idx_conversations_user_a ON conversations (user_a_id, last_message_at DESC);
-CREATE INDEX idx_conversations_user_b ON conversations (user_b_id, last_message_at DESC);
+CREATE INDEX IF NOT EXISTS idx_conversations_user_a ON conversations (user_a_id, last_message_at DESC);
+CREATE INDEX IF NOT EXISTS idx_conversations_user_b ON conversations (user_b_id, last_message_at DESC);
 
 CREATE TABLE IF NOT EXISTS conversation_messages (
   id               INT AUTO_INCREMENT PRIMARY KEY,
@@ -234,7 +260,7 @@ CREATE TABLE IF NOT EXISTS conversation_messages (
   FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
   FOREIGN KEY (sender_id)       REFERENCES users(id)          ON DELETE CASCADE
 );
-CREATE INDEX idx_conv_messages_conv_time ON conversation_messages (conversation_id, sent_at);
+CREATE INDEX IF NOT EXISTS idx_conv_messages_conv_time ON conversation_messages (conversation_id, sent_at);
 
 -- ── COOPERATIVES ───────────────────────────────────────────────
 -- Communal farmers coordinate through a real shared dip tank / grazing
@@ -406,7 +432,7 @@ CREATE TABLE IF NOT EXISTS iot_readings (
   received_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (device_id) REFERENCES iot_devices(id) ON DELETE CASCADE
 );
-CREATE INDEX idx_iot_readings_device_time ON iot_readings (device_id, received_at DESC);
+CREATE INDEX IF NOT EXISTS idx_iot_readings_device_time ON iot_readings (device_id, received_at DESC);
 
 
 -- ── SEED DATA ─────────────────────────────────────────────────

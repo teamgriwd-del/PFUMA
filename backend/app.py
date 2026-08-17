@@ -1145,10 +1145,18 @@ def add_listing():
             return jsonify({"error": str(e)}), 400
 
     if needs_clearance:
+        try:
+            att = _leader_attestation(d)
+        except ValueError as e:
+            db.commit(); db.close()
+            return jsonify({"error": str(e)}), 400
         c.execute("""
-            INSERT INTO sale_clearances (animal_id, listing_id, seller_id, status)
-            VALUES (%s,%s,%s,'pending')
-        """, (animal_id, listing_id, g.current_user['id']))
+            INSERT INTO sale_clearances
+                (animal_id, listing_id, seller_id, status,
+                 leader_clearance, leader_type, leader_name, leader_village,
+                 leader_cleared_on, leader_reference, leader_na_reason)
+            VALUES (%s,%s,%s,'pending',%s,%s,%s,%s,%s,%s,%s)
+        """, (animal_id, listing_id, g.current_user['id']) + att)
 
     db.commit()
     db.close()
@@ -1157,6 +1165,36 @@ def add_listing():
         "status": status,
         "message": "Listing submitted for police clearance ✅" if needs_clearance else "Listing added ✅"
     })
+
+
+def _leader_attestation(d):
+    """Reads the traditional-authority attestation off a request payload.
+
+    In communal areas a Sabuku (village head) or Mambo (chief) clears a sale
+    before the police do. They hold no account here — the seller records the
+    clearance and the officer verifies it, mirroring the paper process.
+    A commercial farm on title deed has no traditional authority, so
+    'not_applicable' plus a reason is a valid answer, not a missing one.
+    """
+    mode = (d.get('leader_clearance') or '').strip() or None
+    if mode not in (None, 'attested', 'not_applicable'):
+        raise ValueError("leader_clearance must be 'attested' or 'not_applicable'")
+    if mode == 'attested':
+        if not (d.get('leader_name') or '').strip():
+            raise ValueError("Name of the Sabuku or Mambo who cleared the sale is required")
+        if (d.get('leader_type') or '') not in ('Sabuku', 'Mambo'):
+            raise ValueError("leader_type must be 'Sabuku' or 'Mambo'")
+    if mode == 'not_applicable' and not (d.get('leader_na_reason') or '').strip():
+        raise ValueError("Give a reason why no traditional clearance applies")
+    return (
+        mode,
+        d.get('leader_type') or None,
+        (d.get('leader_name') or '').strip() or None,
+        (d.get('leader_village') or '').strip() or None,
+        d.get('leader_cleared_on') or None,
+        (d.get('leader_reference') or '').strip() or None,
+        (d.get('leader_na_reason') or '').strip() or None,
+    )
 
 
 # ── SALE CLEARANCES ─────────────────────────────────────────────
@@ -1196,10 +1234,17 @@ def create_clearance():
     animal = c.fetchone()
     if not animal or animal['owner_id'] != g.current_user['id']:
         db.close(); return jsonify({"error": "You can only request clearance for your own animals"}), 403
+    try:
+        att = _leader_attestation(d)
+    except ValueError as e:
+        db.close(); return jsonify({"error": str(e)}), 400
     c.execute("""
-        INSERT INTO sale_clearances (animal_id, listing_id, seller_id, status)
-        VALUES (%s,%s,%s,'pending')
-    """, (d['animal_id'], d.get('listing_id'), g.current_user['id']))
+        INSERT INTO sale_clearances
+            (animal_id, listing_id, seller_id, status,
+             leader_clearance, leader_type, leader_name, leader_village,
+             leader_cleared_on, leader_reference, leader_na_reason)
+        VALUES (%s,%s,%s,'pending',%s,%s,%s,%s,%s,%s,%s)
+    """, (d['animal_id'], d.get('listing_id'), g.current_user['id']) + att)
     clearance_id = c.lastrowid
     db.commit()
     db.close()
@@ -1217,6 +1262,21 @@ def resolve_clearance(clearance_id):
 
     db = get_db()
     c = db.cursor()
+
+    # A sale cannot be cleared until the traditional-authority step has been
+    # answered — either a Sabuku/Mambo attestation, or an explicit reason why
+    # none applies. Rejecting is always allowed; only approval is gated.
+    if status == 'cleared':
+        c.execute("SELECT leader_clearance FROM sale_clearances WHERE id=%s", (clearance_id,))
+        row = c.fetchone()
+        if not row:
+            db.close(); return jsonify({"error": "Clearance not found"}), 404
+        if not row['leader_clearance']:
+            db.close()
+            return jsonify({"error": "No Sabuku or Mambo clearance on record for this sale. "
+                                     "Ask the seller to record it, or to state why none applies, "
+                                     "before you clear the listing."}), 409
+
     c.execute("""
         UPDATE sale_clearances
         SET status=%s, movement_permit_number=%s, officer_id=%s, notes=%s, resolved_at=NOW()
