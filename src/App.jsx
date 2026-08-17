@@ -1500,8 +1500,37 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
                     </div>
                     <span className="text-[9px] font-black text-orange-400 bg-orange-400/10 px-2 py-0.5 rounded-full uppercase shrink-0">Pending</span>
                   </div>
+
+                  {/* Traditional-authority step. It comes before the police one,
+                      so the officer sees the seller's answer before deciding. */}
+                  {c.leader_clearance === 'attested' ? (
+                    <div className="rounded-lg bg-green-500/10 border border-green-500/20 px-3 py-2 mb-1">
+                      <p className="text-[9px] font-black text-green-400 uppercase tracking-widest mb-0.5">Cleared by {c.leader_type || 'traditional authority'}</p>
+                      <p className="text-[11px] text-gray-200 font-medium">{c.leader_name}{c.leader_village ? ` · ${c.leader_village}` : ''}</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">
+                        {c.leader_cleared_on ? String(c.leader_cleared_on).slice(0, 10) : 'No date given'}
+                        {c.leader_reference ? ` · Ref ${c.leader_reference}` : ''}
+                      </p>
+                    </div>
+                  ) : c.leader_clearance === 'not_applicable' ? (
+                    <div className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 mb-1">
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">No traditional authority</p>
+                      <p className="text-[11px] text-gray-300 font-medium">{c.leader_na_reason}</p>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 mb-1 flex items-start gap-2">
+                      <AlertTriangle size={13} className="text-red-400 shrink-0 mt-0.5" />
+                      <p className="text-[11px] text-red-300 font-medium">No Sabuku or Mambo clearance on record. Ask the seller to record it, or to state why none applies, before clearing.</p>
+                    </div>
+                  )}
+
                   <div className="flex gap-2 mt-3">
-                    <button disabled={busyId === c.id} onClick={() => resolveClearance(c.id, 'cleared')} className="flex-1 py-2 bg-green-600 text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition disabled:opacity-40">Clear Sale</button>
+                    <button
+                      disabled={busyId === c.id || !c.leader_clearance}
+                      title={!c.leader_clearance ? 'Sabuku or Mambo clearance must be on record first' : undefined}
+                      onClick={() => resolveClearance(c.id, 'cleared')}
+                      className="flex-1 py-2 bg-green-600 text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    >Clear Sale</button>
                     <button disabled={busyId === c.id} onClick={() => resolveClearance(c.id, 'rejected')} className="flex-1 py-2 bg-white/10 text-gray-300 rounded-lg text-[10px] font-black uppercase hover:bg-white/20 transition disabled:opacity-40">Reject</button>
                   </div>
                 </div>

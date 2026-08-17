@@ -32,7 +32,9 @@ const CAT_BADGE = {
 };
 
 const PostForm = ({ currentUser, onSubmit, onCancel, animals }) => {
-  const [form, setForm] = useState({ product_name: '', category: 'livestock', price: '', unit: 'head', quantity: '1', location: currentUser?.district ? `${currentUser.district}, ${currentUser.province}` : (currentUser?.province || ''), description: '', animal_id: '' });
+  const [form, setForm] = useState({ product_name: '', category: 'livestock', price: '', unit: 'head', quantity: '1', location: currentUser?.district ? `${currentUser.district}, ${currentUser.province}` : (currentUser?.province || ''), description: '', animal_id: '',
+    leader_clearance: '', leader_type: 'Sabuku', leader_name: '', leader_village: '',
+    leader_cleared_on: '', leader_reference: '', leader_na_reason: '' });
   const [photoFile, setPhotoFile]       = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [submitting, setSubmitting]     = useState(false);
@@ -48,6 +50,9 @@ const PostForm = ({ currentUser, onSubmit, onCancel, animals }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.product_name.trim() || !form.price) return;
+    // The Sabuku/Mambo step comes before the police one, so a livestock listing
+    // cannot be submitted until it is answered either way.
+    if (form.category === 'livestock' && form.animal_id && !form.leader_clearance) return;
     setSubmitting(true);
     await onSubmit({ ...form, price: parseFloat(form.price), quantity: parseFloat(form.quantity) }, photoFile);
     setSubmitting(false);
@@ -85,10 +90,72 @@ const PostForm = ({ currentUser, onSubmit, onCancel, animals }) => {
           )}
         </div>
         {form.category === 'livestock' && form.animal_id && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-[11px] text-red-700 font-medium flex items-start gap-2">
-            <ShieldCheck size={14} className="shrink-0 mt-0.5" />
-            <span>This listing links to a registered animal, so it needs Police sale-clearance (ownership &amp; brand papers checked) before it appears on the Marketplace.</span>
-          </div>
+          <>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-[11px] text-red-700 font-medium flex items-start gap-2">
+              <ShieldCheck size={14} className="shrink-0 mt-0.5" />
+              <span>This listing links to a registered animal. It needs clearance from your Sabuku or Mambo first, then Police sale-clearance, before it appears on the Marketplace.</span>
+            </div>
+
+            <div className="border border-gray-200 rounded-xl p-3.5 space-y-3">
+              <div>
+                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Traditional Authority Clearance *</label>
+                <p className="text-[11px] text-gray-500 mb-2">In communal areas the village head (Sabuku) or chief (Mambo) clears a sale before the police do. If you farm on a title deed or lease with no traditional authority, say so instead.</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[['attested', 'Cleared by Sabuku / Mambo'], ['not_applicable', 'Does not apply to my farm']].map(([val, lab]) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => set('leader_clearance', val)}
+                      className={`text-[11px] font-bold rounded-lg px-3 py-2 border transition ${
+                        form.leader_clearance === val
+                          ? 'bg-pfuma-green text-white border-pfuma-green'
+                          : 'bg-white text-gray-600 border-gray-300 hover:border-pfuma-green'}`}
+                    >{lab}</button>
+                  ))}
+                </div>
+              </div>
+
+              {form.leader_clearance === 'attested' && (
+                <div className="space-y-2.5">
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Who cleared it *</label>
+                      <select className={inputCls + ' appearance-none'} value={form.leader_type} onChange={e => set('leader_type', e.target.value)}>
+                        <option value="Sabuku">Sabuku (village head)</option>
+                        <option value="Mambo">Mambo (chief)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Their name *</label>
+                      <input className={inputCls} type="text" required placeholder="e.g. Sabuku Nyathi" value={form.leader_name} onChange={e => set('leader_name', e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Village / Ward</label>
+                      <input className={inputCls} type="text" placeholder="e.g. Nkayi Ward 7" value={form.leader_village} onChange={e => set('leader_village', e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Date cleared</label>
+                      <input className={inputCls} type="date" value={form.leader_cleared_on} onChange={e => set('leader_cleared_on', e.target.value)} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Reference on the written clearance</label>
+                    <input className={inputCls} type="text" placeholder="Optional — if the letter carries a number" value={form.leader_reference} onChange={e => set('leader_reference', e.target.value)} />
+                  </div>
+                </div>
+              )}
+
+              {form.leader_clearance === 'not_applicable' && (
+                <div>
+                  <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Why it does not apply *</label>
+                  <input className={inputCls} type="text" required placeholder="e.g. A2 commercial farm on title deed" value={form.leader_na_reason} onChange={e => set('leader_na_reason', e.target.value)} />
+                  <p className="text-[10px] text-gray-400 mt-1.5">The officer reviewing your listing will see this.</p>
+                </div>
+              )}
+            </div>
+          </>
         )}
         <div>
           <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Product / Item Name *</label>
