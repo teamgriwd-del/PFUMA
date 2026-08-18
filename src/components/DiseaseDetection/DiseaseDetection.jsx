@@ -64,7 +64,7 @@ const ConfidenceExplainer = ({ value, matched, total }) => (
 );
 
 // ── Main Component ────────────────────────────────────────────────────────
-const DiseaseDetection = ({ animals = [], onAddAuditLog }) => {
+const DiseaseDetection = ({ animals = [], onAddAuditLog, onCallVet }) => {
   const [selectedSymptoms, setSelectedSymptoms] = useState([]);
   const [diagnosisResults, setDiagnosisResults]   = useState([]);
   const [hasAnalyzed, setHasAnalyzed]             = useState(false);
@@ -477,13 +477,22 @@ const DiseaseDetection = ({ animals = [], onAddAuditLog }) => {
                       </div>
 
                       {res.severity === 'Critical' && (
-                        <div className="flex items-center gap-3 bg-red-600 text-white rounded-2xl px-5 py-3">
+                        <button
+                          type="button"
+                          onClick={() => onCallVet?.({
+                            subject: `Suspected ${res.name}${targetAnimalId ? ' — ' + (animals.find(a => a.id === parseInt(targetAnimalId, 10))?.name || '') : ''}`.trim(),
+                            animalId: targetAnimalId || null,
+                            description: `AI disease checker flagged a possible ${res.name} (${res.confidence}% match). Symptoms selected: ${selectedSymptoms.join(', ') || 'none'}.`,
+                          })}
+                          className="w-full flex items-center gap-3 bg-red-600 text-white rounded-2xl px-5 py-3 text-left hover:bg-red-700 transition"
+                        >
                           <Phone size={16} className="shrink-0" />
-                          <div>
+                          <div className="flex-1">
                             <p className="text-xs font-black uppercase tracking-wide">Call your vet immediately</p>
-                            <p className="text-[10px] font-medium opacity-80">This is a critical disease. Do not wait — contact DVS: +263 242 706331</p>
+                            <p className="text-[10px] font-medium opacity-80">This is a critical disease — do not wait. Tap to message a vet now, or call DVS directly: +263 242 706331</p>
                           </div>
-                        </div>
+                          <ArrowRight size={16} className="shrink-0" />
+                        </button>
                       )}
                     </div>
                   )}

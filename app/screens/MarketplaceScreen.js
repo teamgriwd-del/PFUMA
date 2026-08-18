@@ -31,6 +31,7 @@ const PostModal = ({ visible, onClose, onSubmit, error, animals = [] }) => {
     leader_cleared_on:'', leader_reference:'', leader_na_reason:'' });
   const [photo, setPhoto] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState(null);
   const set = (k,v) => setForm(p => ({ ...p, [k]: v }));
 
   const pickPhoto = async () => {
@@ -47,10 +48,18 @@ const PostModal = ({ visible, onClose, onSubmit, error, animals = [] }) => {
   const needsClearance = form.category === 'livestock' && !!form.animal_id;
 
   const submit = async () => {
+    setFormError(null);
     if (!form.product_name.trim() || !form.price) return;
-    // The Sabuku/Mambo step comes before the police one, so a listing tied to a
-    // registered animal cannot be submitted until it is answered either way.
-    if (needsClearance && !form.leader_clearance) return;
+    if (form.category === 'livestock' && !form.animal_id) {
+      setFormError('Select which registered animal this listing is for — livestock listings must be linked to a real animal so Police can clear the sale.');
+      return;
+    }
+    // The Sabuku/Mambo step comes before the police one, so the listing
+    // cannot be submitted until that question is answered either way.
+    if (needsClearance && !form.leader_clearance) {
+      setFormError('Say whether a Sabuku or Mambo cleared this sale, or why no traditional authority applies to your farm.');
+      return;
+    }
     setSubmitting(true);
     const ok = await onSubmit(form, photo);
     setSubmitting(false);
@@ -67,6 +76,7 @@ const PostModal = ({ visible, onClose, onSubmit, error, animals = [] }) => {
             <TouchableOpacity onPress={onClose}><X size={20} color={COLORS.muted} /></TouchableOpacity>
           </View>
           {error ? <Text style={styles.errorBanner}>{error}</Text> : null}
+          {formError ? <Text style={styles.errorBanner}>{formError}</Text> : null}
           <ScrollView showsVerticalScrollIndicator={false}>
             <TouchableOpacity style={styles.photoPicker} onPress={pickPhoto} activeOpacity={0.8}>
               {photo ? (
@@ -98,31 +108,6 @@ const PostModal = ({ visible, onClose, onSubmit, error, animals = [] }) => {
                 />
               </View>
             ))}
-            {form.category === 'livestock' && animals.length > 0 && (
-              <View style={styles.formField}>
-                <Text style={styles.formLabel}>Which animal?</Text>
-                <View style={styles.catRow}>
-                  {animals.map(a => {
-                    const active = String(form.animal_id) === String(a.id);
-                    return (
-                      <TouchableOpacity key={a.id} activeOpacity={0.8}
-                        style={[styles.catChip, active && { backgroundColor: COLORS.primary, borderColor: COLORS.primary }]}
-                        onPress={() => {
-                          const next = active ? '' : String(a.id);
-                          set('animal_id', next);
-                          if (next && !form.product_name.trim()) {
-                            set('product_name', [a.name, a.breed, a.species].filter(Boolean).join(' '));
-                          }
-                        }}>
-                        <Text style={[styles.catChipText, active && { color: '#fff' }]}>{a.name}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-                <Text style={styles.helpText}>Linking a registered animal is what puts the sale through clearance. Leave it unselected only for stock that is not on your PFUMA register.</Text>
-              </View>
-            )}
-
             {needsClearance && (
               <View style={styles.clearBox}>
                 <Text style={styles.clearTitle}>Traditional authority clearance *</Text>
@@ -199,6 +184,27 @@ const PostModal = ({ visible, onClose, onSubmit, error, animals = [] }) => {
                 })}
               </View>
             </View>
+            {form.category === 'livestock' && (
+              <View style={styles.formField}>
+                <Text style={styles.formLabel}>Which Animal? *</Text>
+                {animals && animals.length > 0 ? (
+                  <View style={styles.catRow}>
+                    {animals.map(a => {
+                      const active = form.animal_id === String(a.id);
+                      return (
+                        <TouchableOpacity key={a.id} activeOpacity={0.8}
+                          style={[styles.catChip, active && { backgroundColor: COLORS.primary, borderColor: COLORS.primary }]}
+                          onPress={() => { set('animal_id', String(a.id)); set('product_name', `${a.name} — ${a.breed || ''} ${a.species}`.trim()); }}>
+                          <Text style={[styles.catChipText, active && { color: '#fff' }]}>{a.name} ({a.species})</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <Text style={styles.photoPickerText}>Register an animal in your Herd first — livestock listings must be linked to one.</Text>
+                )}
+              </View>
+            )}
             <TouchableOpacity style={styles.submitBtn} onPress={submit} disabled={submitting} activeOpacity={0.8}>
               {submitting ? <ActivityIndicator color="#fff" /> : (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -273,7 +279,7 @@ const resolveImageUrl = (url) => (url && url.startsWith('/uploads/')) ? `${API}$
 
 export default function MarketplaceScreen({ currentUser }) {
   const [listings,   setListings]   = useState([]);
-  const [myAnimals,  setMyAnimals]  = useState([]);
+  const [myAnimals,  setMyAnimals]  = useState([]); // for the "Which Animal?" picker on livestock listings
   const [search,     setSearch]     = useState('');
   const [category,   setCategory]   = useState('all');
   const [loading,    setLoading]    = useState(false);
@@ -284,6 +290,16 @@ export default function MarketplaceScreen({ currentUser }) {
   const [bidAmount,  setBidAmount]  = useState('');
   const [orderTarget, setOrderTarget] = useState(null); // medicine/equipment listing being ordered
   const [orderQty,    setOrderQty]    = useState('');
+
+  useEffect(() => {
+    if (currentUser?.role !== 'Farmer') return;
+    (async () => {
+      try {
+        const res = await authFetch(currentUser, '/animals');
+        if (res.ok) setMyAnimals(await res.json());
+      } catch { /* offline — livestock picker just shows the empty state */ }
+    })();
+  }, [currentUser?.token]);
 
   const load = useCallback(async (refresh = false) => {
     if (refresh) setRefreshing(true); else setLoading(true);
@@ -297,25 +313,14 @@ export default function MarketplaceScreen({ currentUser }) {
 
   useEffect(() => { load(); }, [load]);
 
-  // The seller's own register, so a listing can be tied to a real animal —
-  // which is what triggers the clearance chain.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const { ok, data } = await authJson(currentUser, '/animals');
-      if (!cancelled && ok && Array.isArray(data)) setMyAnimals(data);
-    })();
-    return () => { cancelled = true; };
-  }, [currentUser?.token]);
-
   const handlePost = async (form, photo) => {
     setPostError(null);
     let res, data;
     if (photo) {
       const fd = new FormData();
-      // Append every populated field rather than a hand-listed subset — the old
-      // list silently dropped animal_id, so a photo listing never reached
-      // clearance at all.
+      // Append every populated field rather than a hand-listed subset — a
+      // fixed list silently drops anything added later, which is how
+      // animal_id went missing and let photo listings skip clearance.
       Object.keys(form).forEach(k => {
         const v = form[k];
         if (v !== undefined && v !== null && v !== '') fd.append(k, String(v));

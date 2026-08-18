@@ -833,7 +833,12 @@ def pair_iot_device():
     serial = (d.get('device_serial') or '').strip()
     if not serial:
         return jsonify({"error": "device_serial is required"}), 400
-    animal_id = d.get('animal_id')
+    device_type = d.get('device_type', 'collar')
+    if device_type not in ('collar', 'base_station'):
+        return jsonify({"error": "device_type must be 'collar' or 'base_station'"}), 400
+    # A base station sits at the farmhouse, not on an animal — animal_id
+    # never applies to it regardless of what the client sends.
+    animal_id = d.get('animal_id') if device_type == 'collar' else None
 
     db = get_db()
     c = db.cursor()
@@ -851,12 +856,12 @@ def pair_iot_device():
             return jsonify({"error": "You've already paired this device"}), 409
         return jsonify({"error": "This device serial is already claimed by another account"}), 409
 
-    c.execute("INSERT INTO iot_devices (device_serial, animal_id, owner_id) VALUES (%s,%s,%s)",
-              (serial, animal_id, g.current_user['id']))
+    c.execute("INSERT INTO iot_devices (device_serial, device_type, animal_id, owner_id) VALUES (%s,%s,%s,%s)",
+              (serial, device_type, animal_id, g.current_user['id']))
     device_id = c.lastrowid
     db.commit()
     db.close()
-    return jsonify({"id": device_id, "message": "Device paired ✅"})
+    return jsonify({"id": device_id, "device_type": device_type, "message": "Device paired ✅"})
 
 
 @app.route('/iot-devices/<int:device_id>', methods=['PATCH'])
@@ -865,12 +870,14 @@ def update_iot_device(device_id):
     d = request.json
     db = get_db()
     c = db.cursor()
-    c.execute("SELECT owner_id FROM iot_devices WHERE id=%s", (device_id,))
+    c.execute("SELECT owner_id, device_type FROM iot_devices WHERE id=%s", (device_id,))
     device = c.fetchone()
     if not device:
         db.close(); return jsonify({"error": "Device not found"}), 404
     if device['owner_id'] != g.current_user['id']:
         db.close(); return jsonify({"error": "You can only manage your own devices"}), 403
+    if device['device_type'] == 'base_station':
+        db.close(); return jsonify({"error": "A base station isn't attached to an animal"}), 400
 
     animal_id = d.get('animal_id')
     if animal_id:
@@ -928,11 +935,13 @@ def _store_iot_reading():
 
 
 @app.route('/api/iot/telemetry', methods=['POST'])
+@limiter.limit("60 per minute")
 def ingest_telemetry():
     return _store_iot_reading()
 
 
 @app.route('/api/iot/alert', methods=['POST'])
+@limiter.limit("60 per minute")
 def ingest_alert():
     return _store_iot_reading()
 
@@ -1110,6 +1119,13 @@ def add_listing():
     photo = request.files.get('photo')
     category = d.get('category', 'livestock')
     animal_id = d.get('animal_id') or None
+
+    # Livestock listings exist to carry a verified digital passport — one
+    # without a linked, owned animal record would skip police clearance
+    # below entirely (needs_clearance is keyed off animal_id being set),
+    # so a real animal_id is mandatory here, not just checked when present.
+    if category == 'livestock' and not animal_id:
+        return jsonify({"error": "A livestock listing must be linked to one of your registered animals"}), 400
 
     if animal_id:
         db = get_db(); c = db.cursor()

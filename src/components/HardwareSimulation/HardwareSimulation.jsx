@@ -5,11 +5,11 @@ import {
 import {
   Activity, Thermometer, Heart, MapPin, AlertTriangle, CheckCircle,
   ShieldCheck, Zap, Signal, Gauge, Eye, RefreshCw, Info, Tag,
-  Wifi, WifiOff, ChevronDown, TrendingUp, TrendingDown, Minus, Link2, Plus
+  Wifi, WifiOff, ChevronDown, TrendingUp, TrendingDown, Minus, Link2, Plus,
+  RadioTower,
 } from 'lucide-react';
 import './HardwareSimulation.css';
-
-const API = 'http://localhost:5000';
+import { API } from '../../config';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const SAFE_ZONE = { lat: -17.3601, lon: 30.1918, radius: 0.005, name: 'Mashonaland Farm A' };
@@ -85,8 +85,14 @@ const VitalCard = ({ icon: Icon, label, value, unit, range, alert, trend, descri
 );
 
 // ── Device pairing panel ──────────────────────────────────────────────────
+const DEVICE_TYPES = [
+  { id: 'base_station', label: 'Base Station', icon: RadioTower, hint: 'One per farm — the fixed box near your router that receives LoRa data from your collars.', placeholder: 'e.g. BS-01-HNO' },
+  { id: 'collar',       label: 'Collar',       icon: Tag,        hint: 'One per animal — worn on the animal, radios to your base station.', placeholder: 'e.g. CN-014ZVI' },
+];
+
 const DevicePairingPanel = ({ animals, currentUser }) => {
   const [devices, setDevices]   = useState([]);
+  const [deviceType, setDeviceType] = useState('base_station');
   const [serial, setSerial]     = useState('');
   const [animalId, setAnimalId] = useState('');
   const [busy, setBusy]         = useState(false);
@@ -112,11 +118,15 @@ const DevicePairingPanel = ({ animals, currentUser }) => {
     try {
       const res = await fetch(`${API}/iot-devices/pair`, {
         method: 'POST', headers: { ...authHeaders, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ device_serial: serial.trim(), animal_id: animalId || null }),
+        body: JSON.stringify({
+          device_serial: serial.trim(),
+          device_type: deviceType,
+          animal_id: deviceType === 'collar' ? (animalId || null) : null,
+        }),
       });
       const data = await res.json();
       if (!res.ok) { setFeedback(data.error || 'Could not pair — try again.'); }
-      else { setFeedback('Device paired.'); setSerial(''); setAnimalId(''); loadDevices(); }
+      else { setFeedback(`${DEVICE_TYPES.find(t => t.id === deviceType).label} paired.`); setSerial(''); setAnimalId(''); loadDevices(); }
     } catch {
       setFeedback('Offline — could not reach the PFUMA API to pair this device.');
     } finally {
@@ -126,6 +136,8 @@ const DevicePairingPanel = ({ animals, currentUser }) => {
   };
 
   if (currentUser?.role !== 'Farmer') return null;
+
+  const activeType = DEVICE_TYPES.find(t => t.id === deviceType);
 
   return (
     <div className="bg-white border border-gray-100 rounded-2xl p-5">
@@ -139,35 +151,57 @@ const DevicePairingPanel = ({ animals, currentUser }) => {
         <p className="text-xs text-gray-400 font-medium italic mb-4">No devices paired yet.</p>
       ) : (
         <div className="space-y-2 mb-4">
-          {devices.map(dv => (
-            <div key={dv.id} className="flex items-center justify-between gap-2 p-2.5 bg-gray-50 rounded-xl">
-              <div className="min-w-0">
-                <p className="text-[11px] font-black text-gray-800 truncate">{dv.device_serial}</p>
-                <p className="text-[10px] text-gray-400 font-medium truncate">{dv.animal_name ? `Attached to ${dv.animal_name}` : 'Not attached to an animal yet'}</p>
+          {devices.map(dv => {
+            const TypeIcon = dv.device_type === 'base_station' ? RadioTower : Tag;
+            return (
+              <div key={dv.id} className="flex items-center gap-2.5 p-2.5 bg-gray-50 rounded-xl">
+                <div className="w-7 h-7 rounded-lg bg-white border border-gray-200 flex items-center justify-center shrink-0">
+                  <TypeIcon size={13} className="text-gray-500" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-black text-gray-800 truncate">{dv.device_serial}</p>
+                  <p className="text-[10px] text-gray-400 font-medium truncate">
+                    {dv.device_type === 'base_station' ? 'Base Station' : (dv.animal_name ? `Collar · attached to ${dv.animal_name}` : 'Collar · not attached to an animal yet')}
+                  </p>
+                </div>
+                <ShieldCheck size={13} className="text-pfuma-green shrink-0" />
               </div>
-              <ShieldCheck size={13} className="text-pfuma-green shrink-0" />
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       {feedback && <div className="mb-3 text-[11px] font-bold text-pfuma-green bg-green-50 border border-green-200 rounded-xl p-2.5">{feedback}</div>}
 
+      <div className="flex gap-2 mb-3">
+        {DEVICE_TYPES.map(t => (
+          <button key={t.id} type="button" onClick={() => { setDeviceType(t.id); setAnimalId(''); }}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wide transition ${
+              deviceType === t.id ? 'bg-pfuma-green text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
+            }`}>
+            <t.icon size={13} /> {t.label}
+          </button>
+        ))}
+      </div>
+      <p className="text-[10px] text-gray-400 font-medium mb-3 leading-relaxed">{activeType.hint}</p>
+
       <form onSubmit={pairDevice} className="space-y-2.5">
         <input
-          type="text" placeholder="Device serial (e.g. BS-01-HNO or CN-014)"
+          type="text" placeholder={`Device serial (${activeType.placeholder})`}
           className="w-full p-2.5 bg-gray-50 rounded-xl border-2 border-transparent focus:border-pfuma-green outline-none text-xs font-semibold"
           value={serial} onChange={e => setSerial(e.target.value)}
         />
-        <select
-          className="w-full p-2.5 bg-gray-50 rounded-xl border-2 border-transparent focus:border-pfuma-green outline-none text-xs font-semibold appearance-none"
-          value={animalId} onChange={e => setAnimalId(e.target.value)}
-        >
-          <option value="">Attach to an animal later</option>
-          {animals.map(a => <option key={a.id} value={a.id}>{a.name} ({a.species})</option>)}
-        </select>
+        {deviceType === 'collar' && (
+          <select
+            className="w-full p-2.5 bg-gray-50 rounded-xl border-2 border-transparent focus:border-pfuma-green outline-none text-xs font-semibold appearance-none"
+            value={animalId} onChange={e => setAnimalId(e.target.value)}
+          >
+            <option value="">Attach to an animal later</option>
+            {animals.map(a => <option key={a.id} value={a.id}>{a.name} ({a.species})</option>)}
+          </select>
+        )}
         <button type="submit" disabled={busy} className="w-full flex items-center justify-center gap-2 py-2.5 bg-pfuma-green text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-green-700 transition disabled:opacity-50">
-          <Plus size={13} /> {busy ? 'Pairing…' : 'Pair Device'}
+          <Plus size={13} /> {busy ? 'Pairing…' : `Pair ${activeType.label}`}
         </button>
       </form>
     </div>

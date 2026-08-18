@@ -329,8 +329,8 @@ U1  ESP32-WROOM-32  (same pin-out as CN-01)
 ─────────────────────────────────────────────────────────
 IO2  → LED1 (PWR, green)  via R1 330Ω → GND
 IO4  → LED2 (LoRa, blue)  via R2 330Ω → GND
-IO5  → LED3 (WiFi, yellow) via R3 330Ω → GND  [note: reassign from SPI]
-IO15 → LED4 (Alert, red)  via R4 330Ω → GND
+IO15 → LED3 (WiFi, yellow) via R3 330Ω → GND
+IO27 → LED4 (Alert, red)  via R4 330Ω → GND
 
 SPI (LoRa):
 IO18 → SPI_SCK

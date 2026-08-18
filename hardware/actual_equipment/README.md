@@ -2,15 +2,19 @@
 
 Reference photos and exact search/order terms for the **real, physical components** used in CN-01 (collar) and BS-01 (base station) — matching [`hardware/HARDWARE_DESIGN.md`](../HARDWARE_DESIGN.md) and the wiring diagrams ([`PFUMA_CN01_Wiring_Diagram.pdf`](../../PFUMA_CN01_Wiring_Diagram.pdf), [`PFUMA_BS01_Wiring_Diagram.pdf`](../../PFUMA_BS01_Wiring_Diagram.pdf)) exactly. Full pricing and supplier comparison: [`BUDGET_PROPOSAL.md`](../../BUDGET_PROPOSAL.md).
 
-**Honesty note:** only 3 of the components below have a verified, correctly-matched reference photo in this folder (sourced from Wikimedia Commons, properly licensed and attributed — see each entry). For the rest, a web search turned up no openly-licensed photo I could confirm actually matches the exact variant our BOM specifies (e.g. the DS18B20 search only surfaced the bare TO-92 chip, not the waterproof cable-probe version we actually use — using that photo would have been misleading, so it's skipped rather than guessed). Use the exact search term given for each to find and verify the part yourself before ordering.
+**Honesty note:** 7 of the components below now have a verified, correctly-matched reference photo in this folder (sourced from Wikimedia Commons, properly licensed and attributed — see each entry). For the rest, a web search (checked again in a second pass) turned up no openly-licensed photo confirmed to match the exact variant our BOM specifies — e.g. the DS18B20 search initially only surfaced the bare TO-92 chip (skipped), until a second pass found the correct waterproof cable-probe version. A DC barrel jack was found but was the PCB-mount type, not our panel-mount CN1/BS-01 variant, so it's skipped too. Use the exact search term given for each to find and verify the part yourself before ordering.
 
 ## Photos included in this folder
 
 | File | Component | Source | License |
 |---|---|---|---|
 | `01_ESP32-WROOM-32_devkit.jpg` | ESP32-WROOM-32 DevKit (U1 on both CN-01 and BS-01) | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:ESP32_Espressif_ESP-WROOM-32_Dev_Board.jpg), photo by Ubahnverleih | CC0 1.0 (public domain) |
+| `03_SX1278_Ra02_LoRa_module.jpg` | SX1278 / Ra-02 LoRa module, 433MHz (U3 on CN-01, U2 on BS-01) — chip literally printed "Ra-02 Ai-Thinker... LoRa/FSK/OOK", with SMA antenna attached | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Ra-02.png), photo by VamosSandor | CC BY-SA 4.0 — credit "VamosSandor" if reused elsewhere |
 | `04_MPU-6050_GY521.jpg` | MPU-6050 IMU, GY-521 breakout (U4 on CN-01) | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:GY-521_MPU-6050_Module_3_Axis_Gyroscope_%2B_Accelerometer_0487.jpg), photo by Nevit Dilmen | CC BY-SA 3.0 — credit "© Nevit Dilmen" if reused elsewhere |
+| `06_DS18B20_waterproof_probe.jpg` | DS18B20 waterproof temperature probe, cable + steel tip (U6 on CN-01) — verified NOT the bare TO-92 chip | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Cjam-temperature-sensor.png), photo by Andy Oakley | CC0 1.0 (public domain) |
+| `07_TP4056_charge_controller.jpg` | TP4056 charge controller with protection (U7 on CN-01) — chip printed "4056E", protection MOSFET (8205A) visible | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:TP4056_board_P1089957.jpg), photo by -stk | CC BY-SA 4.0 — credit "-stk" if reused elsewhere |
 | `12_LM2596_buck_converter.jpg` | LM2596 buck converter module (U4 on BS-01) — shown alongside two other converter types in the same photo, LM2596 is the labelled one | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:LM2596_buck_converter_module,_MP1584_buck_converter_module,_and_SDB628_boost_converter_module.jpg), photo by Matthew Berardi (Metaquanta) | CC BY-SA 4.0 — credit "Matthew Berardi" if reused elsewhere |
+| `13_DC_wall_adapter_generic.jpg` | 12V DC wall adapter (PWR on BS-01) — generic reference for shape/plug/barrel-jack cable only; exact voltage, current, and plug region (US vs UK/EU/ZA) will differ by supplier, confirm before ordering | [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Wall-Wart-AC-Adapter.jpg), photo by Evan-Amos | Public domain |
 
 ## Full component list — CN-01 Collar Node
 
@@ -18,11 +22,11 @@ Reference photos and exact search/order terms for the **real, physical component
 |---|---|---|---|---|
 | U1 | ESP32-WROOM-32 DevKit | ✅ | "ESP32-WROOM-32 development board 38 pin" | $4.00 online / $6.50 local |
 | U2 | NEO-6M GPS module + ceramic antenna | — | "NEO-6M GPS module UART ublox" | $5.00 / $7.50 |
-| U3 | SX1278 / Ra-02 LoRa module, 433MHz, SMA | — | "SX1278 Ra-02 LoRa module 433MHz SPI" | $4.00 / $6.00 |
+| U3 | SX1278 / Ra-02 LoRa module, 433MHz, SMA | ✅ | "SX1278 Ra-02 LoRa module 433MHz SPI" | $4.00 / $6.00 |
 | U4 | MPU-6050 IMU, GY-521 breakout | ✅ | "MPU-6050 GY-521 6-axis accelerometer gyroscope module" | $1.50 / $2.50 |
 | U5 | MAX30102 heart-rate/SpO2 sensor breakout | — | "MAX30102 heart rate pulse oximeter sensor module" | $3.00 / $4.50 |
-| U6 | DS18B20 **waterproof** temperature probe | — | "DS18B20 waterproof temperature sensor probe stainless steel" — make sure it's the cable+steel-tip version, not the bare TO-92 chip | $2.50 / $3.50 |
-| U7 | TP4056 charge controller with protection | — | "TP4056 lithium battery charger module with protection" | $0.80 / $1.50 |
+| U6 | DS18B20 **waterproof** temperature probe | ✅ | "DS18B20 waterproof temperature sensor probe stainless steel" — make sure it's the cable+steel-tip version, not the bare TO-92 chip | $2.50 / $3.50 |
+| U7 | TP4056 charge controller with protection | ✅ | "TP4056 lithium battery charger module with protection" | $0.80 / $1.50 |
 | U8 | AMS1117-3.3 LDO regulator breakout | — | "AMS1117-3.3 voltage regulator breakout board" | $0.20 / $0.50 |
 | U9 | MT3608 boost converter (optional) | — | "MT3608 DC-DC boost converter module" | $0.40 / $0.80 |
 | BT1 | LiPo battery 3.7V 2000mAh, JST-PH connector | — | "3.7V 2000mAh lipo battery JST connector" | $4.00 / $6.00 |
@@ -37,14 +41,14 @@ Reference photos and exact search/order terms for the **real, physical component
 | Ref | Component | Photo? | Exact search term to order | Typical price |
 |---|---|---|---|---|
 | U1 | ESP32-WROOM-32 DevKit | ✅ (same photo as CN-01) | "ESP32-WROOM-32 development board 38 pin" | $4.00 / $6.50 |
-| U2 | SX1278 / Ra-02 LoRa module | — | same as CN-01 U3 above | $4.00 / $6.00 |
+| U2 | SX1278 / Ra-02 LoRa module | ✅ | same as CN-01 U3 above | $4.00 / $6.00 |
 | U3 | SSD1306 OLED, 128x64, I2C, 0x3C | — | "SSD1306 0.96 inch OLED display I2C 128x64" | $3.00 / $4.50 |
 | U4 | LM2596 buck converter module (12V→5V) | ✅ | "LM2596 DC-DC step down buck converter module" | $1.50 / $2.50 |
 | U5 | AMS1117-3.3 LDO regulator | — | same as CN-01 U8 above | $0.20 / $0.50 |
 | — | 4x indicator LEDs (green/blue/yellow/red), resistors, capacitors | — | generic passives — see full BOM table in `HARDWARE_DESIGN.md` | ~$1.20 total |
-| CN1 | 12V DC barrel jack, 5.5/2.1mm | — | "12V DC barrel jack panel mount 5.5x2.1mm" | $0.30 / $0.60 |
+| CN1 | 12V DC barrel jack, 5.5/2.1mm | — | "12V DC barrel jack panel mount 5.5x2.1mm" — a PCB-mount version turned up in the photo search, not this panel-mount variant, so confirm before ordering | $0.30 / $0.60 |
 | ANT1 | SMA antenna, 433MHz whip | — | same as CN-01 ANT1 above | $1.50 / $2.50 |
-| PWR | 12V DC wall adapter, 1A | — | "12V 1A DC power adapter barrel jack" | $3.00 / $5.00 |
+| PWR | 12V DC wall adapter, 1A | ✅ (generic reference only — confirm voltage/current/plug region) | "12V 1A DC power adapter barrel jack" | $3.00 / $5.00 |
 | ENC | Project box enclosure, 120x80x40mm | — | "ABS project box enclosure 120x80x40mm" | $4.00 / $7.00 |
 
 ## Before you order

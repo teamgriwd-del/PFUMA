@@ -106,6 +106,19 @@ const Field = ({ label, required, children }) => (
 const inputCls = 'w-full p-3.5 bg-gray-50 rounded-xl border-2 border-transparent focus:border-pfuma-green outline-none font-semibold text-sm text-gray-800 placeholder:text-gray-400 transition';
 const selectCls = inputCls + ' appearance-none cursor-pointer';
 
+// Module-scope so its identity is stable across AuthPortal re-renders — see
+// the matching comment on AnimalProfile.jsx's Field for why a component
+// defined inside another component's body must never wrap a live input.
+const FileField = ({ label, field, required, form, set }) => (
+  <Field label={label} required={required}>
+    <label className={`${inputCls} flex items-center gap-2.5 cursor-pointer`}>
+      <Upload size={15} className="text-gray-400 shrink-0" />
+      <span className="truncate">{form[field] ? form[field].name : 'Choose a PDF, JPG, or PNG...'}</span>
+      <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => set(field, e.target.files?.[0] || null)} />
+    </label>
+  </Field>
+);
+
 // Password field with a show/hide toggle so users can check what they typed
 // before submitting (registration errors on a mistyped password are otherwise
 // only caught by the confirm-password mismatch check, or not at all on login).
@@ -143,6 +156,8 @@ const AuthPortal = ({ onLogin }) => {
   const [loginPassword, setLoginPassword] = useState('');
   const [authError, setAuthError] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
 
   const [form, setForm] = useState({
     // step 0
@@ -264,7 +279,7 @@ const AuthPortal = ({ onLogin }) => {
 
   const advance  = () => setStep(s => Math.min(s + 1, STEPS.length - 1));
   const back     = () => setStep(s => Math.max(s - 1, 0));
-  const confirm  = () => register();
+  const confirm  = () => { if (agreedToTerms) register(); };
 
   // ── step renderers ──
   const renderStep0 = () => (
@@ -498,16 +513,6 @@ const AuthPortal = ({ onLogin }) => {
     return null;
   };
 
-  const FileField = ({ label, field, required }) => (
-    <Field label={label} required={required}>
-      <label className={`${inputCls} flex items-center gap-2.5 cursor-pointer`}>
-        <Upload size={15} className="text-gray-400 shrink-0" />
-        <span className="truncate">{form[field] ? form[field].name : 'Choose a PDF, JPG, or PNG...'}</span>
-        <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={e => set(field, e.target.files?.[0] || null)} />
-      </label>
-    </Field>
-  );
-
   const renderStep3 = () => (
     <div className="space-y-4">
       {roleFields()}
@@ -516,13 +521,14 @@ const AuthPortal = ({ onLogin }) => {
           <h4 className="text-sm font-black text-gray-900 mb-1">Verification Documents</h4>
           <p className="text-[11px] text-gray-400 font-medium">Required so Police (or, for vets, an existing verified vet) can confirm you're who you say you are before you get full access. See <span className="font-bold">compliance/signup-verification-requirements.md</span> for what's expected per role.</p>
         </div>
-        <FileField label="National ID Document" field="idDocument" required />
+        <FileField label="National ID Document" field="idDocument" required form={form} set={set} />
         <FileField
           label={form.role === 'Farmer' ? 'Proof of Land / Farm (title, lease, or allocation letter)'
             : form.role === 'Veterinarian' ? 'DVS Practice License'
             : form.role === 'Police' ? 'Service Attestation Letter'
             : 'Business Registration Certificate'}
           field="credentialDocument"
+          form={form} set={set}
         />
       </div>
     </div>
@@ -573,6 +579,46 @@ const AuthPortal = ({ onLogin }) => {
         <div className="bg-pfuma-green/5 border border-pfuma-green/20 rounded-xl p-3 text-[11px] text-gray-600 font-medium leading-relaxed">
           Your account starts <span className="font-black">pending verification</span> — {form.role === 'Veterinarian' ? 'an existing verified vet' : 'Police'} reviews your documents before you get full access. Your profile is only visible in the PFUMA directory once verified.
         </div>
+
+        <div className="border border-gray-200 rounded-xl p-3.5">
+          <label className="flex items-start gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              className="mt-0.5 w-4 h-4 accent-pfuma-green shrink-0"
+              checked={agreedToTerms}
+              onChange={e => setAgreedToTerms(e.target.checked)}
+            />
+            <span className="text-[11px] text-gray-600 font-medium leading-relaxed">
+              I confirm the details above are accurate and I agree to PFUMA's{' '}
+              <button type="button" onClick={() => setShowTerms(true)} className="text-pfuma-green font-black hover:underline">
+                Terms &amp; Conditions and Privacy Policy
+              </button>.
+            </span>
+          </label>
+        </div>
+
+        {showTerms && (
+          <div className="fixed inset-0 z-[3100] flex items-center justify-center bg-gray-950/70 backdrop-blur-sm p-4" onClick={() => setShowTerms(false)}>
+            <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl p-6 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <h4 className="text-lg font-black text-gray-900 mb-3">Terms &amp; Conditions</h4>
+              <div className="space-y-3 text-xs text-gray-600 font-medium leading-relaxed">
+                <p>By creating a PFUMA Digital ID you agree that:</p>
+                <ul className="list-disc pl-5 space-y-1.5">
+                  <li>The personal, farm/business, and identity details you provide are true and belong to you.</li>
+                  <li>Your uploaded ID and credential documents may be reviewed by Police (or, for veterinarians, an existing verified vet) to verify your identity before your account is activated.</li>
+                  <li>Your name, role, organisation, and province are visible to other verified PFUMA members in the directory once your account is verified, so they can contact you for trade, veterinary, or supply purposes.</li>
+                  <li>Livestock listings, sale data, health records, and marketplace activity you create are stored and may be reviewed by Police as part of the sale-clearance process, to prevent stock theft and fraud.</li>
+                  <li>PFUMA may suspend accounts found to be fraudulent, impersonating another party, or otherwise abusing the platform.</li>
+                </ul>
+                <p>See <span className="font-bold">docs/PRIVACY_POLICY.md</span> in the project repository for the full data-handling policy.</p>
+              </div>
+              <button onClick={() => setShowTerms(false)} className="w-full mt-5 py-3 bg-pfuma-green text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-green-700 transition">
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+
         {authError && (
           <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3 text-[11px] text-red-700 font-bold">
             <AlertTriangle size={14} className="shrink-0 mt-0.5" /> {authError}
@@ -723,8 +769,9 @@ const AuthPortal = ({ onLogin }) => {
                 ) : (
                   <button
                     onClick={confirm}
-                    disabled={authBusy}
-                    className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-pfuma-green text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg hover:bg-green-700 transition disabled:opacity-50"
+                    disabled={authBusy || !agreedToTerms}
+                    title={!agreedToTerms ? 'Please accept the Terms & Conditions first' : undefined}
+                    className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-pfuma-green text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <CheckCircle size={15} /> {authBusy ? 'Creating…' : 'Create Digital ID & Enter'}
                   </button>

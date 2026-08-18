@@ -38,6 +38,7 @@ const PostForm = ({ currentUser, onSubmit, onCancel, animals }) => {
   const [photoFile, setPhotoFile]       = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [submitting, setSubmitting]     = useState(false);
+  const [formError, setFormError]       = useState(null);
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
   const handlePhotoChange = (e) => {
@@ -49,10 +50,18 @@ const PostForm = ({ currentUser, onSubmit, onCancel, animals }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setFormError(null);
     if (!form.product_name.trim() || !form.price) return;
-    // The Sabuku/Mambo step comes before the police one, so a livestock listing
-    // cannot be submitted until it is answered either way.
-    if (form.category === 'livestock' && form.animal_id && !form.leader_clearance) return;
+    if (form.category === 'livestock' && !form.animal_id) {
+      setFormError('Select which registered animal this listing is for — livestock listings must be linked to a real animal so Police can clear the sale.');
+      return;
+    }
+    // The Sabuku/Mambo step comes before the police one, so the listing cannot
+    // be submitted until that question is answered either way.
+    if (form.category === 'livestock' && form.animal_id && !form.leader_clearance) {
+      setFormError('Say whether a Sabuku or Mambo cleared this sale, or why no traditional authority applies to your farm.');
+      return;
+    }
     setSubmitting(true);
     await onSubmit({ ...form, price: parseFloat(form.price), quantity: parseFloat(form.quantity) }, photoFile);
     setSubmitting(false);
@@ -72,6 +81,12 @@ const PostForm = ({ currentUser, onSubmit, onCancel, animals }) => {
         </button>
       </div>
       <form onSubmit={handleSubmit} className="space-y-4">
+        {formError && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-[11px] text-red-700 font-semibold flex items-start gap-2">
+            <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+            <span>{formError}</span>
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Category</label>
@@ -79,13 +94,17 @@ const PostForm = ({ currentUser, onSubmit, onCancel, animals }) => {
               {CATEGORIES.filter(c => c.id !== 'all').map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
           </div>
-          {form.category === 'livestock' && animals.length > 0 && (
+          {form.category === 'livestock' && (
             <div>
-              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Link to Animal (optional)</label>
-              <select className={inputCls + ' appearance-none'} value={form.animal_id} onChange={e => { set('animal_id', e.target.value); const a = animals.find(a => String(a.id) === e.target.value); if (a) set('product_name', `${a.name} — ${a.breed} ${a.species}`); }}>
-                <option value="">Not linked</option>
-                {animals.map(a => <option key={a.id} value={a.id}>{a.name} ({a.species})</option>)}
-              </select>
+              <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Which Animal? *</label>
+              {animals.length > 0 ? (
+                <select className={inputCls + ' appearance-none'} value={form.animal_id} onChange={e => { set('animal_id', e.target.value); const a = animals.find(a => String(a.id) === e.target.value); if (a) set('product_name', `${a.name} — ${a.breed} ${a.species}`); }}>
+                  <option value="">Select an animal…</option>
+                  {animals.map(a => <option key={a.id} value={a.id}>{a.name} ({a.species})</option>)}
+                </select>
+              ) : (
+                <p className="text-[11px] text-gray-500 font-medium p-3 bg-gray-50 rounded-xl">Register an animal in your Herd first — livestock listings must be linked to one.</p>
+              )}
             </div>
           )}
         </div>

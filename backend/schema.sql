@@ -401,7 +401,8 @@ CREATE TABLE IF NOT EXISTS feeding_plans (
 CREATE TABLE IF NOT EXISTS iot_devices (
   id            INT AUTO_INCREMENT PRIMARY KEY,
   device_serial VARCHAR(60) NOT NULL UNIQUE,
-  animal_id     INT,                   -- FK → animals.id (NULL until attached to an animal)
+  device_type   ENUM('collar','base_station') NOT NULL DEFAULT 'collar',
+  animal_id     INT,                   -- FK → animals.id (collars only — NULL for base stations, and NULL until attached for an unattached collar)
   owner_id      INT NOT NULL,          -- FK → users.id (farmer who paired it)
   paired_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (animal_id) REFERENCES animals(id) ON DELETE SET NULL,

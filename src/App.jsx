@@ -1734,6 +1734,11 @@ function App() {
   const [sessionChecked, setSessionChecked] = useState(false);
   const [animals,     setAnimals]     = useState([]);
   const [activeTab,   setActiveTab]   = useState('dashboard');
+  // Set by DiseaseDetection's "Call your vet immediately" — carries the
+  // pre-filled Emergency case (subject/animal/description) into VetCommunication
+  // so navigating there actually opens the composer instead of a blank inbox.
+  const [vetIntent,   setVetIntent]   = useState(null);
+  const requestVetContact = (intent) => { setVetIntent(intent); setActiveTab('vet'); };
   const [completedTasks, setCompletedTasks] = useState([]);
   const [auditLog,    setAuditLog]    = useState([]);
   const [inventory,   setInventory]   = useState([]);
@@ -2046,8 +2051,8 @@ function App() {
           )}
           {activeTab === 'profile'     && <ErrorBoundary><AnimalProfile animals={animals} onAddAnimal={addAnimal} auditLog={auditLog} currentUser={currentUser} onListAnimal={handleListAnimal} /></ErrorBoundary>}
           {activeTab === 'health'      && <ErrorBoundary><HealthManagement animals={animals} completedTasks={completedTasks} setCompletedTasks={setCompletedTasks} auditLog={auditLog} onAddAuditLog={addAuditLog} inventory={inventory} onDeductInventory={deductInventoryItem} /></ErrorBoundary>}
-          {activeTab === 'disease'     && <ErrorBoundary><DiseaseDetection animals={animals} onAddAuditLog={addAuditLog} /></ErrorBoundary>}
-          {activeTab === 'vet'         && <ErrorBoundary><VetCommunication animals={animals} currentUser={currentUser} /></ErrorBoundary>}
+          {activeTab === 'disease'     && <ErrorBoundary><DiseaseDetection animals={animals} onAddAuditLog={addAuditLog} onCallVet={requestVetContact} /></ErrorBoundary>}
+          {activeTab === 'vet'         && <ErrorBoundary><VetCommunication animals={animals} currentUser={currentUser} intent={vetIntent} onIntentConsumed={() => setVetIntent(null)} /></ErrorBoundary>}
           {activeTab === 'marketplace' && <ErrorBoundary><Marketplace currentUser={currentUser} animals={animals} onListAnimal={handleListAnimal} /></ErrorBoundary>}
           {activeTab === 'feed'        && <ErrorBoundary><FeedAnalyzer currentUser={currentUser} animals={animals} onUpdateAnimal={(id, patch) => setAnimals(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a))} /></ErrorBoundary>}
           {activeTab === 'cooperative' && <ErrorBoundary><Cooperative currentUser={currentUser} /></ErrorBoundary>}
