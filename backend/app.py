@@ -1228,7 +1228,7 @@ def create_medication_recommendation():
     create_notification(
         c, animal['owner_id'], 'med_recommendation',
         f"Vet recommendation for {animal_name}",
-        f"Dr. {g.current_user['full_name']} recommended {medicine_name} ({dose_ml}ml) for {animal_name}.",
+        f"{g.current_user['full_name']} recommended {medicine_name} ({dose_ml}ml) for {animal_name}.",
         related_user_id=g.current_user['id'], animal_id=animal_id,
     )
 
@@ -1304,7 +1304,7 @@ def administer_medication_recommendation(rec_id):
         INSERT INTO health_events (animal_id, animal_name, event_type, notes, performed_by)
         VALUES (%s,%s,%s,%s,%s)
     """, (rec['animal_id'], animal_name, f"Treatment: {rec['medicine_name']}",
-          f"{rec['dose_ml']}ml administered per Dr. recommendation #{rec_id}", g.current_user['id']))
+          f"{rec['dose_ml']}ml administered per vet recommendation #{rec_id}", g.current_user['id']))
 
     db.commit()
     db.close()

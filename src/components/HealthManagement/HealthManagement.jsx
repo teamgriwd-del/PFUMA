@@ -553,7 +553,7 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefre
                         <div className="flex items-start justify-between gap-2">
                           <div>
                             <p className="text-sm font-black text-gray-800">{rec.medicine_name}</p>
-                            <p className="text-[10px] text-gray-500 font-medium">Dr. {rec.vet_name} · {new Date(rec.created_at).toLocaleDateString()}</p>
+                            <p className="text-[10px] text-gray-500 font-medium">{rec.vet_name} · {new Date(rec.created_at).toLocaleDateString()}</p>
                           </div>
                           <div className="text-right shrink-0">
                             <span className="text-xl font-black text-blue-700">{Number(rec.dose_ml).toFixed(1)}</span>
@@ -597,7 +597,7 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefre
                           <div key={rec.id} className="flex items-center justify-between gap-2 px-3 py-2 bg-gray-50 rounded-xl">
                             <div className="min-w-0">
                               <p className="text-xs font-black text-gray-700 truncate">{rec.medicine_name} — {Number(rec.dose_ml).toFixed(1)}ml</p>
-                              <p className="text-[10px] text-gray-400 font-medium">Dr. {rec.vet_name} · administered {rec.administered_at ? new Date(rec.administered_at).toLocaleDateString() : ''}</p>
+                              <p className="text-[10px] text-gray-400 font-medium">{rec.vet_name} · administered {rec.administered_at ? new Date(rec.administered_at).toLocaleDateString() : ''}</p>
                             </div>
                             <CheckCircle size={14} className="text-pfuma-green shrink-0" />
                           </div>
