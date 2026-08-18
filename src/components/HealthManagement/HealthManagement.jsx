@@ -266,6 +266,14 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onDeduc
   const dueSoonCount   = schedule.filter(s => s.status === 'Due Soon').length;
   const doneCount      = schedule.filter(s => s.status === 'Completed').length;
   const isCapped       = currentMed?.maxDose && parseFloat(calculateDosage(selectedMeds, selectedAnimal?.currentWeight)) >= currentMed.maxDose;
+  // The dropdown lists every medicine PFUMA knows dosing rules for (a
+  // reference list), which is almost always a bigger set than what's
+  // physically in this farmer's cabinet — surfacing that gap up front (not
+  // just as an error after "Administer" is clicked) is the whole fix for
+  // "what is this calculator actually doing".
+  const cabinetItem    = inventory.find(i => i.name === selectedMeds);
+  const requiredDose   = parseFloat(calculateDosage(selectedMeds, selectedAnimal?.currentWeight));
+  const canAdminister  = !!cabinetItem && cabinetItem.stock >= requiredDose;
 
   return (
     <div className="p-6 bg-gray-50 min-h-full space-y-6 text-left">
@@ -529,7 +537,7 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onDeduc
               <SectionHeader
                 icon={FlaskConical}
                 title="Medication Calculator"
-                description={`Calculates the exact dose for ${selectedAnimal.name} based on its ${selectedAnimal.currentWeight}kg body weight. Press "Administer" to log the treatment and deduct the amount from your stock.`}
+                description={`Pick any medicine PFUMA has dosing rules for and it works out the exact dose for ${selectedAnimal.name}'s ${selectedAnimal.currentWeight}kg body weight. "Administer & Deduct Stock" only works for medicines you actually hold in the Medicine Cabinet below — for anything else, this is a dosing reference only.`}
                 color="text-blue-500"
               />
 
@@ -559,6 +567,23 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onDeduc
                   <Calculator size={28} className="text-blue-200" />
                 </div>
 
+                {/* Cabinet stock status — the calculator itself is just a
+                    reference until this is green, so this needs to be
+                    obvious before the farmer hits Administer. */}
+                {cabinetItem ? (
+                  <div className={`flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] font-bold ${canAdminister ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-orange-50 text-orange-700 border border-orange-100'}`}>
+                    {canAdminister ? <CheckCircle size={13} className="shrink-0" /> : <AlertCircle size={13} className="shrink-0" />}
+                    {canAdminister
+                      ? `In your cabinet — ${cabinetItem.stock.toFixed(1)}ml available.`
+                      : `In your cabinet, but only ${cabinetItem.stock.toFixed(1)}ml left — not enough for this ${requiredDose}ml dose.`}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 bg-gray-100 text-gray-500 border border-gray-200 rounded-xl px-3 py-2 text-[11px] font-bold">
+                    <Info size={13} className="shrink-0" />
+                    Not in your Medicine Cabinet — this is a dosing reference only. Order it from a Supplier in the Marketplace to administer it here.
+                  </div>
+                )}
+
                 {/* Med detail collapsible */}
                 {currentMed && (
                   <div className="border border-gray-100 rounded-xl overflow-hidden">
@@ -583,7 +608,9 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onDeduc
 
                 <button
                   onClick={deductInventory}
-                  className="w-full py-3.5 bg-blue-600 text-white rounded-xl font-black uppercase text-xs tracking-widest shadow-lg hover:bg-blue-700 active:scale-[0.98] transition flex items-center justify-center gap-2"
+                  disabled={!canAdminister}
+                  title={!canAdminister ? (cabinetItem ? 'Not enough stock in your cabinet for this dose' : 'This medicine is not in your Medicine Cabinet') : undefined}
+                  className="w-full py-3.5 bg-blue-600 text-white rounded-xl font-black uppercase text-xs tracking-widest shadow-lg hover:bg-blue-700 active:scale-[0.98] transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
                 >
                   <CheckCircle size={15} /> Administer & Deduct Stock
                 </button>

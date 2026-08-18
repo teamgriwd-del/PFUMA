@@ -111,7 +111,7 @@ function useUserSearch(query, excludeUserId, authHeaders) {
   return { results, searching };
 }
 
-const VetCommunication = ({ animals = [], currentUser }) => {
+const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed }) => {
   const [conversations, setConversations] = useState([]);
   const [activeConvId, setActiveConvId] = useState(null);
   const [activeMessages, setActiveMessages] = useState([]);
@@ -175,6 +175,28 @@ const VetCommunication = ({ animals = [], currentUser }) => {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeMessages]);
+
+  // Arriving here from elsewhere in the app (e.g. Disease Detection's "Call
+  // Vet" on a critical result) — open the composer straight to "who do you
+  // want to message", pre-filled with an Emergency case so picking a vet
+  // drops the farmer right into the structured intake form below.
+  useEffect(() => {
+    if (!intent) return;
+    setIsComposing(true);
+    setSelectedContact(null);
+    setActiveConvId(null);
+    setPeopleQuery('');
+    setActiveFilter('Veterinarian');
+    setNewCase(p => ({
+      ...p,
+      category: intent.category || 'Emergency',
+      subject: intent.subject || p.subject,
+      animalId: intent.animalId != null ? String(intent.animalId) : p.animalId,
+      description: intent.description || p.description,
+    }));
+    onIntentConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intent]);
 
   // Two fully independent live searches — see useUserSearch's comment above
   // for why they must not share state.

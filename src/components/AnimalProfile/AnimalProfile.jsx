@@ -29,6 +29,19 @@ const calculateValue = (animal, auditLog) => {
 
 const SPECIES_COLORS = { Cattle: 'bg-green-100 text-green-700', Goat: 'bg-orange-100 text-orange-700', Sheep: 'bg-blue-100 text-blue-700', Pig: 'bg-pink-100 text-pink-700' };
 
+// Module-scope (not defined inside RegistrationForm) so its identity is
+// stable across re-renders — a component defined inside another component's
+// body gets recreated on every keystroke, which makes React unmount and
+// remount the <input> it wraps, dropping focus after every character typed.
+const Field = ({ id, label, required, children }) => (
+  <div className="space-y-1.5">
+    <label htmlFor={id} className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">
+      {label} {required && <span className="text-red-400">*</span>}
+    </label>
+    {children}
+  </div>
+);
+
 // ── HEALTH PASSPORT MODAL ──────────────────────────────────────────────────
 const HealthPassport = ({ animal, auditLog, onClose }) => (
   <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-gray-900/90 backdrop-blur-md">
@@ -154,14 +167,6 @@ const RegistrationForm = ({ onSubmit, onCancel }) => {
     if (!result?.ok) setError(result?.error || 'Could not register animal — try again.');
   };
 
-  const Field = ({ id, label, required, children }) => (
-    <div className="space-y-1.5">
-      <label htmlFor={id} className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">
-        {label} {required && <span className="text-red-400">*</span>}
-      </label>
-      {children}
-    </div>
-  );
   const inputCls = "w-full p-3 bg-gray-50 rounded-xl border-2 border-transparent focus:border-pfuma-green outline-none font-bold text-sm transition";
 
   return (
