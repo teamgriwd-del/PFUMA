@@ -66,7 +66,20 @@ const HealthPassport = ({ animal, auditLog, onClose }) => {
     printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8" />
       <title>${animal.name} — Health Passport</title>
       ${styleTags}
-      <style>body{margin:0;background:#fff;}</style>
+      <style>
+        body{margin:0;background:#fff;}
+        /* The on-screen modal caps itself to the viewport (max-h-[90vh]) and
+           scrolls internally (overflow-y-auto) — cloned as-is into this
+           print window, that clips Identity Details and the Health Event
+           Log to whatever fit in the visible area instead of flowing them
+           onto the page (only the photo, which sits above the fold, made
+           it through). Overriding by id — not the Tailwind classes
+           themselves, which are fragile to target from injected CSS —
+           forces the full content to lay out and print/paginate normally.
+        */
+        #pfuma-passport-root { max-height: none !important; overflow: visible !important; }
+        #pfuma-passport-body { overflow: visible !important; flex: none !important; }
+      </style>
     </head><body>${printRef.current.outerHTML}</body></html>`);
     printWindow.document.close();
     printWindow.onload = () => {
@@ -77,7 +90,7 @@ const HealthPassport = ({ animal, auditLog, onClose }) => {
 
   return (
   <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-gray-900/90 backdrop-blur-md">
-    <div ref={printRef} className="bg-white w-full max-w-4xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div ref={printRef} id="pfuma-passport-root" className="bg-white w-full max-w-4xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
       {/* Header */}
       <div className="bg-pfuma-green px-10 py-8 text-white flex justify-between items-center relative overflow-hidden">
         <div className="relative z-10">
@@ -94,7 +107,7 @@ const HealthPassport = ({ animal, auditLog, onClose }) => {
       </div>
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto p-5 md:p-10 bg-[#fdfcf9] text-left">
+      <div id="pfuma-passport-body" className="flex-1 overflow-y-auto p-5 md:p-10 bg-[#fdfcf9] text-left">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-10">
           <div className="lg:col-span-1 space-y-5">
             <div className="w-full aspect-square rounded-3xl overflow-hidden border-4 border-white shadow-xl bg-gray-100">
