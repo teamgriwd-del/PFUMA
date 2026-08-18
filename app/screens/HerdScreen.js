@@ -5,7 +5,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import { Search, Beef, X, Camera, Check, ShieldCheck, Tag } from 'lucide-react-native';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import { Search, Beef, X, Camera, Check, ShieldCheck, Tag, Printer, Download } from 'lucide-react-native';
 import { API, COLORS } from '../config';
 import { authFetch, authJson } from '../api';
 
@@ -36,6 +38,74 @@ const calculateValue = (animal, healthEvents) => {
   return Math.round(base + (animal.current_weight || 0) * 1.5 + healthEvents.length * 10).toLocaleString();
 };
 
+// Print/export render an actual PDF (via expo-print's HTML-to-PDF engine),
+// not a screenshot of the on-screen modal — same reasoning as the web
+// app's passport fix: build the full document as real HTML so nothing
+// gets clipped to whatever fit on screen.
+const passportHtml = (animal, healthEvents) => {
+  const rows = [
+    ['Name', animal.name],
+    ['Ear Tag', animal.tag_id ? `#${animal.tag_id}` : '—'],
+    ['Owner Brand', animal.brand_id || '—'],
+    ['Breed', animal.breed || '—'],
+    ['Species', animal.species],
+    ['Age', calculateAge(animal.birth_date)],
+    ['Weight', `${animal.current_weight || 0} kg`],
+    ['Sire ID', animal.sire_id || '—'],
+  ];
+  const logHtml = healthEvents.length === 0
+    ? '<p class="empty">No certified events recorded yet.</p>'
+    : healthEvents.map(ev => `
+        <div class="log-row">
+          <span class="log-text">${ev.event_type}${ev.notes ? ' — ' + ev.notes : ''}</span>
+          <span class="log-date">${new Date(ev.event_date).toLocaleDateString()}</span>
+        </div>`).join('');
+  const imgSrc = resolveImageUrl(animal.image_url) || '';
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8" />
+    <style>
+      * { box-sizing: border-box; }
+      body { font-family: -apple-system, Roboto, Arial, sans-serif; margin: 0; background: #fdfcf9; color: #1a1a1a; }
+      .header { background: #1b5e20; color: #fff; padding: 24px 28px; }
+      .header h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: 1px; }
+      .header p { margin: 0; font-size: 11px; opacity: 0.7; text-transform: uppercase; letter-spacing: 2px; }
+      .body { padding: 20px 28px 32px; }
+      img.photo { width: 100%; max-height: 320px; object-fit: cover; border-radius: 16px; margin-bottom: 16px; }
+      .value-card { background: #fff; border-radius: 14px; padding: 16px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+      .value-label { font-size: 10px; font-weight: 800; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+      .value { font-size: 22px; font-weight: 900; }
+      .section-title { font-size: 11px; font-weight: 800; color: #888; text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 1px solid #e5e5e5; padding-bottom: 8px; margin: 0 0 14px; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; margin-bottom: 28px; }
+      .field-label { font-size: 10px; font-weight: 800; color: #1b5e20; text-transform: uppercase; margin-bottom: 2px; }
+      .field-value { font-size: 16px; font-weight: 900; }
+      .empty { font-size: 13px; color: #999; font-style: italic; }
+      .log-row { display: flex; justify-content: space-between; align-items: center; background: #fff; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+      .log-text { font-size: 13px; font-weight: 700; }
+      .log-date { font-size: 10px; font-weight: 700; color: #999; text-transform: uppercase; margin-left: 10px; white-space: nowrap; }
+      .footer { text-align: center; font-size: 10px; font-weight: 800; color: #999; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 24px; }
+    </style>
+  </head><body>
+    <div class="header">
+      <h1>Health Passport</h1>
+      <p>Verified Digital Pedigree &amp; Medical Record</p>
+    </div>
+    <div class="body">
+      ${imgSrc ? `<img class="photo" src="${imgSrc}" />` : ''}
+      <div class="value-card">
+        <div class="value-label">Estimated Market Value</div>
+        <div class="value">USD $${calculateValue(animal, healthEvents)}</div>
+      </div>
+      <h2 class="section-title">Identity Details</h2>
+      <div class="grid">
+        ${rows.map(([label, value]) => `<div><div class="field-label">${label}</div><div class="field-value">${value}</div></div>`).join('')}
+      </div>
+      <h2 class="section-title">Health Event Log</h2>
+      ${logHtml}
+      <p class="footer">PFUMA Verified · ${new Date().getFullYear()}</p>
+    </div>
+  </body></html>`;
+};
+
 export default function HerdScreen({ currentUser }) {
   const [animals,    setAnimals]    = useState([]);
   const [search,     setSearch]     = useState('');
@@ -50,6 +120,7 @@ export default function HerdScreen({ currentUser }) {
   const [passportAnimal, setPassportAnimal] = useState(null); // animal whose Health Passport is open
   const [healthEvents, setHealthEvents] = useState([]);
   const [healthLoading, setHealthLoading] = useState(false);
+  const [passportExporting, setPassportExporting] = useState(false);
 
   const openPassport = async (animal) => {
     setPassportAnimal(animal);
@@ -60,6 +131,34 @@ export default function HerdScreen({ currentUser }) {
       if (res.ok) setHealthEvents(await res.json());
     } catch { /* offline — passport still shows identity details, just no history */ }
     setHealthLoading(false);
+  };
+
+  const printPassport = async () => {
+    if (!passportAnimal) return;
+    try {
+      await Print.printAsync({ html: passportHtml(passportAnimal, healthEvents) });
+    } catch (err) {
+      if (err?.message && !/cancel/i.test(err.message)) {
+        Alert.alert('Could not print', 'Try again, or use Download PDF instead.');
+      }
+    }
+  };
+
+  const downloadPassport = async () => {
+    if (!passportAnimal) return;
+    setPassportExporting(true);
+    try {
+      const { uri } = await Print.printToFileAsync({ html: passportHtml(passportAnimal, healthEvents) });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: `${passportAnimal.name} — Health Passport` });
+      } else {
+        Alert.alert('PDF saved', uri);
+      }
+    } catch {
+      Alert.alert('Could not export PDF', 'Try again.');
+    }
+    setPassportExporting(false);
   };
 
   const load = async (refresh = false) => {
@@ -312,9 +411,17 @@ export default function HerdScreen({ currentUser }) {
                   <Text style={styles.passportHeaderSub}>Verified Digital Pedigree &amp; Medical Record</Text>
                 </View>
               </View>
-              <TouchableOpacity style={styles.passportCloseBtn} onPress={() => setPassportAnimal(null)} activeOpacity={0.8}>
-                <X size={18} color="#fff" />
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <TouchableOpacity style={styles.passportCloseBtn} onPress={printPassport} activeOpacity={0.8} disabled={passportExporting}>
+                  <Printer size={16} color="#fff" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.passportCloseBtn} onPress={downloadPassport} activeOpacity={0.8} disabled={passportExporting}>
+                  {passportExporting ? <ActivityIndicator size="small" color="#fff" /> : <Download size={16} color="#fff" />}
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.passportCloseBtn} onPress={() => setPassportAnimal(null)} activeOpacity={0.8}>
+                  <X size={18} color="#fff" />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
