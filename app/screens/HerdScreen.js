@@ -3,8 +3,9 @@ import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
   StyleSheet, ActivityIndicator, RefreshControl, Image, Modal, Alert
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
-import { Search, Beef, X, Camera, Check } from 'lucide-react-native';
+import { Search, Beef, X, Camera, Check, ShieldCheck, Tag } from 'lucide-react-native';
 import { API, COLORS } from '../config';
 import { authFetch, authJson } from '../api';
 
@@ -15,6 +16,25 @@ const todayStr = () => new Date().toISOString().slice(0, 10);
 // the species stock fallback (or a picked-but-not-yet-uploaded local file)
 // is already a usable URI as-is.
 const resolveImageUrl = (url) => (url && url.startsWith('/uploads/')) ? `${API}${url}` : url;
+
+const calculateAge = (dob) => {
+  if (!dob) return '—';
+  const birth = new Date(dob);
+  if (isNaN(birth.getTime())) return '—';
+  const now = new Date();
+  let years = now.getFullYear() - birth.getFullYear();
+  let months = now.getMonth() - birth.getMonth();
+  if (months < 0) { years--; months += 12; }
+  return `${years}y ${months}m`;
+};
+
+// Mirrors the web app's src/components/AnimalProfile/AnimalProfile.jsx
+// calculateValue() so the same animal shows the same estimated value on
+// both platforms.
+const calculateValue = (animal, healthEvents) => {
+  const base = animal.species === 'Cattle' ? 500 : 100;
+  return Math.round(base + (animal.current_weight || 0) * 1.5 + healthEvents.length * 10).toLocaleString();
+};
 
 export default function HerdScreen({ currentUser }) {
   const [animals,    setAnimals]    = useState([]);
@@ -27,6 +47,20 @@ export default function HerdScreen({ currentUser }) {
   const [saving, setSaving] = useState(false);
   const [listingAnimal, setListingAnimal] = useState(null); // animal being priced for listing
   const [priceInput, setPriceInput] = useState('');
+  const [passportAnimal, setPassportAnimal] = useState(null); // animal whose Health Passport is open
+  const [healthEvents, setHealthEvents] = useState([]);
+  const [healthLoading, setHealthLoading] = useState(false);
+
+  const openPassport = async (animal) => {
+    setPassportAnimal(animal);
+    setHealthEvents([]);
+    setHealthLoading(true);
+    try {
+      const res = await authFetch(currentUser, `/animals/${animal.id}/health`);
+      if (res.ok) setHealthEvents(await res.json());
+    } catch { /* offline — passport still shows identity details, just no history */ }
+    setHealthLoading(false);
+  };
 
   const load = async (refresh = false) => {
     if (refresh) setRefreshing(true); else setLoading(true);
@@ -164,9 +198,9 @@ export default function HerdScreen({ currentUser }) {
                     {a.for_sale ? 'Listed for Sale' : 'List for Sale'}
                   </Text>
                 </TouchableOpacity>
-                <View style={styles.passportBtn}>
+                <TouchableOpacity style={styles.passportBtn} onPress={() => openPassport(a)} activeOpacity={0.8}>
                   <Text style={styles.passportText}>Passport</Text>
-                </View>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -264,6 +298,84 @@ export default function HerdScreen({ currentUser }) {
           </View>
         </View>
       </Modal>
+
+      {/* Health Passport — full animal identity + health history, mirrors
+          the web app's Health Passport modal. */}
+      <Modal visible={!!passportAnimal} animationType="slide" onRequestClose={() => setPassportAnimal(null)}>
+        {passportAnimal && (
+          <SafeAreaView style={{ flex: 1, backgroundColor: '#fdfcf9' }}>
+            <View style={styles.passportHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <ShieldCheck size={22} color={COLORS.yellow} />
+                <View>
+                  <Text style={styles.passportHeaderTitle}>Health Passport</Text>
+                  <Text style={styles.passportHeaderSub}>Verified Digital Pedigree &amp; Medical Record</Text>
+                </View>
+              </View>
+              <TouchableOpacity style={styles.passportCloseBtn} onPress={() => setPassportAnimal(null)} activeOpacity={0.8}>
+                <X size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+              {passportAnimal.image_url ? (
+                <Image source={{ uri: resolveImageUrl(passportAnimal.image_url) }} style={styles.passportImage} />
+              ) : (
+                <View style={[styles.passportImage, { backgroundColor: COLORS.light, alignItems: 'center', justifyContent: 'center' }]}>
+                  <Beef size={48} color={COLORS.primary} strokeWidth={1.5} />
+                </View>
+              )}
+
+              <View style={styles.passportValueCard}>
+                <Text style={styles.passportSectionLabel}>Estimated Market Value</Text>
+                <Text style={styles.passportValue}>USD ${calculateValue(passportAnimal, healthEvents)}</Text>
+                <Text style={styles.passportValueSub}>Based on weight, species, and health records</Text>
+              </View>
+
+              <Text style={styles.passportSectionTitle}>Identity Details</Text>
+              <View style={styles.passportGrid}>
+                {[
+                  { label: 'Name', value: passportAnimal.name },
+                  { label: 'Ear Tag', value: passportAnimal.tag_id ? `#${passportAnimal.tag_id}` : '—' },
+                  { label: 'Owner Brand', value: passportAnimal.brand_id || '—' },
+                  { label: 'Breed', value: passportAnimal.breed || '—' },
+                  { label: 'Species', value: passportAnimal.species },
+                  { label: 'Age', value: calculateAge(passportAnimal.birth_date) },
+                  { label: 'Weight', value: `${passportAnimal.current_weight || 0} kg` },
+                  { label: 'Sire ID', value: passportAnimal.sire_id || '—' },
+                ].map(f => (
+                  <View key={f.label} style={styles.passportGridItem}>
+                    <Text style={styles.passportFieldLabel}>{f.label}</Text>
+                    <Text style={styles.passportFieldValue}>{f.value}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <Text style={styles.passportSectionTitle}>Health Event Log</Text>
+              {healthLoading ? (
+                <ActivityIndicator color={COLORS.primary} style={{ marginVertical: 16 }} />
+              ) : healthEvents.length === 0 ? (
+                <Text style={styles.passportEmptyLog}>No certified events recorded yet.</Text>
+              ) : (
+                healthEvents.map(ev => (
+                  <View key={ev.id} style={styles.passportLogRow}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                      <View style={styles.passportLogDot} />
+                      <Text style={styles.passportLogText} numberOfLines={2}>{ev.event_type}{ev.notes ? ` — ${ev.notes}` : ''}</Text>
+                    </View>
+                    <Text style={styles.passportLogDate}>{new Date(ev.event_date).toLocaleDateString()}</Text>
+                  </View>
+                ))
+              )}
+
+              <View style={styles.passportFooter}>
+                <Tag size={12} color={COLORS.primary} />
+                <Text style={styles.passportFooterText}>PFUMA Verified · {new Date().getFullYear()}</Text>
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        )}
+      </Modal>
     </View>
   );
 }
@@ -315,4 +427,26 @@ const styles = StyleSheet.create({
   speciesChipText:{ fontSize: 12, fontWeight: '700', color: COLORS.muted },
   submitBtn:      { backgroundColor: COLORS.primary, borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginTop: 10, elevation: 4 },
   submitText:     { color: '#fff', fontWeight: '900', fontSize: 15 },
+
+  passportHeader:      { backgroundColor: COLORS.primary, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16 },
+  passportHeaderTitle: { color: '#fff', fontSize: 17, fontWeight: '900', textTransform: 'uppercase' },
+  passportHeaderSub:   { color: 'rgba(255,255,255,0.6)', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginTop: 2 },
+  passportCloseBtn:    { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
+  passportImage:       { width: '100%', height: 220, borderRadius: 20, marginBottom: 14 },
+  passportValueCard:   { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 20, elevation: 2 },
+  passportSectionLabel:{ fontSize: 10, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+  passportValue:       { fontSize: 24, fontWeight: '900', color: COLORS.text },
+  passportValueSub:    { fontSize: 11, color: COLORS.muted, marginTop: 2 },
+  passportSectionTitle:{ fontSize: 11, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#e5e5e5', paddingBottom: 8 },
+  passportGrid:        { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 24 },
+  passportGridItem:    { width: '50%', marginBottom: 16 },
+  passportFieldLabel:  { fontSize: 10, fontWeight: '800', color: COLORS.primary, textTransform: 'uppercase', marginBottom: 2 },
+  passportFieldValue:  { fontSize: 16, fontWeight: '900', color: COLORS.text },
+  passportEmptyLog:    { fontSize: 13, color: COLORS.muted, fontStyle: 'italic' },
+  passportLogRow:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, elevation: 1 },
+  passportLogDot:       { width: 7, height: 7, borderRadius: 3.5, backgroundColor: COLORS.primary },
+  passportLogText:      { flex: 1, fontSize: 13, fontWeight: '700', color: COLORS.text },
+  passportLogDate:      { fontSize: 10, fontWeight: '700', color: COLORS.muted, textTransform: 'uppercase', marginLeft: 10 },
+  passportFooter:       { flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center', marginTop: 20 },
+  passportFooterText:   { fontSize: 10, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
 });
