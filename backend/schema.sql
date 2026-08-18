@@ -172,7 +172,8 @@ CREATE TABLE IF NOT EXISTS sale_clearances (
 );
 
 -- Upgrades a database that predates traditional-authority attestation.
--- MariaDB supports ADD COLUMN IF NOT EXISTS, so this is safe to re-run.
+-- MariaDB supports ADD COLUMN IF NOT EXISTS; plain MySQL (production) does
+-- not — see the note further down. app.py's ensure_schema() is authoritative.
 ALTER TABLE sale_clearances
   ADD COLUMN IF NOT EXISTS leader_clearance ENUM('attested','not_applicable') NULL,
   ADD COLUMN IF NOT EXISTS leader_type      ENUM('Sabuku','Mambo') NULL,
@@ -491,7 +492,12 @@ CREATE INDEX IF NOT EXISTS idx_iot_readings_device_time ON iot_readings (device_
 -- Columns added after the first release. A database created earlier will not
 -- pick these up from CREATE TABLE IF NOT EXISTS, and the seed data below
 -- references some of them, so re-importing without these would fail.
--- MariaDB supports ADD COLUMN IF NOT EXISTS, so this block is safe to re-run.
+-- ADD COLUMN IF NOT EXISTS is a MariaDB-only extension — plain MySQL (which
+-- is what production actually runs) rejects it with a syntax error, so this
+-- block silently no-ops there. backend/app.py's ensure_schema() is the real,
+-- portable migration path (checks information_schema before a plain ALTER)
+-- and runs automatically on every backend startup — treat these blocks as
+-- reference/manual-import-only, not what production actually depends on.
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS account_status ENUM('active','suspended') NOT NULL DEFAULT 'active',
   ADD COLUMN IF NOT EXISTS suspension_reason VARCHAR(300),

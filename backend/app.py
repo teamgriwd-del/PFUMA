@@ -188,37 +188,45 @@ def ensure_schema():
 
     # Column-level upgrades for tables that already existed on some deployed
     # database (CREATE TABLE IF NOT EXISTS is a no-op against those, so a
-    # column added after first release never lands without this). Mirrors
-    # schema.sql's "UPGRADES FOR EXISTING DATABASES" blocks — each is
-    # independently idempotent, so a failure in one doesn't block the rest.
-    upgrade_statements = [
-        """ALTER TABLE sale_clearances
-             ADD COLUMN IF NOT EXISTS leader_clearance ENUM('attested','not_applicable') NULL,
-             ADD COLUMN IF NOT EXISTS leader_type      ENUM('Sabuku','Mambo') NULL,
-             ADD COLUMN IF NOT EXISTS leader_name      VARCHAR(120),
-             ADD COLUMN IF NOT EXISTS leader_village   VARCHAR(120),
-             ADD COLUMN IF NOT EXISTS leader_cleared_on DATE,
-             ADD COLUMN IF NOT EXISTS leader_reference VARCHAR(80),
-             ADD COLUMN IF NOT EXISTS leader_document_path VARCHAR(300),
-             ADD COLUMN IF NOT EXISTS leader_na_reason VARCHAR(200)""",
-        """ALTER TABLE users
-             ADD COLUMN IF NOT EXISTS account_status ENUM('active','suspended') NOT NULL DEFAULT 'active',
-             ADD COLUMN IF NOT EXISTS suspension_reason VARCHAR(300),
-             ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(300)""",
-        """ALTER TABLE marketplace_listings
-             ADD COLUMN IF NOT EXISTS photo_url VARCHAR(300),
-             ADD COLUMN IF NOT EXISTS sold_at   TIMESTAMP NULL""",
-        """ALTER TABLE health_events
-             ADD COLUMN IF NOT EXISTS next_due_date DATE""",
-        """ALTER TABLE conversation_messages
-             ADD COLUMN IF NOT EXISTS attachment_url  VARCHAR(300),
-             ADD COLUMN IF NOT EXISTS attachment_name VARCHAR(150)""",
-    ]
-    for stmt in upgrade_statements:
-        try:
-            c.execute(stmt)
-        except Exception as e:
-            print(f"[WARNING] schema upgrade statement failed (continuing): {e}")
+    # column added after first release never lands without this).
+    #
+    # `ADD COLUMN IF NOT EXISTS` is a MariaDB-only extension — plain MySQL
+    # (which is what's actually running here) rejects it outright with a
+    # syntax error, which silently no-opped every one of these on every
+    # startup until this was caught. Checking information_schema first and
+    # only running a plain ALTER when the column is truly missing works on
+    # both engines.
+    def add_column_if_missing(table, column, ddl):
+        c.execute("""
+            SELECT COUNT(*) AS n FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = %s AND column_name = %s
+        """, (table, column))
+        if c.fetchone()['n'] == 0:
+            try:
+                c.execute(f"ALTER TABLE {table} ADD COLUMN {ddl}")
+            except Exception as e:
+                print(f"[WARNING] could not add {table}.{column}: {e}")
+
+    add_column_if_missing('sale_clearances', 'leader_clearance', "leader_clearance ENUM('attested','not_applicable') NULL")
+    add_column_if_missing('sale_clearances', 'leader_type', "leader_type ENUM('Sabuku','Mambo') NULL")
+    add_column_if_missing('sale_clearances', 'leader_name', "leader_name VARCHAR(120)")
+    add_column_if_missing('sale_clearances', 'leader_village', "leader_village VARCHAR(120)")
+    add_column_if_missing('sale_clearances', 'leader_cleared_on', "leader_cleared_on DATE")
+    add_column_if_missing('sale_clearances', 'leader_reference', "leader_reference VARCHAR(80)")
+    add_column_if_missing('sale_clearances', 'leader_document_path', "leader_document_path VARCHAR(300)")
+    add_column_if_missing('sale_clearances', 'leader_na_reason', "leader_na_reason VARCHAR(200)")
+
+    add_column_if_missing('users', 'account_status', "account_status ENUM('active','suspended') NOT NULL DEFAULT 'active'")
+    add_column_if_missing('users', 'suspension_reason', "suspension_reason VARCHAR(300)")
+    add_column_if_missing('users', 'avatar_url', "avatar_url VARCHAR(300)")
+
+    add_column_if_missing('marketplace_listings', 'photo_url', "photo_url VARCHAR(300)")
+    add_column_if_missing('marketplace_listings', 'sold_at', "sold_at TIMESTAMP NULL")
+
+    add_column_if_missing('health_events', 'next_due_date', "next_due_date DATE")
+
+    add_column_if_missing('conversation_messages', 'attachment_url', "attachment_url VARCHAR(300)")
+    add_column_if_missing('conversation_messages', 'attachment_name', "attachment_name VARCHAR(150)")
 
     db.commit()
     db.close()
