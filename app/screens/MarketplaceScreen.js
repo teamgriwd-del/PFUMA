@@ -25,8 +25,10 @@ const CAT_COLOR = {
   medicine:  '#1565c0', equipment: '#6a1b9a', all: '#333',
 };
 
-const PostModal = ({ visible, onClose, onSubmit, error }) => {
-  const [form, setForm] = useState({ product_name:'', category:'livestock', price:'', unit:'head', quantity:'1', location:'', description:'' });
+const PostModal = ({ visible, onClose, onSubmit, error, animals = [] }) => {
+  const [form, setForm] = useState({ product_name:'', category:'livestock', price:'', unit:'head', quantity:'1', location:'', description:'',
+    animal_id:'', leader_clearance:'', leader_type:'Sabuku', leader_name:'', leader_village:'',
+    leader_cleared_on:'', leader_reference:'', leader_na_reason:'' });
   const [photo, setPhoto] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const set = (k,v) => setForm(p => ({ ...p, [k]: v }));
@@ -42,12 +44,19 @@ const PostModal = ({ visible, onClose, onSubmit, error }) => {
     setPhoto({ uri: asset.uri, name: filename, type: `image/${ext === 'jpg' ? 'jpeg' : ext}` });
   };
 
+  const needsClearance = form.category === 'livestock' && !!form.animal_id;
+
   const submit = async () => {
     if (!form.product_name.trim() || !form.price) return;
+    // The Sabuku/Mambo step comes before the police one, so a listing tied to a
+    // registered animal cannot be submitted until it is answered either way.
+    if (needsClearance && !form.leader_clearance) return;
     setSubmitting(true);
     const ok = await onSubmit(form, photo);
     setSubmitting(false);
-    if (ok) { setForm({ product_name:'', category:'livestock', price:'', unit:'head', quantity:'1', location:'', description:'' }); setPhoto(null); onClose(); }
+    if (ok) { setForm({ product_name:'', category:'livestock', price:'', unit:'head', quantity:'1', location:'', description:'',
+    animal_id:'', leader_clearance:'', leader_type:'Sabuku', leader_name:'', leader_village:'',
+    leader_cleared_on:'', leader_reference:'', leader_na_reason:'' }); setPhoto(null); onClose(); }
   };
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
@@ -89,6 +98,91 @@ const PostModal = ({ visible, onClose, onSubmit, error }) => {
                 />
               </View>
             ))}
+            {form.category === 'livestock' && animals.length > 0 && (
+              <View style={styles.formField}>
+                <Text style={styles.formLabel}>Which animal?</Text>
+                <View style={styles.catRow}>
+                  {animals.map(a => {
+                    const active = String(form.animal_id) === String(a.id);
+                    return (
+                      <TouchableOpacity key={a.id} activeOpacity={0.8}
+                        style={[styles.catChip, active && { backgroundColor: COLORS.primary, borderColor: COLORS.primary }]}
+                        onPress={() => {
+                          const next = active ? '' : String(a.id);
+                          set('animal_id', next);
+                          if (next && !form.product_name.trim()) {
+                            set('product_name', [a.name, a.breed, a.species].filter(Boolean).join(' '));
+                          }
+                        }}>
+                        <Text style={[styles.catChipText, active && { color: '#fff' }]}>{a.name}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+                <Text style={styles.helpText}>Linking a registered animal is what puts the sale through clearance. Leave it unselected only for stock that is not on your PFUMA register.</Text>
+              </View>
+            )}
+
+            {needsClearance && (
+              <View style={styles.clearBox}>
+                <Text style={styles.clearTitle}>Traditional authority clearance *</Text>
+                <Text style={styles.helpText}>In communal areas your Sabuku or Mambo clears the sale before the police do. If you farm on a title deed or lease with no traditional authority, say so instead.</Text>
+                <View style={styles.catRow}>
+                  {[['attested', 'Cleared by Sabuku / Mambo'], ['not_applicable', 'Does not apply to my farm']].map(opt => {
+                    const active = form.leader_clearance === opt[0];
+                    return (
+                      <TouchableOpacity key={opt[0]} activeOpacity={0.8}
+                        style={[styles.catChip, active && { backgroundColor: COLORS.primary, borderColor: COLORS.primary }]}
+                        onPress={() => set('leader_clearance', opt[0])}>
+                        <Text style={[styles.catChipText, active && { color: '#fff' }]}>{opt[1]}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {form.leader_clearance === 'attested' && (
+                  <>
+                    <View style={styles.formField}>
+                      <Text style={styles.formLabel}>Who cleared it *</Text>
+                      <View style={styles.catRow}>
+                        {['Sabuku', 'Mambo'].map(t => {
+                          const active = form.leader_type === t;
+                          return (
+                            <TouchableOpacity key={t} activeOpacity={0.8}
+                              style={[styles.catChip, active && { backgroundColor: COLORS.primary, borderColor: COLORS.primary }]}
+                              onPress={() => set('leader_type', t)}>
+                              <Text style={[styles.catChipText, active && { color: '#fff' }]}>{t === 'Sabuku' ? 'Sabuku (village head)' : 'Mambo (chief)'}</Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+                    {[
+                      { label: 'Their name *',      key: 'leader_name',       ph: 'e.g. Sabuku Nyathi' },
+                      { label: 'Village / Ward',    key: 'leader_village',    ph: 'e.g. Nkayi Ward 7' },
+                      { label: 'Date cleared',      key: 'leader_cleared_on', ph: 'YYYY-MM-DD' },
+                      { label: 'Written reference', key: 'leader_reference',  ph: 'Optional' },
+                    ].map(f => (
+                      <View key={f.key} style={styles.formField}>
+                        <Text style={styles.formLabel}>{f.label}</Text>
+                        <TextInput style={styles.formInput} placeholder={f.ph} value={form[f.key]}
+                          onChangeText={v => set(f.key, v)} placeholderTextColor="#bbb" />
+                      </View>
+                    ))}
+                  </>
+                )}
+
+                {form.leader_clearance === 'not_applicable' && (
+                  <View style={styles.formField}>
+                    <Text style={styles.formLabel}>Why it does not apply *</Text>
+                    <TextInput style={styles.formInput} placeholder="e.g. A2 commercial farm on title deed"
+                      value={form.leader_na_reason} onChangeText={v => set('leader_na_reason', v)} placeholderTextColor="#bbb" />
+                    <Text style={styles.helpText}>The officer reviewing your listing will see this.</Text>
+                  </View>
+                )}
+              </View>
+            )}
+
             <View style={styles.formField}>
               <Text style={styles.formLabel}>Category</Text>
               <View style={styles.catRow}>
@@ -179,6 +273,7 @@ const resolveImageUrl = (url) => (url && url.startsWith('/uploads/')) ? `${API}$
 
 export default function MarketplaceScreen({ currentUser }) {
   const [listings,   setListings]   = useState([]);
+  const [myAnimals,  setMyAnimals]  = useState([]);
   const [search,     setSearch]     = useState('');
   const [category,   setCategory]   = useState('all');
   const [loading,    setLoading]    = useState(false);
@@ -202,18 +297,29 @@ export default function MarketplaceScreen({ currentUser }) {
 
   useEffect(() => { load(); }, [load]);
 
+  // The seller's own register, so a listing can be tied to a real animal —
+  // which is what triggers the clearance chain.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { ok, data } = await authJson(currentUser, '/animals');
+      if (!cancelled && ok && Array.isArray(data)) setMyAnimals(data);
+    })();
+    return () => { cancelled = true; };
+  }, [currentUser?.token]);
+
   const handlePost = async (form, photo) => {
     setPostError(null);
     let res, data;
     if (photo) {
       const fd = new FormData();
-      fd.append('product_name', form.product_name);
-      fd.append('category', form.category);
-      fd.append('price', form.price);
-      fd.append('unit', form.unit);
-      fd.append('quantity', form.quantity);
-      fd.append('location', form.location);
-      fd.append('description', form.description);
+      // Append every populated field rather than a hand-listed subset — the old
+      // list silently dropped animal_id, so a photo listing never reached
+      // clearance at all.
+      Object.keys(form).forEach(k => {
+        const v = form[k];
+        if (v !== undefined && v !== null && v !== '') fd.append(k, String(v));
+      });
       fd.append('photo', photo);
       res = await authFetch(currentUser, '/listings', { method: 'POST', body: fd });
       data = await res.json().catch(() => ({}));
@@ -357,7 +463,7 @@ export default function MarketplaceScreen({ currentUser }) {
         }
       />
 
-      <PostModal visible={showPost} onClose={() => { setShowPost(false); setPostError(null); }} onSubmit={handlePost} error={postError} />
+      <PostModal visible={showPost} onClose={() => { setShowPost(false); setPostError(null); }} onSubmit={handlePost} error={postError} animals={myAnimals} />
 
       {/* Bid amount modal */}
       <Modal visible={!!bidTarget} animationType="fade" transparent onRequestClose={() => setBidTarget(null)}>
@@ -471,4 +577,7 @@ const styles = StyleSheet.create({
   catChipText: { fontSize: 12, fontWeight: '700', color: COLORS.muted },
   submitBtn:   { backgroundColor: COLORS.primary, borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginTop: 10 },
   submitText:  { color: '#fff', fontWeight: '900', fontSize: 15 },
+  helpText:    { fontSize: 11, color: COLORS.muted, lineHeight: 16, marginTop: 6 },
+  clearBox:    { borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 14, padding: 14, marginBottom: 16, gap: 4 },
+  clearTitle:  { fontSize: 11, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase' },
 });
