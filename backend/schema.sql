@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS users (
   id_document_path         VARCHAR(300),  -- national ID upload
   credential_document_path VARCHAR(300),  -- DVS license / business reg / land proof upload
   avatar_seed    VARCHAR(80),
+  avatar_url     VARCHAR(300),          -- real uploaded profile picture; falls back to the Dicebear avatar_seed when NULL
   account_status ENUM('active','suspended') NOT NULL DEFAULT 'active',  -- admin moderation (scammers etc.), separate from verification_status
   suspension_reason VARCHAR(300),
   created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -302,7 +303,9 @@ CREATE TABLE IF NOT EXISTS conversation_messages (
   id               INT AUTO_INCREMENT PRIMARY KEY,
   conversation_id  INT NOT NULL,
   sender_id        INT NOT NULL,
-  message          TEXT NOT NULL,
+  message          TEXT NOT NULL,       -- may be '' when the message is attachment-only
+  attachment_url   VARCHAR(300),        -- private route (/attachments/<id>), not a public /uploads path
+  attachment_name  VARCHAR(150),        -- original filename, for non-image display
   sent_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   read_at          TIMESTAMP NULL,
   FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
@@ -491,7 +494,8 @@ CREATE INDEX IF NOT EXISTS idx_iot_readings_device_time ON iot_readings (device_
 -- MariaDB supports ADD COLUMN IF NOT EXISTS, so this block is safe to re-run.
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS account_status ENUM('active','suspended') NOT NULL DEFAULT 'active',
-  ADD COLUMN IF NOT EXISTS suspension_reason VARCHAR(300);
+  ADD COLUMN IF NOT EXISTS suspension_reason VARCHAR(300),
+  ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(300);
 
 ALTER TABLE marketplace_listings
   ADD COLUMN IF NOT EXISTS photo_url VARCHAR(300),
@@ -499,6 +503,10 @@ ALTER TABLE marketplace_listings
 
 ALTER TABLE health_events
   ADD COLUMN IF NOT EXISTS next_due_date DATE;
+
+ALTER TABLE conversation_messages
+  ADD COLUMN IF NOT EXISTS attachment_url  VARCHAR(300),
+  ADD COLUMN IF NOT EXISTS attachment_name VARCHAR(150);
 
 -- ── SEED DATA ─────────────────────────────────────────────────
 -- Demo password for every seeded account below: Pfuma2026!

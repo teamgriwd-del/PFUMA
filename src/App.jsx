@@ -20,7 +20,7 @@ import {
   Truck, BarChart3, Globe, AlertTriangle, CheckCircle, ChevronRight,
   Zap, Clock, ArrowRight, Tag, Pill, MapPin, FileText,
   RefreshCw, DollarSign, Target, Box, PhoneCall, Star, Wheat, Store,
-  Sprout, Check, Syringe, Shield, UserPlus, X, Menu, Eye, EyeOff, Handshake, Radio, FlaskConical,
+  Sprout, Check, Syringe, Shield, UserPlus, X, Menu, Eye, EyeOff, Handshake, Radio, FlaskConical, Camera,
 } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis } from 'recharts';
 import './App.css';
@@ -1776,8 +1776,6 @@ const ROLE_ACTIVE_BG = {
   Police:      'bg-white/10',
 };
 
-const TOKEN_STORAGE_KEY = 'pfuma_token';
-
 const IMAGE_BY_SPECIES = {
   Cattle: 'https://images.unsplash.com/photo-1546445317-29f4545e9d53?auto=format&fit=crop&q=80&w=800',
   Goat:   'https://images.unsplash.com/photo-1524024973431-2ad916746881?auto=format&fit=crop&q=80&w=800',
@@ -1848,6 +1846,7 @@ function App() {
     { id: 2, title: 'Vaccine Recall',         msg: 'Lot #992 Oxytetracycline recalled by supplier.',  type: 'Info',     time: '4h ago' },
   ]);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   // Real per-user events (a bid came in, a bid you placed was accepted, a
   // vet recommended a medication) — separate from the static regional
@@ -1919,44 +1918,19 @@ function App() {
     }
   }, []);
 
-  // Restore session from a stored token on first load.
-  useEffect(() => {
-    const token = localStorage.getItem(TOKEN_STORAGE_KEY);
-    if (!token) { setSessionChecked(true); return; }
-    (async () => {
-      try {
-        const res = await fetch(`${API}/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
-        if (res.ok) {
-          const apiUser = await res.json();
-          const user = {
-            id: apiUser.id, token, name: apiUser.full_name, phone: apiUser.phone, email: apiUser.email,
-            org: apiUser.org_name, province: apiUser.province, district: apiUser.district, address: apiUser.address,
-            role: apiUser.role, farmSize: apiUser.farm_size_ha,
-            species: (apiUser.species_farmed || '').split(',').filter(Boolean),
-            licenseNumber: apiUser.license_number, speciality: apiUser.speciality, businessReg: apiUser.business_reg,
-            supplyCategories: (apiUser.supply_categories || '').split(',').filter(Boolean),
-            tradingAreas: apiUser.trading_areas, badgeNumber: apiUser.badge_number, station: apiUser.station,
-            jurisdictionProvince: apiUser.jurisdiction_province, verificationStatus: apiUser.verification_status,
-            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${apiUser.full_name || 'PFUMA'}`,
-          };
-          setCurrentUser(user);
-          loadUserData(user);
-        } else {
-          localStorage.removeItem(TOKEN_STORAGE_KEY);
-        }
-      } catch { /* API offline — fall through to login screen */ }
-      setSessionChecked(true);
-    })();
-  }, [loadUserData]);
+  // Session lives only in memory — deliberately not persisted to
+  // localStorage/sessionStorage. Refreshing the page, duplicating the tab,
+  // or closing and reopening the browser all require signing in again;
+  // nothing about a livestock/identity-document account should survive on
+  // a shared or borrowed device once the tab is gone.
+  useEffect(() => { setSessionChecked(true); }, []);
 
   const handleLoginSuccess = (user) => {
-    localStorage.setItem(TOKEN_STORAGE_KEY, user.token);
     setCurrentUser(user);
     loadUserData(user);
   };
 
   const handleSignOut = () => {
-    localStorage.removeItem(TOKEN_STORAGE_KEY);
     setCurrentUser(null);
     setAnimals([]);
     setInventory([]);
@@ -2027,6 +2001,19 @@ function App() {
   const handleListAnimal = async (id) => {
     setAnimals(prev => prev.map(a => a.id === id ? { ...a, forSale: !a.forSale } : a));
     try { await authFetch(`/animals/${id}/sale`, { method: 'PATCH' }); } catch { /* offline — local toggle already applied */ }
+  };
+
+  const handleAvatarChange = async (file) => {
+    if (!file) return;
+    setAvatarUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('photo', file);
+      const res = await authFetch('/users/me/avatar', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (res.ok) setCurrentUser(prev => ({ ...prev, avatar: `${API}${data.avatar_url}` }));
+    } catch { /* offline — avatar keeps its previous value */ }
+    setAvatarUploading(false);
   };
 
   if (!sessionChecked) return null;
@@ -2108,9 +2095,20 @@ function App() {
         {/* User + Logout */}
         <div className="px-4 pb-5 border-t border-white/10 pt-4">
           <div className="flex items-center gap-3 mb-3 px-2">
-            <div className="w-8 h-8 rounded-lg overflow-hidden border border-white/20 shrink-0">
+            <label className="relative w-8 h-8 rounded-lg overflow-hidden border border-white/20 shrink-0 cursor-pointer group" title="Change profile picture">
               <img src={currentUser.avatar} alt={currentUser.name} className="w-full h-full object-cover" />
-            </div>
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                {avatarUploading ? (
+                  <RefreshCw size={11} className="text-white animate-spin" />
+                ) : (
+                  <Camera size={11} className="text-white" />
+                )}
+              </div>
+              <input
+                type="file" accept="image/*" className="hidden" disabled={avatarUploading}
+                onChange={e => { handleAvatarChange(e.target.files?.[0]); e.target.value = ''; }}
+              />
+            </label>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-black text-white leading-none truncate">{currentUser.name}</p>
               <p className="text-[10px] text-yellow-400 font-black uppercase tracking-widest leading-none mt-0.5">{role}</p>

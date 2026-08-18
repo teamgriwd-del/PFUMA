@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import glob
 import secrets
 import functools
 import datetime
@@ -57,6 +58,9 @@ UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 ALLOWED_DOC_EXT = {'.pdf', '.jpg', '.jpeg', '.png'}
 ALLOWED_IMG_EXT = {'.jpg', '.jpeg', '.png', '.webp'}
+# Messenger attachments — images plus common documents (a health passport
+# scan, a movement permit) since a chat attachment isn't always a photo.
+ALLOWED_ATTACHMENT_EXT = ALLOWED_IMG_EXT | {'.pdf', '.doc', '.docx'}
 
 # Roles that are not self-service — provisioned by an existing Police officer.
 ADMIN_PROVISIONED_ROLES = {'Police'}
@@ -199,12 +203,16 @@ def ensure_schema():
              ADD COLUMN IF NOT EXISTS leader_na_reason VARCHAR(200)""",
         """ALTER TABLE users
              ADD COLUMN IF NOT EXISTS account_status ENUM('active','suspended') NOT NULL DEFAULT 'active',
-             ADD COLUMN IF NOT EXISTS suspension_reason VARCHAR(300)""",
+             ADD COLUMN IF NOT EXISTS suspension_reason VARCHAR(300),
+             ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(300)""",
         """ALTER TABLE marketplace_listings
              ADD COLUMN IF NOT EXISTS photo_url VARCHAR(300),
              ADD COLUMN IF NOT EXISTS sold_at   TIMESTAMP NULL""",
         """ALTER TABLE health_events
              ADD COLUMN IF NOT EXISTS next_due_date DATE""",
+        """ALTER TABLE conversation_messages
+             ADD COLUMN IF NOT EXISTS attachment_url  VARCHAR(300),
+             ADD COLUMN IF NOT EXISTS attachment_name VARCHAR(150)""",
     ]
     for stmt in upgrade_statements:
         try:
@@ -310,6 +318,7 @@ def public_user_view(user, requester):
     base = {
         'id': user['id'], 'full_name': user['full_name'], 'role': user['role'],
         'org_name': user['org_name'], 'province': user['province'], 'district': user['district'],
+        'avatar_url': user.get('avatar_url'),
     }
     # Business-facing roles publish contact info as part of their function on the
     # platform; Farmers and Police do not (contact happens via listings/messenger).
@@ -348,15 +357,18 @@ def save_upload(file_storage, user_id, doctype):
     return f"{user_id}/{filename}"
 
 
-def save_photo(file_storage, category, entity_id):
-    """Saves an uploaded animal/listing photo under uploads/<category>/<entity_id><ext>
-    and returns the relative path stored in the DB (served publicly, unlike
-    save_upload's private id/credential documents)."""
+def save_photo(file_storage, category, entity_id, allowed_ext=None):
+    """Saves an uploaded animal/listing/attachment/avatar photo under
+    uploads/<category>/<entity_id><ext> and returns the relative path stored
+    in the DB (served publicly, unlike save_upload's private id/credential
+    documents). allowed_ext defaults to images only; pass a wider set (e.g.
+    ALLOWED_ATTACHMENT_EXT) for callers that accept documents too."""
     if not file_storage or not file_storage.filename:
         return None
+    allowed_ext = allowed_ext or ALLOWED_IMG_EXT
     ext = os.path.splitext(secure_filename(file_storage.filename))[1].lower()
-    if ext not in ALLOWED_IMG_EXT:
-        raise ValueError(f"Unsupported image type '{ext}' — use JPG, PNG, or WEBP")
+    if ext not in allowed_ext:
+        raise ValueError(f"Unsupported file type '{ext}' — use {', '.join(sorted(e.lstrip('.').upper() for e in allowed_ext))}")
     category_dir = os.path.join(UPLOAD_DIR, category)
     os.makedirs(category_dir, exist_ok=True)
     filename = f"{entity_id}{ext}"
@@ -565,9 +577,37 @@ def get_document(user_id, doctype):
 # documents above), same as a stock product photo would be on any marketplace.
 @app.route('/uploads/<category>/<path:filename>', methods=['GET'])
 def get_photo(category, filename):
-    if category not in ('animals', 'listings'):
+    if category not in ('animals', 'listings', 'avatars'):
         return jsonify({"error": "Not found"}), 404
     return send_from_directory(os.path.join(UPLOAD_DIR, category), filename)
+
+
+# Message attachments are private conversation content (not a public
+# marketplace photo) and their filenames are just <message_id><ext> —
+# trivially guessable sequential ids — so unlike get_photo above, this
+# requires auth and checks the requester actually took part in the
+# conversation that message belongs to.
+@app.route('/attachments/<int:msg_id>', methods=['GET'])
+@require_auth
+def get_attachment(msg_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT conversation_id, attachment_url FROM conversation_messages WHERE id=%s", (msg_id,))
+    msg = c.fetchone()
+    if not msg or not msg['attachment_url']:
+        db.close(); return jsonify({"error": "Not found"}), 404
+    conv = _conversation_participant_or_404(c, msg['conversation_id'], g.current_user['id'])
+    db.close()
+    if not conv:
+        return jsonify({"error": "Not found"}), 404
+    # Saved as "<msg_id><ext>" by save_photo(); attachment_url is the stable
+    # /attachments/<id> route, not the filename, so the real extension is
+    # looked up on disk rather than assumed.
+    matches = glob.glob(os.path.join(UPLOAD_DIR, 'attachments', f'{msg_id}.*'))
+    if not matches:
+        return jsonify({"error": "Not found"}), 404
+    directory, filename = os.path.split(matches[0])
+    return send_from_directory(directory, filename)
 
 
 # ── USERS ─────────────────────────────────────────────────────
@@ -671,6 +711,24 @@ def get_user(user_id):
     return jsonify(public_user_view(user, g.current_user))
 
 
+@app.route('/users/me/avatar', methods=['POST'])
+@require_auth
+def upload_avatar():
+    photo = request.files.get('photo')
+    if not photo or not photo.filename:
+        return jsonify({"error": "No photo uploaded"}), 400
+    try:
+        rel_path = save_photo(photo, 'avatars', g.current_user['id'])
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    db = get_db()
+    c = db.cursor()
+    c.execute("UPDATE users SET avatar_url=%s WHERE id=%s", (f"/uploads/{rel_path}", g.current_user['id']))
+    db.commit()
+    db.close()
+    return jsonify({"avatar_url": f"/uploads/{rel_path}", "message": "Profile picture updated ✅"})
+
+
 # ── MESSENGER (real conversations, any verified user to any other) ──────
 def _conversation_participant_or_404(c, conversation_id, requester_id):
     c.execute("SELECT * FROM conversations WHERE id=%s", (conversation_id,))
@@ -717,6 +775,34 @@ def get_conversations():
         })
     db.close()
     return jsonify(result)
+
+
+@app.route('/conversations/<int:conversation_id>/contact', methods=['GET'])
+@require_auth
+def get_conversation_contact(conversation_id):
+    """The other participant's contact details — phone included, even for a
+    Farmer talking to a Farmer, which public_user_view() otherwise redacts.
+    Scoped narrowly: only visible to someone who is actually a participant
+    in THIS conversation with them, i.e. they're already directly connected
+    and arranging something (a sale, a consult) that needs a phone number —
+    not a general directory lookup."""
+    me = g.current_user['id']
+    db = get_db()
+    c = db.cursor()
+    conv = _conversation_participant_or_404(c, conversation_id, me)
+    if not conv:
+        db.close(); return jsonify({"error": "Conversation not found"}), 404
+    other_id = conv['user_b_id'] if conv['user_a_id'] == me else conv['user_a_id']
+    c.execute("SELECT * FROM users WHERE id=%s", (other_id,))
+    other = c.fetchone()
+    db.close()
+    if not other:
+        return jsonify({"error": "User not found"}), 404
+    view = public_user_view(other, g.current_user)
+    view['phone'] = other['phone']
+    view['email'] = other['email']
+    view['address'] = other['address']
+    return jsonify(view)
 
 
 @app.route('/conversations', methods=['POST'])
@@ -792,10 +878,13 @@ def get_conversation_messages(conversation_id):
 @require_auth
 def send_conversation_message(conversation_id):
     me = g.current_user['id']
-    d = request.json or {}
+    # multipart (attachment) and plain JSON bodies are both accepted — a
+    # message can be text-only, attachment-only (like WhatsApp), or both.
+    d = request.form if request.form else (request.json or {})
+    attachment = request.files.get('attachment')
     text = (d.get('message') or '').strip()[:2000]
-    if not text:
-        return jsonify({"error": "message is required"}), 400
+    if not text and not (attachment and attachment.filename):
+        return jsonify({"error": "message or an attachment is required"}), 400
 
     db = get_db()
     c = db.cursor()
@@ -807,6 +896,16 @@ def send_conversation_message(conversation_id):
         INSERT INTO conversation_messages (conversation_id, sender_id, message) VALUES (%s,%s,%s)
     """, (conversation_id, me, text))
     msg_id = c.lastrowid
+
+    if attachment and attachment.filename:
+        try:
+            save_photo(attachment, 'attachments', msg_id, allowed_ext=ALLOWED_ATTACHMENT_EXT)
+            c.execute("UPDATE conversation_messages SET attachment_url=%s, attachment_name=%s WHERE id=%s",
+                      (f"/attachments/{msg_id}", secure_filename(attachment.filename), msg_id))
+        except ValueError as e:
+            db.commit(); db.close()
+            return jsonify({"error": str(e)}), 400
+
     c.execute("UPDATE conversations SET last_message_at=NOW() WHERE id=%s", (conversation_id,))
     db.commit()
     c.execute("SELECT * FROM conversation_messages WHERE id=%s", (msg_id,))

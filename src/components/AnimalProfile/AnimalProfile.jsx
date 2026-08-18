@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { BREED_PROFILES } from '../HealthManagement/healthData';
 import {
   PlusCircle, ChevronRight, Users, ShieldCheck, X,
@@ -43,23 +43,41 @@ const Field = ({ id, label, required, children }) => (
 );
 
 // ── HEALTH PASSPORT MODAL ──────────────────────────────────────────────────
-// Print/Export PDF/download are all the same real capability here: the
-// browser's native print dialog, which every modern browser can also target
-// at "Save as PDF" — that covers all three without a heavy client-side PDF
-// library. The print-only <style> block hides the rest of the app and the
-// modal chrome (close/print buttons) so only the passport card is printed.
+// Print/Export PDF/download are all the same real capability: the browser's
+// native print dialog, which can also target "Save as PDF" — no heavy
+// client-side PDF library needed. Printing directly from this modal (via
+// @media print visibility tricks) rendered a blank page in practice —
+// `position: fixed` + `backdrop-blur` on the overlay doesn't reliably
+// translate to the print layout across browsers/WebViews. Instead this
+// clones the passport markup into a separate, isolated print window (same
+// compiled stylesheet, none of the modal's fixed/blur baggage) and prints
+// that — the standard robust pattern for printing one part of a page.
 const HealthPassport = ({ animal, auditLog, onClose }) => {
-  const handlePrint = () => window.print();
+  const printRef = useRef(null);
+
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank', 'width=900,height=1200');
+    if (!printWindow || !printRef.current) {
+      window.alert('Your browser blocked the print window — allow pop-ups for this site and try again.');
+      return;
+    }
+    const styleTags = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+      .map(el => el.outerHTML).join('\n');
+    printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8" />
+      <title>${animal.name} — Health Passport</title>
+      ${styleTags}
+      <style>body{margin:0;background:#fff;}</style>
+    </head><body>${printRef.current.outerHTML}</body></html>`);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.focus();
+      printWindow.print();
+    };
+  };
+
   return (
-  <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-gray-900/90 backdrop-blur-md print:static print:bg-white print:p-0 print:block">
-    <style>{`
-      @media print {
-        body * { visibility: hidden; }
-        #pfuma-health-passport, #pfuma-health-passport * { visibility: visible; }
-        #pfuma-health-passport { position: absolute; inset: 0; width: 100%; max-height: none; box-shadow: none; border-radius: 0; }
-      }
-    `}</style>
-    <div id="pfuma-health-passport" className="bg-white w-full max-w-4xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:overflow-visible">
+  <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-gray-900/90 backdrop-blur-md">
+    <div ref={printRef} className="bg-white w-full max-w-4xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
       {/* Header */}
       <div className="bg-pfuma-green px-10 py-8 text-white flex justify-between items-center relative overflow-hidden">
         <div className="relative z-10">

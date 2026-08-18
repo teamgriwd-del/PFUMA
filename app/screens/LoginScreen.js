@@ -99,6 +99,7 @@ const userFromApi = (apiUser, token) => ({
   jurisdictionProvince: apiUser.jurisdiction_province,
   verificationStatus: apiUser.verification_status,
   avatar: apiUser.full_name,
+  avatarUrl: apiUser.avatar_url ? `${API}${apiUser.avatar_url}` : null,
 });
 
 export default function LoginScreen({ onLogin }) {

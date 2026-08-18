@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ZIMBABWE_REGIONS, EMERGENCY_HOTLINES } from './vetData';
 import {
   Send, Plus, MapPin, Phone, ShieldCheck, Video,
-  BellRing, Zap, Clock, X, Search, ChevronDown, MoreVertical, ArrowLeft, Paperclip,
+  BellRing, Zap, Clock, X, Search, ChevronDown, ArrowLeft, Paperclip, Mail,
   Check, CheckCheck, PhoneCall, Stethoscope, Pill,
   Sprout, Store, Users, Lock, Loader2
 } from 'lucide-react';
@@ -61,13 +61,77 @@ const Avatar = ({ user, size = 'md' }) => {
   );
 };
 
-const MessageBubble = ({ msg, isOwn }) => (
+const IMAGE_EXT_RE = /\.(jpg|jpeg|png|webp)$/i;
+
+// Attachments live behind /attachments/<id>, which requires auth (unlike a
+// plain marketplace photo — see backend comment) — a bare <img src> can't
+// carry the Authorization header, so this fetches the bytes itself and
+// renders them as a blob URL. Also used for the non-image "click to
+// download" case, via the same authenticated fetch.
+const AttachmentPreview = ({ msg, token, isOwn }) => {
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [error, setError] = useState(false);
+  const isImage = IMAGE_EXT_RE.test(msg.attachment_name || '');
+
+  useEffect(() => {
+    if (!isImage) return;
+    let objectUrl;
+    let cancelled = false;
+    fetch(`${API}${msg.attachment_url}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => (r.ok ? r.blob() : Promise.reject()))
+      .then(blob => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setBlobUrl(objectUrl);
+      })
+      .catch(() => { if (!cancelled) setError(true); });
+    return () => { cancelled = true; if (objectUrl) URL.revokeObjectURL(objectUrl); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [msg.attachment_url, token]);
+
+  const download = async () => {
+    try {
+      const res = await fetch(`${API}${msg.attachment_url}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = msg.attachment_name || 'attachment';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch { setError(true); }
+  };
+
+  if (isImage) {
+    return blobUrl ? (
+      <img src={blobUrl} alt={msg.attachment_name || 'Attachment'} onClick={download}
+           className="max-w-full max-h-64 rounded-xl cursor-pointer object-cover" />
+    ) : (
+      <div className="w-40 h-32 rounded-xl bg-black/10 flex items-center justify-center">
+        {error ? <span className="text-[10px]">Couldn't load image</span> : <Loader2 size={16} className="animate-spin" />}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={download}
+      className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold ${isOwn ? 'bg-white/15 text-white' : 'bg-gray-100 text-gray-700'}`}
+    >
+      <Paperclip size={13} className="shrink-0" />
+      <span className="truncate max-w-[160px]">{msg.attachment_name || 'Attachment'}</span>
+    </button>
+  );
+};
+
+const MessageBubble = ({ msg, isOwn, token }) => (
   <div className={`flex items-end gap-2 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
     <div className="max-w-[72%] group">
-      <div className={`px-4 py-2.5 rounded-2xl text-sm font-medium leading-relaxed shadow-sm ${
+      <div className={`px-4 py-2.5 rounded-2xl text-sm font-medium leading-relaxed shadow-sm space-y-1.5 ${
         isOwn ? 'bg-pfuma-green text-white rounded-br-sm' : 'bg-white text-gray-800 rounded-bl-sm border border-gray-100'
       }`}>
-        {msg.message}
+        {msg.attachment_url && <AttachmentPreview msg={msg} token={token} isOwn={isOwn} />}
+        {msg.message && <div>{msg.message}</div>}
       </div>
       <div className={`flex items-center gap-1 mt-1 px-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
         <span className="text-[10px] text-gray-400 font-medium">{fmtTime(msg.sent_at)}</span>
@@ -122,9 +186,14 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
   const [peopleQuery, setPeopleQuery] = useState('');
 
   const [chatInput, setChatInput] = useState('');
+  const [attachmentFile, setAttachmentFile] = useState(null);
+  const attachInputRef = useRef(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
   const [showHotlines, setShowHotlines] = useState(false);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [contactDetails, setContactDetails] = useState(null);
+  const [contactLoading, setContactLoading] = useState(false);
   const [formError, setFormError] = useState('');
   const [sendBusy, setSendBusy] = useState(false);
   const [newCase, setNewCase] = useState({ category: 'General', animalId: '', province: '', district: '', subject: '', description: '' });
@@ -276,14 +345,26 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
 
   const handleSend = async () => {
     const text = sanitize(chatInput);
-    if (!text || !activeConvId || sendBusy) return;
+    if ((!text && !attachmentFile) || !activeConvId || sendBusy) return;
     setSendBusy(true);
     setChatInput('');
+    const file = attachmentFile;
+    setAttachmentFile(null);
     try {
-      const res = await fetch(`${API}/conversations/${activeConvId}/messages`, {
-        method: 'POST', headers: { ...authHeaders, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text }),
-      });
+      let res;
+      if (file) {
+        const fd = new FormData();
+        fd.append('message', text);
+        fd.append('attachment', file);
+        res = await fetch(`${API}/conversations/${activeConvId}/messages`, {
+          method: 'POST', headers: authHeaders, body: fd,
+        });
+      } else {
+        res = await fetch(`${API}/conversations/${activeConvId}/messages`, {
+          method: 'POST', headers: { ...authHeaders, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text }),
+        });
+      }
       if (res.ok) {
         await loadMessages(activeConvId);
         await loadConversations();
@@ -296,6 +377,22 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
     } finally {
       setSendBusy(false);
     }
+  };
+
+  // Fetches the real phone/email/address for whoever's on the other end of
+  // the open conversation — public_user_view() normally redacts a Farmer's
+  // phone from other Farmers, but the two of you are already directly
+  // connected in this thread, so /conversations/<id>/contact allows it.
+  const openContactModal = async () => {
+    if (!activeConvId) return;
+    setContactModalOpen(true);
+    setContactLoading(true);
+    setContactDetails(null);
+    try {
+      const res = await fetch(`${API}/conversations/${activeConvId}/contact`, { headers: authHeaders });
+      if (res.ok) setContactDetails(await res.json());
+    } catch { /* leave contactDetails null — modal shows an error state */ }
+    setContactLoading(false);
   };
 
   const handleCreateCase = async (e) => {
@@ -621,24 +718,23 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
               <button onClick={() => setActiveConvId(null)} className="md:hidden w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-800" aria-label="Back to conversations">
                 <ArrowLeft size={18} />
               </button>
-              <Avatar user={activeConv.other_user} size="md" />
-              <div className="flex-1 min-w-0">
-                <h4 className="font-black text-gray-900 text-sm leading-none mb-0.5">{activeConv.other_user?.full_name}</h4>
-                <p className="text-[11px] text-gray-500 font-medium">
-                  {activeConv.other_user?.role}{activeConv.other_user?.org_name ? ` · ${activeConv.other_user.org_name}` : ''}
-                </p>
-              </div>
+              <button onClick={openContactModal} className="flex items-center gap-3 flex-1 min-w-0 text-left" aria-label={`View ${activeConv.other_user?.full_name}'s details`}>
+                <Avatar user={activeConv.other_user} size="md" />
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-black text-gray-900 text-sm leading-none mb-0.5">{activeConv.other_user?.full_name}</h4>
+                  <p className="text-[11px] text-gray-500 font-medium">
+                    {activeConv.other_user?.role}{activeConv.other_user?.org_name ? ` · ${activeConv.other_user.org_name}` : ''}
+                  </p>
+                </div>
+              </button>
               <div className="flex items-center gap-2">
                 {activeConv.category === 'Emergency' && (
                   <span className="flex items-center gap-1 bg-red-600 text-white text-[9px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest animate-pulse">
                     <Zap size={10} /> URGENT
                   </span>
                 )}
-                <button className="w-9 h-9 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-gray-200 transition" aria-label="Voice call">
+                <button onClick={openContactModal} className="w-9 h-9 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-gray-200 transition" aria-label="Contact details">
                   <PhoneCall size={17} />
-                </button>
-                <button className="w-9 h-9 bg-gray-100 text-gray-500 rounded-full flex items-center justify-center hover:bg-gray-200 transition" aria-label="More options">
-                  <MoreVertical size={17} />
                 </button>
               </div>
             </div>
@@ -665,7 +761,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
               {activeMessages.length === 0 ? (
                 <p className="text-center text-xs text-gray-400 font-medium py-8">No messages yet — say hello.</p>
               ) : activeMessages.map(msg => (
-                <MessageBubble key={msg.id} msg={msg} isOwn={msg.sender_id === currentUser?.id} />
+                <MessageBubble key={msg.id} msg={msg} isOwn={msg.sender_id === currentUser?.id} token={currentUser?.token} />
               ))}
               <div ref={chatEndRef} />
             </div>
@@ -674,8 +770,29 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
                 bubble, which sits at bottom-right of the whole viewport and
                 would otherwise sit on top of it and block clicks. */}
             <div className="px-4 pr-24 py-3 bg-gray-50 border-t border-gray-200">
+              {attachmentFile && (
+                <div className="flex items-center gap-2 mb-2 px-3 py-2 bg-white rounded-xl border border-gray-200 w-fit max-w-full">
+                  <Paperclip size={13} className="text-gray-400 shrink-0" />
+                  <span className="text-xs font-bold text-gray-700 truncate max-w-[200px]">{attachmentFile.name}</span>
+                  <button onClick={() => setAttachmentFile(null)} className="text-gray-400 hover:text-red-500 transition shrink-0" aria-label="Remove attachment">
+                    <X size={13} />
+                  </button>
+                </div>
+              )}
               <div className="flex items-center gap-2 bg-white rounded-full px-4 py-2 shadow-sm border border-gray-200 focus-within:border-pfuma-green/50 focus-within:shadow-md transition">
-                <button className="text-gray-400 hover:text-pfuma-green transition shrink-0" aria-label="Attach file"><Paperclip size={18} /></button>
+                <input
+                  ref={attachInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={e => { setAttachmentFile(e.target.files?.[0] || null); e.target.value = ''; }}
+                />
+                <button
+                  onClick={() => attachInputRef.current?.click()}
+                  className="text-gray-400 hover:text-pfuma-green transition shrink-0"
+                  aria-label="Attach file"
+                >
+                  <Paperclip size={18} />
+                </button>
                 <input
                   ref={inputRef}
                   type="text"
@@ -689,7 +806,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
                 />
                 <button
                   onClick={handleSend}
-                  disabled={!chatInput.trim() || sendBusy}
+                  disabled={(!chatInput.trim() && !attachmentFile) || sendBusy}
                   className="w-9 h-9 bg-pfuma-green text-white rounded-full flex items-center justify-center hover:bg-green-700 transition disabled:opacity-40 disabled:cursor-not-allowed shrink-0 shadow-md"
                   aria-label="Send"
                 >
@@ -722,6 +839,62 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
           </div>
         )}
       </div>
+
+      {/* CONTACT DETAILS — the other party's phone/email, visible because
+          you're already directly connected in this conversation (see
+          backend /conversations/<id>/contact). */}
+      {contactModalOpen && (
+        <div className="fixed inset-0 z-[3200] flex items-center justify-center bg-gray-950/60 backdrop-blur-sm p-4" onClick={() => setContactModalOpen(false)}>
+          <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6" onClick={e => e.stopPropagation()}>
+            {contactLoading ? (
+              <div className="py-10 flex justify-center"><Loader2 size={22} className="animate-spin text-pfuma-green" /></div>
+            ) : !contactDetails ? (
+              <p className="text-sm text-gray-400 font-medium text-center py-6">Could not load contact details.</p>
+            ) : (
+              <>
+                <div className="flex flex-col items-center text-center mb-5">
+                  <Avatar user={contactDetails} size="lg" />
+                  <h3 className="text-lg font-black text-gray-900 mt-3">{contactDetails.full_name}</h3>
+                  <p className="text-xs text-gray-500 font-bold uppercase tracking-wide mt-0.5">
+                    {contactDetails.role}{contactDetails.org_name ? ` · ${contactDetails.org_name}` : ''}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  {contactDetails.phone && (
+                    <a href={`tel:${contactDetails.phone}`} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition">
+                      <PhoneCall size={15} className="text-pfuma-green shrink-0" />
+                      <span className="text-sm font-bold text-gray-800">{contactDetails.phone}</span>
+                    </a>
+                  )}
+                  {contactDetails.email && (
+                    <a href={`mailto:${contactDetails.email}`} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition">
+                      <Mail size={15} className="text-pfuma-green shrink-0" />
+                      <span className="text-sm font-bold text-gray-800 truncate">{contactDetails.email}</span>
+                    </a>
+                  )}
+                  {(contactDetails.address || contactDetails.district || contactDetails.province) && (
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                      <MapPin size={15} className="text-pfuma-green shrink-0" />
+                      <span className="text-sm font-bold text-gray-800">
+                        {contactDetails.address || [contactDetails.district, contactDetails.province].filter(Boolean).join(', ')}
+                      </span>
+                    </div>
+                  )}
+                  {contactDetails.speciality && (
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                      <Stethoscope size={15} className="text-pfuma-green shrink-0" />
+                      <span className="text-sm font-bold text-gray-800">{contactDetails.speciality}</span>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+            <button onClick={() => setContactModalOpen(false)} className="w-full mt-5 py-3 bg-gray-100 text-gray-600 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-gray-200 transition">
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

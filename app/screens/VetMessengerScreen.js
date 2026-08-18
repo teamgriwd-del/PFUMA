@@ -2,13 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
   StyleSheet, StatusBar, KeyboardAvoidingView, Platform, Linking, ActivityIndicator,
+  Image, Modal, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 import {
   Send, MapPin, ShieldCheck, ClipboardList, MessageSquare, FileText, CheckCircle,
-  Siren, Stethoscope, Pill, Sprout, Store, Users, ArrowLeft, Phone,
+  Siren, Stethoscope, Pill, Sprout, Store, Users, ArrowLeft, Phone, Paperclip, X, Mail,
 } from 'lucide-react-native';
-import { COLORS } from '../config';
+import { COLORS, API } from '../config';
 import { authFetch, authJson } from '../api';
 
 const ROLE_META = {
@@ -89,6 +91,10 @@ export default function VetMessengerScreen({ currentUser, route }) {
   const [sendError, setSendError]           = useState(null);
   const [input, setInput]                   = useState('');
   const [category, setCategory]             = useState('General');
+  const [attachment, setAttachment]         = useState(null); // { uri, name, type }
+  const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [contactDetails, setContactDetails] = useState(null);
+  const [contactLoading, setContactLoading] = useState(false);
   const scrollRef = useRef(null);
 
   // Real user directory — every verified user can message any other verified
@@ -128,6 +134,7 @@ export default function VetMessengerScreen({ currentUser, route }) {
         setMessages(msgsRes.data.map(m => ({
           id: m.id, text: m.message, from: m.sender_id === currentUser.id ? 'me' : 'them',
           time: new Date(m.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          attachmentUrl: m.attachment_url, attachmentName: m.attachment_name,
         })));
       }
     } else {
@@ -136,11 +143,40 @@ export default function VetMessengerScreen({ currentUser, route }) {
     setLoadingMsgs(false);
   };
 
+  const pickAttachment = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) { Alert.alert('Photo access needed', 'Enable photo library access in Settings to attach a photo.'); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
+    if (result.canceled || !result.assets?.[0]) return;
+    const asset = result.assets[0];
+    const filename = asset.uri.split('/').pop();
+    const ext = (filename.split('.').pop() || 'jpg').toLowerCase();
+    setAttachment({ uri: asset.uri, name: filename, type: `image/${ext === 'jpg' ? 'jpeg' : ext}` });
+  };
+
+  // The other party's phone/email — public_user_view() on the backend
+  // normally redacts a Farmer's phone from other Farmers, but /contact
+  // allows it specifically because you're already directly connected in
+  // this conversation.
+  const openContactDetails = async () => {
+    if (!conversationId) return;
+    setContactModalOpen(true);
+    setContactLoading(true);
+    setContactDetails(null);
+    try {
+      const res = await authFetch(currentUser, `/conversations/${conversationId}/contact`);
+      if (res.ok) setContactDetails(await res.json());
+    } catch { /* leave contactDetails null — modal shows an error state */ }
+    setContactLoading(false);
+  };
+
   const sendMessage = async () => {
     const text = input.trim();
-    if (!text || !selectedContact) return;
+    if ((!text && !attachment) || !selectedContact) return;
     setInput('');
     setSendError(null);
+    const file = attachment;
+    setAttachment(null);
 
     // Category chips only matter the first time a thread is created — the
     // backend files Emergency/Vaccination/Trade Certification as distinct
@@ -158,16 +194,30 @@ export default function VetMessengerScreen({ currentUser, route }) {
     }
     if (!convId) { setSendError('No conversation open.'); return; }
 
-    const optimistic = { id: `local-${Date.now()}`, text, from: 'me', time: now() };
+    const optimistic = { id: `local-${Date.now()}`, text, from: 'me', time: now(), attachmentPreview: file?.uri };
     setMessages(prev => [...prev, optimistic]);
 
-    const { ok, data } = await authJson(currentUser, `/conversations/${convId}/messages`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text }),
-    });
-    if (!ok) {
+    let res;
+    if (file) {
+      const fd = new FormData();
+      fd.append('message', text);
+      fd.append('attachment', file);
+      res = await authFetch(currentUser, `/conversations/${convId}/messages`, { method: 'POST', body: fd });
+    } else {
+      res = await authFetch(currentUser, `/conversations/${convId}/messages`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text }),
+      });
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
       setMessages(prev => prev.filter(m => m.id !== optimistic.id));
       setSendError(data.error || 'Message failed to send — try again.');
       setInput(text);
+      setAttachment(file);
+    } else {
+      setMessages(prev => prev.map(m => m.id === optimistic.id
+        ? { ...m, id: data.id, attachmentUrl: data.attachment_url, attachmentName: data.attachment_name }
+        : m));
     }
   };
 
@@ -281,15 +331,17 @@ export default function VetMessengerScreen({ currentUser, route }) {
         <TouchableOpacity style={s.backBtn} onPress={() => setSelectedContact(null)} activeOpacity={0.8}>
           <ArrowLeft size={20} color="#fff" />
         </TouchableOpacity>
-        <View style={[s.avatarSm, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-          {selectedContact.icon
-            ? <selectedContact.icon size={16} color="#fff" />
-            : <Text style={[s.avatarText, { fontSize: 14 }]}>{selectedContact.avatar}</Text>}
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={s.chatName}>{selectedContact.name}</Text>
-          <Text style={s.chatStatus}>{selectedContact.role}{selectedContact.speciality ? ` · ${selectedContact.speciality}` : ''}</Text>
-        </View>
+        <TouchableOpacity style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }} onPress={openContactDetails} activeOpacity={0.8}>
+          <View style={[s.avatarSm, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+            {selectedContact.icon
+              ? <selectedContact.icon size={16} color="#fff" />
+              : <Text style={[s.avatarText, { fontSize: 14 }]}>{selectedContact.avatar}</Text>}
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.chatName}>{selectedContact.name}</Text>
+            <Text style={s.chatStatus}>{selectedContact.role}{selectedContact.speciality ? ` · ${selectedContact.speciality}` : ''}</Text>
+          </View>
+        </TouchableOpacity>
       </View>
 
       {/* Category picker (vets) or role tag (everyone else) */}
@@ -338,7 +390,25 @@ export default function VetMessengerScreen({ currentUser, route }) {
               </View>
             )}
             <View style={[s.bubble, msg.from === 'me' ? s.bubbleUser : s.bubbleVet]}>
-              <Text style={[s.bubbleText, msg.from === 'me' && { color: '#fff' }]}>{msg.text}</Text>
+              {msg.attachmentPreview && (
+                <Image source={{ uri: msg.attachmentPreview }} style={s.attachmentImg} />
+              )}
+              {!msg.attachmentPreview && msg.attachmentUrl && (
+                /\.(jpg|jpeg|png|webp)$/i.test(msg.attachmentName || '') ? (
+                  <Image
+                    source={{ uri: `${API}${msg.attachmentUrl}`, headers: { Authorization: `Bearer ${currentUser.token}` } }}
+                    style={s.attachmentImg}
+                  />
+                ) : (
+                  <View style={[s.attachmentFile, msg.from === 'me' && { backgroundColor: 'rgba(255,255,255,0.15)' }]}>
+                    <Paperclip size={13} color={msg.from === 'me' ? '#fff' : '#555'} />
+                    <Text style={[s.attachmentFileName, msg.from === 'me' && { color: '#fff' }]} numberOfLines={1}>
+                      {msg.attachmentName || 'Attachment'}
+                    </Text>
+                  </View>
+                )
+              )}
+              {!!msg.text && <Text style={[s.bubbleText, msg.from === 'me' && { color: '#fff' }]}>{msg.text}</Text>}
               <Text style={[s.bubbleTime, msg.from === 'me' && { color: 'rgba(255,255,255,0.6)' }]}>{msg.time}</Text>
             </View>
           </View>
@@ -348,7 +418,19 @@ export default function VetMessengerScreen({ currentUser, route }) {
       {/* Input bar */}
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {sendError ? <Text style={s.errorBanner}>{sendError}</Text> : null}
+        {attachment && (
+          <View style={s.attachPreviewRow}>
+            <Image source={{ uri: attachment.uri }} style={s.attachPreviewImg} />
+            <Text style={s.attachPreviewName} numberOfLines={1}>{attachment.name}</Text>
+            <TouchableOpacity onPress={() => setAttachment(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <X size={16} color="#888" />
+            </TouchableOpacity>
+          </View>
+        )}
         <View style={s.inputBar}>
+          <TouchableOpacity style={s.attachBtn} onPress={pickAttachment} activeOpacity={0.8}>
+            <Paperclip size={19} color="#9ca3af" />
+          </TouchableOpacity>
           <TextInput
             style={s.textInput}
             placeholder={`Message ${selectedContact.name}…`}
@@ -359,15 +441,60 @@ export default function VetMessengerScreen({ currentUser, route }) {
             maxLength={500}
           />
           <TouchableOpacity
-            style={[s.sendBtn, { backgroundColor: selectedContact.color, opacity: input.trim() ? 1 : 0.4 }]}
+            style={[s.sendBtn, { backgroundColor: selectedContact.color, opacity: (input.trim() || attachment) ? 1 : 0.4 }]}
             onPress={sendMessage}
             activeOpacity={0.8}
-            disabled={!input.trim()}
+            disabled={!input.trim() && !attachment}
           >
             <Send size={18} color="#fff" />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Contact details — phone/email for whoever you're chatting with,
+          real because you're already directly connected in this thread. */}
+      <Modal visible={contactModalOpen} animationType="fade" transparent onRequestClose={() => setContactModalOpen(false)}>
+        <TouchableOpacity style={s.modalOverlay} activeOpacity={1} onPress={() => setContactModalOpen(false)}>
+          <TouchableOpacity style={s.contactSheet} activeOpacity={1} onPress={() => {}}>
+            {contactLoading ? (
+              <ActivityIndicator color={COLORS.primary} style={{ marginVertical: 30 }} />
+            ) : !contactDetails ? (
+              <Text style={{ color: COLORS.muted, textAlign: 'center', paddingVertical: 24 }}>Could not load contact details.</Text>
+            ) : (
+              <>
+                <View style={[s.avatar, { backgroundColor: selectedContact.color, alignSelf: 'center', marginBottom: 12 }]}>
+                  {selectedContact.icon
+                    ? <selectedContact.icon size={24} color="#fff" />
+                    : <Text style={s.avatarText}>{selectedContact.avatar}</Text>}
+                </View>
+                <Text style={s.contactName}>{contactDetails.full_name}</Text>
+                <Text style={s.contactRole}>{contactDetails.role}{contactDetails.org_name ? ` · ${contactDetails.org_name}` : ''}</Text>
+                {contactDetails.phone && (
+                  <TouchableOpacity style={s.contactRow} onPress={() => Linking.openURL(`tel:${contactDetails.phone}`)} activeOpacity={0.8}>
+                    <Phone size={15} color={COLORS.primary} />
+                    <Text style={s.contactRowText}>{contactDetails.phone}</Text>
+                  </TouchableOpacity>
+                )}
+                {contactDetails.email && (
+                  <TouchableOpacity style={s.contactRow} onPress={() => Linking.openURL(`mailto:${contactDetails.email}`)} activeOpacity={0.8}>
+                    <Mail size={15} color={COLORS.primary} />
+                    <Text style={s.contactRowText}>{contactDetails.email}</Text>
+                  </TouchableOpacity>
+                )}
+                {(contactDetails.address || contactDetails.district || contactDetails.province) && (
+                  <View style={s.contactRow}>
+                    <MapPin size={15} color={COLORS.primary} />
+                    <Text style={s.contactRowText}>{contactDetails.address || [contactDetails.district, contactDetails.province].filter(Boolean).join(', ')}</Text>
+                  </View>
+                )}
+              </>
+            )}
+            <TouchableOpacity style={s.contactCloseBtn} onPress={() => setContactModalOpen(false)} activeOpacity={0.8}>
+              <Text style={s.contactCloseText}>Close</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -434,4 +561,22 @@ const s = StyleSheet.create({
   inputBar:        { flexDirection: 'row', alignItems: 'flex-end', backgroundColor: '#fff', paddingHorizontal: 14, paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#e5e7eb', gap: 10 },
   textInput:       { flex: 1, backgroundColor: '#f3f4f6', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 14, color: '#111827', maxHeight: 100 },
   sendBtn:         { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
+  attachBtn:       { width: 38, height: 38, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
+
+  attachmentImg:   { width: 200, height: 150, borderRadius: 12, marginBottom: 6 },
+  attachmentFile:  { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#f3f4f6', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 6 },
+  attachmentFileName: { fontSize: 12, fontWeight: '700', color: '#374151', maxWidth: 160 },
+
+  attachPreviewRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff', paddingHorizontal: 14, paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#e5e7eb' },
+  attachPreviewImg:  { width: 36, height: 36, borderRadius: 8 },
+  attachPreviewName: { flex: 1, fontSize: 12, fontWeight: '700', color: '#374151' },
+
+  modalOverlay:    { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  contactSheet:    { backgroundColor: '#fff', borderRadius: 24, padding: 24, width: '100%', maxWidth: 340 },
+  contactName:     { fontSize: 17, fontWeight: '900', color: '#111827', textAlign: 'center' },
+  contactRole:     { fontSize: 12, fontWeight: '700', color: '#9ca3af', textAlign: 'center', marginTop: 2, marginBottom: 16, textTransform: 'uppercase', letterSpacing: 0.5 },
+  contactRow:      { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, marginBottom: 8 },
+  contactRowText:  { fontSize: 13, fontWeight: '700', color: '#111827', flex: 1 },
+  contactCloseBtn: { backgroundColor: '#f3f4f6', borderRadius: 14, paddingVertical: 12, alignItems: 'center', marginTop: 8 },
+  contactCloseText:{ fontSize: 12, fontWeight: '800', color: '#6b7280', textTransform: 'uppercase', letterSpacing: 0.5 },
 });

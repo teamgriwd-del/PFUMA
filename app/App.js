@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -94,7 +94,7 @@ const TabIcon = ({ icon: Icon, label, focused, roleColor }) => (
   </View>
 );
 
-function RoleTabNavigator({ currentUser, onLogout }) {
+function RoleTabNavigator({ currentUser, onLogout, onUserUpdate }) {
   const role  = currentUser?.role || 'Farmer';
   const tabs  = ROLE_TABS[role] || ROLE_TABS.Farmer;
   const color = ROLE_COLORS[role] || COLORS.primary;
@@ -121,7 +121,7 @@ function RoleTabNavigator({ currentUser, onLogout }) {
             ),
           }}
         >
-          {props => <t.screen {...props} currentUser={currentUser} onLogout={onLogout} />}
+          {props => <t.screen {...props} currentUser={currentUser} onLogout={onLogout} onUserUpdate={onUserUpdate} />}
         </Tab.Screen>
       ))}
     </Tab.Navigator>
@@ -130,6 +130,8 @@ function RoleTabNavigator({ currentUser, onLogout }) {
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
+  const [activeRoute, setActiveRoute] = useState(null);
+  const navRef = useNavigationContainerRef();
   const [fontsLoaded] = useFonts({
     PlusJakartaSans_400Regular,
     PlusJakartaSans_600SemiBold,
@@ -155,13 +157,22 @@ export default function App() {
     <SafeAreaProvider onLayout={onLayoutRootView}>
       {/* Wrap in a relative View so the FAB can be absolutely positioned above the tab bar */}
       <View style={{ flex: 1 }}>
-        <NavigationContainer>
+        <NavigationContainer
+          ref={navRef}
+          onReady={() => setActiveRoute(navRef.getCurrentRoute()?.name)}
+          onStateChange={() => setActiveRoute(navRef.getCurrentRoute()?.name)}
+        >
           <RoleTabNavigator
             currentUser={currentUser}
             onLogout={() => setCurrentUser(null)}
+            onUserUpdate={patch => setCurrentUser(prev => ({ ...prev, ...patch }))}
           />
         </NavigationContainer>
-        <JindaFAB currentUser={currentUser} />
+        {/* Hidden on the Messages tab — the floating bubble sits directly on
+            top of the chat's own send button there (see JindaFAB's fixed
+            bottom-right position), which is worse than redundant since a
+            chat screen already has messaging. */}
+        {activeRoute !== 'Vet' && <JindaFAB currentUser={currentUser} />}
       </View>
     </SafeAreaProvider>
   );

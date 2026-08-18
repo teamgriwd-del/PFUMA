@@ -211,7 +211,9 @@ const AuthPortal = ({ onLogin }) => {
     station: apiUser.station,
     jurisdictionProvince: apiUser.jurisdiction_province,
     verificationStatus: apiUser.verification_status,
-    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${apiUser.full_name || 'PFUMA'}`,
+    // Real uploaded profile photo when the user has set one; otherwise the
+    // same deterministic placeholder avatar as always.
+    avatar: apiUser.avatar_url ? `${API}${apiUser.avatar_url}` : `https://api.dicebear.com/7.x/avataaars/svg?seed=${apiUser.full_name || 'PFUMA'}`,
   });
 
   // ── login ──
