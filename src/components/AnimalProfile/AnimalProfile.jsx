@@ -43,9 +43,23 @@ const Field = ({ id, label, required, children }) => (
 );
 
 // ── HEALTH PASSPORT MODAL ──────────────────────────────────────────────────
-const HealthPassport = ({ animal, auditLog, onClose }) => (
-  <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-gray-900/90 backdrop-blur-md">
-    <div className="bg-white w-full max-w-4xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+// Print/Export PDF/download are all the same real capability here: the
+// browser's native print dialog, which every modern browser can also target
+// at "Save as PDF" — that covers all three without a heavy client-side PDF
+// library. The print-only <style> block hides the rest of the app and the
+// modal chrome (close/print buttons) so only the passport card is printed.
+const HealthPassport = ({ animal, auditLog, onClose }) => {
+  const handlePrint = () => window.print();
+  return (
+  <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-gray-900/90 backdrop-blur-md print:static print:bg-white print:p-0 print:block">
+    <style>{`
+      @media print {
+        body * { visibility: hidden; }
+        #pfuma-health-passport, #pfuma-health-passport * { visibility: visible; }
+        #pfuma-health-passport { position: absolute; inset: 0; width: 100%; max-height: none; box-shadow: none; border-radius: 0; }
+      }
+    `}</style>
+    <div id="pfuma-health-passport" className="bg-white w-full max-w-4xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:overflow-visible">
       {/* Header */}
       <div className="bg-pfuma-green px-10 py-8 text-white flex justify-between items-center relative overflow-hidden">
         <div className="relative z-10">
@@ -55,7 +69,7 @@ const HealthPassport = ({ animal, auditLog, onClose }) => (
           </div>
           <p className="text-sm opacity-60 font-medium uppercase tracking-[3px]">Verified Digital Pedigree & Medical Record</p>
         </div>
-        <button onClick={onClose} className="relative z-10 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition" aria-label="Close passport">
+        <button onClick={onClose} className="relative z-10 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition print:hidden" aria-label="Close passport">
           <X size={20} />
         </button>
         <div className="absolute -top-10 -right-10 w-64 h-64 bg-white/5 rounded-full" aria-hidden="true" />
@@ -123,18 +137,19 @@ const HealthPassport = ({ animal, auditLog, onClose }) => (
       </div>
 
       {/* Footer */}
-      <div className="px-10 py-5 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
+      <div className="px-10 py-5 bg-gray-50 border-t border-gray-100 flex justify-between items-center print:hidden">
         <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
           <ShieldCheck size={14} className="text-pfuma-green" /> PFUMA Verified · {new Date().getFullYear()}
         </div>
         <div className="flex gap-3">
-          <button className="px-6 py-2.5 bg-white border-2 border-gray-200 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-gray-100 transition">Print</button>
-          <button className="px-6 py-2.5 bg-pfuma-green text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-md hover:bg-green-700 transition">Export PDF</button>
+          <button onClick={handlePrint} className="px-6 py-2.5 bg-white border-2 border-gray-200 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-gray-100 transition">Print</button>
+          <button onClick={handlePrint} title="Choose &quot;Save as PDF&quot; as the destination in the print dialog to download it" className="px-6 py-2.5 bg-pfuma-green text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-md hover:bg-green-700 transition">Export PDF</button>
         </div>
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // ── REGISTRATION FORM ──────────────────────────────────────────────────────
 const RegistrationForm = ({ onSubmit, onCancel }) => {

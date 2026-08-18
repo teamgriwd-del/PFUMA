@@ -241,8 +241,11 @@ const CooperativeHome = ({ currentUser, coop, onChanged }) => {
               <span className="text-[10px] font-black text-yellow-400 uppercase tracking-[3px]">Cooperative</span>
             </div>
             <h2 className="text-2xl font-black text-white leading-tight mb-1">{coop.name}</h2>
-            <p className="text-gray-400 text-sm font-medium">
+            <p className="text-gray-400 text-sm font-medium mb-2">
               {coop.district ? `${coop.district}, ` : ''}{coop.province}{coop.dip_tank_location ? ` · ${coop.dip_tank_location}` : ''} · {coop.members.length} member{coop.members.length !== 1 ? 's' : ''}
+            </p>
+            <p className="text-gray-500 text-xs font-medium leading-relaxed max-w-lg">
+              This is your shared group for the tasks that only make sense done together: agree one dip day below so the whole group shows up on the same day instead of coordinating by word of mouth, and post a vet request that any verified vet in {coop.province} can pick up for a single group visit — cheaper and faster than everyone booking their own.
             </p>
           </div>
           <button onClick={leave} disabled={busy} className="shrink-0 flex items-center gap-1.5 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-[10px] font-black uppercase transition disabled:opacity-50">
@@ -260,7 +263,8 @@ const CooperativeHome = ({ currentUser, coop, onChanged }) => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Members */}
         <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-          <h3 className="text-sm font-black text-gray-800 mb-4 flex items-center gap-2"><Users size={15} className="text-pfuma-green" /> Members</h3>
+          <h3 className="text-sm font-black text-gray-800 mb-1 flex items-center gap-2"><Users size={15} className="text-pfuma-green" /> Members</h3>
+          <p className="text-[10px] text-gray-400 font-medium mb-3">Everyone sharing this dip tank / grazing group, and how many animals each of them has registered.</p>
           <div className="space-y-2.5">
             {coop.members.map(m => (
               <div key={m.id} className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-xl">
@@ -280,10 +284,13 @@ const CooperativeHome = ({ currentUser, coop, onChanged }) => {
 
         {/* Dip schedule */}
         <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-1">
             <h3 className="text-sm font-black text-gray-800 flex items-center gap-2"><Calendar size={15} className="text-blue-500" /> Dip Schedule</h3>
             {isAdmin && <button onClick={() => setShowDipForm(p => !p)} className="text-[10px] font-black text-pfuma-green hover:underline uppercase">+ Add</button>}
           </div>
+          <p className="text-[10px] text-gray-400 font-medium mb-3">
+            {isAdmin ? 'One shared dip date visible to every member — you set it since you admin this group.' : 'The next agreed dip day for the whole group, set by your group admin.'}
+          </p>
           {showDipForm && (
             <form onSubmit={submitDip} className="mb-4 space-y-2 bg-gray-50 rounded-xl p-3">
               <input required type="date" min={new Date().toISOString().slice(0, 10)} value={dipForm.scheduled_date} onChange={e => setDipForm(p => ({ ...p, scheduled_date: e.target.value }))}
@@ -310,10 +317,11 @@ const CooperativeHome = ({ currentUser, coop, onChanged }) => {
 
         {/* Vet requests */}
         <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-1">
             <h3 className="text-sm font-black text-gray-800 flex items-center gap-2"><Stethoscope size={15} className="text-pfuma-gold" /> Vet Requests</h3>
             <button onClick={() => setShowReqForm(p => !p)} className="text-[10px] font-black text-pfuma-green hover:underline uppercase">+ Request</button>
           </div>
+          <p className="text-[10px] text-gray-400 font-medium mb-3">Post once for the whole group — any verified vet in {coop.province} can claim it and see it as "open" until they do.</p>
           {showReqForm && (
             <form onSubmit={submitRequest} className="mb-4 space-y-2 bg-gray-50 rounded-xl p-3">
               <input required placeholder="What's needed? e.g. Group health check on dip day" value={reqForm.reason} onChange={e => setReqForm(p => ({ ...p, reason: e.target.value }))}

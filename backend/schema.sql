@@ -195,6 +195,54 @@ CREATE TABLE IF NOT EXISTS bids (
   FOREIGN KEY (bidder_id)  REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- ── NOTIFICATIONS ────────────────────────────────────────────
+-- Real events a user needs to know about (a bid came in, a bid they placed
+-- was accepted, ...). related_user_id is set whenever the notification is
+-- "about" another person, so the UI can offer "Message them" straight into
+-- PFUMA Messenger instead of making the user go find that person again.
+CREATE TABLE IF NOT EXISTS notifications (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  user_id         INT NOT NULL,            -- FK → users.id (recipient)
+  type            VARCHAR(40) NOT NULL,    -- 'bid_placed', 'bid_accepted', 'med_recommendation', ...
+  title           VARCHAR(150) NOT NULL,
+  message         VARCHAR(300) NOT NULL,
+  related_user_id INT NULL,                -- FK → users.id (the other party, if any)
+  listing_id      INT NULL,                -- FK → marketplace_listings.id
+  animal_id       INT NULL,                -- FK → animals.id
+  read_at         TIMESTAMP NULL,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id)         REFERENCES users(id)                 ON DELETE CASCADE,
+  FOREIGN KEY (related_user_id) REFERENCES users(id)                 ON DELETE SET NULL,
+  FOREIGN KEY (listing_id)      REFERENCES marketplace_listings(id)  ON DELETE SET NULL,
+  FOREIGN KEY (animal_id)       REFERENCES animals(id)                ON DELETE SET NULL
+);
+CREATE INDEX idx_notifications_user_time ON notifications (user_id, created_at DESC);
+
+-- ── MEDICATION RECOMMENDATIONS ───────────────────────────────
+-- A vet recommends a specific medicine/dose to a farmer for one of their
+-- animals; the farmer administers it from their own cabinet. This is the
+-- clinical direction real veterinary practice runs in (vet prescribes,
+-- farmer/owner administers under that guidance) — the farmer no longer
+-- self-selects a medicine and dose with no vet involved.
+CREATE TABLE IF NOT EXISTS medication_recommendations (
+  id             INT AUTO_INCREMENT PRIMARY KEY,
+  animal_id      INT NOT NULL,
+  farmer_id      INT NOT NULL,             -- FK → users.id (the animal's owner, denormalized for a fast farmer-side query)
+  vet_id         INT NOT NULL,             -- FK → users.id (Veterinarian who recommended it)
+  medicine_name  VARCHAR(120) NOT NULL,    -- matches DOSAGE_RATES / medicine_inventory naming
+  dose_ml        DECIMAL(8,2) NOT NULL,
+  frequency      VARCHAR(100),
+  notes          TEXT,
+  status         ENUM('pending','administered','declined') DEFAULT 'pending',
+  created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  administered_at TIMESTAMP NULL,
+  FOREIGN KEY (animal_id) REFERENCES animals(id) ON DELETE CASCADE,
+  FOREIGN KEY (farmer_id) REFERENCES users(id)   ON DELETE CASCADE,
+  FOREIGN KEY (vet_id)    REFERENCES users(id)   ON DELETE CASCADE
+);
+CREATE INDEX idx_medrec_animal ON medication_recommendations (animal_id, status);
+CREATE INDEX idx_medrec_farmer ON medication_recommendations (farmer_id, status);
+
 -- ── VET CASES / MESSAGES ─────────────────────────────────────
 -- Vet Messenger cases from the web app. Also used by mobile.
 CREATE TABLE IF NOT EXISTS vet_cases (

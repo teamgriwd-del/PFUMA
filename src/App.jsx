@@ -13,13 +13,14 @@ import Jinda      from './components/IntelAI/PfumaIntelAI';
 import AuthPortal        from './components/IntelAI/AuthPortal';
 import ErrorBoundary     from './components/ErrorBoundary';
 import { HEALTH_PROTOCOLS } from './components/HealthManagement/healthData';
+import { DOSAGE_RATES } from './components/HealthManagement/dosageData';
 import {
   LayoutDashboard, Users, HeartPulse, Stethoscope, MessageSquare,
   Bell, LogOut, ShieldCheck, TrendingUp, Package, ShoppingCart, Activity,
   Truck, BarChart3, Globe, AlertTriangle, CheckCircle, ChevronRight,
   Zap, Clock, ArrowRight, Tag, Pill, MapPin, FileText,
   RefreshCw, DollarSign, Target, Box, PhoneCall, Star, Wheat, Store,
-  Sprout, Check, Syringe, Shield, UserPlus, X, Menu, Eye, EyeOff, Handshake, Radio,
+  Sprout, Check, Syringe, Shield, UserPlus, X, Menu, Eye, EyeOff, Handshake, Radio, FlaskConical,
 } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis } from 'recharts';
 import './App.css';
@@ -497,6 +498,85 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
 };
 
 // ── VETERINARIAN DASHBOARD ─────────────────────────────────────────────────
+// Module-scope (not nested inside VeterinarianDashboard) so its identity is
+// stable across re-renders — see the matching comment on AnimalProfile's
+// Field for why a component wrapping a live input must never be redefined
+// inside its parent's render body.
+const VetMedicationRecommender = ({ animals, currentUser }) => {
+  const [animalId, setAnimalId] = useState('');
+  const [medicine, setMedicine] = useState(Object.keys(DOSAGE_RATES)[0] || '');
+  const [frequency, setFrequency] = useState('');
+  const [notes, setNotes] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [feedback, setFeedback] = useState(null);
+
+  const animal = animals.find(a => a.id === Number(animalId));
+  const med = DOSAGE_RATES[medicine];
+  const dose = animal && med ? Math.min(med.maxDose || Infinity, (animal.currentWeight / med.per) * med.rate) : null;
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!animal || !med || dose == null) return;
+    setBusy(true); setFeedback(null);
+    try {
+      const res = await fetch(`${API}/medication-recommendations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentUser.token}` },
+        body: JSON.stringify({
+          animal_id: animal.id, medicine_name: medicine, dose_ml: Number(dose.toFixed(1)),
+          frequency: frequency || med.frequency, notes,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setFeedback({ ok: false, msg: data.error || 'Could not send recommendation.' }); return; }
+      setFeedback({ ok: true, msg: `Sent to ${animal.ownerName || 'the farmer'} — they can administer it from their Medicine Cabinet.` });
+      setNotes(''); setFrequency('');
+    } catch {
+      setFeedback({ ok: false, msg: 'Could not reach the PFUMA API.' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+      <h3 className="text-sm font-black text-white mb-1 flex items-center gap-2"><FlaskConical size={15} className="text-blue-400" /> Recommend Medication</h3>
+      <p className="text-[11px] text-gray-500 font-medium mb-4">Prescribe a dose for a specific animal — the farmer administers it from their own cabinet against your recommendation.</p>
+      <form onSubmit={submit} className="space-y-3">
+        <select required value={animalId} onChange={e => setAnimalId(e.target.value)}
+          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-blue-400/50">
+          <option value="" className="text-gray-900">Select an animal...</option>
+          {animals.map(a => (
+            <option key={a.id} value={a.id} className="text-gray-900">
+              {a.name} — {a.ownerName || 'you'} ({a.species}, {a.currentWeight}kg)
+            </option>
+          ))}
+        </select>
+        <select value={medicine} onChange={e => setMedicine(e.target.value)}
+          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-blue-400/50">
+          {Object.keys(DOSAGE_RATES).map(m => <option key={m} value={m} className="text-gray-900">{m}</option>)}
+        </select>
+        {animal && med && (
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2.5 flex items-center justify-between">
+            <span className="text-[10px] text-blue-300 font-black uppercase">Dose for {animal.name}</span>
+            <span className="text-sm font-black text-white">{dose.toFixed(1)} ml</span>
+          </div>
+        )}
+        <input placeholder={med?.frequency || 'Frequency (optional override)'} value={frequency} onChange={e => setFrequency(e.target.value)}
+          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-400/50" />
+        <textarea placeholder="Clinical notes for the farmer (optional)" rows={2} value={notes} onChange={e => setNotes(e.target.value)}
+          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-400/50 resize-none" />
+        {feedback && (
+          <p className={`text-[11px] font-bold ${feedback.ok ? 'text-green-400' : 'text-red-400'}`}>{feedback.msg}</p>
+        )}
+        <button type="submit" disabled={busy || !animalId} className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-[11px] font-black uppercase hover:bg-blue-700 transition disabled:opacity-50">
+          {busy ? 'Sending…' : 'Send Recommendation'}
+        </button>
+      </form>
+    </div>
+  );
+};
+
 const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUser }) => {
   const [farms, setFarms] = useState([]);
   const [reportingHealth, setReportingHealth] = useState([]);
@@ -680,6 +760,8 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
               ))}
             </div>
           </div>
+
+          <VetMedicationRecommender animals={animals} currentUser={currentUser} />
         </div>
 
         {/* Farm registry */}
@@ -1716,7 +1798,23 @@ const animalFromApi = (a) => ({
   imageUrl: resolveImageUrl(a.image_url) || IMAGE_BY_SPECIES[a.species] || IMAGE_BY_SPECIES.Cattle,
   weightHistory: (a.weight_history || []).map(w => ({ month: w.month_label, weight: w.weight_kg })),
   forSale: !!a.for_sale, costToDate: a.cost_to_date || 0,
+  // Only present when a Vet/Police oversight role fetches /animals (it
+  // spans every farm, not just the caller's own) — undefined for a Farmer.
+  ownerId: a.owner_id, ownerName: a.owner_name,
 });
+
+// Backend serializes MySQL TIMESTAMPs as RFC 2822 strings — Date parses
+// that natively. Renders a short relative label for the notification feed.
+const timeAgo = (raw) => {
+  if (!raw) return '';
+  const diffMs = Date.now() - new Date(raw).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+};
 
 // Maps a /health-events row into the shape the audit-log UI expects.
 const auditLogFromApi = (e) => ({
@@ -1734,9 +1832,11 @@ function App() {
   const [sessionChecked, setSessionChecked] = useState(false);
   const [animals,     setAnimals]     = useState([]);
   const [activeTab,   setActiveTab]   = useState('dashboard');
-  // Set by DiseaseDetection's "Call your vet immediately" — carries the
-  // pre-filled Emergency case (subject/animal/description) into VetCommunication
-  // so navigating there actually opens the composer instead of a blank inbox.
+  // Carries an intent into VetCommunication so navigating to Messenger does
+  // something useful instead of landing on a blank inbox: either open the
+  // composer pre-filled with an Emergency case (DiseaseDetection's "Call
+  // your vet immediately"), or jump straight into a conversation with a
+  // specific person (a notification's "Message" action).
   const [vetIntent,   setVetIntent]   = useState(null);
   const requestVetContact = (intent) => { setVetIntent(intent); setActiveTab('vet'); };
   const [completedTasks, setCompletedTasks] = useState([]);
@@ -1749,11 +1849,47 @@ function App() {
   ]);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  // Real per-user events (a bid came in, a bid you placed was accepted, a
+  // vet recommended a medication) — separate from the static regional
+  // alerts array above, which is a different concept (disease/security
+  // alerts shown inside the role dashboards, not personal activity).
+  const [realNotifications, setRealNotifications] = useState([]);
 
   const authFetch = useCallback((path, opts = {}) => fetch(`${API}${path}`, {
     ...opts,
     headers: { ...(opts.headers || {}), Authorization: `Bearer ${currentUser?.token}` },
   }), [currentUser?.token]);
+
+  const loadNotifications = useCallback(async () => {
+    if (!currentUser?.token) return;
+    try {
+      const res = await fetch(`${API}/notifications`, { headers: { Authorization: `Bearer ${currentUser.token}` } });
+      if (res.ok) setRealNotifications(await res.json());
+    } catch { /* offline — keep whatever was last loaded */ }
+  }, [currentUser?.token]);
+
+  useEffect(() => {
+    if (!currentUser?.token) { setRealNotifications([]); return; }
+    loadNotifications();
+    const t = setInterval(loadNotifications, 20000);
+    return () => clearInterval(t);
+  }, [currentUser?.token, loadNotifications]);
+
+  // "Message" on a notification (e.g. a bid was accepted) — starts/reuses a
+  // conversation with the other party and drops the user straight into it,
+  // skipping the "who do you want to message" search VetCommunication
+  // normally shows since we already know exactly who.
+  const messageFromNotification = async (n) => {
+    if (!n.related_user_id) return;
+    setVetIntent({ startConversationWith: n.related_user_id, subject: n.title });
+    setActiveTab('vet');
+    if (!n.read_at) {
+      try {
+        await authFetch(`/notifications/${n.id}/read`, { method: 'PATCH' });
+        setRealNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read_at: new Date().toISOString() } : x));
+      } catch { /* not critical if this fails */ }
+    }
+  };
 
   const loadUserData = useCallback(async (user) => {
     const headers = { Authorization: `Bearer ${user.token}` };
@@ -1874,19 +2010,18 @@ function App() {
     }
   };
 
-  const deductInventoryItem = async (itemId, dose) => {
+  // Re-fetches just the medicine cabinet — used after administering a vet's
+  // medication recommendation, which deducts stock server-side as part of
+  // that same transaction rather than through deductInventoryItem above.
+  const refreshInventory = async () => {
+    if (!currentUser) return;
     try {
-      const res = await authFetch(`/inventory/${itemId}/deduct`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dose }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) return { ok: false, error: data.error || 'Could not update stock — try again.' };
-      setInventory(prev => prev.map(i => i.id === itemId ? { ...i, stock: Number(data.new_stock) } : i));
-      return { ok: true };
-    } catch {
-      return { ok: false, error: 'Offline — stock was not updated.' };
-    }
+      const res = await authFetch(`/inventory/${currentUser.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setInventory(data.map(i => ({ id: i.id, name: i.medicine_name, stock: Number(i.stock), unit: i.unit, min: Number(i.min_stock), supplier: i.supplier, price: Number(i.price_usd) })));
+      }
+    } catch { /* offline */ }
   };
 
   const handleListAnimal = async (id) => {
@@ -2016,11 +2151,38 @@ function App() {
               aria-label="Notifications"
             >
               <Bell size={17} />
-              {notifications.length > 0 && <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-red-500 rounded-full border border-white" />}
+              {(realNotifications.some(n => !n.read_at) || notifications.length > 0) && <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-red-500 rounded-full border border-white" />}
             </button>
             {isNotifOpen && (
-              <div className="absolute top-12 right-0 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 p-5 text-left z-40 animate-in slide-in-from-top-2 duration-200">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Notifications</p>
+              <div className="absolute top-12 right-0 w-80 max-h-[70vh] overflow-y-auto bg-white rounded-2xl shadow-2xl border border-gray-100 p-5 text-left z-40 animate-in slide-in-from-top-2 duration-200">
+                {realNotifications.length > 0 && (
+                  <>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Activity</p>
+                    <div className="space-y-2.5 mb-5">
+                      {realNotifications.map(n => (
+                        <div key={n.id} className={`p-3 rounded-xl ${n.read_at ? 'bg-gray-50' : 'bg-pfuma-green/5 border border-pfuma-green/20'}`}>
+                          <div className="flex items-start gap-2.5">
+                            <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.read_at ? 'bg-gray-300' : 'bg-pfuma-green'}`} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-black text-gray-800">{n.title}</p>
+                              <p className="text-[10px] text-gray-500 font-medium mt-0.5">{n.message}</p>
+                              <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">{timeAgo(n.created_at)}</p>
+                            </div>
+                          </div>
+                          {n.related_user_id && (
+                            <button
+                              onClick={() => messageFromNotification(n)}
+                              className="mt-2 ml-4 flex items-center gap-1.5 px-3 py-1.5 bg-pfuma-green text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition"
+                            >
+                              <MessageSquare size={11} /> Message
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Regional Alerts</p>
                 <div className="space-y-3">
                   {notifications.map(n => (
                     <div key={n.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
@@ -2050,7 +2212,7 @@ function App() {
             </ErrorBoundary>
           )}
           {activeTab === 'profile'     && <ErrorBoundary><AnimalProfile animals={animals} onAddAnimal={addAnimal} auditLog={auditLog} currentUser={currentUser} onListAnimal={handleListAnimal} /></ErrorBoundary>}
-          {activeTab === 'health'      && <ErrorBoundary><HealthManagement animals={animals} completedTasks={completedTasks} setCompletedTasks={setCompletedTasks} auditLog={auditLog} onAddAuditLog={addAuditLog} inventory={inventory} onDeductInventory={deductInventoryItem} /></ErrorBoundary>}
+          {activeTab === 'health'      && <ErrorBoundary><HealthManagement animals={animals} completedTasks={completedTasks} setCompletedTasks={setCompletedTasks} auditLog={auditLog} onAddAuditLog={addAuditLog} inventory={inventory} onRefreshInventory={refreshInventory} currentUser={currentUser} /></ErrorBoundary>}
           {activeTab === 'disease'     && <ErrorBoundary><DiseaseDetection animals={animals} onAddAuditLog={addAuditLog} onCallVet={requestVetContact} /></ErrorBoundary>}
           {activeTab === 'vet'         && <ErrorBoundary><VetCommunication animals={animals} currentUser={currentUser} intent={vetIntent} onIntentConsumed={() => setVetIntent(null)} /></ErrorBoundary>}
           {activeTab === 'marketplace' && <ErrorBoundary><Marketplace currentUser={currentUser} animals={animals} onListAnimal={handleListAnimal} /></ErrorBoundary>}

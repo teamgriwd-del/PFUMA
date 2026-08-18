@@ -176,12 +176,39 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeMessages]);
 
-  // Arriving here from elsewhere in the app (e.g. Disease Detection's "Call
-  // Vet" on a critical result) — open the composer straight to "who do you
-  // want to message", pre-filled with an Emergency case so picking a vet
-  // drops the farmer right into the structured intake form below.
+  // Arriving here from elsewhere in the app carries one of two intents:
+  //  - startConversationWith: we already know exactly who (e.g. a
+  //    notification's "Message" action after a bid was accepted) — skip
+  //    the search step entirely and drop straight into that conversation.
+  //  - category/subject/animalId: Disease Detection's "Call Vet" on a
+  //    critical result — open the composer pre-filled with an Emergency
+  //    case so picking a vet drops the farmer into the intake form below.
   useEffect(() => {
     if (!intent) return;
+
+    if (intent.startConversationWith) {
+      const otherId = intent.startConversationWith;
+      (async () => {
+        try {
+          const res = await fetch(`${API}/conversations`, {
+            method: 'POST', headers: { ...authHeaders, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ other_user_id: otherId, category: 'General', subject: intent.subject || undefined }),
+          });
+          const data = await res.json();
+          if (res.ok) {
+            await loadConversations();
+            openConversation(data.id);
+          } else {
+            setFormError(data.error || 'Could not open that conversation.');
+          }
+        } catch {
+          setFormError('Could not reach the PFUMA API.');
+        }
+      })();
+      onIntentConsumed?.();
+      return;
+    }
+
     setIsComposing(true);
     setSelectedContact(null);
     setActiveConvId(null);

@@ -136,6 +136,95 @@ def get_db():
     )
 
 
+def ensure_schema():
+    """Creates tables added after the first release, if they don't already
+    exist. CREATE TABLE IF NOT EXISTS is a no-op against an up-to-date
+    database, so this is safe to run on every startup — it exists so a
+    production database doesn't need a manual schema.sql re-import (and the
+    credentials that would require) just to pick up a new feature's tables.
+    Mirrors the full DDL in schema.sql; keep both in sync."""
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS notifications (
+          id              INT AUTO_INCREMENT PRIMARY KEY,
+          user_id         INT NOT NULL,
+          type            VARCHAR(40) NOT NULL,
+          title           VARCHAR(150) NOT NULL,
+          message         VARCHAR(300) NOT NULL,
+          related_user_id INT NULL,
+          listing_id      INT NULL,
+          animal_id       INT NULL,
+          read_at         TIMESTAMP NULL,
+          created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id)         REFERENCES users(id)                 ON DELETE CASCADE,
+          FOREIGN KEY (related_user_id) REFERENCES users(id)                 ON DELETE SET NULL,
+          FOREIGN KEY (listing_id)      REFERENCES marketplace_listings(id)  ON DELETE SET NULL,
+          FOREIGN KEY (animal_id)       REFERENCES animals(id)               ON DELETE SET NULL
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS medication_recommendations (
+          id             INT AUTO_INCREMENT PRIMARY KEY,
+          animal_id      INT NOT NULL,
+          farmer_id      INT NOT NULL,
+          vet_id         INT NOT NULL,
+          medicine_name  VARCHAR(120) NOT NULL,
+          dose_ml        DECIMAL(8,2) NOT NULL,
+          frequency      VARCHAR(100),
+          notes          TEXT,
+          status         ENUM('pending','administered','declined') DEFAULT 'pending',
+          created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          administered_at TIMESTAMP NULL,
+          FOREIGN KEY (animal_id) REFERENCES animals(id) ON DELETE CASCADE,
+          FOREIGN KEY (farmer_id) REFERENCES users(id)   ON DELETE CASCADE,
+          FOREIGN KEY (vet_id)    REFERENCES users(id)   ON DELETE CASCADE
+        )
+    """)
+
+    # Column-level upgrades for tables that already existed on some deployed
+    # database (CREATE TABLE IF NOT EXISTS is a no-op against those, so a
+    # column added after first release never lands without this). Mirrors
+    # schema.sql's "UPGRADES FOR EXISTING DATABASES" blocks — each is
+    # independently idempotent, so a failure in one doesn't block the rest.
+    upgrade_statements = [
+        """ALTER TABLE sale_clearances
+             ADD COLUMN IF NOT EXISTS leader_clearance ENUM('attested','not_applicable') NULL,
+             ADD COLUMN IF NOT EXISTS leader_type      ENUM('Sabuku','Mambo') NULL,
+             ADD COLUMN IF NOT EXISTS leader_name      VARCHAR(120),
+             ADD COLUMN IF NOT EXISTS leader_village   VARCHAR(120),
+             ADD COLUMN IF NOT EXISTS leader_cleared_on DATE,
+             ADD COLUMN IF NOT EXISTS leader_reference VARCHAR(80),
+             ADD COLUMN IF NOT EXISTS leader_document_path VARCHAR(300),
+             ADD COLUMN IF NOT EXISTS leader_na_reason VARCHAR(200)""",
+        """ALTER TABLE users
+             ADD COLUMN IF NOT EXISTS account_status ENUM('active','suspended') NOT NULL DEFAULT 'active',
+             ADD COLUMN IF NOT EXISTS suspension_reason VARCHAR(300)""",
+        """ALTER TABLE marketplace_listings
+             ADD COLUMN IF NOT EXISTS photo_url VARCHAR(300),
+             ADD COLUMN IF NOT EXISTS sold_at   TIMESTAMP NULL""",
+        """ALTER TABLE health_events
+             ADD COLUMN IF NOT EXISTS next_due_date DATE""",
+    ]
+    for stmt in upgrade_statements:
+        try:
+            c.execute(stmt)
+        except Exception as e:
+            print(f"[WARNING] schema upgrade statement failed (continuing): {e}")
+
+    db.commit()
+    db.close()
+
+
+try:
+    ensure_schema()
+except Exception as e:
+    # Don't crash the whole API over a schema bootstrap failure — the app is
+    # still useful for everything that doesn't touch these two new tables,
+    # and this is loud in the logs either way.
+    print(f"[WARNING] ensure_schema() failed: {e}")
+
+
 # ── AUTH HELPERS ─────────────────────────────────────────────────
 def issue_token(user):
     payload = {
@@ -273,6 +362,17 @@ def save_photo(file_storage, category, entity_id):
     filename = f"{entity_id}{ext}"
     file_storage.save(os.path.join(category_dir, filename))
     return f"{category}/{filename}"
+
+
+def create_notification(c, user_id, ntype, title, message, related_user_id=None, listing_id=None, animal_id=None):
+    """Writes one real notification row. Call with the same cursor/connection
+    as the triggering write so it commits in the same transaction — a
+    notification that outlives the event it describes (or vanishes with it
+    on rollback) would be worse than not having one."""
+    c.execute("""
+        INSERT INTO notifications (user_id, type, title, message, related_user_id, listing_id, animal_id)
+        VALUES (%s,%s,%s,%s,%s,%s,%s)
+    """, (user_id, ntype, title, message, related_user_id, listing_id, animal_id))
 
 
 # ── HEALTH CHECK ──────────────────────────────────────────────
@@ -1086,6 +1186,131 @@ def deduct_inventory(item_id):
     return jsonify({"new_stock": new_stock, "message": f"{dose}ml deducted ✅"})
 
 
+# ── MEDICATION RECOMMENDATIONS ──────────────────────────────────
+# The clinical direction runs vet → farmer: a Veterinarian recommends a
+# medicine/dose for a specific animal, and the farmer administers it from
+# their own cabinet against that recommendation — replacing the earlier
+# calculator where a farmer picked any medicine and dosed themselves with
+# no vet involved at all.
+@app.route('/medication-recommendations', methods=['POST'])
+@require_auth
+@require_role('Veterinarian')
+@require_verified
+def create_medication_recommendation():
+    d = request.json or {}
+    animal_id = d.get('animal_id')
+    medicine_name = (d.get('medicine_name') or '').strip()
+    dose_ml = d.get('dose_ml')
+    if not animal_id or not medicine_name or dose_ml in (None, ''):
+        return jsonify({"error": "animal_id, medicine_name, and dose_ml are required"}), 400
+    try:
+        dose_ml = float(dose_ml)
+    except (TypeError, ValueError):
+        return jsonify({"error": "dose_ml must be a number"}), 400
+
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT owner_id FROM animals WHERE id=%s", (animal_id,))
+    animal = c.fetchone()
+    if not animal:
+        db.close(); return jsonify({"error": "Animal not found"}), 404
+
+    c.execute("""
+        INSERT INTO medication_recommendations
+            (animal_id, farmer_id, vet_id, medicine_name, dose_ml, frequency, notes)
+        VALUES (%s,%s,%s,%s,%s,%s,%s)
+    """, (animal_id, animal['owner_id'], g.current_user['id'], medicine_name, dose_ml,
+          d.get('frequency', ''), d.get('notes', '')))
+    rec_id = c.lastrowid
+
+    c.execute("SELECT name FROM animals WHERE id=%s", (animal_id,))
+    animal_name = (c.fetchone() or {}).get('name', 'your animal')
+    create_notification(
+        c, animal['owner_id'], 'med_recommendation',
+        f"Vet recommendation for {animal_name}",
+        f"Dr. {g.current_user['full_name']} recommended {medicine_name} ({dose_ml}ml) for {animal_name}.",
+        related_user_id=g.current_user['id'], animal_id=animal_id,
+    )
+
+    db.commit()
+    db.close()
+    return jsonify({"id": rec_id, "message": "Recommendation sent to the farmer ✅"}), 201
+
+
+@app.route('/medication-recommendations', methods=['GET'])
+@require_auth
+def get_medication_recommendations():
+    """Farmers see recommendations for their own animals (optionally
+    filtered to one via ?animal_id=); vets see the ones they personally
+    made; Police get none of this — not their concern."""
+    requester = g.current_user
+    animal_id = request.args.get('animal_id')
+    db = get_db()
+    c = db.cursor()
+    sql = """
+        SELECT mr.*, a.name AS animal_name, v.full_name AS vet_name, f.full_name AS farmer_name
+        FROM medication_recommendations mr
+        JOIN animals a ON mr.animal_id = a.id
+        JOIN users v   ON mr.vet_id = v.id
+        JOIN users f   ON mr.farmer_id = f.id
+        WHERE 1=1
+    """
+    params = []
+    if requester['role'] == 'Veterinarian':
+        sql += " AND mr.vet_id = %s"; params.append(requester['id'])
+    else:
+        sql += " AND mr.farmer_id = %s"; params.append(requester['id'])
+    if animal_id:
+        sql += " AND mr.animal_id = %s"; params.append(animal_id)
+    sql += " ORDER BY mr.created_at DESC"
+    c.execute(sql, params)
+    rows = c.fetchall()
+    db.close()
+    return jsonify(rows)
+
+
+@app.route('/medication-recommendations/<int:rec_id>/administer', methods=['PATCH'])
+@require_auth
+def administer_medication_recommendation(rec_id):
+    """Farmer marks a recommendation administered — deducts the
+    recommended dose from their cabinet and logs it to the animal's health
+    record, same real effects the old self-serve calculator had, just
+    triggered by the vet's dose instead of the farmer's own pick."""
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT * FROM medication_recommendations WHERE id=%s", (rec_id,))
+    rec = c.fetchone()
+    if not rec:
+        db.close(); return jsonify({"error": "Recommendation not found"}), 404
+    if rec['farmer_id'] != g.current_user['id']:
+        db.close(); return jsonify({"error": "Only the farmer this was recommended to can administer it"}), 403
+    if rec['status'] != 'pending':
+        db.close(); return jsonify({"error": "This recommendation is no longer pending"}), 409
+
+    c.execute("SELECT id, stock FROM medicine_inventory WHERE owner_id=%s AND medicine_name=%s",
+               (g.current_user['id'], rec['medicine_name']))
+    item = c.fetchone()
+    if not item:
+        db.close(); return jsonify({"error": f"{rec['medicine_name']} is not in your Medicine Cabinet"}), 409
+    if float(item['stock']) < float(rec['dose_ml']):
+        db.close(); return jsonify({"error": f"Insufficient stock — only {float(item['stock']):.1f}ml left"}), 409
+
+    c.execute("UPDATE medicine_inventory SET stock = stock - %s WHERE id = %s", (rec['dose_ml'], item['id']))
+    c.execute("UPDATE medication_recommendations SET status='administered', administered_at=NOW() WHERE id=%s", (rec_id,))
+
+    c.execute("SELECT name FROM animals WHERE id=%s", (rec['animal_id'],))
+    animal_name = (c.fetchone() or {}).get('name', '')
+    c.execute("""
+        INSERT INTO health_events (animal_id, animal_name, event_type, notes, performed_by)
+        VALUES (%s,%s,%s,%s,%s)
+    """, (rec['animal_id'], animal_name, f"Treatment: {rec['medicine_name']}",
+          f"{rec['dose_ml']}ml administered per Dr. recommendation #{rec_id}", g.current_user['id']))
+
+    db.commit()
+    db.close()
+    return jsonify({"message": f"{rec['dose_ml']}ml of {rec['medicine_name']} administered ✅"})
+
+
 # ── MARKETPLACE ───────────────────────────────────────────────
 @app.route('/listings', methods=['GET'])
 @require_auth
@@ -1106,6 +1331,26 @@ def get_listings():
         sql += " AND ml.product_name LIKE %s"; params.append(f'%{q}%')
     sql += " ORDER BY ml.created_at DESC"
     c.execute(sql, params)
+    listings = c.fetchall()
+    db.close()
+    return jsonify(listings)
+
+
+@app.route('/listings/mine', methods=['GET'])
+@require_auth
+def get_my_listings():
+    """A seller's own listings at every stage of the lifecycle — pending
+    clearance, live, sold, withdrawn — not just the 'available' ones the
+    public marketplace shows. Lets a seller manage what they've posted
+    without hunting for it inside the public feed."""
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT ml.*, u.full_name as seller_name, u.phone, u.province as seller_province
+        FROM marketplace_listings ml JOIN users u ON ml.user_id = u.id
+        WHERE ml.user_id = %s
+        ORDER BY ml.created_at DESC
+    """, (g.current_user['id'],))
     listings = c.fetchall()
     db.close()
     return jsonify(listings)
@@ -1318,7 +1563,7 @@ def place_bid(listing_id):
     d = request.json
     db = get_db()
     c = db.cursor()
-    c.execute("SELECT status, category FROM marketplace_listings WHERE id=%s", (listing_id,))
+    c.execute("SELECT status, category, product_name, user_id FROM marketplace_listings WHERE id=%s", (listing_id,))
     listing = c.fetchone()
     if not listing:
         db.close(); return jsonify({"error": "Listing not found"}), 404
@@ -1331,6 +1576,14 @@ def place_bid(listing_id):
         VALUES (%s,%s,%s,%s)
     """, (listing_id, g.current_user['id'], d['amount'], d.get('message', '')))
     bid_id = c.lastrowid
+
+    create_notification(
+        c, listing['user_id'], 'bid_placed',
+        f"New offer on {listing['product_name']}",
+        f"{g.current_user['full_name']} offered USD {float(d['amount']):,.2f}.",
+        related_user_id=g.current_user['id'], listing_id=listing_id,
+    )
+
     db.commit()
     db.close()
     return jsonify({"id": bid_id, "message": "Bid submitted ✅"})
@@ -1391,7 +1644,7 @@ def accept_bid(listing_id, bid_id):
     becomes 'sold' — needed so the price-trend chart reflects real sales."""
     db = get_db()
     c = db.cursor()
-    c.execute("SELECT user_id, status FROM marketplace_listings WHERE id=%s", (listing_id,))
+    c.execute("SELECT user_id, status, product_name FROM marketplace_listings WHERE id=%s", (listing_id,))
     listing = c.fetchone()
     if not listing:
         db.close(); return jsonify({"error": "Listing not found"}), 404
@@ -1400,7 +1653,7 @@ def accept_bid(listing_id, bid_id):
     if listing['status'] == 'sold':
         db.close(); return jsonify({"error": "This listing is already sold"}), 409
 
-    c.execute("SELECT id, amount, status FROM bids WHERE id=%s AND listing_id=%s", (bid_id, listing_id))
+    c.execute("SELECT id, amount, status, bidder_id FROM bids WHERE id=%s AND listing_id=%s", (bid_id, listing_id))
     bid = c.fetchone()
     if not bid:
         db.close(); return jsonify({"error": "Bid not found"}), 404
@@ -1410,9 +1663,65 @@ def accept_bid(listing_id, bid_id):
     c.execute("UPDATE bids SET status='accepted' WHERE id=%s", (bid_id,))
     c.execute("UPDATE bids SET status='declined' WHERE listing_id=%s AND id!=%s AND status='pending'", (listing_id, bid_id))
     c.execute("UPDATE marketplace_listings SET status='sold', price=%s, sold_at=NOW() WHERE id=%s", (bid['amount'], listing_id))
+
+    # Both sides of the sale get a real notification, each carrying the
+    # other party's user id so the frontend can drop them straight into a
+    # PFUMA Messenger conversation instead of just showing text.
+    c.execute("SELECT full_name FROM users WHERE id=%s", (bid['bidder_id'],))
+    buyer_name = (c.fetchone() or {}).get('full_name', 'The buyer')
+    create_notification(
+        c, listing['user_id'], 'bid_accepted',
+        f"Sold: {listing['product_name']}",
+        f"You accepted {buyer_name}'s offer of USD {float(bid['amount']):,.2f}.",
+        related_user_id=bid['bidder_id'], listing_id=listing_id,
+    )
+    create_notification(
+        c, bid['bidder_id'], 'bid_accepted',
+        f"Offer accepted: {listing['product_name']}",
+        f"Your offer of USD {float(bid['amount']):,.2f} was accepted — message the seller to arrange collection.",
+        related_user_id=listing['user_id'], listing_id=listing_id,
+    )
+
     db.commit()
     db.close()
     return jsonify({"message": "Bid accepted — listing marked sold ✅"})
+
+
+# ── NOTIFICATIONS ─────────────────────────────────────────────────
+@app.route('/notifications', methods=['GET'])
+@require_auth
+def get_notifications():
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT * FROM notifications WHERE user_id=%s ORDER BY created_at DESC LIMIT 50
+    """, (g.current_user['id'],))
+    rows = c.fetchall()
+    db.close()
+    return jsonify(rows)
+
+
+@app.route('/notifications/<int:notif_id>/read', methods=['PATCH'])
+@require_auth
+def mark_notification_read(notif_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute("UPDATE notifications SET read_at=NOW() WHERE id=%s AND user_id=%s AND read_at IS NULL",
+               (notif_id, g.current_user['id']))
+    db.commit()
+    db.close()
+    return jsonify({"message": "Marked read"})
+
+
+@app.route('/notifications/read-all', methods=['PATCH'])
+@require_auth
+def mark_all_notifications_read():
+    db = get_db()
+    c = db.cursor()
+    c.execute("UPDATE notifications SET read_at=NOW() WHERE user_id=%s AND read_at IS NULL", (g.current_user['id'],))
+    db.commit()
+    db.close()
+    return jsonify({"message": "All marked read"})
 
 
 @app.route('/listings/price-trend', methods=['GET'])
