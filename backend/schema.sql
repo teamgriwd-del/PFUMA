@@ -435,6 +435,22 @@ CREATE TABLE IF NOT EXISTS iot_readings (
 CREATE INDEX IF NOT EXISTS idx_iot_readings_device_time ON iot_readings (device_id, received_at DESC);
 
 
+-- ── UPGRADES FOR EXISTING DATABASES ───────────────────────────
+-- Columns added after the first release. A database created earlier will not
+-- pick these up from CREATE TABLE IF NOT EXISTS, and the seed data below
+-- references some of them, so re-importing without these would fail.
+-- MariaDB supports ADD COLUMN IF NOT EXISTS, so this block is safe to re-run.
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS account_status ENUM('active','suspended') NOT NULL DEFAULT 'active',
+  ADD COLUMN IF NOT EXISTS suspension_reason VARCHAR(300);
+
+ALTER TABLE marketplace_listings
+  ADD COLUMN IF NOT EXISTS photo_url VARCHAR(300),
+  ADD COLUMN IF NOT EXISTS sold_at   TIMESTAMP NULL;
+
+ALTER TABLE health_events
+  ADD COLUMN IF NOT EXISTS next_due_date DATE;
+
 -- ── SEED DATA ─────────────────────────────────────────────────
 -- Demo password for every seeded account below: Pfuma2026!
 -- (bcrypt hash generated once — do not reuse this hash pattern for real accounts)
