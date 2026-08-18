@@ -36,7 +36,8 @@ CREATE TABLE IF NOT EXISTS users (
   -- Auth & signup verification
   password_hash  VARCHAR(255),
   verification_status ENUM('pending','verified','rejected') DEFAULT 'pending',
-  verified_by    INT NULL,             -- FK → users.id (reviewer: Police, or a peer Vet)
+  verified_by    INT NULL,             -- FK → users.id (reviewer: Police/peer Vet, or Admin for a Police applicant)
+  requested_by   INT NULL,             -- FK → users.id (existing officer who nominated a new Police account; NULL for every other role)
   verification_notes TEXT,
   id_document_path         VARCHAR(300),  -- national ID upload
   credential_document_path VARCHAR(300),  -- DVS license / business reg / land proof upload
@@ -45,7 +46,8 @@ CREATE TABLE IF NOT EXISTS users (
   account_status ENUM('active','suspended') NOT NULL DEFAULT 'active',  -- admin moderation (scammers etc.), separate from verification_status
   suspension_reason VARCHAR(300),
   created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (verified_by) REFERENCES users(id) ON DELETE SET NULL
+  FOREIGN KEY (verified_by)  REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE SET NULL
 );
 -- Upgrades an existing database that predates the Admin role. MODIFY is
 -- idempotent (safe to re-run) unlike ADD COLUMN, so no IF NOT EXISTS needed.

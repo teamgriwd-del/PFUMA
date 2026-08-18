@@ -219,6 +219,7 @@ def ensure_schema():
     add_column_if_missing('users', 'account_status', "account_status ENUM('active','suspended') NOT NULL DEFAULT 'active'")
     add_column_if_missing('users', 'suspension_reason', "suspension_reason VARCHAR(300)")
     add_column_if_missing('users', 'avatar_url', "avatar_url VARCHAR(300)")
+    add_column_if_missing('users', 'requested_by', "requested_by INT NULL")
 
     add_column_if_missing('marketplace_listings', 'photo_url', "photo_url VARCHAR(300)")
     add_column_if_missing('marketplace_listings', 'sold_at', "sold_at TIMESTAMP NULL")
@@ -505,9 +506,12 @@ def get_verifications():
     status = request.args.get('status', 'pending')
     db = get_db()
     c = db.cursor()
-    if requester['role'] == 'Police':
+    if requester['role'] == 'Police' and requester['verification_status'] == 'verified':
+        # Police-role applicants are excluded — only Admin can resolve those
+        # (see resolve_verification), so listing them here would show a
+        # pending officer with no action this viewer is allowed to take.
         c.execute("SELECT id, full_name, role, org_name, province, id_document_path, credential_document_path, created_at "
-                   "FROM users WHERE verification_status=%s AND role NOT IN ('Veterinarian','Admin') ORDER BY created_at ASC", (status,))
+                   "FROM users WHERE verification_status=%s AND role NOT IN ('Veterinarian','Admin','Police') ORDER BY created_at ASC", (status,))
     elif requester['role'] == 'Veterinarian' and requester['verification_status'] == 'verified':
         c.execute("SELECT id, full_name, role, org_name, province, id_document_path, credential_document_path, created_at "
                    "FROM users WHERE verification_status=%s AND role='Veterinarian' AND id != %s ORDER BY created_at ASC",
@@ -536,9 +540,14 @@ def resolve_verification(user_id):
     if not target:
         db.close(); return jsonify({"error": "User not found"}), 404
 
+    # A Police applicant can only be resolved by Admin — a fellow officer
+    # approving their own peer is exactly the unilateral-fraud path this is
+    # meant to close, so it's carved out of the general Police branch below
+    # even though Police otherwise reviews every other role's signups.
     authorized = (
         requester['role'] == 'Admin' or
-        (requester['role'] == 'Police' and target['role'] != 'Veterinarian') or
+        (requester['role'] == 'Police' and requester['verification_status'] == 'verified'
+         and target['role'] not in ('Veterinarian', 'Police')) or
         (requester['role'] == 'Veterinarian' and requester['verification_status'] == 'verified' and target['role'] == 'Veterinarian')
     )
     if not authorized:
@@ -661,9 +670,16 @@ def get_users():
 @app.route('/users', methods=['POST'])
 @require_auth
 @require_role('Police')
+@require_verified
 def create_user():
-    """Administrative user provisioning — used by Police to create another
-    verified officer account (Police signups are not self-service)."""
+    """An existing officer nominates a new Police account (Police signups
+    are not self-service). This does NOT verify the account — a single
+    officer being able to unilaterally mint other verified officer accounts
+    is exactly the fraud risk this closes. The account sits pending, with
+    requested_by recording who nominated them, until PFUMA Admin reviews
+    and approves it via PATCH /verifications/<id> (see resolve_verification,
+    which only allows Admin to resolve a Police applicant, not another
+    officer)."""
     d = request.json or {}
     full_name = (d.get('full_name') or '').strip()
     if not full_name:
@@ -690,8 +706,8 @@ def create_user():
     password_hash = bcrypt.hashpw((d.get('password') or os.urandom(8).hex()).encode(), bcrypt.gensalt()).decode()
     c.execute("""
         INSERT INTO users (full_name, phone, national_id_number, email, role, org_name, province, district, address,
-            badge_number, station, jurisdiction_province, password_hash, verification_status, verified_by)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'verified',%s)
+            badge_number, station, jurisdiction_province, password_hash, verification_status, requested_by)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pending',%s)
     """, (
         full_name, phone, national_id, d.get('email', ''), d.get('role', 'Police'),
         d.get('org_name', ''), d.get('province', ''), d.get('district', ''), d.get('address', ''),
@@ -701,7 +717,7 @@ def create_user():
     db.commit()
     user_id = c.lastrowid
     db.close()
-    return jsonify({"id": user_id, "message": "Officer account provisioned and verified."})
+    return jsonify({"id": user_id, "message": "Officer nomination submitted — pending PFUMA Admin approval before this account can log in."})
 
 
 @app.route('/users/<int:user_id>', methods=['GET'])
@@ -1569,6 +1585,7 @@ def _leader_attestation(d):
 @app.route('/clearances', methods=['GET'])
 @require_auth
 @require_role('Police')
+@require_verified
 def get_clearances():
     db = get_db()
     c = db.cursor()
@@ -1622,6 +1639,7 @@ def create_clearance():
 @app.route('/clearances/<int:clearance_id>', methods=['PATCH'])
 @require_auth
 @require_role('Police')
+@require_verified
 def resolve_clearance(clearance_id):
     d = request.json
     status = d.get('status')
@@ -2705,23 +2723,30 @@ def admin_list_users():
     province = request.args.get('province')
     verification_status = request.args.get('verification_status')
     q = request.args.get('q', '')
-    sql = "SELECT * FROM users WHERE 1=1"
+    # requested_by is only ever set for a Police applicant (an existing
+    # officer nominating a new one) — surfacing who vouched for them is the
+    # whole point of routing officer approval through Admin.
+    sql = """
+        SELECT u.*, r.full_name AS requested_by_name, r.badge_number AS requested_by_badge
+        FROM users u LEFT JOIN users r ON u.requested_by = r.id
+        WHERE 1=1
+    """
     params = []
     if role:
-        sql += " AND role = %s"; params.append(role)
+        sql += " AND u.role = %s"; params.append(role)
     if province:
-        sql += " AND province = %s"; params.append(province)
+        sql += " AND u.province = %s"; params.append(province)
     if verification_status:
-        sql += " AND verification_status = %s"; params.append(verification_status)
+        sql += " AND u.verification_status = %s"; params.append(verification_status)
     if q:
         q_digits = re.sub(r'\D', '', q)
-        sql += " AND (full_name LIKE %s OR org_name LIKE %s OR province LIKE %s"
+        sql += " AND (u.full_name LIKE %s OR u.org_name LIKE %s OR u.province LIKE %s"
         params += [f'%{q}%', f'%{q}%', f'%{q}%']
         if q_digits:
-            sql += " OR phone LIKE %s"
+            sql += " OR u.phone LIKE %s"
             params.append(f'%{q_digits}%')
         sql += ")"
-    sql += " ORDER BY created_at DESC"
+    sql += " ORDER BY u.created_at DESC"
     db = get_db()
     c = db.cursor()
     c.execute(sql, params)

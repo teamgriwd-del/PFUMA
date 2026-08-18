@@ -104,6 +104,11 @@ const UsersTab = ({ currentUser }) => {
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-black text-gray-900">{u.full_name} <span className="text-gray-400 font-medium">· {u.role}</span></p>
                   <p className="text-[10px] text-gray-500 font-medium">{u.phone} · {u.org_name || '—'} · {u.province || '—'}{u.district ? `, ${u.district}` : ''}</p>
+                  {u.role === 'Police' && u.requested_by_name && (
+                    <p className="text-[10px] text-amber-700 font-bold mt-0.5">
+                      Nominated by Officer {u.requested_by_name}{u.requested_by_badge ? ` (${u.requested_by_badge})` : ''} — verify this is a real, legitimate request before approving.
+                    </p>
+                  )}
                 </div>
                 <span className={`shrink-0 text-[9px] font-black px-2.5 py-1 rounded-full uppercase ${
                   u.verification_status === 'verified' ? 'bg-green-100 text-green-700' :

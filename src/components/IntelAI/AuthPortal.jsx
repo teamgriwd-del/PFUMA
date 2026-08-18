@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import pfumaMark from '../../assets/pfuma-mark.png';
 import {
   Sprout, ShoppingBag, Truck, ArrowRight, ArrowLeft,
-  Phone, Mail, MapPin, Building2, CheckCircle, Stethoscope, Shield,
+  Phone, Mail, MapPin, Building2, CheckCircle, Stethoscope,
   Lock, Upload, AlertTriangle, CreditCard, Eye, EyeOff,
 } from 'lucide-react';
 
@@ -60,13 +60,11 @@ const ROLES = [
     border: 'border-purple-600',
     desc: 'Browse certified livestock listings and acquire trade certificates.',
   },
-  {
-    name: 'Police',
-    icon: Shield,
-    color: 'bg-red-700',
-    border: 'border-red-700',
-    desc: 'Verify livestock papers and clear sales before they go live.',
-  },
+  // Police is deliberately not a self-signup role — an officer account can
+  // only come from an existing officer's nomination, approved by PFUMA
+  // Admin (see PoliceDashboard's "Add Officer" and AdminDashboard's Users
+  // tab). Listing it here would invite exactly the fraud path that flow
+  // exists to close.
 ];
 
 const PROVINCES = [
@@ -175,8 +173,6 @@ const AuthPortal = ({ onLogin }) => {
     businessReg: '', supplyCategories: [],
     // retailer
     retailerReg: '', tradingAreas: '',
-    // police
-    badgeNumber: '', station: '', jurisdictionProvince: 'Mashonaland West',
     // verification documents (required for every role)
     idDocument: null, credentialDocument: null,
   });
@@ -366,15 +362,14 @@ const AuthPortal = ({ onLogin }) => {
           {form.role === 'Farmer' ? 'Your farm name and location.' :
            form.role === 'Veterinarian' ? 'Your practice or government department.' :
            form.role === 'Supplier' ? 'Your supply business details.' :
-           form.role === 'Police' ? 'Your unit and posting.' :
            'Your trading business details.'}
         </p>
       </div>
-      <Field label={form.role === 'Farmer' ? 'Farm Name' : form.role === 'Police' ? 'Unit Name' : 'Organisation / Business Name'} required>
+      <Field label={form.role === 'Farmer' ? 'Farm Name' : 'Organisation / Business Name'} required>
         <div className="relative">
           <Building2 size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input className={inputCls + ' pl-10'} type="text"
-            placeholder={form.role === 'Farmer' ? 'e.g. Moyo Family Farm' : form.role === 'Veterinarian' ? 'e.g. DVS Mashonaland West' : form.role === 'Police' ? 'e.g. ZRP Stock Theft Unit' : 'e.g. AgroChem Zimbabwe'}
+            placeholder={form.role === 'Farmer' ? 'e.g. Moyo Family Farm' : form.role === 'Veterinarian' ? 'e.g. DVS Mashonaland West' : 'e.g. AgroChem Zimbabwe'}
             value={form.orgName} onChange={e => set('orgName', e.target.value)} />
         </div>
       </Field>
@@ -490,28 +485,6 @@ const AuthPortal = ({ onLogin }) => {
       </div>
     );
 
-    if (form.role === 'Police') return (
-      <div className="space-y-4">
-        <div>
-          <h3 className="text-2xl font-black text-gray-900 mb-1">Officer Details</h3>
-          <p className="text-sm text-gray-400 font-medium">Police accounts are provisioned and verified out-of-band (via ZRP/DVS liaison), not self-service — these details go into your verification request.</p>
-        </div>
-        <Field label="Badge / Service Number" required>
-          <input className={inputCls} type="text" placeholder="e.g. ZRP-STU-0231" value={form.badgeNumber} onChange={e => set('badgeNumber', e.target.value)} />
-        </Field>
-        <Field label="Station">
-          <input className={inputCls} type="text" placeholder="e.g. Chegutu Police Station" value={form.station} onChange={e => set('station', e.target.value)} />
-        </Field>
-        <Field label="Jurisdiction Province" required>
-          <select className={selectCls} value={form.jurisdictionProvince} onChange={e => set('jurisdictionProvince', e.target.value)}>
-            {PROVINCES.map(p => <option key={p}>{p}</option>)}
-          </select>
-        </Field>
-        <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-[11px] text-red-700 font-medium">
-          You will review pending Farmer/Supplier/Retailer signups and livestock sale-clearance requests for {form.jurisdictionProvince}. Your own account is activated by an existing verified officer, not automatically.
-        </div>
-      </div>
-    );
     return null;
   };
 
@@ -527,7 +500,6 @@ const AuthPortal = ({ onLogin }) => {
         <FileField
           label={form.role === 'Farmer' ? 'Proof of Land / Farm (title, lease, or allocation letter)'
             : form.role === 'Veterinarian' ? 'DVS Practice License'
-            : form.role === 'Police' ? 'Service Attestation Letter'
             : 'Business Registration Certificate'}
           field="credentialDocument"
           form={form} set={set}
@@ -565,9 +537,6 @@ const AuthPortal = ({ onLogin }) => {
               (form.businessReg || form.retailerReg) && { label: 'Business Reg', value: form.businessReg || form.retailerReg },
               form.supplyCategories.length && { label: 'Products', value: form.supplyCategories.join(', ') },
               form.tradingAreas   && { label: 'Trading Areas', value: form.tradingAreas },
-              form.badgeNumber    && { label: 'Badge Number', value: form.badgeNumber },
-              form.station        && { label: 'Station', value: form.station },
-              form.role === 'Police' && { label: 'Jurisdiction', value: form.jurisdictionProvince },
               { label: 'ID Document',         value: form.idDocument ? form.idDocument.name : 'Not attached' },
               { label: 'Credential Document',  value: form.credentialDocument ? form.credentialDocument.name : 'Not attached' },
             ].filter(Boolean).map(f => f && (

@@ -1328,7 +1328,7 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
       });
       const data = await res.json();
       if (!res.ok) { setOfficerError(data.error || 'Could not provision this officer.'); return; }
-      setFeedback(`${officerForm.full_name} provisioned and verified — give them their phone number and the temporary password you just set so they can log in.`);
+      setFeedback(`${officerForm.full_name}'s nomination was submitted — PFUMA Admin must approve it before the account can act as an officer. Give them their phone number and the temporary password so they're ready to log in once approved.`);
       setOfficerForm(EMPTY_OFFICER_FORM);
       setShowAddOfficer(false);
       setTimeout(() => setFeedback(null), 6000);
@@ -1425,15 +1425,17 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
         </div>
       )}
 
-      {/* Provision a new Police officer — Police accounts are not self-service
-          signup; an existing verified officer creates and verifies the next
-          one here, same as real ZRP unit onboarding. */}
+      {/* Nominate a new Police officer — Police accounts are not self-service
+          signup, and an existing officer can no longer unilaterally verify
+          the next one (that was the fraud path: one compromised or rogue
+          account minting others). This submits a pending request that only
+          PFUMA Admin can approve, in the Admin Panel. */}
       {showAddOfficer && (
         <form onSubmit={provisionOfficer} className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-4">
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="text-sm font-black text-white mb-1">Provision New Officer</h3>
-              <p className="text-[11px] text-gray-500 font-medium">Police accounts aren't self-service signup — an existing verified officer creates and verifies the next one. The account is created already-verified.</p>
+              <h3 className="text-sm font-black text-white mb-1">Nominate New Officer</h3>
+              <p className="text-[11px] text-gray-500 font-medium">Police accounts aren't self-service signup. This submits a request — PFUMA Admin must review and approve it (confirming a real officer vouched for them) before the account can log in and act as Police.</p>
             </div>
             <button type="button" onClick={() => setShowAddOfficer(false)} className="text-gray-500 hover:text-white transition p-1">
               <X size={16} />
