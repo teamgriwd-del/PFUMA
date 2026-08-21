@@ -6,6 +6,7 @@ import {
   Info, CheckCircle, Edit3, BarChart2, Camera, AlertTriangle
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import LifecycleTimeline from './LifecycleTimeline';
 import './AnimalProfile.css';
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -271,11 +272,11 @@ const RegistrationForm = ({ onSubmit, onCancel }) => {
 };
 
 // ── MAIN COMPONENT ─────────────────────────────────────────────────────────
-const AnimalProfile = ({ animals, onAddAnimal, auditLog, onListAnimal }) => {
+const AnimalProfile = ({ animals, onAddAnimal, auditLog, onListAnimal, currentUser }) => {
   const [selectedAnimalId, setSelectedAnimalId] = useState(null);
   const [isRegistering,    setIsRegistering]    = useState(false);
   const [isPassportOpen,   setIsPassportOpen]   = useState(false);
-  const [activeTab,        setActiveTab]        = useState('history');
+  const [activeTab,        setActiveTab]        = useState('lifecycle');
 
   const selectedAnimal = animals.find(a => a.id === selectedAnimalId);
 
@@ -294,7 +295,7 @@ const AnimalProfile = ({ animals, onAddAnimal, auditLog, onListAnimal }) => {
     return (
       <div className="p-6 bg-gray-50 min-h-full space-y-5 text-left">
         {/* Back */}
-        <button onClick={() => { setSelectedAnimalId(null); setActiveTab('history'); }} className="flex items-center gap-1.5 text-pfuma-green font-black text-xs uppercase tracking-widest hover:underline">
+        <button onClick={() => { setSelectedAnimalId(null); setActiveTab('lifecycle'); }} className="flex items-center gap-1.5 text-pfuma-green font-black text-xs uppercase tracking-widest hover:underline">
           <ArrowLeft size={14} /> Back to Herd
         </button>
 
@@ -360,8 +361,9 @@ const AnimalProfile = ({ animals, onAddAnimal, auditLog, onListAnimal }) => {
         <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
           <div className="flex border-b border-gray-100">
             {[
-              { id: 'history',  label: '📋 Health Events',    desc: 'All recorded treatments, vaccines, and diagnostics' },
-              { id: 'growth',   label: '📈 Weight Growth',     desc: 'Weight trend since birth' },
+              { id: 'lifecycle', label: '🗓 Lifecycle',        desc: 'Everything recorded for this animal, in date order' },
+              { id: 'history',   label: '📋 Health Events',    desc: 'All recorded treatments, vaccines, and diagnostics' },
+              { id: 'growth',    label: '📈 Weight Growth',    desc: 'Weight trend since birth' },
             ].map(t => (
               <button
                 key={t.id}
@@ -375,7 +377,9 @@ const AnimalProfile = ({ animals, onAddAnimal, auditLog, onListAnimal }) => {
           </div>
 
           <div className="p-6">
-            {activeTab === 'history' ? (
+            {activeTab === 'lifecycle' ? (
+              <LifecycleTimeline animalId={selectedAnimal.id} currentUser={currentUser} />
+            ) : activeTab === 'history' ? (
               animalLogs.length === 0 ? (
                 <div className="text-center py-12">
                   <ShieldCheck size={32} className="mx-auto text-gray-200 mb-3" />

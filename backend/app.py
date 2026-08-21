@@ -14,6 +14,8 @@ import pymysql
 import bcrypt
 import jwt
 
+import protocols
+
 app = Flask(__name__)
 
 # ── CONFIG ───────────────────────────────────────────────────────
@@ -43,7 +45,12 @@ TOKEN_TTL_HOURS = 24 * 7  # 1 week
 
 # CORS: restrict to known frontend origins in production; permissive for
 # local dev across the usual Vite/Expo ports so nothing here blocks testing.
-_default_dev_origins = "http://localhost:5173,http://127.0.0.1:5173,http://localhost:8081,http://localhost:19006"
+_default_dev_origins = (
+    "http://localhost:5173,http://127.0.0.1:5173,"
+    "http://localhost:5174,http://127.0.0.1:5174,"
+    "http://localhost:5175,http://127.0.0.1:5175,"
+    "http://localhost:8081,http://localhost:19006"
+)
 _allowed_origins = os.environ.get('PFUMA_ALLOWED_ORIGINS', _default_dev_origins).split(',')
 CORS(app, resources={r"/*": {"origins": [o.strip() for o in _allowed_origins if o.strip()]}})
 
@@ -1044,12 +1051,665 @@ def add_health_event():
             INSERT INTO health_events (animal_id, animal_name, event_type, notes, performed_by, next_due_date)
             VALUES (%s,%s,%s,%s,%s,%s)
         """, (d['animal_id'], animal['name'], d['event_type'], d.get('notes', ''), g.current_user['id'], next_due_date))
-    db.commit()
     event_id = c.lastrowid
+
+    # Logging the shot is what closes the case — the ladder never has to be
+    # unwound by hand, and a trade lockout lifts the moment the animal is
+    # actually vaccinated. Matching is on the protocol name the case was
+    # opened under, the same prefix rule the schedule UI uses.
+    resolved = []
+    c.execute("""SELECT id, vaccine_name, trade_locked FROM compliance_cases
+                  WHERE animal_id = %s AND stage NOT IN ('resolved','waived')""", (d['animal_id'],))
+    for case in c.fetchall():
+        if not d['event_type'].lower().startswith(case['vaccine_name'].lower()):
+            continue
+        c.execute("""UPDATE compliance_cases
+                        SET stage='resolved', trade_locked=FALSE, stage_due=NULL,
+                            deferred_until=NULL, resolved_at=NOW(), resolved_event_id=%s
+                      WHERE id=%s""", (event_id, case['id']))
+        _log_action(c, case['id'], 'resolved', g.current_user['id'], g.current_user['role'],
+                    f"{d['event_type']} logged — requirement met.")
+        if case['trade_locked']:
+            _log_action(c, case['id'], 'unlocked', g.current_user['id'], g.current_user['role'],
+                        'Trade lockout lifted automatically once the vaccination was recorded.')
+        resolved.append(case['vaccine_name'])
+
+    db.commit()
     c.execute("SELECT * FROM health_events WHERE id = %s", (event_id,))
     event = c.fetchone()
     db.close()
-    return jsonify({"id": event_id, "message": "Health event logged ✅", "event": event})
+    msg = "Health event logged ✅"
+    if resolved:
+        msg += f" — compliance case closed for {', '.join(resolved)}, this animal can trade again."
+    return jsonify({"id": event_id, "message": msg, "event": event, "resolved_cases": resolved})
+
+
+# ── VACCINATION COMPLIANCE ────────────────────────────────────
+# Missing a mandatory shot opens a case that a vet follows up on, rather than
+# just colouring a dashboard card red. See backend/protocols.py for the ladder
+# and schema.sql for why the penalty is a per-animal trade lockout and not a
+# fine. The short version: a smallholder who cannot get the vaccine has not
+# committed an offence, so the escape hatch (declaring a blocker) is one tap
+# away at every stage and costs nothing.
+
+def _log_action(c, case_id, action, actor_id=None, actor_role=None, notes=''):
+    c.execute("""
+        INSERT INTO compliance_actions (case_id, action, actor_id, actor_role, notes)
+        VALUES (%s,%s,%s,%s,%s)
+    """, (case_id, action, actor_id, actor_role, (notes or '')[:400]))
+
+
+def _due_occurrences(animal, events, today):
+    """Every enforceable dose that is past due for one animal, with the date
+    it fell due.
+
+    A dose counts as due when either:
+      - it has never been logged and the animal is old enough for it, or
+      - the last logged dose carried a next_due_date that has now passed.
+
+    Age alone is deliberately not enough — that would flag an animal that was
+    vaccinated on time, forever.
+    """
+    out = []
+    birth = animal.get('birth_date')
+    if not birth:
+        return out  # no birth date, no schedule to measure against
+    if isinstance(birth, datetime.datetime):
+        birth = birth.date()
+
+    for v in protocols.enforceable_vaccines(animal['species']):
+        first_due = birth + datetime.timedelta(days=v['age'])
+        matching = sorted(
+            [e for e in events if (e['event_type'] or '').lower().startswith(v['name'].lower())],
+            key=lambda e: e['event_date'], reverse=True
+        )
+        if not matching:
+            if today > first_due:
+                out.append((v['name'], first_due))
+            continue
+
+        last = matching[0]
+        nxt = last.get('next_due_date')
+        if not nxt and v['interval_days']:
+            # Logged without a next date — fall back to the protocol interval
+            # so an annual booster doesn't silently stop being tracked.
+            last_date = last['event_date']
+            if isinstance(last_date, datetime.datetime):
+                last_date = last_date.date()
+            nxt = last_date + datetime.timedelta(days=v['interval_days'])
+        if isinstance(nxt, datetime.datetime):
+            nxt = nxt.date()
+        if nxt and today > nxt:
+            out.append((v['name'], nxt))
+    return out
+
+
+def sync_compliance(db, owner_id=None, province=None):
+    """Open cases for newly-overdue doses and auto-advance stale ones.
+
+    This runs on read (whenever a farmer or vet opens their compliance view)
+    rather than on a scheduler, because this deployment has no job runner. It
+    is idempotent — uniq_case_occurrence stops duplicate cases, and each stage
+    only advances once its grace period has actually elapsed.
+    """
+    today = datetime.date.today()
+    c = db.cursor()
+
+    sql = """SELECT a.id, a.name, a.species, a.birth_date, a.owner_id,
+                    u.province, u.district
+             FROM animals a JOIN users u ON a.owner_id = u.id
+             WHERE u.role = 'Farmer'"""
+    params = []
+    if owner_id:
+        sql += " AND a.owner_id = %s"; params.append(owner_id)
+    if province:
+        sql += " AND u.province = %s"; params.append(province)
+    c.execute(sql, params)
+    animals = c.fetchall()
+
+    for a in animals:
+        c.execute("""SELECT event_type, event_date, next_due_date
+                     FROM health_events WHERE animal_id = %s""", (a['id'],))
+        events = c.fetchall()
+        for vaccine_name, due_date in _due_occurrences(a, events, today):
+            c.execute("""
+                INSERT IGNORE INTO compliance_cases
+                    (animal_id, owner_id, vaccine_name, species, due_date,
+                     stage, stage_due, province, district)
+                VALUES (%s,%s,%s,%s,%s,'reminder',%s,%s,%s)
+            """, (a['id'], a['owner_id'], vaccine_name, a['species'], due_date,
+                  today + datetime.timedelta(days=protocols.GRACE_DAYS['reminder']),
+                  a['province'], a['district']))
+            if c.rowcount:
+                _log_action(c, c.lastrowid, 'opened',
+                            notes=f"{vaccine_name} fell due {due_date} and has not been logged.")
+
+    # A deferral that has run its course comes back as a live case — at the
+    # stage it was paused from, never straight to a penalty.
+    c.execute("""
+        UPDATE compliance_cases
+           SET stage = 'vet_followup', deferred_until = NULL,
+               stage_due = DATE_ADD(CURDATE(), INTERVAL %s DAY)
+         WHERE stage = 'deferred' AND deferred_until IS NOT NULL AND deferred_until < CURDATE()
+    """, (protocols.GRACE_DAYS['vet_followup'],))
+
+    # Auto-advance is capped at pulling a vet in. Everything past that
+    # (notice, lockout) needs a human decision — see PATCH /compliance/cases.
+    for stage, nxt in protocols.AUTO_ADVANCE.items():
+        c.execute("""SELECT id FROM compliance_cases
+                     WHERE stage = %s AND stage_due IS NOT NULL AND stage_due < CURDATE()""", (stage,))
+        for row in c.fetchall():
+            c.execute("""UPDATE compliance_cases
+                            SET stage = %s, stage_due = DATE_ADD(CURDATE(), INTERVAL %s DAY)
+                          WHERE id = %s""",
+                      (nxt, protocols.GRACE_DAYS.get(nxt, 14), row['id']))
+            _log_action(c, row['id'], 'escalated',
+                        notes=f"No response within the {stage} grace period — raised to {nxt}.")
+    db.commit()
+
+
+def _case_row_sql():
+    return """
+        SELECT cc.*, a.name AS animal_name, a.tag_id, a.image_url,
+               u.full_name AS owner_name, u.phone AS owner_phone,
+               v.full_name AS vet_name
+        FROM compliance_cases cc
+        JOIN animals a ON cc.animal_id = a.id
+        JOIN users u   ON cc.owner_id  = u.id
+        LEFT JOIN users v ON cc.vet_id = v.id
+    """
+
+
+def animal_trade_block(c, animal_id):
+    """Why this animal can't be traded right now, or None if it can.
+
+    Called by the listing and clearance paths — a locked animal must not
+    reach the marketplace, but a vet's conditional clearance overrides the
+    lock so a farmer who needs the cash can still sell.
+    """
+    c.execute("""
+        SELECT vaccine_name, due_date FROM compliance_cases
+         WHERE animal_id = %s AND stage = 'penalty'
+           AND trade_locked = TRUE AND conditional_clearance = FALSE
+    """, (animal_id,))
+    rows = c.fetchall()
+    if not rows:
+        return None
+    names = ', '.join(r['vaccine_name'] for r in rows)
+    return (f"This animal is under a vaccination trade lockout ({names}). "
+            f"Log the outstanding vaccination — or ask your vet for a conditional "
+            f"clearance — and the lockout lifts immediately.")
+
+
+@app.route('/compliance/cases', methods=['GET'])
+@require_auth
+def list_compliance_cases():
+    """Farmer: my own open cases. Vet: the follow-up queue for my province."""
+    role = g.current_user['role']
+    db = get_db()
+    try:
+        if role == 'Farmer':
+            sync_compliance(db, owner_id=g.current_user['id'])
+            where, params = " WHERE cc.owner_id = %s", [g.current_user['id']]
+        elif role in ('Veterinarian', 'Police', 'Admin'):
+            province = g.current_user.get('province')
+            sync_compliance(db, province=province)
+            where, params = " WHERE cc.province = %s", [province]
+        else:
+            return jsonify({"error": "Not authorized to view compliance cases"}), 403
+
+        stage = request.args.get('stage')
+        if stage:
+            where += " AND cc.stage = %s"; params.append(stage)
+        elif request.args.get('include_resolved') != 'true':
+            where += " AND cc.stage NOT IN ('resolved','waived')"
+        animal_id = request.args.get('animal_id')
+        if animal_id:
+            where += " AND cc.animal_id = %s"; params.append(animal_id)
+
+        c = db.cursor()
+        c.execute(_case_row_sql() + where + """
+            ORDER BY FIELD(cc.stage,'penalty','notice','vet_followup','reminder','deferred','resolved','waived'),
+                     cc.due_date ASC
+            LIMIT 300
+        """, params)
+        cases = c.fetchall()
+        for case in cases:
+            c.execute("""SELECT ca.*, u.full_name AS actor_name
+                           FROM compliance_actions ca
+                           LEFT JOIN users u ON ca.actor_id = u.id
+                          WHERE ca.case_id = %s ORDER BY ca.created_at""", (case['id'],))
+            case['actions'] = c.fetchall()
+        return jsonify(cases)
+    finally:
+        db.close()
+
+
+@app.route('/compliance/cases/<int:case_id>/defer', methods=['POST'])
+@require_auth
+@require_role('Farmer')
+def defer_compliance_case(case_id):
+    """The 'I can't comply' path.
+
+    Declaring a real blocker pauses the case, carries no penalty, and routes
+    it to whoever can clear the obstruction. This is not an admission — it is
+    how a farmer reports that the system, not they, is the thing that failed.
+    """
+    d = request.json or {}
+    reason = d.get('reason')
+    if reason not in protocols.BLOCKER_ROUTING:
+        return jsonify({"error": "Choose a reason you cannot vaccinate right now"}), 400
+
+    db = get_db()
+    try:
+        c = db.cursor()
+        c.execute("SELECT * FROM compliance_cases WHERE id = %s", (case_id,))
+        case = c.fetchone()
+        if not case:
+            return jsonify({"error": "Case not found"}), 404
+        if case['owner_id'] != g.current_user['id']:
+            return jsonify({"error": "Not your case"}), 403
+        if case['stage'] in ('resolved', 'waived'):
+            return jsonify({"error": "This case is already closed"}), 400
+
+        routed_to = protocols.BLOCKER_ROUTING[reason]
+        notes = (d.get('notes') or '').strip()[:300]
+
+        # Past the self-service allowance the blocker still stands and still
+        # blocks a penalty — but a vet has to agree to the next pause.
+        auto_pause = case['defer_count'] < protocols.MAX_SELF_DEFERRALS and case['stage'] != 'penalty'
+        if auto_pause:
+            until = datetime.date.today() + datetime.timedelta(days=protocols.DEFER_DAYS[reason])
+            c.execute("""
+                UPDATE compliance_cases
+                   SET stage='deferred', blocker_reason=%s, blocker_notes=%s,
+                       deferred_until=%s, stage_due=NULL, defer_count=defer_count+1,
+                       routed_to=%s
+                 WHERE id=%s
+            """, (reason, notes, until, routed_to, case_id))
+        else:
+            c.execute("""
+                UPDATE compliance_cases
+                   SET blocker_reason=%s, blocker_notes=%s, routed_to=%s,
+                       defer_count=defer_count+1
+                 WHERE id=%s
+            """, (reason, notes, routed_to, case_id))
+        _log_action(c, case_id, 'deferred', g.current_user['id'], 'Farmer',
+                    f"Blocker declared: {reason}. {notes}")
+
+        # Route it. A blocker nobody acts on is just a delay with extra steps,
+        # so each reason lands in a queue that already exists in the app.
+        if routed_to == 'vet_dispatch':
+            c.execute("""SELECT cm.cooperative_id FROM cooperative_members cm
+                          WHERE cm.user_id = %s LIMIT 1""", (g.current_user['id'],))
+            coop = c.fetchone()
+            if coop:
+                c.execute("""
+                    INSERT INTO cooperative_vet_requests (cooperative_id, requested_by, reason, status)
+                    VALUES (%s,%s,%s,'open')
+                """, (coop['cooperative_id'], g.current_user['id'],
+                      f"Vaccination visit needed — {case['vaccine_name']} outstanding "
+                      f"(no vet access reported). {notes}"))
+
+        db.commit()
+        c.execute(_case_row_sql() + " WHERE cc.id = %s", (case_id,))
+        return jsonify({
+            "case": c.fetchone(),
+            "paused": bool(auto_pause),
+            "routed_to": routed_to,
+            "message": ("Recorded. The clock is paused and this has been sent on to be unblocked — "
+                        "no penalty applies."
+                        if auto_pause else
+                        "Recorded and sent to your vet. This is your third blocker on this case, "
+                        "so a vet needs to approve the next pause — no penalty applies meanwhile."),
+        })
+    finally:
+        db.close()
+
+
+@app.route('/compliance/cases/<int:case_id>', methods=['PATCH'])
+@require_auth
+@require_role('Veterinarian')
+def act_on_compliance_case(case_id):
+    """The vet's decisions on a case.
+
+    Every stage past 'vet_followup' happens here and only here — the system
+    proposes, a vet disposes. A lockout is never applied by a timer.
+    """
+    d = request.json or {}
+    action = d.get('action')
+    notes = (d.get('notes') or '').strip()[:400]
+    valid = ('claim', 'issue_notice', 'apply_lockout', 'accept_deferral',
+             'reject_deferral', 'conditional_clearance', 'waive')
+    if action not in valid:
+        return jsonify({"error": f"action must be one of {', '.join(valid)}"}), 400
+
+    db = get_db()
+    try:
+        c = db.cursor()
+        c.execute("SELECT * FROM compliance_cases WHERE id = %s", (case_id,))
+        case = c.fetchone()
+        if not case:
+            return jsonify({"error": "Case not found"}), 404
+        if case['stage'] in ('resolved',):
+            return jsonify({"error": "This case is already resolved"}), 400
+
+        vet_id = g.current_user['id']
+        today = datetime.date.today()
+
+        if action == 'claim':
+            c.execute("UPDATE compliance_cases SET vet_id=%s WHERE id=%s", (vet_id, case_id))
+            _log_action(c, case_id, 'escalated', vet_id, 'Veterinarian', notes or 'Vet took over follow-up.')
+
+        elif action == 'issue_notice':
+            if case['stage'] not in ('reminder', 'vet_followup', 'deferred'):
+                return jsonify({"error": "A notice only applies to a case still awaiting compliance"}), 400
+            if not notes:
+                return jsonify({"error": "A formal notice must say what was found on follow-up"}), 400
+            c.execute("""UPDATE compliance_cases
+                            SET stage='notice', vet_id=%s,
+                                stage_due=DATE_ADD(CURDATE(), INTERVAL %s DAY)
+                          WHERE id=%s""", (vet_id, protocols.GRACE_DAYS['notice'], case_id))
+            _log_action(c, case_id, 'notice_issued', vet_id, 'Veterinarian', notes)
+
+        elif action == 'apply_lockout':
+            # Guardrails, in order: only after a notice, only after that
+            # notice's grace period has actually run, and never over an
+            # unresolved blocker. A supply failure is not non-compliance.
+            if case['stage'] != 'notice':
+                return jsonify({"error": "A lockout can only follow a formal notice the farmer did not act on"}), 400
+            if case['stage_due'] and case['stage_due'] > today:
+                return jsonify({"error": f"The notice grace period runs until {case['stage_due']}. "
+                                         f"The farmer still has time to comply."}), 400
+            if case['blocker_reason'] and not d.get('blocker_reviewed'):
+                return jsonify({"error": "This farmer reported a blocker that is still open. "
+                                         "Resolve or reject it before locking the animal out of trade."}), 400
+            if not notes:
+                return jsonify({"error": "Record why the lockout is justified — the farmer can dispute it"}), 400
+            c.execute("""UPDATE compliance_cases
+                            SET stage='penalty', trade_locked=TRUE, vet_id=%s, stage_due=NULL
+                          WHERE id=%s""", (vet_id, case_id))
+            _log_action(c, case_id, 'locked', vet_id, 'Veterinarian', notes)
+            # Pull any live listing for this animal back off the market.
+            c.execute("""UPDATE marketplace_listings SET status='pending_clearance'
+                          WHERE animal_id=%s AND status='available'""", (case['animal_id'],))
+
+        elif action == 'accept_deferral':
+            if not case['blocker_reason']:
+                return jsonify({"error": "No blocker has been reported on this case"}), 400
+            days = int(d.get('days') or protocols.DEFER_DAYS.get(case['blocker_reason'], 30))
+            c.execute("""UPDATE compliance_cases
+                            SET stage='deferred', trade_locked=FALSE, vet_id=%s,
+                                deferred_until=DATE_ADD(CURDATE(), INTERVAL %s DAY), stage_due=NULL
+                          WHERE id=%s""", (vet_id, days, case_id))
+            _log_action(c, case_id, 'defer_accepted', vet_id, 'Veterinarian',
+                        notes or f"Blocker accepted — paused {days} days.")
+            if case['trade_locked']:
+                _log_action(c, case_id, 'unlocked', vet_id, 'Veterinarian', 'Lockout lifted with the deferral.')
+
+        elif action == 'reject_deferral':
+            if not notes:
+                return jsonify({"error": "Say why the reported blocker was not accepted"}), 400
+            c.execute("""UPDATE compliance_cases
+                            SET stage='vet_followup', vet_id=%s, blocker_reason=NULL,
+                                deferred_until=NULL,
+                                stage_due=DATE_ADD(CURDATE(), INTERVAL %s DAY)
+                          WHERE id=%s""", (vet_id, protocols.GRACE_DAYS['vet_followup'], case_id))
+            _log_action(c, case_id, 'defer_rejected', vet_id, 'Veterinarian', notes)
+
+        elif action == 'conditional_clearance':
+            # Lets a farmer sell a locked animal on condition it is vaccinated
+            # at the point of sale — the cash-flow release valve that keeps the
+            # lockout from being ruinous for someone with one beast to sell.
+            if not notes:
+                return jsonify({"error": "Record the condition attached to this clearance"}), 400
+            c.execute("""UPDATE compliance_cases
+                            SET conditional_clearance=TRUE, vet_id=%s WHERE id=%s""", (vet_id, case_id))
+            _log_action(c, case_id, 'conditional_clearance', vet_id, 'Veterinarian', notes)
+
+        elif action == 'waive':
+            if not notes:
+                return jsonify({"error": "Record why this requirement does not apply"}), 400
+            c.execute("""UPDATE compliance_cases
+                            SET stage='waived', trade_locked=FALSE, vet_id=%s,
+                                resolved_at=NOW(), stage_due=NULL
+                          WHERE id=%s""", (vet_id, case_id))
+            _log_action(c, case_id, 'waived', vet_id, 'Veterinarian', notes)
+
+        db.commit()
+        c.execute(_case_row_sql() + " WHERE cc.id = %s", (case_id,))
+        return jsonify({"case": c.fetchone(), "message": "Case updated ✅"})
+    finally:
+        db.close()
+
+
+@app.route('/compliance/summary', methods=['GET'])
+@require_auth
+def compliance_summary():
+    """Counts for the dashboard cards, without shipping every case row."""
+    role = g.current_user['role']
+    db = get_db()
+    try:
+        if role == 'Farmer':
+            sync_compliance(db, owner_id=g.current_user['id'])
+            where, params = "cc.owner_id = %s", [g.current_user['id']]
+        elif role in ('Veterinarian', 'Police', 'Admin'):
+            sync_compliance(db, province=g.current_user.get('province'))
+            where, params = "cc.province = %s", [g.current_user.get('province')]
+        else:
+            return jsonify({"error": "Not authorized"}), 403
+        c = db.cursor()
+        c.execute(f"""SELECT cc.stage, COUNT(*) AS n FROM compliance_cases cc
+                       WHERE {where} GROUP BY cc.stage""", params)
+        by_stage = {r['stage']: r['n'] for r in c.fetchall()}
+        c.execute(f"""SELECT COUNT(*) AS n FROM compliance_cases cc
+                       WHERE {where} AND cc.trade_locked = TRUE
+                         AND cc.conditional_clearance = FALSE""", params)
+        locked = c.fetchone()['n']
+        return jsonify({
+            "by_stage": by_stage,
+            "open": sum(v for k, v in by_stage.items() if k not in ('resolved', 'waived')),
+            "trade_locked": locked,
+        })
+    finally:
+        db.close()
+
+
+# ── ANIMAL LIFECYCLE TIMELINE ─────────────────────────────────
+# One animal's whole recorded life in date order: born, registered here,
+# every vaccination and treatment, illnesses picked up by diagnosis or by a
+# fever alert on the collar, feed rations planned, weights taken, compliance
+# steps, and finally its passage through the market.
+#
+# The data already existed — it was just scattered across eight tables and
+# only ever surfaced as a flat list of health events, so nobody could see an
+# animal's history as a history.
+
+def _iso(v):
+    if v is None:
+        return None
+    if isinstance(v, datetime.datetime):
+        return v.isoformat(sep=' ', timespec='seconds')
+    return str(v)
+
+
+def _classify_health_event(event_type):
+    """Sorts a health_events row into a lane the timeline can filter on.
+
+    event_type is free text written by whatever screen logged it, so this
+    reads the prefixes those screens actually use rather than assuming a
+    clean taxonomy: 'Diagnostic: FMD' from Disease Detection, vaccine names
+    straight out of HEALTH_PROTOCOLS, and dosage entries from the calculator.
+    """
+    t = (event_type or '').lower()
+    if t.startswith('diagnostic') or 'illness' in t or 'symptom' in t:
+        return 'illness'
+    if 'vaccine' in t or 'vaccination' in t or t.startswith(('brucellosis', 'anthrax', 'lumpy',
+                                                             'fmd', 'cbpp', 'blue tongue',
+                                                             'pulpy kidney', 'pasteurella',
+                                                             'foot rot', 'swine fever')):
+        return 'vaccine'
+    if 'dip' in t or 'tick' in t:
+        return 'dipping'
+    if 'deworm' in t or 'dose' in t or 'treatment' in t or 'injection' in t:
+        return 'treatment'
+    if 'birth' in t or 'calv' in t or 'pregnan' in t or 'gestation' in t:
+        return 'breeding'
+    return 'other'
+
+
+@app.route('/animals/<int:animal_id>/timeline', methods=['GET'])
+@require_auth
+def animal_timeline(animal_id):
+    db = get_db()
+    try:
+        c = db.cursor()
+        c.execute("""SELECT a.*, u.full_name AS owner_name
+                       FROM animals a JOIN users u ON a.owner_id = u.id
+                      WHERE a.id = %s""", (animal_id,))
+        animal = c.fetchone()
+        if not animal:
+            return jsonify({"error": "Animal not found"}), 404
+        if (g.current_user['role'] not in ('Veterinarian', 'Police', 'Admin')
+                and animal['owner_id'] != g.current_user['id']):
+            return jsonify({"error": "Not authorized to view this animal's record"}), 403
+
+        ev = []
+
+        def add(at, kind, title, detail='', actor=None, meta=None):
+            if not at:
+                return
+            ev.append({"at": _iso(at), "kind": kind, "title": title,
+                       "detail": detail, "actor": actor, "meta": meta or {}})
+
+        # ── Origin ──
+        add(animal['birth_date'], 'birth', 'Born',
+            f"{animal['breed'] or animal['species']}"
+            + (f" · birth weight {animal['birth_weight']}kg" if animal['birth_weight'] else ''))
+        add(animal['created_at'], 'registration', 'Registered on PFUMA',
+            f"Digital identity created"
+            + (f" · ear tag {animal['tag_id']}" if animal['tag_id'] else '')
+            + (f" · brand {animal['brand_id']}" if animal['brand_id'] else ''),
+            actor=animal['owner_name'])
+
+        # ── Health events (vaccines, treatments, diagnoses) ──
+        c.execute("""SELECT he.*, u.full_name AS actor_name, u.role AS actor_role
+                       FROM health_events he
+                       LEFT JOIN users u ON he.performed_by = u.id
+                      WHERE he.animal_id = %s""", (animal_id,))
+        for e in c.fetchall():
+            kind = _classify_health_event(e['event_type'])
+            detail = e['notes'] or ''
+            if e['next_due_date']:
+                detail = (detail + ' · ' if detail else '') + f"next due {e['next_due_date']}"
+            add(e['event_date'], kind, e['event_type'], detail,
+                actor=e['actor_name'], meta={"role": e['actor_role'], "event_id": e['id']})
+
+        # ── Weight ──
+        c.execute("""SELECT month_label, weight_kg, recorded_at FROM weight_history
+                      WHERE animal_id = %s ORDER BY id""", (animal_id,))
+        for w in c.fetchall():
+            add(w['recorded_at'], 'weight', f"Weight recorded — {w['weight_kg']}kg",
+                f"Logged as {w['month_label']}" if w['month_label'] else '')
+
+        # ── Nutrition ──
+        c.execute("""SELECT fp.*, u.full_name AS actor_name FROM feeding_plans fp
+                       LEFT JOIN users u ON fp.owner_id = u.id
+                      WHERE fp.animal_id = %s""", (animal_id,))
+        for p in c.fetchall():
+            try:
+                items = json.loads(p['items']) if isinstance(p['items'], str) else (p['items'] or [])
+            except (ValueError, TypeError):
+                items = []
+            feeds = ', '.join(i.get('name', '') for i in items if i.get('name'))
+            add(p['created_at'], 'feed', 'Feed ration planned',
+                f"{feeds or 'Ration'} · {p['total_protein_g']}g protein, "
+                f"{p['total_energy_mj']}MJ ({p['protein_status']}/{p['energy_status']})"
+                + (f" · ${p['total_cost_usd']}" if p['total_cost_usd'] else ''),
+                actor=p['actor_name'],
+                meta={"protein_status": p['protein_status'], "energy_status": p['energy_status']})
+
+        # ── Sensor alerts — an unexpected illness the collar caught first ──
+        c.execute("""SELECT r.temp_c, r.heart_rate, r.fever_alert, r.theft_alert, r.received_at
+                       FROM iot_readings r JOIN iot_devices d ON r.device_id = d.id
+                      WHERE d.animal_id = %s AND (r.fever_alert = TRUE OR r.theft_alert = TRUE)
+                      ORDER BY r.received_at DESC LIMIT 50""", (animal_id,))
+        for r in c.fetchall():
+            if r['fever_alert']:
+                add(r['received_at'], 'illness', 'Fever alert from collar',
+                    f"{r['temp_c']}°C, heart rate {r['heart_rate']}bpm — flagged by the IoT sensor")
+            if r['theft_alert']:
+                add(r['received_at'], 'alert', 'Geofence breach alert',
+                    'Collar reported the animal outside its grazing zone')
+
+        # ── Vet consultations ──
+        c.execute("""SELECT vc.*, u.full_name AS vet_name FROM vet_cases vc
+                       LEFT JOIN users u ON vc.vet_id = u.id
+                      WHERE vc.animal_id = %s""", (animal_id,))
+        for vcase in c.fetchall():
+            add(vcase['created_at'], 'vet',
+                f"Vet case opened — {vcase['subject']}",
+                f"{vcase['category']} · {vcase['priority']} · {vcase['status']}",
+                actor=vcase['vet_name'])
+
+        # ── Compliance ──
+        c.execute("""SELECT ca.*, cc.vaccine_name, u.full_name AS actor_name
+                       FROM compliance_actions ca
+                       JOIN compliance_cases cc ON ca.case_id = cc.id
+                       LEFT JOIN users u ON ca.actor_id = u.id
+                      WHERE cc.animal_id = %s ORDER BY ca.created_at""", (animal_id,))
+        compliance_labels = {
+            'opened': 'Vaccination overdue',
+            'reminded': 'Reminder sent',
+            'escalated': 'Raised for vet follow-up',
+            'notice_issued': 'Formal notice issued',
+            'deferred': 'Farmer reported a blocker',
+            'defer_accepted': 'Blocker accepted — clock paused',
+            'defer_rejected': 'Blocker not accepted',
+            'locked': 'Trade lockout applied',
+            'unlocked': 'Trade lockout lifted',
+            'conditional_clearance': 'Conditional sale clearance granted',
+            'resolved': 'Vaccination logged — case closed',
+            'waived': 'Requirement waived',
+        }
+        for a in c.fetchall():
+            add(a['created_at'], 'compliance',
+                f"{compliance_labels.get(a['action'], a['action'])} — {a['vaccine_name']}",
+                a['notes'] or '', actor=a['actor_name'] or 'PFUMA (automatic)')
+
+        # ── Market ──
+        c.execute("""SELECT * FROM marketplace_listings WHERE animal_id = %s""", (animal_id,))
+        for l in c.fetchall():
+            add(l['created_at'], 'trade', 'Listed on the marketplace',
+                f"{l['product_name']} · ${l['price']} · {l['status']}")
+            add(l['sold_at'], 'trade', 'Sold', f"{l['product_name']} · ${l['price']}")
+
+        c.execute("""SELECT sc.*, u.full_name AS officer_name FROM sale_clearances sc
+                       LEFT JOIN users u ON sc.officer_id = u.id
+                      WHERE sc.animal_id = %s""", (animal_id,))
+        for sc in c.fetchall():
+            add(sc['created_at'], 'trade', 'Sale clearance requested',
+                'Submitted to police for ownership and brand verification')
+            if sc['resolved_at']:
+                add(sc['resolved_at'], 'trade',
+                    f"Sale clearance {sc['status']}",
+                    (sc['notes'] or '') + (f" · permit {sc['movement_permit_number']}"
+                                           if sc['movement_permit_number'] else ''),
+                    actor=sc['officer_name'])
+
+        ev.sort(key=lambda x: x['at'], reverse=True)
+        return jsonify({
+            "animal": {
+                "id": animal['id'], "name": animal['name'], "species": animal['species'],
+                "breed": animal['breed'], "tag_id": animal['tag_id'],
+                "birth_date": _iso(animal['birth_date']),
+                "registered_at": _iso(animal['created_at']),
+                "owner_name": animal['owner_name'],
+            },
+            "events": ev,
+        })
+    finally:
+        db.close()
 
 
 # ── MEDICINE INVENTORY ────────────────────────────────────────
@@ -1130,9 +1790,17 @@ def add_listing():
     if animal_id:
         db = get_db(); c = db.cursor()
         c.execute("SELECT owner_id FROM animals WHERE id=%s", (animal_id,))
-        animal = c.fetchone(); db.close()
+        animal = c.fetchone()
+        # An animal under a vaccination trade lockout does not reach the
+        # market. This is the whole penalty — there is no fine — and it is
+        # scoped to the one animal, so the seller's other stock, feed and
+        # produce listings are untouched.
+        block = animal_trade_block(c, animal_id) if animal else None
+        db.close()
         if not animal or animal['owner_id'] != g.current_user['id']:
             return jsonify({"error": "You can only list your own animals"}), 403
+        if block:
+            return jsonify({"error": block, "trade_locked": True}), 409
 
     # Livestock listings tied to a specific animal must clear police review
     # (ownership/brand papers checked) before they're visible on the marketplace.
@@ -1283,7 +1951,7 @@ def resolve_clearance(clearance_id):
     # answered — either a Sabuku/Mambo attestation, or an explicit reason why
     # none applies. Rejecting is always allowed; only approval is gated.
     if status == 'cleared':
-        c.execute("SELECT leader_clearance FROM sale_clearances WHERE id=%s", (clearance_id,))
+        c.execute("SELECT leader_clearance, animal_id FROM sale_clearances WHERE id=%s", (clearance_id,))
         row = c.fetchone()
         if not row:
             db.close(); return jsonify({"error": "Clearance not found"}), 404
@@ -1292,6 +1960,14 @@ def resolve_clearance(clearance_id):
             return jsonify({"error": "No Sabuku or Mambo clearance on record for this sale. "
                                      "Ask the seller to record it, or to state why none applies, "
                                      "before you clear the listing."}), 409
+        # Second gate on the same lockout the listing path enforces — a case
+        # can reach 'penalty' after a listing was already submitted, and a
+        # movement permit for an unvaccinated animal is exactly what the
+        # vaccination requirement exists to prevent.
+        block = animal_trade_block(c, row['animal_id'])
+        if block:
+            db.close()
+            return jsonify({"error": block, "trade_locked": True}), 409
 
     c.execute("""
         UPDATE sale_clearances
