@@ -1,24 +1,14 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { HEALTH_PROTOCOLS, BREED_PROFILES } from './healthData';
-import { DOSAGE_RATES } from './dosageData';
+import { API } from '../../config';
 import {
-  Pill, Calculator, AlertCircle, History, ShieldCheck,
+  Pill, AlertCircle, History, ShieldCheck,
   HeartPulse, Package, AlertTriangle, Baby, Info, BookOpen,
-  CheckCircle, Tag, Calendar, FlaskConical, ChevronDown, ChevronUp, RefreshCw
+  CheckCircle, Tag, Calendar, FlaskConical, RefreshCw
 } from 'lucide-react';
 import './HealthManagement.css';
 
 // ── helpers ────────────────────────────────────────────────────────────────
-const catColor = (cat) => {
-  if (cat === 'Antibiotic')           return 'bg-blue-100 text-blue-700';
-  if (cat === 'Anti-protozoal')       return 'bg-purple-100 text-purple-700';
-  if (cat === 'NSAID / Pain Relief')  return 'bg-orange-100 text-orange-700';
-  if (cat === 'Antiparasitic')        return 'bg-teal-100 text-teal-700';
-  if (cat === 'Anthelmintic')         return 'bg-lime-100 text-lime-700';
-  if (cat === 'Hormone')              return 'bg-pink-100 text-pink-700';
-  return 'bg-gray-100 text-gray-600';
-};
-
 const statusStyle = (s) => {
   if (s === 'Completed') return 'bg-green-50 border-green-100';
   if (s === 'Overdue')   return 'bg-red-50 border-red-200';
@@ -64,16 +54,17 @@ const InfoRow = ({ label, value, sub }) => (
 const MATING_EVENT = 'Mating / Insemination';
 
 // ── main ───────────────────────────────────────────────────────────────────
-const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onDeductInventory }) => {
+const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefreshInventory, currentUser }) => {
   const [selectedAnimalId, setSelectedAnimalId] = useState('');
   const [gestationStart, setGestationStart]     = useState('');
   const [matingSaving, setMatingSaving]         = useState(false);
-  const [selectedMeds, setSelectedMeds]         = useState('Oxytetracycline (LA)');
   const [activeInfoTab, setActiveInfoTab]       = useState('lifecycle');
   const [feedbackMsg, setFeedbackMsg]           = useState(null);
-  const [showMedDetail, setShowMedDetail]       = useState(false);
   const [showLogForm, setShowLogForm]           = useState(false);
   const [logForm, setLogForm] = useState({ eventType: '', eventDate: '', nextDueDate: '', notes: '' });
+  const [recommendations, setRecommendations]  = useState([]);
+  const [recLoading, setRecLoading]             = useState(false);
+  const [administeringId, setAdministeringId]   = useState(null);
   const feedbackTimerRef = useRef(null);
 
   useEffect(() => () => { if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current); }, []);
@@ -128,14 +119,6 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onDeduc
       ageDisplay: ageYears > 0 ? `${ageYears}y ${ageMonths}m` : `${ageInDays}d`,
       ageInDays
     };
-  };
-
-  const calculateDosage = (medName, weight) => {
-    if (!weight || weight <= 0) return '0.0';
-    const med = DOSAGE_RATES[medName];
-    if (!med) return '0.0';
-    const dose = (weight / med.per) * med.rate;
-    return (med.maxDose ? Math.min(dose, med.maxDose) : dose).toFixed(1);
   };
 
   // Merges the birth-date-triggered vaccine schedule with recurring items
@@ -236,44 +219,52 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onDeduc
     showFeedback(`✓ Mating date saved for ${selectedAnimal.name} — expected birth ${expectedBirth.toDateString()}.`);
   };
 
-  const deductInventory = async () => {
-    if (!selectedAnimal?.currentWeight || selectedAnimal.currentWeight <= 0) {
-      showFeedback('Animal weight not recorded. Update the animal profile first.', 'error'); return;
+  // Medication now runs vet → farmer: a Veterinarian recommends a
+  // medicine/dose for this animal (see VetMedicationRecommender in App.jsx),
+  // and administering it here deducts from the farmer's own cabinet against
+  // that specific recommendation — there's no more free "pick any medicine"
+  // self-service.
+  const loadRecommendations = async () => {
+    if (!selectedAnimal || !currentUser?.token) { setRecommendations([]); return; }
+    setRecLoading(true);
+    try {
+      const res = await fetch(`${API}/medication-recommendations?animal_id=${selectedAnimal.id}`, {
+        headers: { Authorization: `Bearer ${currentUser.token}` },
+      });
+      if (res.ok) setRecommendations(await res.json());
+    } catch { /* offline — keep whatever was last loaded */ }
+    setRecLoading(false);
+  };
+
+  useEffect(() => { loadRecommendations(); }, [selectedAnimal?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const administerRecommendation = async (rec) => {
+    setAdministeringId(rec.id);
+    try {
+      const res = await fetch(`${API}/medication-recommendations/${rec.id}/administer`, {
+        method: 'PATCH', headers: { Authorization: `Bearer ${currentUser.token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) { showFeedback(data.error || 'Could not administer — try again.', 'error'); return; }
+      showFeedback(data.message || `${rec.medicine_name} administered.`);
+      await loadRecommendations();
+      await onRefreshInventory?.();
+    } catch {
+      showFeedback('Could not reach the PFUMA API.', 'error');
+    } finally {
+      setAdministeringId(null);
     }
-    const dose = parseFloat(calculateDosage(selectedMeds, selectedAnimal.currentWeight));
-    const item = inventory.find(i => i.name === selectedMeds);
-    if (!item) { showFeedback(`${selectedMeds} is not in the medicine cabinet.`, 'error'); return; }
-    if (item.stock < dose) { showFeedback(`Insufficient stock. Only ${item.stock.toFixed(1)}ml left.`, 'error'); return; }
-
-    const deductResult = await onDeductInventory(item.id, dose);
-    if (!deductResult.ok) { showFeedback(deductResult.error || 'Could not update stock — try again.', 'error'); return; }
-
-    const logResult = await onAddAuditLog({
-      id: Date.now(), animalId: selectedAnimal.id, animal: selectedAnimal.name,
-      eventType: `Treatment: ${selectedMeds}`, notes: `${dose}ml administered`,
-      date: new Date().toLocaleString(),
-    });
-    if (!logResult.ok) { showFeedback(logResult.error || 'Stock updated, but the treatment record could not be saved.', 'error'); return; }
-    showFeedback(`${dose}ml of ${selectedMeds} administered and deducted from cabinet.`);
   };
 
   const gestationInfo  = calculateGestation(gestationStart, selectedAnimal?.species);
   const lifecycle      = getLifecycleStats(selectedAnimal);
   const schedule       = getDynamicSchedule(selectedAnimal);
-  const currentMed     = DOSAGE_RATES[selectedMeds];
   const breedInfo      = BREED_PROFILES[selectedAnimal?.species]?.find(b => b.breed === selectedAnimal?.breed);
   const overdueCount   = schedule.filter(s => s.status === 'Overdue').length;
   const dueSoonCount   = schedule.filter(s => s.status === 'Due Soon').length;
   const doneCount      = schedule.filter(s => s.status === 'Completed').length;
-  const isCapped       = currentMed?.maxDose && parseFloat(calculateDosage(selectedMeds, selectedAnimal?.currentWeight)) >= currentMed.maxDose;
-  // The dropdown lists every medicine PFUMA knows dosing rules for (a
-  // reference list), which is almost always a bigger set than what's
-  // physically in this farmer's cabinet — surfacing that gap up front (not
-  // just as an error after "Administer" is clicked) is the whole fix for
-  // "what is this calculator actually doing".
-  const cabinetItem    = inventory.find(i => i.name === selectedMeds);
-  const requiredDose   = parseFloat(calculateDosage(selectedMeds, selectedAnimal?.currentWeight));
-  const canAdminister  = !!cabinetItem && cabinetItem.stock >= requiredDose;
+  const pendingRecs      = recommendations.filter(r => r.status === 'pending');
+  const administeredRecs = recommendations.filter(r => r.status === 'administered');
 
   return (
     <div className="p-6 bg-gray-50 min-h-full space-y-6 text-left">
@@ -532,93 +523,90 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onDeduc
               )}
             </div>
 
-            {/* MEDICATION CALCULATOR */}
+            {/* VET RECOMMENDATIONS — replaces the old self-serve calculator.
+                A vet prescribes a medicine/dose for this specific animal;
+                the farmer's only action here is to administer (or not)
+                against that recommendation, from their own cabinet. */}
             <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
               <SectionHeader
                 icon={FlaskConical}
-                title="Medication Calculator"
-                description={`Pick any medicine PFUMA has dosing rules for and it works out the exact dose for ${selectedAnimal.name}'s ${selectedAnimal.currentWeight}kg body weight. "Administer & Deduct Stock" only works for medicines you actually hold in the Medicine Cabinet below — for anything else, this is a dosing reference only.`}
+                title="Vet Recommendations"
+                description={`Medication for ${selectedAnimal.name} is prescribed by a vet, not picked by you — a Veterinarian recommends the medicine and dose here, and you administer it from your Medicine Cabinet below.`}
                 color="text-blue-500"
               />
 
-              <div className="space-y-3">
-                <div>
-                  <label className="text-[10px] font-black text-gray-500 uppercase block mb-1.5" htmlFor="med-sel">Select Medicine</label>
-                  <select
-                    id="med-sel"
-                    className="w-full p-3 bg-gray-50 rounded-xl font-bold text-sm border-2 border-transparent outline-none focus:border-blue-400 transition appearance-none"
-                    value={selectedMeds}
-                    onChange={e => { setSelectedMeds(e.target.value); setShowMedDetail(false); }}
-                  >
-                    {Object.keys(DOSAGE_RATES).map(m => <option key={m}>{m}</option>)}
-                  </select>
+              {recLoading ? (
+                <p className="text-xs text-gray-400 font-medium italic text-center py-6">Loading…</p>
+              ) : recommendations.length === 0 ? (
+                <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-2xl">
+                  <FlaskConical size={24} className="mx-auto text-gray-300 mb-2" />
+                  <p className="text-xs font-black text-gray-400">No recommendations yet</p>
+                  <p className="text-[11px] text-gray-400 font-medium mt-1 px-4">Ask your vet on PFUMA Messenger to review {selectedAnimal.name} — anything they prescribe shows up here.</p>
                 </div>
+              ) : (
+                <div className="space-y-3">
+                  {pendingRecs.map(rec => {
+                    const cabinetItem = inventory.find(i => i.name === rec.medicine_name);
+                    const canAdminister = !!cabinetItem && cabinetItem.stock >= rec.dose_ml;
+                    return (
+                      <div key={rec.id} className="bg-blue-50 border border-blue-100 rounded-2xl p-4 space-y-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-sm font-black text-gray-800">{rec.medicine_name}</p>
+                            <p className="text-[10px] text-gray-500 font-medium">{rec.vet_name} · {new Date(rec.created_at).toLocaleDateString()}</p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="text-xl font-black text-blue-700">{Number(rec.dose_ml).toFixed(1)}</span>
+                            <span className="text-xs font-black text-blue-500"> ml</span>
+                          </div>
+                        </div>
+                        {rec.frequency && <p className="text-[11px] text-gray-600 font-bold">{rec.frequency}</p>}
+                        {rec.notes && <p className="text-[11px] text-gray-600 font-medium italic">"{rec.notes}"</p>}
 
-                {/* Dose display */}
-                <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] font-black text-blue-400 uppercase mb-1">Required Dose</p>
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-black text-blue-700">{calculateDosage(selectedMeds, selectedAnimal.currentWeight)}</span>
-                      <span className="text-sm font-black text-blue-500">ml</span>
-                    </div>
-                    {isCapped && <p className="text-[9px] text-orange-600 font-black uppercase mt-1">⚠ Capped at max safe dose</p>}
-                  </div>
-                  <Calculator size={28} className="text-blue-200" />
-                </div>
+                        {cabinetItem ? (
+                          <div className={`flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] font-bold ${canAdminister ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-orange-50 text-orange-700 border border-orange-100'}`}>
+                            {canAdminister ? <CheckCircle size={13} className="shrink-0" /> : <AlertCircle size={13} className="shrink-0" />}
+                            {canAdminister
+                              ? `In your cabinet — ${cabinetItem.stock.toFixed(1)}ml available.`
+                              : `Only ${cabinetItem.stock.toFixed(1)}ml left — not enough for this ${Number(rec.dose_ml).toFixed(1)}ml dose.`}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 bg-gray-100 text-gray-500 border border-gray-200 rounded-xl px-3 py-2 text-[11px] font-bold">
+                            <Info size={13} className="shrink-0" />
+                            Not in your Medicine Cabinet — order it from a Supplier in the Marketplace first.
+                          </div>
+                        )}
 
-                {/* Cabinet stock status — the calculator itself is just a
-                    reference until this is green, so this needs to be
-                    obvious before the farmer hits Administer. */}
-                {cabinetItem ? (
-                  <div className={`flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] font-bold ${canAdminister ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-orange-50 text-orange-700 border border-orange-100'}`}>
-                    {canAdminister ? <CheckCircle size={13} className="shrink-0" /> : <AlertCircle size={13} className="shrink-0" />}
-                    {canAdminister
-                      ? `In your cabinet — ${cabinetItem.stock.toFixed(1)}ml available.`
-                      : `In your cabinet, but only ${cabinetItem.stock.toFixed(1)}ml left — not enough for this ${requiredDose}ml dose.`}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 bg-gray-100 text-gray-500 border border-gray-200 rounded-xl px-3 py-2 text-[11px] font-bold">
-                    <Info size={13} className="shrink-0" />
-                    Not in your Medicine Cabinet — this is a dosing reference only. Order it from a Supplier in the Marketplace to administer it here.
-                  </div>
-                )}
-
-                {/* Med detail collapsible */}
-                {currentMed && (
-                  <div className="border border-gray-100 rounded-xl overflow-hidden">
-                    <button
-                      className="w-full flex items-center justify-between px-3 py-2.5 text-[11px] font-black text-gray-600 uppercase tracking-wide hover:bg-gray-50 transition"
-                      onClick={() => setShowMedDetail(p => !p)}
-                    >
-                      <span className="flex items-center gap-1.5">
-                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${catColor(currentMed.category)}`}>{currentMed.category}</span>
-                        Medicine Info
-                      </span>
-                      {showMedDetail ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                    </button>
-                    {showMedDetail && (
-                      <div className="px-3 pb-3 space-y-2 border-t border-gray-50 pt-2">
-                        <p className="text-[11px] text-gray-600 font-medium leading-relaxed italic">{currentMed.note}</p>
-                        <p className="text-[10px] font-black text-gray-400 uppercase">Frequency: {currentMed.frequency}</p>
+                        <button
+                          onClick={() => administerRecommendation(rec)}
+                          disabled={!canAdminister || administeringId === rec.id}
+                          title={!canAdminister ? 'Not enough stock in your cabinet for this dose' : undefined}
+                          className="w-full py-3 bg-blue-600 text-white rounded-xl font-black uppercase text-xs tracking-widest shadow-lg hover:bg-blue-700 active:scale-[0.98] transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
+                        >
+                          <CheckCircle size={15} /> {administeringId === rec.id ? 'Administering…' : 'Administer & Deduct Stock'}
+                        </button>
                       </div>
-                    )}
-                  </div>
-                )}
+                    );
+                  })}
 
-                <button
-                  onClick={deductInventory}
-                  disabled={!canAdminister}
-                  title={!canAdminister ? (cabinetItem ? 'Not enough stock in your cabinet for this dose' : 'This medicine is not in your Medicine Cabinet') : undefined}
-                  className="w-full py-3.5 bg-blue-600 text-white rounded-xl font-black uppercase text-xs tracking-widest shadow-lg hover:bg-blue-700 active:scale-[0.98] transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
-                >
-                  <CheckCircle size={15} /> Administer & Deduct Stock
-                </button>
-
-                <p className="text-[10px] text-gray-400 font-medium text-center">
-                  Calculated for {selectedAnimal.name} · {selectedAnimal.currentWeight} kg
-                </p>
-              </div>
+                  {administeredRecs.length > 0 && (
+                    <div className="pt-1">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Administered</p>
+                      <div className="space-y-2">
+                        {administeredRecs.map(rec => (
+                          <div key={rec.id} className="flex items-center justify-between gap-2 px-3 py-2 bg-gray-50 rounded-xl">
+                            <div className="min-w-0">
+                              <p className="text-xs font-black text-gray-700 truncate">{rec.medicine_name} — {Number(rec.dose_ml).toFixed(1)}ml</p>
+                              <p className="text-[10px] text-gray-400 font-medium">{rec.vet_name} · administered {rec.administered_at ? new Date(rec.administered_at).toLocaleDateString() : ''}</p>
+                            </div>
+                            <CheckCircle size={14} className="text-pfuma-green shrink-0" />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* MEDICINE CABINET */}

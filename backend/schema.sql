@@ -36,15 +36,18 @@ CREATE TABLE IF NOT EXISTS users (
   -- Auth & signup verification
   password_hash  VARCHAR(255),
   verification_status ENUM('pending','verified','rejected') DEFAULT 'pending',
-  verified_by    INT NULL,             -- FK → users.id (reviewer: Police, or a peer Vet)
+  verified_by    INT NULL,             -- FK → users.id (reviewer: Police/peer Vet, or Admin for a Police applicant)
+  requested_by   INT NULL,             -- FK → users.id (existing officer who nominated a new Police account; NULL for every other role)
   verification_notes TEXT,
   id_document_path         VARCHAR(300),  -- national ID upload
   credential_document_path VARCHAR(300),  -- DVS license / business reg / land proof upload
   avatar_seed    VARCHAR(80),
+  avatar_url     VARCHAR(300),          -- real uploaded profile picture; falls back to the Dicebear avatar_seed when NULL
   account_status ENUM('active','suspended') NOT NULL DEFAULT 'active',  -- admin moderation (scammers etc.), separate from verification_status
   suspension_reason VARCHAR(300),
   created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (verified_by) REFERENCES users(id) ON DELETE SET NULL
+  FOREIGN KEY (verified_by)  REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE SET NULL
 );
 -- Upgrades an existing database that predates the Admin role. MODIFY is
 -- idempotent (safe to re-run) unlike ADD COLUMN, so no IF NOT EXISTS needed.
@@ -171,7 +174,8 @@ CREATE TABLE IF NOT EXISTS sale_clearances (
 );
 
 -- Upgrades a database that predates traditional-authority attestation.
--- MariaDB supports ADD COLUMN IF NOT EXISTS, so this is safe to re-run.
+-- MariaDB supports ADD COLUMN IF NOT EXISTS; plain MySQL (production) does
+-- not — see the note further down. app.py's ensure_schema() is authoritative.
 ALTER TABLE sale_clearances
   ADD COLUMN IF NOT EXISTS leader_clearance ENUM('attested','not_applicable') NULL,
   ADD COLUMN IF NOT EXISTS leader_type      ENUM('Sabuku','Mambo') NULL,
@@ -194,6 +198,54 @@ CREATE TABLE IF NOT EXISTS bids (
   FOREIGN KEY (listing_id) REFERENCES marketplace_listings(id) ON DELETE CASCADE,
   FOREIGN KEY (bidder_id)  REFERENCES users(id) ON DELETE CASCADE
 );
+
+-- ── NOTIFICATIONS ────────────────────────────────────────────
+-- Real events a user needs to know about (a bid came in, a bid they placed
+-- was accepted, ...). related_user_id is set whenever the notification is
+-- "about" another person, so the UI can offer "Message them" straight into
+-- PFUMA Messenger instead of making the user go find that person again.
+CREATE TABLE IF NOT EXISTS notifications (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  user_id         INT NOT NULL,            -- FK → users.id (recipient)
+  type            VARCHAR(40) NOT NULL,    -- 'bid_placed', 'bid_accepted', 'med_recommendation', ...
+  title           VARCHAR(150) NOT NULL,
+  message         VARCHAR(300) NOT NULL,
+  related_user_id INT NULL,                -- FK → users.id (the other party, if any)
+  listing_id      INT NULL,                -- FK → marketplace_listings.id
+  animal_id       INT NULL,                -- FK → animals.id
+  read_at         TIMESTAMP NULL,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id)         REFERENCES users(id)                 ON DELETE CASCADE,
+  FOREIGN KEY (related_user_id) REFERENCES users(id)                 ON DELETE SET NULL,
+  FOREIGN KEY (listing_id)      REFERENCES marketplace_listings(id)  ON DELETE SET NULL,
+  FOREIGN KEY (animal_id)       REFERENCES animals(id)                ON DELETE SET NULL
+);
+CREATE INDEX idx_notifications_user_time ON notifications (user_id, created_at DESC);
+
+-- ── MEDICATION RECOMMENDATIONS ───────────────────────────────
+-- A vet recommends a specific medicine/dose to a farmer for one of their
+-- animals; the farmer administers it from their own cabinet. This is the
+-- clinical direction real veterinary practice runs in (vet prescribes,
+-- farmer/owner administers under that guidance) — the farmer no longer
+-- self-selects a medicine and dose with no vet involved.
+CREATE TABLE IF NOT EXISTS medication_recommendations (
+  id             INT AUTO_INCREMENT PRIMARY KEY,
+  animal_id      INT NOT NULL,
+  farmer_id      INT NOT NULL,             -- FK → users.id (the animal's owner, denormalized for a fast farmer-side query)
+  vet_id         INT NOT NULL,             -- FK → users.id (Veterinarian who recommended it)
+  medicine_name  VARCHAR(120) NOT NULL,    -- matches DOSAGE_RATES / medicine_inventory naming
+  dose_ml        DECIMAL(8,2) NOT NULL,
+  frequency      VARCHAR(100),
+  notes          TEXT,
+  status         ENUM('pending','administered','declined') DEFAULT 'pending',
+  created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  administered_at TIMESTAMP NULL,
+  FOREIGN KEY (animal_id) REFERENCES animals(id) ON DELETE CASCADE,
+  FOREIGN KEY (farmer_id) REFERENCES users(id)   ON DELETE CASCADE,
+  FOREIGN KEY (vet_id)    REFERENCES users(id)   ON DELETE CASCADE
+);
+CREATE INDEX idx_medrec_animal ON medication_recommendations (animal_id, status);
+CREATE INDEX idx_medrec_farmer ON medication_recommendations (farmer_id, status);
 
 -- ── VET CASES / MESSAGES ─────────────────────────────────────
 -- Vet Messenger cases from the web app. Also used by mobile.
@@ -254,7 +306,9 @@ CREATE TABLE IF NOT EXISTS conversation_messages (
   id               INT AUTO_INCREMENT PRIMARY KEY,
   conversation_id  INT NOT NULL,
   sender_id        INT NOT NULL,
-  message          TEXT NOT NULL,
+  message          TEXT NOT NULL,       -- may be '' when the message is attachment-only
+  attachment_url   VARCHAR(300),        -- private route (/attachments/<id>), not a public /uploads path
+  attachment_name  VARCHAR(150),        -- original filename, for non-image display
   sent_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   read_at          TIMESTAMP NULL,
   FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
@@ -514,10 +568,16 @@ CREATE TABLE IF NOT EXISTS compliance_actions (
 -- Columns added after the first release. A database created earlier will not
 -- pick these up from CREATE TABLE IF NOT EXISTS, and the seed data below
 -- references some of them, so re-importing without these would fail.
--- MariaDB supports ADD COLUMN IF NOT EXISTS, so this block is safe to re-run.
+-- ADD COLUMN IF NOT EXISTS is a MariaDB-only extension — plain MySQL (which
+-- is what production actually runs) rejects it with a syntax error, so this
+-- block silently no-ops there. backend/app.py's ensure_schema() is the real,
+-- portable migration path (checks information_schema before a plain ALTER)
+-- and runs automatically on every backend startup — treat these blocks as
+-- reference/manual-import-only, not what production actually depends on.
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS account_status ENUM('active','suspended') NOT NULL DEFAULT 'active',
-  ADD COLUMN IF NOT EXISTS suspension_reason VARCHAR(300);
+  ADD COLUMN IF NOT EXISTS suspension_reason VARCHAR(300),
+  ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(300);
 
 ALTER TABLE marketplace_listings
   ADD COLUMN IF NOT EXISTS photo_url VARCHAR(300),
@@ -525,6 +585,10 @@ ALTER TABLE marketplace_listings
 
 ALTER TABLE health_events
   ADD COLUMN IF NOT EXISTS next_due_date DATE;
+
+ALTER TABLE conversation_messages
+  ADD COLUMN IF NOT EXISTS attachment_url  VARCHAR(300),
+  ADD COLUMN IF NOT EXISTS attachment_name VARCHAR(150);
 
 -- ── SEED DATA ─────────────────────────────────────────────────
 -- Demo password for every seeded account below: Pfuma2026!

@@ -31,6 +31,16 @@ const CAT_BADGE = {
   equipment: 'bg-purple-100 text-purple-700',
 };
 
+// Only relevant in "My Listings" — the public feed only ever shows
+// 'available', so a seller otherwise has no way to see where a listing
+// that hasn't gone live yet (or already sold) actually stands.
+const STATUS_BADGE = {
+  pending_clearance: { label: 'Pending Clearance', cls: 'bg-yellow-100 text-yellow-700' },
+  available:         { label: 'Live',              cls: 'bg-green-100 text-green-700'  },
+  sold:              { label: 'Sold',               cls: 'bg-gray-200 text-gray-600'    },
+  withdrawn:         { label: 'Withdrawn',          cls: 'bg-red-100 text-red-600'      },
+};
+
 const PostForm = ({ currentUser, onSubmit, onCancel, animals }) => {
   const [form, setForm] = useState({ product_name: '', category: 'livestock', price: '', unit: 'head', quantity: '1', location: currentUser?.district ? `${currentUser.district}, ${currentUser.province}` : (currentUser?.province || ''), description: '', animal_id: '',
     leader_clearance: '', leader_type: 'Sabuku', leader_name: '', leader_village: '',
@@ -234,13 +244,20 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal }) => {
   const [feedback, setFeedback]     = useState(null);
   const [openBidsId, setOpenBidsId] = useState(null);
   const [bidsByListing, setBidsByListing] = useState({});
+  // 'market' = the public feed everyone sees (only 'available' listings);
+  // 'mine' = every listing this seller has ever posted, at any status, so
+  // they can find and manage their own without hunting through everyone
+  // else's.
+  const [viewMode, setViewMode]     = useState('market');
 
   const fetchListings = useCallback(async () => {
     setLoading(true);
     try {
-      const url = activeCategory === 'all'
-        ? `${API}/listings`
-        : `${API}/listings?category=${activeCategory}`;
+      const url = viewMode === 'mine'
+        ? `${API}/listings/mine`
+        : activeCategory === 'all'
+          ? `${API}/listings`
+          : `${API}/listings?category=${activeCategory}`;
       const res = await fetch(url, { headers: { Authorization: `Bearer ${currentUser?.token}` } });
       if (!res.ok) throw new Error();
       const data = await res.json();
@@ -253,7 +270,7 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal }) => {
     } finally {
       setLoading(false);
     }
-  }, [activeCategory, currentUser?.token]);
+  }, [activeCategory, viewMode, currentUser?.token]);
 
   useEffect(() => { fetchListings(); }, [fetchListings]);
 
@@ -354,9 +371,10 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal }) => {
   };
 
   const filtered = listings.filter(l =>
-    l.product_name?.toLowerCase().includes(search.toLowerCase()) ||
-    l.location?.toLowerCase().includes(search.toLowerCase()) ||
-    l.seller_name?.toLowerCase().includes(search.toLowerCase())
+    (viewMode !== 'mine' || activeCategory === 'all' || l.category === activeCategory) &&
+    (l.product_name?.toLowerCase().includes(search.toLowerCase()) ||
+     l.location?.toLowerCase().includes(search.toLowerCase()) ||
+     l.seller_name?.toLowerCase().includes(search.toLowerCase()))
   );
 
   const canPost = ['Farmer', 'Supplier'].includes(currentUser?.role);
@@ -409,6 +427,32 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal }) => {
 
       {/* Post form */}
       {showForm && <PostForm currentUser={currentUser} animals={animals} onSubmit={handlePost} onCancel={() => setShowForm(false)} />}
+
+      {/* Market vs. mine — a seller's own listings (any status) are easy to
+          lose track of in the shared public feed, so this pulls them out
+          into their own view instead of the seller having to search/scan
+          through everyone else's. */}
+      {canPost && (
+        <div className="flex gap-1 bg-white border border-gray-100 rounded-2xl p-1 shadow-sm w-fit">
+          <button
+            onClick={() => setViewMode('market')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide transition ${viewMode === 'market' ? 'bg-pfuma-green text-white' : 'text-gray-400 hover:text-gray-600'}`}
+          >
+            <ShoppingCart size={13} /> All Listings
+          </button>
+          <button
+            onClick={() => setViewMode('mine')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide transition ${viewMode === 'mine' ? 'bg-pfuma-green text-white' : 'text-gray-400 hover:text-gray-600'}`}
+          >
+            <Tag size={13} /> My Listings
+          </button>
+        </div>
+      )}
+      {viewMode === 'mine' && (
+        <p className="text-[11px] text-gray-400 font-medium -mt-3">
+          Everything you've posted, at every stage — pending clearance, live, sold, or withdrawn. Only you see this view.
+        </p>
+      )}
 
       {/* Search + category filter */}
       <div className="flex flex-col md:flex-row gap-4">
@@ -472,7 +516,11 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal }) => {
                   <span className={`text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide ${CAT_BADGE[listing.category] || 'bg-gray-100 text-gray-600'}`}>
                     {listing.category}
                   </span>
-                  {listing.category === 'livestock' && (
+                  {viewMode === 'mine' && STATUS_BADGE[listing.status] ? (
+                    <span className={`text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide ${STATUS_BADGE[listing.status].cls}`}>
+                      {STATUS_BADGE[listing.status].label}
+                    </span>
+                  ) : listing.category === 'livestock' && listing.status !== 'pending_clearance' && (
                     <span className="flex items-center gap-1 text-[9px] font-black text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full uppercase" title="This livestock listing was reviewed and cleared by Police before going live">
                       <ShieldCheck size={9} /> Police Cleared
                     </span>

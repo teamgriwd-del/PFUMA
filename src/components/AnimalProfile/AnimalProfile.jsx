@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { BREED_PROFILES } from '../HealthManagement/healthData';
 import {
   PlusCircle, ChevronRight, Users, ShieldCheck, X,
@@ -44,9 +44,54 @@ const Field = ({ id, label, required, children }) => (
 );
 
 // ── HEALTH PASSPORT MODAL ──────────────────────────────────────────────────
-const HealthPassport = ({ animal, auditLog, onClose }) => (
+// Print/Export PDF/download are all the same real capability: the browser's
+// native print dialog, which can also target "Save as PDF" — no heavy
+// client-side PDF library needed. Printing directly from this modal (via
+// @media print visibility tricks) rendered a blank page in practice —
+// `position: fixed` + `backdrop-blur` on the overlay doesn't reliably
+// translate to the print layout across browsers/WebViews. Instead this
+// clones the passport markup into a separate, isolated print window (same
+// compiled stylesheet, none of the modal's fixed/blur baggage) and prints
+// that — the standard robust pattern for printing one part of a page.
+const HealthPassport = ({ animal, auditLog, onClose }) => {
+  const printRef = useRef(null);
+
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank', 'width=900,height=1200');
+    if (!printWindow || !printRef.current) {
+      window.alert('Your browser blocked the print window — allow pop-ups for this site and try again.');
+      return;
+    }
+    const styleTags = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
+      .map(el => el.outerHTML).join('\n');
+    printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8" />
+      <title>${animal.name} — Health Passport</title>
+      ${styleTags}
+      <style>
+        body{margin:0;background:#fff;}
+        /* The on-screen modal caps itself to the viewport (max-h-[90vh]) and
+           scrolls internally (overflow-y-auto) — cloned as-is into this
+           print window, that clips Identity Details and the Health Event
+           Log to whatever fit in the visible area instead of flowing them
+           onto the page (only the photo, which sits above the fold, made
+           it through). Overriding by id — not the Tailwind classes
+           themselves, which are fragile to target from injected CSS —
+           forces the full content to lay out and print/paginate normally.
+        */
+        #pfuma-passport-root { max-height: none !important; overflow: visible !important; }
+        #pfuma-passport-body { overflow: visible !important; flex: none !important; }
+      </style>
+    </head><body>${printRef.current.outerHTML}</body></html>`);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.focus();
+      printWindow.print();
+    };
+  };
+
+  return (
   <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-gray-900/90 backdrop-blur-md">
-    <div className="bg-white w-full max-w-4xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div ref={printRef} id="pfuma-passport-root" className="bg-white w-full max-w-4xl rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
       {/* Header */}
       <div className="bg-pfuma-green px-10 py-8 text-white flex justify-between items-center relative overflow-hidden">
         <div className="relative z-10">
@@ -56,14 +101,14 @@ const HealthPassport = ({ animal, auditLog, onClose }) => (
           </div>
           <p className="text-sm opacity-60 font-medium uppercase tracking-[3px]">Verified Digital Pedigree & Medical Record</p>
         </div>
-        <button onClick={onClose} className="relative z-10 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition" aria-label="Close passport">
+        <button onClick={onClose} className="relative z-10 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition print:hidden" aria-label="Close passport">
           <X size={20} />
         </button>
         <div className="absolute -top-10 -right-10 w-64 h-64 bg-white/5 rounded-full" aria-hidden="true" />
       </div>
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto p-5 md:p-10 bg-[#fdfcf9] text-left">
+      <div id="pfuma-passport-body" className="flex-1 overflow-y-auto p-5 md:p-10 bg-[#fdfcf9] text-left">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-10">
           <div className="lg:col-span-1 space-y-5">
             <div className="w-full aspect-square rounded-3xl overflow-hidden border-4 border-white shadow-xl bg-gray-100">
@@ -124,18 +169,19 @@ const HealthPassport = ({ animal, auditLog, onClose }) => (
       </div>
 
       {/* Footer */}
-      <div className="px-10 py-5 bg-gray-50 border-t border-gray-100 flex justify-between items-center">
+      <div className="px-10 py-5 bg-gray-50 border-t border-gray-100 flex justify-between items-center print:hidden">
         <div className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
           <ShieldCheck size={14} className="text-pfuma-green" /> PFUMA Verified · {new Date().getFullYear()}
         </div>
         <div className="flex gap-3">
-          <button className="px-6 py-2.5 bg-white border-2 border-gray-200 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-gray-100 transition">Print</button>
-          <button className="px-6 py-2.5 bg-pfuma-green text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-md hover:bg-green-700 transition">Export PDF</button>
+          <button onClick={handlePrint} className="px-6 py-2.5 bg-white border-2 border-gray-200 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-gray-100 transition">Print</button>
+          <button onClick={handlePrint} title="Choose &quot;Save as PDF&quot; as the destination in the print dialog to download it" className="px-6 py-2.5 bg-pfuma-green text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-md hover:bg-green-700 transition">Export PDF</button>
         </div>
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // ── REGISTRATION FORM ──────────────────────────────────────────────────────
 const RegistrationForm = ({ onSubmit, onCancel }) => {

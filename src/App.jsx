@@ -14,13 +14,14 @@ import Jinda      from './components/IntelAI/PfumaIntelAI';
 import AuthPortal        from './components/IntelAI/AuthPortal';
 import ErrorBoundary     from './components/ErrorBoundary';
 import { HEALTH_PROTOCOLS } from './components/HealthManagement/healthData';
+import { DOSAGE_RATES } from './components/HealthManagement/dosageData';
 import {
   LayoutDashboard, Users, HeartPulse, Stethoscope, MessageSquare,
   Bell, LogOut, ShieldCheck, TrendingUp, Package, ShoppingCart, Activity,
   Truck, BarChart3, Globe, AlertTriangle, CheckCircle, ChevronRight,
   Zap, Clock, ArrowRight, Tag, Pill, MapPin, FileText,
   RefreshCw, DollarSign, Target, Box, PhoneCall, Star, Wheat, Store,
-  Sprout, Check, Syringe, Shield, UserPlus, X, Menu, Eye, EyeOff, Handshake, Radio,
+  Sprout, Check, Syringe, Shield, UserPlus, X, Menu, Eye, EyeOff, Handshake, Radio, FlaskConical, Camera,
   ShieldAlert,
 } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis } from 'recharts';
@@ -499,6 +500,85 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
 };
 
 // ── VETERINARIAN DASHBOARD ─────────────────────────────────────────────────
+// Module-scope (not nested inside VeterinarianDashboard) so its identity is
+// stable across re-renders — see the matching comment on AnimalProfile's
+// Field for why a component wrapping a live input must never be redefined
+// inside its parent's render body.
+const VetMedicationRecommender = ({ animals, currentUser }) => {
+  const [animalId, setAnimalId] = useState('');
+  const [medicine, setMedicine] = useState(Object.keys(DOSAGE_RATES)[0] || '');
+  const [frequency, setFrequency] = useState('');
+  const [notes, setNotes] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [feedback, setFeedback] = useState(null);
+
+  const animal = animals.find(a => a.id === Number(animalId));
+  const med = DOSAGE_RATES[medicine];
+  const dose = animal && med ? Math.min(med.maxDose || Infinity, (animal.currentWeight / med.per) * med.rate) : null;
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!animal || !med || dose == null) return;
+    setBusy(true); setFeedback(null);
+    try {
+      const res = await fetch(`${API}/medication-recommendations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentUser.token}` },
+        body: JSON.stringify({
+          animal_id: animal.id, medicine_name: medicine, dose_ml: Number(dose.toFixed(1)),
+          frequency: frequency || med.frequency, notes,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setFeedback({ ok: false, msg: data.error || 'Could not send recommendation.' }); return; }
+      setFeedback({ ok: true, msg: `Sent to ${animal.ownerName || 'the farmer'} — they can administer it from their Medicine Cabinet.` });
+      setNotes(''); setFrequency('');
+    } catch {
+      setFeedback({ ok: false, msg: 'Could not reach the PFUMA API.' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+      <h3 className="text-sm font-black text-white mb-1 flex items-center gap-2"><FlaskConical size={15} className="text-blue-400" /> Recommend Medication</h3>
+      <p className="text-[11px] text-gray-500 font-medium mb-4">Prescribe a dose for a specific animal — the farmer administers it from their own cabinet against your recommendation.</p>
+      <form onSubmit={submit} className="space-y-3">
+        <select required value={animalId} onChange={e => setAnimalId(e.target.value)}
+          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-blue-400/50">
+          <option value="" className="text-gray-900">Select an animal...</option>
+          {animals.map(a => (
+            <option key={a.id} value={a.id} className="text-gray-900">
+              {a.name} — {a.ownerName || 'you'} ({a.species}, {a.currentWeight}kg)
+            </option>
+          ))}
+        </select>
+        <select value={medicine} onChange={e => setMedicine(e.target.value)}
+          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-blue-400/50">
+          {Object.keys(DOSAGE_RATES).map(m => <option key={m} value={m} className="text-gray-900">{m}</option>)}
+        </select>
+        {animal && med && (
+          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2.5 flex items-center justify-between">
+            <span className="text-[10px] text-blue-300 font-black uppercase">Dose for {animal.name}</span>
+            <span className="text-sm font-black text-white">{dose.toFixed(1)} ml</span>
+          </div>
+        )}
+        <input placeholder={med?.frequency || 'Frequency (optional override)'} value={frequency} onChange={e => setFrequency(e.target.value)}
+          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-400/50" />
+        <textarea placeholder="Clinical notes for the farmer (optional)" rows={2} value={notes} onChange={e => setNotes(e.target.value)}
+          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-400/50 resize-none" />
+        {feedback && (
+          <p className={`text-[11px] font-bold ${feedback.ok ? 'text-green-400' : 'text-red-400'}`}>{feedback.msg}</p>
+        )}
+        <button type="submit" disabled={busy || !animalId} className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-[11px] font-black uppercase hover:bg-blue-700 transition disabled:opacity-50">
+          {busy ? 'Sending…' : 'Send Recommendation'}
+        </button>
+      </form>
+    </div>
+  );
+};
+
 const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUser }) => {
   const [farms, setFarms] = useState([]);
   const [reportingHealth, setReportingHealth] = useState([]);
@@ -682,6 +762,8 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
               ))}
             </div>
           </div>
+
+          <VetMedicationRecommender animals={animals} currentUser={currentUser} />
         </div>
 
         {/* Farm registry */}
@@ -1248,7 +1330,7 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
       });
       const data = await res.json();
       if (!res.ok) { setOfficerError(data.error || 'Could not provision this officer.'); return; }
-      setFeedback(`${officerForm.full_name} provisioned and verified — give them their phone number and the temporary password you just set so they can log in.`);
+      setFeedback(`${officerForm.full_name}'s nomination was submitted — PFUMA Admin must approve it before the account can act as an officer. Give them their phone number and the temporary password so they're ready to log in once approved.`);
       setOfficerForm(EMPTY_OFFICER_FORM);
       setShowAddOfficer(false);
       setTimeout(() => setFeedback(null), 6000);
@@ -1345,15 +1427,17 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
         </div>
       )}
 
-      {/* Provision a new Police officer — Police accounts are not self-service
-          signup; an existing verified officer creates and verifies the next
-          one here, same as real ZRP unit onboarding. */}
+      {/* Nominate a new Police officer — Police accounts are not self-service
+          signup, and an existing officer can no longer unilaterally verify
+          the next one (that was the fraud path: one compromised or rogue
+          account minting others). This submits a pending request that only
+          PFUMA Admin can approve, in the Admin Panel. */}
       {showAddOfficer && (
         <form onSubmit={provisionOfficer} className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-4">
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="text-sm font-black text-white mb-1">Provision New Officer</h3>
-              <p className="text-[11px] text-gray-500 font-medium">Police accounts aren't self-service signup — an existing verified officer creates and verifies the next one. The account is created already-verified.</p>
+              <h3 className="text-sm font-black text-white mb-1">Nominate New Officer</h3>
+              <p className="text-[11px] text-gray-500 font-medium">Police accounts aren't self-service signup. This submits a request — PFUMA Admin must review and approve it (confirming a real officer vouched for them) before the account can log in and act as Police.</p>
             </div>
             <button type="button" onClick={() => setShowAddOfficer(false)} className="text-gray-500 hover:text-white transition p-1">
               <X size={16} />
@@ -1698,8 +1782,6 @@ const ROLE_ACTIVE_BG = {
   Police:      'bg-white/10',
 };
 
-const TOKEN_STORAGE_KEY = 'pfuma_token';
-
 const IMAGE_BY_SPECIES = {
   Cattle: 'https://images.unsplash.com/photo-1546445317-29f4545e9d53?auto=format&fit=crop&q=80&w=800',
   Goat:   'https://images.unsplash.com/photo-1524024973431-2ad916746881?auto=format&fit=crop&q=80&w=800',
@@ -1721,7 +1803,23 @@ const animalFromApi = (a) => ({
   weightHistory: (a.weight_history || []).map(w => ({ month: w.month_label, weight: w.weight_kg })),
   forSale: !!a.for_sale, costToDate: a.cost_to_date || 0,
   registeredAt: a.created_at,
+  // Only present when a Vet/Police oversight role fetches /animals (it
+  // spans every farm, not just the caller's own) — undefined for a Farmer.
+  ownerId: a.owner_id, ownerName: a.owner_name,
 });
+
+// Backend serializes MySQL TIMESTAMPs as RFC 2822 strings — Date parses
+// that natively. Renders a short relative label for the notification feed.
+const timeAgo = (raw) => {
+  if (!raw) return '';
+  const diffMs = Date.now() - new Date(raw).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+};
 
 // Maps a /health-events row into the shape the audit-log UI expects.
 const auditLogFromApi = (e) => ({
@@ -1739,9 +1837,11 @@ function App() {
   const [sessionChecked, setSessionChecked] = useState(false);
   const [animals,     setAnimals]     = useState([]);
   const [activeTab,   setActiveTab]   = useState('dashboard');
-  // Set by DiseaseDetection's "Call your vet immediately" — carries the
-  // pre-filled Emergency case (subject/animal/description) into VetCommunication
-  // so navigating there actually opens the composer instead of a blank inbox.
+  // Carries an intent into VetCommunication so navigating to Messenger does
+  // something useful instead of landing on a blank inbox: either open the
+  // composer pre-filled with an Emergency case (DiseaseDetection's "Call
+  // your vet immediately"), or jump straight into a conversation with a
+  // specific person (a notification's "Message" action).
   const [vetIntent,   setVetIntent]   = useState(null);
   const requestVetContact = (intent) => { setVetIntent(intent); setActiveTab('vet'); };
   const [completedTasks, setCompletedTasks] = useState([]);
@@ -1753,12 +1853,49 @@ function App() {
     { id: 2, title: 'Vaccine Recall',         msg: 'Lot #992 Oxytetracycline recalled by supplier.',  type: 'Info',     time: '4h ago' },
   ]);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  // Real per-user events (a bid came in, a bid you placed was accepted, a
+  // vet recommended a medication) — separate from the static regional
+  // alerts array above, which is a different concept (disease/security
+  // alerts shown inside the role dashboards, not personal activity).
+  const [realNotifications, setRealNotifications] = useState([]);
 
   const authFetch = useCallback((path, opts = {}) => fetch(`${API}${path}`, {
     ...opts,
     headers: { ...(opts.headers || {}), Authorization: `Bearer ${currentUser?.token}` },
   }), [currentUser?.token]);
+
+  const loadNotifications = useCallback(async () => {
+    if (!currentUser?.token) return;
+    try {
+      const res = await fetch(`${API}/notifications`, { headers: { Authorization: `Bearer ${currentUser.token}` } });
+      if (res.ok) setRealNotifications(await res.json());
+    } catch { /* offline — keep whatever was last loaded */ }
+  }, [currentUser?.token]);
+
+  useEffect(() => {
+    if (!currentUser?.token) { setRealNotifications([]); return; }
+    loadNotifications();
+    const t = setInterval(loadNotifications, 20000);
+    return () => clearInterval(t);
+  }, [currentUser?.token, loadNotifications]);
+
+  // "Message" on a notification (e.g. a bid was accepted) — starts/reuses a
+  // conversation with the other party and drops the user straight into it,
+  // skipping the "who do you want to message" search VetCommunication
+  // normally shows since we already know exactly who.
+  const messageFromNotification = async (n) => {
+    if (!n.related_user_id) return;
+    setVetIntent({ startConversationWith: n.related_user_id, subject: n.title });
+    setActiveTab('vet');
+    if (!n.read_at) {
+      try {
+        await authFetch(`/notifications/${n.id}/read`, { method: 'PATCH' });
+        setRealNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read_at: new Date().toISOString() } : x));
+      } catch { /* not critical if this fails */ }
+    }
+  };
 
   const loadUserData = useCallback(async (user) => {
     const headers = { Authorization: `Bearer ${user.token}` };
@@ -1788,44 +1925,19 @@ function App() {
     }
   }, []);
 
-  // Restore session from a stored token on first load.
-  useEffect(() => {
-    const token = localStorage.getItem(TOKEN_STORAGE_KEY);
-    if (!token) { setSessionChecked(true); return; }
-    (async () => {
-      try {
-        const res = await fetch(`${API}/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
-        if (res.ok) {
-          const apiUser = await res.json();
-          const user = {
-            id: apiUser.id, token, name: apiUser.full_name, phone: apiUser.phone, email: apiUser.email,
-            org: apiUser.org_name, province: apiUser.province, district: apiUser.district, address: apiUser.address,
-            role: apiUser.role, farmSize: apiUser.farm_size_ha,
-            species: (apiUser.species_farmed || '').split(',').filter(Boolean),
-            licenseNumber: apiUser.license_number, speciality: apiUser.speciality, businessReg: apiUser.business_reg,
-            supplyCategories: (apiUser.supply_categories || '').split(',').filter(Boolean),
-            tradingAreas: apiUser.trading_areas, badgeNumber: apiUser.badge_number, station: apiUser.station,
-            jurisdictionProvince: apiUser.jurisdiction_province, verificationStatus: apiUser.verification_status,
-            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${apiUser.full_name || 'PFUMA'}`,
-          };
-          setCurrentUser(user);
-          loadUserData(user);
-        } else {
-          localStorage.removeItem(TOKEN_STORAGE_KEY);
-        }
-      } catch { /* API offline — fall through to login screen */ }
-      setSessionChecked(true);
-    })();
-  }, [loadUserData]);
+  // Session lives only in memory — deliberately not persisted to
+  // localStorage/sessionStorage. Refreshing the page, duplicating the tab,
+  // or closing and reopening the browser all require signing in again;
+  // nothing about a livestock/identity-document account should survive on
+  // a shared or borrowed device once the tab is gone.
+  useEffect(() => { setSessionChecked(true); }, []);
 
   const handleLoginSuccess = (user) => {
-    localStorage.setItem(TOKEN_STORAGE_KEY, user.token);
     setCurrentUser(user);
     loadUserData(user);
   };
 
   const handleSignOut = () => {
-    localStorage.removeItem(TOKEN_STORAGE_KEY);
     setCurrentUser(null);
     setAnimals([]);
     setInventory([]);
@@ -1879,24 +1991,36 @@ function App() {
     }
   };
 
-  const deductInventoryItem = async (itemId, dose) => {
+  // Re-fetches just the medicine cabinet — used after administering a vet's
+  // medication recommendation, which deducts stock server-side as part of
+  // that same transaction rather than through deductInventoryItem above.
+  const refreshInventory = async () => {
+    if (!currentUser) return;
     try {
-      const res = await authFetch(`/inventory/${itemId}/deduct`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dose }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) return { ok: false, error: data.error || 'Could not update stock — try again.' };
-      setInventory(prev => prev.map(i => i.id === itemId ? { ...i, stock: Number(data.new_stock) } : i));
-      return { ok: true };
-    } catch {
-      return { ok: false, error: 'Offline — stock was not updated.' };
-    }
+      const res = await authFetch(`/inventory/${currentUser.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setInventory(data.map(i => ({ id: i.id, name: i.medicine_name, stock: Number(i.stock), unit: i.unit, min: Number(i.min_stock), supplier: i.supplier, price: Number(i.price_usd) })));
+      }
+    } catch { /* offline */ }
   };
 
   const handleListAnimal = async (id) => {
     setAnimals(prev => prev.map(a => a.id === id ? { ...a, forSale: !a.forSale } : a));
     try { await authFetch(`/animals/${id}/sale`, { method: 'PATCH' }); } catch { /* offline — local toggle already applied */ }
+  };
+
+  const handleAvatarChange = async (file) => {
+    if (!file) return;
+    setAvatarUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append('photo', file);
+      const res = await authFetch('/users/me/avatar', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (res.ok) setCurrentUser(prev => ({ ...prev, avatar: `${API}${data.avatar_url}` }));
+    } catch { /* offline — avatar keeps its previous value */ }
+    setAvatarUploading(false);
   };
 
   if (!sessionChecked) return null;
@@ -1978,9 +2102,20 @@ function App() {
         {/* User + Logout */}
         <div className="px-4 pb-5 border-t border-white/10 pt-4">
           <div className="flex items-center gap-3 mb-3 px-2">
-            <div className="w-8 h-8 rounded-lg overflow-hidden border border-white/20 shrink-0">
+            <label className="relative w-8 h-8 rounded-lg overflow-hidden border border-white/20 shrink-0 cursor-pointer group" title="Change profile picture">
               <img src={currentUser.avatar} alt={currentUser.name} className="w-full h-full object-cover" />
-            </div>
+              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                {avatarUploading ? (
+                  <RefreshCw size={11} className="text-white animate-spin" />
+                ) : (
+                  <Camera size={11} className="text-white" />
+                )}
+              </div>
+              <input
+                type="file" accept="image/*" className="hidden" disabled={avatarUploading}
+                onChange={e => { handleAvatarChange(e.target.files?.[0]); e.target.value = ''; }}
+              />
+            </label>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-black text-white leading-none truncate">{currentUser.name}</p>
               <p className="text-[10px] text-yellow-400 font-black uppercase tracking-widest leading-none mt-0.5">{role}</p>
@@ -2021,11 +2156,38 @@ function App() {
               aria-label="Notifications"
             >
               <Bell size={17} />
-              {notifications.length > 0 && <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-red-500 rounded-full border border-white" />}
+              {(realNotifications.some(n => !n.read_at) || notifications.length > 0) && <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-red-500 rounded-full border border-white" />}
             </button>
             {isNotifOpen && (
-              <div className="absolute top-12 right-0 w-80 bg-white rounded-2xl shadow-2xl border border-gray-100 p-5 text-left z-40 animate-in slide-in-from-top-2 duration-200">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Notifications</p>
+              <div className="absolute top-12 right-0 w-80 max-h-[70vh] overflow-y-auto bg-white rounded-2xl shadow-2xl border border-gray-100 p-5 text-left z-40 animate-in slide-in-from-top-2 duration-200">
+                {realNotifications.length > 0 && (
+                  <>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Activity</p>
+                    <div className="space-y-2.5 mb-5">
+                      {realNotifications.map(n => (
+                        <div key={n.id} className={`p-3 rounded-xl ${n.read_at ? 'bg-gray-50' : 'bg-pfuma-green/5 border border-pfuma-green/20'}`}>
+                          <div className="flex items-start gap-2.5">
+                            <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.read_at ? 'bg-gray-300' : 'bg-pfuma-green'}`} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-black text-gray-800">{n.title}</p>
+                              <p className="text-[10px] text-gray-500 font-medium mt-0.5">{n.message}</p>
+                              <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">{timeAgo(n.created_at)}</p>
+                            </div>
+                          </div>
+                          {n.related_user_id && (
+                            <button
+                              onClick={() => messageFromNotification(n)}
+                              className="mt-2 ml-4 flex items-center gap-1.5 px-3 py-1.5 bg-pfuma-green text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition"
+                            >
+                              <MessageSquare size={11} /> Message
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Regional Alerts</p>
                 <div className="space-y-3">
                   {notifications.map(n => (
                     <div key={n.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
@@ -2055,7 +2217,7 @@ function App() {
             </ErrorBoundary>
           )}
           {activeTab === 'profile'     && <ErrorBoundary><AnimalProfile animals={animals} onAddAnimal={addAnimal} auditLog={auditLog} currentUser={currentUser} onListAnimal={handleListAnimal} /></ErrorBoundary>}
-          {activeTab === 'health'      && <ErrorBoundary><HealthManagement animals={animals} completedTasks={completedTasks} setCompletedTasks={setCompletedTasks} auditLog={auditLog} onAddAuditLog={addAuditLog} inventory={inventory} onDeductInventory={deductInventoryItem} /></ErrorBoundary>}
+          {activeTab === 'health'      && <ErrorBoundary><HealthManagement animals={animals} completedTasks={completedTasks} setCompletedTasks={setCompletedTasks} auditLog={auditLog} onAddAuditLog={addAuditLog} inventory={inventory} onRefreshInventory={refreshInventory} currentUser={currentUser} /></ErrorBoundary>}
           {activeTab === 'disease'     && <ErrorBoundary><DiseaseDetection animals={animals} onAddAuditLog={addAuditLog} onCallVet={requestVetContact} /></ErrorBoundary>}
           {activeTab === 'vet'         && <ErrorBoundary><VetCommunication animals={animals} currentUser={currentUser} intent={vetIntent} onIntentConsumed={() => setVetIntent(null)} /></ErrorBoundary>}
           {activeTab === 'marketplace' && <ErrorBoundary><Marketplace currentUser={currentUser} animals={animals} onListAnimal={handleListAnimal} /></ErrorBoundary>}

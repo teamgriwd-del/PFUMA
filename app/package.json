@@ -11,6 +11,8 @@
     "expo-font": "~56.0.7",
     "expo-image-picker": "~56.0.22",
     "expo-linear-gradient": "~56.0.4",
+    "expo-print": "~56.0.4",
+    "expo-sharing": "~56.0.25",
     "expo-splash-screen": "~56.0.14",
     "expo-status-bar": "~56.0.4",
     "expo-updates": "~56.0.23",

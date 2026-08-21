@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import glob
 import secrets
 import functools
 import datetime
@@ -64,6 +65,9 @@ UPLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 ALLOWED_DOC_EXT = {'.pdf', '.jpg', '.jpeg', '.png'}
 ALLOWED_IMG_EXT = {'.jpg', '.jpeg', '.png', '.webp'}
+# Messenger attachments — images plus common documents (a health passport
+# scan, a movement permit) since a chat attachment isn't always a photo.
+ALLOWED_ATTACHMENT_EXT = ALLOWED_IMG_EXT | {'.pdf', '.doc', '.docx'}
 
 # Roles that are not self-service — provisioned by an existing Police officer.
 ADMIN_PROVISIONED_ROLES = {'Police'}
@@ -141,6 +145,108 @@ def get_db():
         charset='utf8mb4',
         cursorclass=pymysql.cursors.DictCursor
     )
+
+
+def ensure_schema():
+    """Creates tables added after the first release, if they don't already
+    exist. CREATE TABLE IF NOT EXISTS is a no-op against an up-to-date
+    database, so this is safe to run on every startup — it exists so a
+    production database doesn't need a manual schema.sql re-import (and the
+    credentials that would require) just to pick up a new feature's tables.
+    Mirrors the full DDL in schema.sql; keep both in sync."""
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS notifications (
+          id              INT AUTO_INCREMENT PRIMARY KEY,
+          user_id         INT NOT NULL,
+          type            VARCHAR(40) NOT NULL,
+          title           VARCHAR(150) NOT NULL,
+          message         VARCHAR(300) NOT NULL,
+          related_user_id INT NULL,
+          listing_id      INT NULL,
+          animal_id       INT NULL,
+          read_at         TIMESTAMP NULL,
+          created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id)         REFERENCES users(id)                 ON DELETE CASCADE,
+          FOREIGN KEY (related_user_id) REFERENCES users(id)                 ON DELETE SET NULL,
+          FOREIGN KEY (listing_id)      REFERENCES marketplace_listings(id)  ON DELETE SET NULL,
+          FOREIGN KEY (animal_id)       REFERENCES animals(id)               ON DELETE SET NULL
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS medication_recommendations (
+          id             INT AUTO_INCREMENT PRIMARY KEY,
+          animal_id      INT NOT NULL,
+          farmer_id      INT NOT NULL,
+          vet_id         INT NOT NULL,
+          medicine_name  VARCHAR(120) NOT NULL,
+          dose_ml        DECIMAL(8,2) NOT NULL,
+          frequency      VARCHAR(100),
+          notes          TEXT,
+          status         ENUM('pending','administered','declined') DEFAULT 'pending',
+          created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          administered_at TIMESTAMP NULL,
+          FOREIGN KEY (animal_id) REFERENCES animals(id) ON DELETE CASCADE,
+          FOREIGN KEY (farmer_id) REFERENCES users(id)   ON DELETE CASCADE,
+          FOREIGN KEY (vet_id)    REFERENCES users(id)   ON DELETE CASCADE
+        )
+    """)
+
+    # Column-level upgrades for tables that already existed on some deployed
+    # database (CREATE TABLE IF NOT EXISTS is a no-op against those, so a
+    # column added after first release never lands without this).
+    #
+    # `ADD COLUMN IF NOT EXISTS` is a MariaDB-only extension — plain MySQL
+    # (which is what's actually running here) rejects it outright with a
+    # syntax error, which silently no-opped every one of these on every
+    # startup until this was caught. Checking information_schema first and
+    # only running a plain ALTER when the column is truly missing works on
+    # both engines.
+    def add_column_if_missing(table, column, ddl):
+        c.execute("""
+            SELECT COUNT(*) AS n FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = %s AND column_name = %s
+        """, (table, column))
+        if c.fetchone()['n'] == 0:
+            try:
+                c.execute(f"ALTER TABLE {table} ADD COLUMN {ddl}")
+            except Exception as e:
+                print(f"[WARNING] could not add {table}.{column}: {e}")
+
+    add_column_if_missing('sale_clearances', 'leader_clearance', "leader_clearance ENUM('attested','not_applicable') NULL")
+    add_column_if_missing('sale_clearances', 'leader_type', "leader_type ENUM('Sabuku','Mambo') NULL")
+    add_column_if_missing('sale_clearances', 'leader_name', "leader_name VARCHAR(120)")
+    add_column_if_missing('sale_clearances', 'leader_village', "leader_village VARCHAR(120)")
+    add_column_if_missing('sale_clearances', 'leader_cleared_on', "leader_cleared_on DATE")
+    add_column_if_missing('sale_clearances', 'leader_reference', "leader_reference VARCHAR(80)")
+    add_column_if_missing('sale_clearances', 'leader_document_path', "leader_document_path VARCHAR(300)")
+    add_column_if_missing('sale_clearances', 'leader_na_reason', "leader_na_reason VARCHAR(200)")
+
+    add_column_if_missing('users', 'account_status', "account_status ENUM('active','suspended') NOT NULL DEFAULT 'active'")
+    add_column_if_missing('users', 'suspension_reason', "suspension_reason VARCHAR(300)")
+    add_column_if_missing('users', 'avatar_url', "avatar_url VARCHAR(300)")
+    add_column_if_missing('users', 'requested_by', "requested_by INT NULL")
+
+    add_column_if_missing('marketplace_listings', 'photo_url', "photo_url VARCHAR(300)")
+    add_column_if_missing('marketplace_listings', 'sold_at', "sold_at TIMESTAMP NULL")
+
+    add_column_if_missing('health_events', 'next_due_date', "next_due_date DATE")
+
+    add_column_if_missing('conversation_messages', 'attachment_url', "attachment_url VARCHAR(300)")
+    add_column_if_missing('conversation_messages', 'attachment_name', "attachment_name VARCHAR(150)")
+
+    db.commit()
+    db.close()
+
+
+try:
+    ensure_schema()
+except Exception as e:
+    # Don't crash the whole API over a schema bootstrap failure — the app is
+    # still useful for everything that doesn't touch these two new tables,
+    # and this is loud in the logs either way.
+    print(f"[WARNING] ensure_schema() failed: {e}")
 
 
 # ── AUTH HELPERS ─────────────────────────────────────────────────
@@ -228,6 +334,7 @@ def public_user_view(user, requester):
     base = {
         'id': user['id'], 'full_name': user['full_name'], 'role': user['role'],
         'org_name': user['org_name'], 'province': user['province'], 'district': user['district'],
+        'avatar_url': user.get('avatar_url'),
     }
     # Business-facing roles publish contact info as part of their function on the
     # platform; Farmers and Police do not (contact happens via listings/messenger).
@@ -266,20 +373,34 @@ def save_upload(file_storage, user_id, doctype):
     return f"{user_id}/{filename}"
 
 
-def save_photo(file_storage, category, entity_id):
-    """Saves an uploaded animal/listing photo under uploads/<category>/<entity_id><ext>
-    and returns the relative path stored in the DB (served publicly, unlike
-    save_upload's private id/credential documents)."""
+def save_photo(file_storage, category, entity_id, allowed_ext=None):
+    """Saves an uploaded animal/listing/attachment/avatar photo under
+    uploads/<category>/<entity_id><ext> and returns the relative path stored
+    in the DB (served publicly, unlike save_upload's private id/credential
+    documents). allowed_ext defaults to images only; pass a wider set (e.g.
+    ALLOWED_ATTACHMENT_EXT) for callers that accept documents too."""
     if not file_storage or not file_storage.filename:
         return None
+    allowed_ext = allowed_ext or ALLOWED_IMG_EXT
     ext = os.path.splitext(secure_filename(file_storage.filename))[1].lower()
-    if ext not in ALLOWED_IMG_EXT:
-        raise ValueError(f"Unsupported image type '{ext}' — use JPG, PNG, or WEBP")
+    if ext not in allowed_ext:
+        raise ValueError(f"Unsupported file type '{ext}' — use {', '.join(sorted(e.lstrip('.').upper() for e in allowed_ext))}")
     category_dir = os.path.join(UPLOAD_DIR, category)
     os.makedirs(category_dir, exist_ok=True)
     filename = f"{entity_id}{ext}"
     file_storage.save(os.path.join(category_dir, filename))
     return f"{category}/{filename}"
+
+
+def create_notification(c, user_id, ntype, title, message, related_user_id=None, listing_id=None, animal_id=None):
+    """Writes one real notification row. Call with the same cursor/connection
+    as the triggering write so it commits in the same transaction — a
+    notification that outlives the event it describes (or vanishes with it
+    on rollback) would be worse than not having one."""
+    c.execute("""
+        INSERT INTO notifications (user_id, type, title, message, related_user_id, listing_id, animal_id)
+        VALUES (%s,%s,%s,%s,%s,%s,%s)
+    """, (user_id, ntype, title, message, related_user_id, listing_id, animal_id))
 
 
 # ── HEALTH CHECK ──────────────────────────────────────────────
@@ -392,9 +513,12 @@ def get_verifications():
     status = request.args.get('status', 'pending')
     db = get_db()
     c = db.cursor()
-    if requester['role'] == 'Police':
+    if requester['role'] == 'Police' and requester['verification_status'] == 'verified':
+        # Police-role applicants are excluded — only Admin can resolve those
+        # (see resolve_verification), so listing them here would show a
+        # pending officer with no action this viewer is allowed to take.
         c.execute("SELECT id, full_name, role, org_name, province, id_document_path, credential_document_path, created_at "
-                   "FROM users WHERE verification_status=%s AND role NOT IN ('Veterinarian','Admin') ORDER BY created_at ASC", (status,))
+                   "FROM users WHERE verification_status=%s AND role NOT IN ('Veterinarian','Admin','Police') ORDER BY created_at ASC", (status,))
     elif requester['role'] == 'Veterinarian' and requester['verification_status'] == 'verified':
         c.execute("SELECT id, full_name, role, org_name, province, id_document_path, credential_document_path, created_at "
                    "FROM users WHERE verification_status=%s AND role='Veterinarian' AND id != %s ORDER BY created_at ASC",
@@ -423,9 +547,14 @@ def resolve_verification(user_id):
     if not target:
         db.close(); return jsonify({"error": "User not found"}), 404
 
+    # A Police applicant can only be resolved by Admin — a fellow officer
+    # approving their own peer is exactly the unilateral-fraud path this is
+    # meant to close, so it's carved out of the general Police branch below
+    # even though Police otherwise reviews every other role's signups.
     authorized = (
         requester['role'] == 'Admin' or
-        (requester['role'] == 'Police' and target['role'] != 'Veterinarian') or
+        (requester['role'] == 'Police' and requester['verification_status'] == 'verified'
+         and target['role'] not in ('Veterinarian', 'Police')) or
         (requester['role'] == 'Veterinarian' and requester['verification_status'] == 'verified' and target['role'] == 'Veterinarian')
     )
     if not authorized:
@@ -472,9 +601,37 @@ def get_document(user_id, doctype):
 # documents above), same as a stock product photo would be on any marketplace.
 @app.route('/uploads/<category>/<path:filename>', methods=['GET'])
 def get_photo(category, filename):
-    if category not in ('animals', 'listings'):
+    if category not in ('animals', 'listings', 'avatars'):
         return jsonify({"error": "Not found"}), 404
     return send_from_directory(os.path.join(UPLOAD_DIR, category), filename)
+
+
+# Message attachments are private conversation content (not a public
+# marketplace photo) and their filenames are just <message_id><ext> —
+# trivially guessable sequential ids — so unlike get_photo above, this
+# requires auth and checks the requester actually took part in the
+# conversation that message belongs to.
+@app.route('/attachments/<int:msg_id>', methods=['GET'])
+@require_auth
+def get_attachment(msg_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT conversation_id, attachment_url FROM conversation_messages WHERE id=%s", (msg_id,))
+    msg = c.fetchone()
+    if not msg or not msg['attachment_url']:
+        db.close(); return jsonify({"error": "Not found"}), 404
+    conv = _conversation_participant_or_404(c, msg['conversation_id'], g.current_user['id'])
+    db.close()
+    if not conv:
+        return jsonify({"error": "Not found"}), 404
+    # Saved as "<msg_id><ext>" by save_photo(); attachment_url is the stable
+    # /attachments/<id> route, not the filename, so the real extension is
+    # looked up on disk rather than assumed.
+    matches = glob.glob(os.path.join(UPLOAD_DIR, 'attachments', f'{msg_id}.*'))
+    if not matches:
+        return jsonify({"error": "Not found"}), 404
+    directory, filename = os.path.split(matches[0])
+    return send_from_directory(directory, filename)
 
 
 # ── USERS ─────────────────────────────────────────────────────
@@ -520,9 +677,16 @@ def get_users():
 @app.route('/users', methods=['POST'])
 @require_auth
 @require_role('Police')
+@require_verified
 def create_user():
-    """Administrative user provisioning — used by Police to create another
-    verified officer account (Police signups are not self-service)."""
+    """An existing officer nominates a new Police account (Police signups
+    are not self-service). This does NOT verify the account — a single
+    officer being able to unilaterally mint other verified officer accounts
+    is exactly the fraud risk this closes. The account sits pending, with
+    requested_by recording who nominated them, until PFUMA Admin reviews
+    and approves it via PATCH /verifications/<id> (see resolve_verification,
+    which only allows Admin to resolve a Police applicant, not another
+    officer)."""
     d = request.json or {}
     full_name = (d.get('full_name') or '').strip()
     if not full_name:
@@ -549,8 +713,8 @@ def create_user():
     password_hash = bcrypt.hashpw((d.get('password') or os.urandom(8).hex()).encode(), bcrypt.gensalt()).decode()
     c.execute("""
         INSERT INTO users (full_name, phone, national_id_number, email, role, org_name, province, district, address,
-            badge_number, station, jurisdiction_province, password_hash, verification_status, verified_by)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'verified',%s)
+            badge_number, station, jurisdiction_province, password_hash, verification_status, requested_by)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pending',%s)
     """, (
         full_name, phone, national_id, d.get('email', ''), d.get('role', 'Police'),
         d.get('org_name', ''), d.get('province', ''), d.get('district', ''), d.get('address', ''),
@@ -560,7 +724,7 @@ def create_user():
     db.commit()
     user_id = c.lastrowid
     db.close()
-    return jsonify({"id": user_id, "message": "Officer account provisioned and verified."})
+    return jsonify({"id": user_id, "message": "Officer nomination submitted — pending PFUMA Admin approval before this account can log in."})
 
 
 @app.route('/users/<int:user_id>', methods=['GET'])
@@ -576,6 +740,24 @@ def get_user(user_id):
     if user['role'] == 'Police' and g.current_user['role'] != 'Police' and g.current_user['id'] != user_id:
         return jsonify({"error": "User not found"}), 404
     return jsonify(public_user_view(user, g.current_user))
+
+
+@app.route('/users/me/avatar', methods=['POST'])
+@require_auth
+def upload_avatar():
+    photo = request.files.get('photo')
+    if not photo or not photo.filename:
+        return jsonify({"error": "No photo uploaded"}), 400
+    try:
+        rel_path = save_photo(photo, 'avatars', g.current_user['id'])
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    db = get_db()
+    c = db.cursor()
+    c.execute("UPDATE users SET avatar_url=%s WHERE id=%s", (f"/uploads/{rel_path}", g.current_user['id']))
+    db.commit()
+    db.close()
+    return jsonify({"avatar_url": f"/uploads/{rel_path}", "message": "Profile picture updated ✅"})
 
 
 # ── MESSENGER (real conversations, any verified user to any other) ──────
@@ -624,6 +806,34 @@ def get_conversations():
         })
     db.close()
     return jsonify(result)
+
+
+@app.route('/conversations/<int:conversation_id>/contact', methods=['GET'])
+@require_auth
+def get_conversation_contact(conversation_id):
+    """The other participant's contact details — phone included, even for a
+    Farmer talking to a Farmer, which public_user_view() otherwise redacts.
+    Scoped narrowly: only visible to someone who is actually a participant
+    in THIS conversation with them, i.e. they're already directly connected
+    and arranging something (a sale, a consult) that needs a phone number —
+    not a general directory lookup."""
+    me = g.current_user['id']
+    db = get_db()
+    c = db.cursor()
+    conv = _conversation_participant_or_404(c, conversation_id, me)
+    if not conv:
+        db.close(); return jsonify({"error": "Conversation not found"}), 404
+    other_id = conv['user_b_id'] if conv['user_a_id'] == me else conv['user_a_id']
+    c.execute("SELECT * FROM users WHERE id=%s", (other_id,))
+    other = c.fetchone()
+    db.close()
+    if not other:
+        return jsonify({"error": "User not found"}), 404
+    view = public_user_view(other, g.current_user)
+    view['phone'] = other['phone']
+    view['email'] = other['email']
+    view['address'] = other['address']
+    return jsonify(view)
 
 
 @app.route('/conversations', methods=['POST'])
@@ -699,10 +909,13 @@ def get_conversation_messages(conversation_id):
 @require_auth
 def send_conversation_message(conversation_id):
     me = g.current_user['id']
-    d = request.json or {}
+    # multipart (attachment) and plain JSON bodies are both accepted — a
+    # message can be text-only, attachment-only (like WhatsApp), or both.
+    d = request.form if request.form else (request.json or {})
+    attachment = request.files.get('attachment')
     text = (d.get('message') or '').strip()[:2000]
-    if not text:
-        return jsonify({"error": "message is required"}), 400
+    if not text and not (attachment and attachment.filename):
+        return jsonify({"error": "message or an attachment is required"}), 400
 
     db = get_db()
     c = db.cursor()
@@ -714,6 +927,16 @@ def send_conversation_message(conversation_id):
         INSERT INTO conversation_messages (conversation_id, sender_id, message) VALUES (%s,%s,%s)
     """, (conversation_id, me, text))
     msg_id = c.lastrowid
+
+    if attachment and attachment.filename:
+        try:
+            save_photo(attachment, 'attachments', msg_id, allowed_ext=ALLOWED_ATTACHMENT_EXT)
+            c.execute("UPDATE conversation_messages SET attachment_url=%s, attachment_name=%s WHERE id=%s",
+                      (f"/attachments/{msg_id}", secure_filename(attachment.filename), msg_id))
+        except ValueError as e:
+            db.commit(); db.close()
+            return jsonify({"error": str(e)}), 400
+
     c.execute("UPDATE conversations SET last_message_at=NOW() WHERE id=%s", (conversation_id,))
     db.commit()
     c.execute("SELECT * FROM conversation_messages WHERE id=%s", (msg_id,))
@@ -1746,6 +1969,131 @@ def deduct_inventory(item_id):
     return jsonify({"new_stock": new_stock, "message": f"{dose}ml deducted ✅"})
 
 
+# ── MEDICATION RECOMMENDATIONS ──────────────────────────────────
+# The clinical direction runs vet → farmer: a Veterinarian recommends a
+# medicine/dose for a specific animal, and the farmer administers it from
+# their own cabinet against that recommendation — replacing the earlier
+# calculator where a farmer picked any medicine and dosed themselves with
+# no vet involved at all.
+@app.route('/medication-recommendations', methods=['POST'])
+@require_auth
+@require_role('Veterinarian')
+@require_verified
+def create_medication_recommendation():
+    d = request.json or {}
+    animal_id = d.get('animal_id')
+    medicine_name = (d.get('medicine_name') or '').strip()
+    dose_ml = d.get('dose_ml')
+    if not animal_id or not medicine_name or dose_ml in (None, ''):
+        return jsonify({"error": "animal_id, medicine_name, and dose_ml are required"}), 400
+    try:
+        dose_ml = float(dose_ml)
+    except (TypeError, ValueError):
+        return jsonify({"error": "dose_ml must be a number"}), 400
+
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT owner_id FROM animals WHERE id=%s", (animal_id,))
+    animal = c.fetchone()
+    if not animal:
+        db.close(); return jsonify({"error": "Animal not found"}), 404
+
+    c.execute("""
+        INSERT INTO medication_recommendations
+            (animal_id, farmer_id, vet_id, medicine_name, dose_ml, frequency, notes)
+        VALUES (%s,%s,%s,%s,%s,%s,%s)
+    """, (animal_id, animal['owner_id'], g.current_user['id'], medicine_name, dose_ml,
+          d.get('frequency', ''), d.get('notes', '')))
+    rec_id = c.lastrowid
+
+    c.execute("SELECT name FROM animals WHERE id=%s", (animal_id,))
+    animal_name = (c.fetchone() or {}).get('name', 'your animal')
+    create_notification(
+        c, animal['owner_id'], 'med_recommendation',
+        f"Vet recommendation for {animal_name}",
+        f"{g.current_user['full_name']} recommended {medicine_name} ({dose_ml}ml) for {animal_name}.",
+        related_user_id=g.current_user['id'], animal_id=animal_id,
+    )
+
+    db.commit()
+    db.close()
+    return jsonify({"id": rec_id, "message": "Recommendation sent to the farmer ✅"}), 201
+
+
+@app.route('/medication-recommendations', methods=['GET'])
+@require_auth
+def get_medication_recommendations():
+    """Farmers see recommendations for their own animals (optionally
+    filtered to one via ?animal_id=); vets see the ones they personally
+    made; Police get none of this — not their concern."""
+    requester = g.current_user
+    animal_id = request.args.get('animal_id')
+    db = get_db()
+    c = db.cursor()
+    sql = """
+        SELECT mr.*, a.name AS animal_name, v.full_name AS vet_name, f.full_name AS farmer_name
+        FROM medication_recommendations mr
+        JOIN animals a ON mr.animal_id = a.id
+        JOIN users v   ON mr.vet_id = v.id
+        JOIN users f   ON mr.farmer_id = f.id
+        WHERE 1=1
+    """
+    params = []
+    if requester['role'] == 'Veterinarian':
+        sql += " AND mr.vet_id = %s"; params.append(requester['id'])
+    else:
+        sql += " AND mr.farmer_id = %s"; params.append(requester['id'])
+    if animal_id:
+        sql += " AND mr.animal_id = %s"; params.append(animal_id)
+    sql += " ORDER BY mr.created_at DESC"
+    c.execute(sql, params)
+    rows = c.fetchall()
+    db.close()
+    return jsonify(rows)
+
+
+@app.route('/medication-recommendations/<int:rec_id>/administer', methods=['PATCH'])
+@require_auth
+def administer_medication_recommendation(rec_id):
+    """Farmer marks a recommendation administered — deducts the
+    recommended dose from their cabinet and logs it to the animal's health
+    record, same real effects the old self-serve calculator had, just
+    triggered by the vet's dose instead of the farmer's own pick."""
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT * FROM medication_recommendations WHERE id=%s", (rec_id,))
+    rec = c.fetchone()
+    if not rec:
+        db.close(); return jsonify({"error": "Recommendation not found"}), 404
+    if rec['farmer_id'] != g.current_user['id']:
+        db.close(); return jsonify({"error": "Only the farmer this was recommended to can administer it"}), 403
+    if rec['status'] != 'pending':
+        db.close(); return jsonify({"error": "This recommendation is no longer pending"}), 409
+
+    c.execute("SELECT id, stock FROM medicine_inventory WHERE owner_id=%s AND medicine_name=%s",
+               (g.current_user['id'], rec['medicine_name']))
+    item = c.fetchone()
+    if not item:
+        db.close(); return jsonify({"error": f"{rec['medicine_name']} is not in your Medicine Cabinet"}), 409
+    if float(item['stock']) < float(rec['dose_ml']):
+        db.close(); return jsonify({"error": f"Insufficient stock — only {float(item['stock']):.1f}ml left"}), 409
+
+    c.execute("UPDATE medicine_inventory SET stock = stock - %s WHERE id = %s", (rec['dose_ml'], item['id']))
+    c.execute("UPDATE medication_recommendations SET status='administered', administered_at=NOW() WHERE id=%s", (rec_id,))
+
+    c.execute("SELECT name FROM animals WHERE id=%s", (rec['animal_id'],))
+    animal_name = (c.fetchone() or {}).get('name', '')
+    c.execute("""
+        INSERT INTO health_events (animal_id, animal_name, event_type, notes, performed_by)
+        VALUES (%s,%s,%s,%s,%s)
+    """, (rec['animal_id'], animal_name, f"Treatment: {rec['medicine_name']}",
+          f"{rec['dose_ml']}ml administered per vet recommendation #{rec_id}", g.current_user['id']))
+
+    db.commit()
+    db.close()
+    return jsonify({"message": f"{rec['dose_ml']}ml of {rec['medicine_name']} administered ✅"})
+
+
 # ── MARKETPLACE ───────────────────────────────────────────────
 @app.route('/listings', methods=['GET'])
 @require_auth
@@ -1766,6 +2114,26 @@ def get_listings():
         sql += " AND ml.product_name LIKE %s"; params.append(f'%{q}%')
     sql += " ORDER BY ml.created_at DESC"
     c.execute(sql, params)
+    listings = c.fetchall()
+    db.close()
+    return jsonify(listings)
+
+
+@app.route('/listings/mine', methods=['GET'])
+@require_auth
+def get_my_listings():
+    """A seller's own listings at every stage of the lifecycle — pending
+    clearance, live, sold, withdrawn — not just the 'available' ones the
+    public marketplace shows. Lets a seller manage what they've posted
+    without hunting for it inside the public feed."""
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT ml.*, u.full_name as seller_name, u.phone, u.province as seller_province
+        FROM marketplace_listings ml JOIN users u ON ml.user_id = u.id
+        WHERE ml.user_id = %s
+        ORDER BY ml.created_at DESC
+    """, (g.current_user['id'],))
     listings = c.fetchall()
     db.close()
     return jsonify(listings)
@@ -1885,6 +2253,7 @@ def _leader_attestation(d):
 @app.route('/clearances', methods=['GET'])
 @require_auth
 @require_role('Police')
+@require_verified
 def get_clearances():
     db = get_db()
     c = db.cursor()
@@ -1938,6 +2307,7 @@ def create_clearance():
 @app.route('/clearances/<int:clearance_id>', methods=['PATCH'])
 @require_auth
 @require_role('Police')
+@require_verified
 def resolve_clearance(clearance_id):
     d = request.json
     status = d.get('status')
@@ -1994,7 +2364,7 @@ def place_bid(listing_id):
     d = request.json
     db = get_db()
     c = db.cursor()
-    c.execute("SELECT status, category FROM marketplace_listings WHERE id=%s", (listing_id,))
+    c.execute("SELECT status, category, product_name, user_id FROM marketplace_listings WHERE id=%s", (listing_id,))
     listing = c.fetchone()
     if not listing:
         db.close(); return jsonify({"error": "Listing not found"}), 404
@@ -2007,6 +2377,14 @@ def place_bid(listing_id):
         VALUES (%s,%s,%s,%s)
     """, (listing_id, g.current_user['id'], d['amount'], d.get('message', '')))
     bid_id = c.lastrowid
+
+    create_notification(
+        c, listing['user_id'], 'bid_placed',
+        f"New offer on {listing['product_name']}",
+        f"{g.current_user['full_name']} offered USD {float(d['amount']):,.2f}.",
+        related_user_id=g.current_user['id'], listing_id=listing_id,
+    )
+
     db.commit()
     db.close()
     return jsonify({"id": bid_id, "message": "Bid submitted ✅"})
@@ -2067,7 +2445,7 @@ def accept_bid(listing_id, bid_id):
     becomes 'sold' — needed so the price-trend chart reflects real sales."""
     db = get_db()
     c = db.cursor()
-    c.execute("SELECT user_id, status FROM marketplace_listings WHERE id=%s", (listing_id,))
+    c.execute("SELECT user_id, status, product_name FROM marketplace_listings WHERE id=%s", (listing_id,))
     listing = c.fetchone()
     if not listing:
         db.close(); return jsonify({"error": "Listing not found"}), 404
@@ -2076,7 +2454,7 @@ def accept_bid(listing_id, bid_id):
     if listing['status'] == 'sold':
         db.close(); return jsonify({"error": "This listing is already sold"}), 409
 
-    c.execute("SELECT id, amount, status FROM bids WHERE id=%s AND listing_id=%s", (bid_id, listing_id))
+    c.execute("SELECT id, amount, status, bidder_id FROM bids WHERE id=%s AND listing_id=%s", (bid_id, listing_id))
     bid = c.fetchone()
     if not bid:
         db.close(); return jsonify({"error": "Bid not found"}), 404
@@ -2086,9 +2464,65 @@ def accept_bid(listing_id, bid_id):
     c.execute("UPDATE bids SET status='accepted' WHERE id=%s", (bid_id,))
     c.execute("UPDATE bids SET status='declined' WHERE listing_id=%s AND id!=%s AND status='pending'", (listing_id, bid_id))
     c.execute("UPDATE marketplace_listings SET status='sold', price=%s, sold_at=NOW() WHERE id=%s", (bid['amount'], listing_id))
+
+    # Both sides of the sale get a real notification, each carrying the
+    # other party's user id so the frontend can drop them straight into a
+    # PFUMA Messenger conversation instead of just showing text.
+    c.execute("SELECT full_name FROM users WHERE id=%s", (bid['bidder_id'],))
+    buyer_name = (c.fetchone() or {}).get('full_name', 'The buyer')
+    create_notification(
+        c, listing['user_id'], 'bid_accepted',
+        f"Sold: {listing['product_name']}",
+        f"You accepted {buyer_name}'s offer of USD {float(bid['amount']):,.2f}.",
+        related_user_id=bid['bidder_id'], listing_id=listing_id,
+    )
+    create_notification(
+        c, bid['bidder_id'], 'bid_accepted',
+        f"Offer accepted: {listing['product_name']}",
+        f"Your offer of USD {float(bid['amount']):,.2f} was accepted — message the seller to arrange collection.",
+        related_user_id=listing['user_id'], listing_id=listing_id,
+    )
+
     db.commit()
     db.close()
     return jsonify({"message": "Bid accepted — listing marked sold ✅"})
+
+
+# ── NOTIFICATIONS ─────────────────────────────────────────────────
+@app.route('/notifications', methods=['GET'])
+@require_auth
+def get_notifications():
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT * FROM notifications WHERE user_id=%s ORDER BY created_at DESC LIMIT 50
+    """, (g.current_user['id'],))
+    rows = c.fetchall()
+    db.close()
+    return jsonify(rows)
+
+
+@app.route('/notifications/<int:notif_id>/read', methods=['PATCH'])
+@require_auth
+def mark_notification_read(notif_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute("UPDATE notifications SET read_at=NOW() WHERE id=%s AND user_id=%s AND read_at IS NULL",
+               (notif_id, g.current_user['id']))
+    db.commit()
+    db.close()
+    return jsonify({"message": "Marked read"})
+
+
+@app.route('/notifications/read-all', methods=['PATCH'])
+@require_auth
+def mark_all_notifications_read():
+    db = get_db()
+    c = db.cursor()
+    c.execute("UPDATE notifications SET read_at=NOW() WHERE user_id=%s AND read_at IS NULL", (g.current_user['id'],))
+    db.commit()
+    db.close()
+    return jsonify({"message": "All marked read"})
 
 
 @app.route('/listings/price-trend', methods=['GET'])
@@ -2965,23 +3399,30 @@ def admin_list_users():
     province = request.args.get('province')
     verification_status = request.args.get('verification_status')
     q = request.args.get('q', '')
-    sql = "SELECT * FROM users WHERE 1=1"
+    # requested_by is only ever set for a Police applicant (an existing
+    # officer nominating a new one) — surfacing who vouched for them is the
+    # whole point of routing officer approval through Admin.
+    sql = """
+        SELECT u.*, r.full_name AS requested_by_name, r.badge_number AS requested_by_badge
+        FROM users u LEFT JOIN users r ON u.requested_by = r.id
+        WHERE 1=1
+    """
     params = []
     if role:
-        sql += " AND role = %s"; params.append(role)
+        sql += " AND u.role = %s"; params.append(role)
     if province:
-        sql += " AND province = %s"; params.append(province)
+        sql += " AND u.province = %s"; params.append(province)
     if verification_status:
-        sql += " AND verification_status = %s"; params.append(verification_status)
+        sql += " AND u.verification_status = %s"; params.append(verification_status)
     if q:
         q_digits = re.sub(r'\D', '', q)
-        sql += " AND (full_name LIKE %s OR org_name LIKE %s OR province LIKE %s"
+        sql += " AND (u.full_name LIKE %s OR u.org_name LIKE %s OR u.province LIKE %s"
         params += [f'%{q}%', f'%{q}%', f'%{q}%']
         if q_digits:
-            sql += " OR phone LIKE %s"
+            sql += " OR u.phone LIKE %s"
             params.append(f'%{q_digits}%')
         sql += ")"
-    sql += " ORDER BY created_at DESC"
+    sql += " ORDER BY u.created_at DESC"
     db = get_db()
     c = db.cursor()
     c.execute(sql, params)

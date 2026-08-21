@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Linking } from 'react-native';
+import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Linking, Alert, ActivityIndicator } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import {
   Users, ShoppingCart, Wheat, Stethoscope, Pill, AlertTriangle,
-  Store, Sprout, LogOut, ChevronRight,
+  Store, Sprout, LogOut, ChevronRight, Camera,
 } from 'lucide-react-native';
 import { COLORS, API } from '../config';
 import { authFetch } from '../api';
@@ -24,11 +25,31 @@ const MenuItem = ({ icon: Icon, label, desc, color, onPress }) => (
 const ROLE_ICON  = { Farmer: Sprout, Veterinarian: Stethoscope, Supplier: Pill, Retailer: Store };
 const ROLE_COLOR = { Farmer: COLORS.primary, Veterinarian: '#1e293b', Supplier: '#ea580c', Retailer: '#6d28d9' };
 
-export default function ProfileScreen({ navigation, currentUser, onLogout }) {
+export default function ProfileScreen({ navigation, currentUser, onLogout, onUserUpdate }) {
   const role      = currentUser?.role || 'Farmer';
   const headerBg  = ROLE_COLOR[role]  || COLORS.primary;
   const RoleIcon  = ROLE_ICON[role]   || Sprout;
   const [stats, setStats] = useState({ animals: 0, listings: 0, messages: 0 });
+  const [avatarUploading, setAvatarUploading] = useState(false);
+
+  const changeAvatar = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) { Alert.alert('Photo access needed', 'Enable photo library access in Settings to change your profile picture.'); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7, allowsEditing: true, aspect: [1, 1] });
+    if (result.canceled || !result.assets?.[0]) return;
+    const asset = result.assets[0];
+    const filename = asset.uri.split('/').pop();
+    const ext = (filename.split('.').pop() || 'jpg').toLowerCase();
+
+    setAvatarUploading(true);
+    const fd = new FormData();
+    fd.append('photo', { uri: asset.uri, name: filename, type: `image/${ext === 'jpg' ? 'jpeg' : ext}` });
+    const res = await authFetch(currentUser, '/users/me/avatar', { method: 'POST', body: fd });
+    const data = await res.json().catch(() => ({}));
+    setAvatarUploading(false);
+    if (!res.ok) { Alert.alert('Could not update photo', data.error || 'Try again.'); return; }
+    onUserUpdate?.({ avatarUrl: `${API}${data.avatar_url}` });
+  };
 
   useEffect(() => {
     if (!currentUser?.id) return;
@@ -44,9 +65,16 @@ export default function ProfileScreen({ navigation, currentUser, onLogout }) {
     <ScrollView style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: headerBg }]}>
-        <View style={styles.avatar}>
-          <RoleIcon size={36} color={headerBg} strokeWidth={2.2} />
-        </View>
+        <TouchableOpacity style={styles.avatar} onPress={changeAvatar} activeOpacity={0.8} disabled={avatarUploading}>
+          {currentUser?.avatarUrl ? (
+            <Image source={{ uri: currentUser.avatarUrl }} style={styles.avatarImg} />
+          ) : (
+            <RoleIcon size={36} color={headerBg} strokeWidth={2.2} />
+          )}
+          <View style={styles.avatarBadge}>
+            {avatarUploading ? <ActivityIndicator size="small" color="#fff" /> : <Camera size={13} color="#fff" strokeWidth={2.4} />}
+          </View>
+        </TouchableOpacity>
         <Text style={styles.userName}>{currentUser?.name || 'User'}</Text>
         <Text style={styles.userRole}>{role} · {currentUser?.province || 'Zimbabwe'}</Text>
         {currentUser?.org ? <Text style={styles.userOrg}>{currentUser.org}</Text> : null}
@@ -129,7 +157,9 @@ export default function ProfileScreen({ navigation, currentUser, onLogout }) {
 const styles = StyleSheet.create({
   container:      { flex: 1, backgroundColor: COLORS.bg },
   header:         { backgroundColor: COLORS.primary, padding: 24, paddingTop: 56, alignItems: 'center', paddingBottom: 32 },
-  avatar:         { width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.yellow, alignItems: 'center', justifyContent: 'center', marginBottom: 12, elevation: 6 },
+  avatar:         { width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.yellow, alignItems: 'center', justifyContent: 'center', marginBottom: 12, elevation: 6, overflow: 'hidden' },
+  avatarImg:      { width: '100%', height: '100%' },
+  avatarBadge:    { position: 'absolute', bottom: -2, right: -2, width: 26, height: 26, borderRadius: 13, backgroundColor: COLORS.primary, borderWidth: 2, borderColor: '#fff', alignItems: 'center', justifyContent: 'center' },
   userName:       { color: '#fff', fontSize: 22, fontWeight: '900' },
   userRole:       { color: '#a5d6a7', fontSize: 13, fontWeight: '600', marginTop: 4 },
   userOrg:        { color: '#a5d6a7', fontSize: 12, fontWeight: '600', marginTop: 2 },
