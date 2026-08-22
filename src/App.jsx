@@ -8,6 +8,7 @@ import Marketplace       from './components/Marketplace/Marketplace';
 import FeedAnalyzer      from './components/FeedAnalyzer/FeedAnalyzer';
 import Cooperative       from './components/Cooperative/Cooperative';
 import HardwareSimulation from './components/HardwareSimulation/HardwareSimulation';
+import ComplianceCenter  from './components/Compliance/ComplianceCenter';
 import AdminDashboard    from './components/Admin/AdminDashboard';
 import Jinda      from './components/IntelAI/PfumaIntelAI';
 import AuthPortal        from './components/IntelAI/AuthPortal';
@@ -21,6 +22,7 @@ import {
   Zap, Clock, ArrowRight, Tag, Pill, MapPin, FileText,
   RefreshCw, DollarSign, Target, Box, PhoneCall, Star, Wheat, Store,
   Sprout, Check, Syringe, Shield, UserPlus, X, Menu, Eye, EyeOff, Handshake, Radio, FlaskConical, Camera,
+  ShieldAlert,
 } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis } from 'recharts';
 import './App.css';
@@ -174,7 +176,7 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
     ...overdueVaccines.map(v => ({
       icon: Syringe, iconBg: 'bg-red-50', iconColor: 'text-red-600',
       tagBg: 'bg-red-50', tagColor: 'text-red-600', tag: 'Overdue',
-      title: v.vaccine, sub: `${v.animal} — vaccine due`, onClick: () => setActiveTab('health'),
+      title: v.vaccine, sub: `${v.animal} — vaccine due`, onClick: () => setActiveTab('compliance'),
     })),
     ...lowStock.map(item => ({
       icon: Package, iconBg: 'bg-orange-50', iconColor: 'text-orange-600',
@@ -236,7 +238,7 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard label="Total Animals"    value={animals.length}            sub="In your herd registry"                icon={Tag}         iconColor="text-pfuma-green"  onClick={() => setActiveTab('profile')} />
         <KpiCard label="Herd Value"       value={`$${totalValue.toLocaleString()}`} sub="Estimated market value"       icon={DollarSign}  iconColor="text-pfuma-gold"   accent="bg-pfuma-gold/5 border-pfuma-gold/20" />
-        <KpiCard label="Overdue Vaccines" value={overdueVaccines.length}    sub={overdueVaccines.length ? 'Need immediate attention' : 'All vaccinations current'} icon={ShieldCheck} iconColor={overdueVaccines.length ? 'text-red-500' : 'text-green-500'} accent={overdueVaccines.length ? 'bg-red-50 border-red-200' : 'bg-white border-gray-100'} textColor={overdueVaccines.length ? 'text-red-600' : 'text-gray-900'} onClick={() => setActiveTab('health')} />
+        <KpiCard label="Overdue Vaccines" value={overdueVaccines.length}    sub={overdueVaccines.length ? 'Open the follow-up list' : 'All vaccinations current'} icon={ShieldCheck} iconColor={overdueVaccines.length ? 'text-red-500' : 'text-green-500'} accent={overdueVaccines.length ? 'bg-red-50 border-red-200' : 'bg-white border-gray-100'} textColor={overdueVaccines.length ? 'text-red-600' : 'text-gray-900'} onClick={() => setActiveTab('compliance')} />
         <KpiCard label="Listed for Sale"  value={forSale}                   sub={forSale ? 'Visible on marketplace' : 'None listed yet'} icon={ShoppingCart} iconColor="text-purple-500" onClick={() => setActiveTab('profile')} />
       </div>
 
@@ -1652,6 +1654,7 @@ const NAV_SECTIONS = {
       items: [
         { tab: 'profile',     icon: Users,           label: 'Herd Registry', desc: 'Animal records & passports' },
         { tab: 'health',      icon: HeartPulse,      label: 'Lifecycle',     desc: 'Vaccines & health protocols' },
+        { tab: 'compliance',  icon: ShieldAlert,     label: 'Follow-Ups',    desc: 'Overdue vaccinations & what to do' },
         { tab: 'disease',     icon: Stethoscope,     label: 'Diagnostics',   desc: 'AI disease checker' },
         { tab: 'feed',        icon: Wheat,           label: 'Feed Analyzer', desc: 'Livestock nutrition database' },
         { tab: 'iot',         icon: Radio,           label: 'IoT Monitor',   desc: 'Live collar sensor data' },
@@ -1690,6 +1693,7 @@ const NAV_SECTIONS = {
     {
       section: 'Authority',
       items: [
+        { tab: 'compliance',  icon: ShieldAlert,     label: 'Follow-Ups',    desc: 'Overdue vaccinations in your province' },
         { tab: 'vet',         icon: MessageSquare,   label: 'Messenger',     desc: 'Vets, suppliers, farmers & retailers' },
         { tab: 'marketplace', icon: Store,           label: 'Marketplace',   desc: 'Monitor trade & listings' },
       ]
@@ -1798,6 +1802,7 @@ const animalFromApi = (a) => ({
   imageUrl: resolveImageUrl(a.image_url) || IMAGE_BY_SPECIES[a.species] || IMAGE_BY_SPECIES.Cattle,
   weightHistory: (a.weight_history || []).map(w => ({ month: w.month_label, weight: w.weight_kg })),
   forSale: !!a.for_sale, costToDate: a.cost_to_date || 0,
+  registeredAt: a.created_at,
   // Only present when a Vet/Police oversight role fetches /animals (it
   // spans every farm, not just the caller's own) — undefined for a Farmer.
   ownerId: a.owner_id, ownerName: a.owner_name,
@@ -2217,6 +2222,7 @@ function App() {
           {activeTab === 'vet'         && <ErrorBoundary><VetCommunication animals={animals} currentUser={currentUser} intent={vetIntent} onIntentConsumed={() => setVetIntent(null)} /></ErrorBoundary>}
           {activeTab === 'marketplace' && <ErrorBoundary><Marketplace currentUser={currentUser} animals={animals} onListAnimal={handleListAnimal} /></ErrorBoundary>}
           {activeTab === 'feed'        && <ErrorBoundary><FeedAnalyzer currentUser={currentUser} animals={animals} onUpdateAnimal={(id, patch) => setAnimals(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a))} /></ErrorBoundary>}
+          {activeTab === 'compliance' && <ErrorBoundary><ComplianceCenter currentUser={currentUser} /></ErrorBoundary>}
           {activeTab === 'cooperative' && <ErrorBoundary><Cooperative currentUser={currentUser} /></ErrorBoundary>}
           {activeTab === 'iot'         && <ErrorBoundary><HardwareSimulation animals={animals} currentUser={currentUser} /></ErrorBoundary>}
         </div>

@@ -490,6 +490,80 @@ CREATE TABLE IF NOT EXISTS iot_readings (
 CREATE INDEX IF NOT EXISTS idx_iot_readings_device_time ON iot_readings (device_id, received_at DESC);
 
 
+-- ── VACCINATION COMPLIANCE CASES ──────────────────────────────
+-- A missed mandatory vaccination is not just a red badge on a dashboard —
+-- it opens a case that a vet actually follows up on. The ladder is:
+--   reminder → vet_followup → notice → penalty (trade lockout)
+-- with a grace period between each stage, and it stops the moment the
+-- vaccination is logged (the case auto-resolves in add_health_event).
+--
+-- The 'deferred' stage is the point of the whole design. Most missed
+-- vaccinations in communal areas are not defiance — the vaccine is out of
+-- stock, no vet has come through the ward, or there is no cash this month.
+-- A farmer declaring a blocker pauses the clock, carries NO penalty, and
+-- routes the case to whoever can unblock it (supplier / vet dispatch /
+-- cooperative) instead of punishing them for a supply failure.
+--
+-- The penalty is deliberately NOT a monetary fine: the platform cannot
+-- collect one, and fining a peasant farmer for an unavailable vaccine is
+-- both unjust and unenforceable. It is a per-ANIMAL trade lockout — that
+-- animal cannot be listed or cleared for sale until the shot is logged.
+-- Per-animal, so the farmer's other stock, feed and produce still trade.
+CREATE TABLE IF NOT EXISTS compliance_cases (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  animal_id       INT NOT NULL,
+  owner_id        INT NOT NULL,          -- FK → users.id (farmer), denormalised for queue queries
+  vaccine_name    VARCHAR(120) NOT NULL, -- protocol item, e.g. 'FMD Vaccine'
+  species         VARCHAR(20),
+  due_date        DATE NOT NULL,         -- the date the shot became due
+  stage           ENUM('reminder','vet_followup','notice','penalty','deferred','resolved','waived')
+                  NOT NULL DEFAULT 'reminder',
+  stage_due       DATE NULL,             -- when this stage's grace period expires
+  trade_locked    BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Vet override: sale allowed on condition the animal is vaccinated at the
+  -- point of sale. Lets a distressed farmer raise cash without the herd
+  -- going unvaccinated.
+  conditional_clearance BOOLEAN NOT NULL DEFAULT FALSE,
+  vet_id          INT NULL,              -- FK → users.id (vet handling the follow-up)
+  province        VARCHAR(60),           -- copied from owner, so a vet can scope by province
+  district        VARCHAR(60),
+  -- ── "I can't comply" path ──
+  blocker_reason  ENUM('vaccine_unavailable','no_vet_access','financial_hardship','animal_condition','other') NULL,
+  blocker_notes   VARCHAR(300),
+  deferred_until  DATE NULL,
+  defer_count     SMALLINT NOT NULL DEFAULT 0,
+  routed_to       ENUM('supplier','vet_dispatch','cooperative','vet_review') NULL,
+  opened_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_action_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  resolved_at     TIMESTAMP NULL,
+  resolved_event_id INT NULL,            -- FK → health_events.id (the shot that closed it)
+  -- One case per missed occurrence: re-scanning must not open duplicates.
+  UNIQUE KEY uniq_case_occurrence (animal_id, vaccine_name, due_date),
+  FOREIGN KEY (animal_id) REFERENCES animals(id) ON DELETE CASCADE,
+  FOREIGN KEY (owner_id)  REFERENCES users(id)   ON DELETE CASCADE,
+  FOREIGN KEY (vet_id)    REFERENCES users(id)   ON DELETE SET NULL,
+  INDEX idx_compliance_stage (stage, province),
+  INDEX idx_compliance_animal (animal_id)
+);
+
+-- Every step of a case, so a lockout can always be explained after the fact
+-- (and disputed). This is the evidence trail behind the animal timeline.
+CREATE TABLE IF NOT EXISTS compliance_actions (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  case_id    INT NOT NULL,
+  action     ENUM('opened','reminded','escalated','notice_issued','deferred',
+                  'defer_accepted','defer_rejected','locked','unlocked',
+                  'conditional_clearance','resolved','waived') NOT NULL,
+  actor_id   INT NULL,                   -- NULL = the system (auto-escalation)
+  actor_role VARCHAR(20),
+  notes      VARCHAR(400),
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (case_id)  REFERENCES compliance_cases(id) ON DELETE CASCADE,
+  FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE SET NULL,
+  INDEX idx_compliance_actions_case (case_id, created_at)
+);
+
+
 -- ── UPGRADES FOR EXISTING DATABASES ───────────────────────────
 -- Columns added after the first release. A database created earlier will not
 -- pick these up from CREATE TABLE IF NOT EXISTS, and the seed data below
