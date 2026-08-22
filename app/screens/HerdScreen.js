@@ -9,7 +9,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Search, Beef, X, Camera, Check, ShieldCheck, Tag, Printer, Download } from 'lucide-react-native';
 import { API, COLORS } from '../config';
-import { authFetch, authJson } from '../api';
+import { authFetch, authJson, assetToFormFile } from '../api';
 import PhotoLightbox from '../components/PhotoLightbox';
 
 const SPECIES = ['Cattle','Goat'];
@@ -155,10 +155,8 @@ export default function HerdScreen({ currentUser }) {
   // failure on photo 3 doesn't undo 1 and 2, and reports exactly which one
   // failed instead of one opaque "could not add photos" for the whole batch.
   const uploadOnePhoto = async (animalId, asset) => {
-    const filename = asset.uri.split('/').pop();
-    const ext = (filename.split('.').pop() || 'jpg').toLowerCase();
     const fd = new FormData();
-    fd.append('photos', { uri: asset.uri, name: filename, type: `image/${ext === 'jpg' ? 'jpeg' : ext}` });
+    fd.append('photos', assetToFormFile(asset, 'animal'));
     const res = await authFetch(currentUser, `/animals/${animalId}/photos`, { method: 'POST', body: fd });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || 'upload failed');
@@ -176,6 +174,7 @@ export default function HerdScreen({ currentUser }) {
     setPassportUploading(true);
     const newUrls = [];
     let failed = 0;
+    let lastError = '';
     for (const asset of result.assets) {
       try {
         const url = await uploadOnePhoto(passportAnimal.id, asset);
@@ -189,13 +188,14 @@ export default function HerdScreen({ currentUser }) {
             ? { ...a, photos: [...(a.photos || (a.image_url ? [a.image_url] : [])), url] }
             : a));
         }
-      } catch {
+      } catch (err) {
         failed += 1;
+        lastError = err?.message || '';
       }
     }
     setPassportUploading(false);
     if (failed > 0) {
-      Alert.alert('Some photos didn\'t upload', `${newUrls.length} added, ${failed} failed — try adding the missing one(s) again.`);
+      Alert.alert('Some photos didn\'t upload', `${newUrls.length} added, ${failed} failed${lastError ? `: ${lastError}` : ''} — try adding the missing one(s) again.`);
     }
   };
 
@@ -234,11 +234,7 @@ export default function HerdScreen({ currentUser }) {
       mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7, allowsMultipleSelection: true,
     });
     if (result.canceled || !result.assets?.length) return;
-    const picked = result.assets.map(asset => {
-      const filename = asset.uri.split('/').pop();
-      const ext = (filename.split('.').pop() || 'jpg').toLowerCase();
-      return { uri: asset.uri, name: filename, type: `image/${ext === 'jpg' ? 'jpeg' : ext}` };
-    });
+    const picked = result.assets.map(asset => assetToFormFile(asset, 'animal'));
     setPhotos(prev => [...prev, ...picked]);
   };
 

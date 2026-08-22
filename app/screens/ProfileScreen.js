@@ -6,7 +6,7 @@ import {
   Store, Sprout, LogOut, ChevronRight, Camera,
 } from 'lucide-react-native';
 import { COLORS, API } from '../config';
-import { authFetch } from '../api';
+import { authFetch, assetToFormFile } from '../api';
 import pfumaMark from '../assets/pfuma-mark.png';
 
 const MenuItem = ({ icon: Icon, label, desc, color, onPress }) => (
@@ -38,12 +38,10 @@ export default function ProfileScreen({ navigation, currentUser, onLogout, onUse
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7, allowsEditing: true, aspect: [1, 1] });
     if (result.canceled || !result.assets?.[0]) return;
     const asset = result.assets[0];
-    const filename = asset.uri.split('/').pop();
-    const ext = (filename.split('.').pop() || 'jpg').toLowerCase();
 
     setAvatarUploading(true);
     const fd = new FormData();
-    fd.append('photo', { uri: asset.uri, name: filename, type: `image/${ext === 'jpg' ? 'jpeg' : ext}` });
+    fd.append('photo', assetToFormFile(asset, 'avatar'));
     const res = await authFetch(currentUser, '/users/me/avatar', { method: 'POST', body: fd });
     const data = await res.json().catch(() => ({}));
     setAvatarUploading(false);

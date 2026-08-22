@@ -21,3 +21,20 @@ export async function authJson(currentUser, path, opts = {}) {
   const data = await res.json().catch(() => ({}));
   return { ok: res.ok, status: res.status, data };
 }
+
+// Turns an expo-image-picker asset into a { uri, name, type } object safe
+// to pass to FormData.append(). Parsing a filename/extension out of
+// asset.uri is unreliable — Android's system Photo Picker (and some
+// gallery apps) return content:// URIs with no file extension in the path
+// at all, so `uri.split('/').pop().split('.').pop()` silently produces an
+// extension-less or garbage "extension" (e.g. a raw numeric media id),
+// which becomes an invalid MIME type the backend correctly rejects as an
+// unsupported file type — the exact cause of some-but-not-all picked
+// photos failing to upload. expo-image-picker already gives us the real
+// mimeType (and often fileName); use those instead of guessing.
+export function assetToFormFile(asset, fallbackBase = 'photo') {
+  const mimeType = asset.mimeType || 'image/jpeg';
+  const ext = mimeType.split('/')[1] || 'jpg';
+  const name = asset.fileName || `${fallbackBase}_${Date.now()}.${ext}`;
+  return { uri: asset.uri, name, type: mimeType };
+}

@@ -11,7 +11,7 @@ import {
   Siren, Stethoscope, Pill, Sprout, Store, Users, ArrowLeft, Phone, Paperclip, X, Mail,
 } from 'lucide-react-native';
 import { COLORS, API } from '../config';
-import { authFetch, authJson } from '../api';
+import { authFetch, authJson, assetToFormFile } from '../api';
 
 const ROLE_META = {
   Vet:      { icon: Stethoscope, color: COLORS.primary, label: 'Vets' },
@@ -149,9 +149,7 @@ export default function VetMessengerScreen({ currentUser, route }) {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
     if (result.canceled || !result.assets?.[0]) return;
     const asset = result.assets[0];
-    const filename = asset.uri.split('/').pop();
-    const ext = (filename.split('.').pop() || 'jpg').toLowerCase();
-    setAttachment({ uri: asset.uri, name: filename, type: `image/${ext === 'jpg' ? 'jpeg' : ext}` });
+    setAttachment(assetToFormFile(asset, 'attachment'));
   };
 
   // The other party's phone/email — public_user_view() on the backend

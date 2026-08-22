@@ -9,7 +9,7 @@ import {
   Package, MapPin, User, PhoneCall, ShoppingCart, Check,
 } from 'lucide-react-native';
 import { API, COLORS } from '../config';
-import { authFetch, authJson } from '../api';
+import { authFetch, authJson, assetToFormFile } from '../api';
 import PhotoLightbox from '../components/PhotoLightbox';
 
 const CATEGORIES = [
@@ -41,9 +41,7 @@ const PostModal = ({ visible, onClose, onSubmit, error, animals = [] }) => {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
     if (result.canceled || !result.assets?.[0]) return;
     const asset = result.assets[0];
-    const filename = asset.uri.split('/').pop();
-    const ext = (filename.split('.').pop() || 'jpg').toLowerCase();
-    setPhoto({ uri: asset.uri, name: filename, type: `image/${ext === 'jpg' ? 'jpeg' : ext}` });
+    setPhoto(assetToFormFile(asset, 'listing'));
   };
 
   const needsClearance = form.category === 'livestock' && !!form.animal_id;
