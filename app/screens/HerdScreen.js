@@ -10,6 +10,7 @@ import * as Sharing from 'expo-sharing';
 import { Search, Beef, X, Camera, Check, ShieldCheck, Tag, Printer, Download } from 'lucide-react-native';
 import { API, COLORS } from '../config';
 import { authFetch, authJson } from '../api';
+import PhotoLightbox from '../components/PhotoLightbox';
 
 const SPECIES = ['Cattle','Goat'];
 const todayStr = () => new Date().toISOString().slice(0, 10);
@@ -122,6 +123,7 @@ export default function HerdScreen({ currentUser }) {
   const [healthLoading, setHealthLoading] = useState(false);
   const [passportExporting, setPassportExporting] = useState(false);
   const [passportUploading, setPassportUploading] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(null); // null = closed
 
   const openPassport = async (animal) => {
     setPassportAnimal(animal);
@@ -145,6 +147,24 @@ export default function HerdScreen({ currentUser }) {
     }
   };
 
+  // One photo per request, uploaded one after another — not all of them
+  // bundled into a single multipart body. React Native's FormData has been
+  // unreliable about carrying more than one file under the same field name
+  // in one request (later parts silently dropped on some RN/Android
+  // combinations); a request per file sidesteps that entirely and means a
+  // failure on photo 3 doesn't undo 1 and 2, and reports exactly which one
+  // failed instead of one opaque "could not add photos" for the whole batch.
+  const uploadOnePhoto = async (animalId, asset) => {
+    const filename = asset.uri.split('/').pop();
+    const ext = (filename.split('.').pop() || 'jpg').toLowerCase();
+    const fd = new FormData();
+    fd.append('photos', { uri: asset.uri, name: filename, type: `image/${ext === 'jpg' ? 'jpeg' : ext}` });
+    const res = await authFetch(currentUser, `/animals/${animalId}/photos`, { method: 'POST', body: fd });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'upload failed');
+    return data.photos?.[0]?.image_url;
+  };
+
   const addPassportPhotos = async () => {
     if (!passportAnimal) return;
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -154,21 +174,29 @@ export default function HerdScreen({ currentUser }) {
     });
     if (result.canceled || !result.assets?.length) return;
     setPassportUploading(true);
-    const fd = new FormData();
-    result.assets.forEach(asset => {
-      const filename = asset.uri.split('/').pop();
-      const ext = (filename.split('.').pop() || 'jpg').toLowerCase();
-      fd.append('photos', { uri: asset.uri, name: filename, type: `image/${ext === 'jpg' ? 'jpeg' : ext}` });
-    });
-    const res = await authFetch(currentUser, `/animals/${passportAnimal.id}/photos`, { method: 'POST', body: fd });
-    const data = await res.json().catch(() => ({}));
+    const newUrls = [];
+    let failed = 0;
+    for (const asset of result.assets) {
+      try {
+        const url = await uploadOnePhoto(passportAnimal.id, asset);
+        if (url) {
+          newUrls.push(url);
+          // Reflect each photo as soon as it lands, not only after the
+          // whole batch finishes — so if a later one fails, the earlier
+          // successful ones are still visibly saved, not lost from view.
+          setPassportAnimal(prev => ({ ...prev, photos: [...(prev.photos || (prev.image_url ? [prev.image_url] : [])), url] }));
+          setAnimals(prev => prev.map(a => a.id === passportAnimal.id
+            ? { ...a, photos: [...(a.photos || (a.image_url ? [a.image_url] : [])), url] }
+            : a));
+        }
+      } catch {
+        failed += 1;
+      }
+    }
     setPassportUploading(false);
-    if (!res.ok) { Alert.alert('Could not add photos', data.error || 'Try again.'); return; }
-    const newUrls = (data.photos || []).map(p => p.image_url);
-    setPassportAnimal(prev => ({ ...prev, photos: [...(prev.photos || (prev.image_url ? [prev.image_url] : [])), ...newUrls] }));
-    setAnimals(prev => prev.map(a => a.id === passportAnimal.id
-      ? { ...a, photos: [...(a.photos || (a.image_url ? [a.image_url] : [])), ...newUrls] }
-      : a));
+    if (failed > 0) {
+      Alert.alert('Some photos didn\'t upload', `${newUrls.length} added, ${failed} failed — try adding the missing one(s) again.`);
+    }
   };
 
   const downloadPassport = async () => {
@@ -228,7 +256,6 @@ export default function HerdScreen({ currentUser }) {
     fd.append('birth_weight', form.current_weight || '0');
     fd.append('current_weight', form.current_weight || '0');
     if (photos[0]) fd.append('photo', photos[0]);
-    photos.slice(1).forEach(p => fd.append('photos', p));
 
     const res = await authFetch(currentUser, '/animals', { method: 'POST', body: fd });
     const data = await res.json().catch(() => ({}));
@@ -237,8 +264,18 @@ export default function HerdScreen({ currentUser }) {
       setSaving(false);
       return;
     }
+    // Extra photos beyond the cover go one request at a time (see
+    // uploadOnePhoto) rather than bundled into the registration request —
+    // more reliable, and a failure here doesn't undo the registration.
+    let extraFailed = 0;
+    for (const p of photos.slice(1)) {
+      try { await uploadOnePhoto(data.id, p); } catch { extraFailed += 1; }
+    }
     await load();
     setSaving(false); setShowAdd(false); setPhotos([]);
+    if (extraFailed > 0) {
+      Alert.alert('Animal registered', `${photos.length - 1 - extraFailed} of ${photos.length - 1} extra photo(s) uploaded — add the rest from its Health Passport.`);
+    }
     setForm({ name:'', species:'Cattle', breed:'', tag_id:'', birth_date: todayStr(), current_weight:'' });
   };
 
@@ -271,6 +308,10 @@ export default function HerdScreen({ currentUser }) {
     a.breed?.toLowerCase().includes(search.toLowerCase()) ||
     a.species?.toLowerCase().includes(search.toLowerCase())
   );
+
+  const passportPhotos = passportAnimal
+    ? (passportAnimal.photos?.length > 0 ? passportAnimal.photos : (passportAnimal.image_url ? [passportAnimal.image_url] : [])).map(resolveImageUrl)
+    : [];
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
@@ -439,7 +480,7 @@ export default function HerdScreen({ currentUser }) {
 
       {/* Health Passport — full animal identity + health history, mirrors
           the web app's Health Passport modal. */}
-      <Modal visible={!!passportAnimal} animationType="slide" onRequestClose={() => setPassportAnimal(null)}>
+      <Modal visible={!!passportAnimal} animationType="slide" onRequestClose={() => { setPassportAnimal(null); setLightboxIndex(null); }}>
         {passportAnimal && (
           <SafeAreaView style={{ flex: 1, backgroundColor: '#fdfcf9' }}>
             <View style={styles.passportHeader}>
@@ -457,7 +498,7 @@ export default function HerdScreen({ currentUser }) {
                 <TouchableOpacity style={styles.passportCloseBtn} onPress={downloadPassport} activeOpacity={0.8} disabled={passportExporting}>
                   {passportExporting ? <ActivityIndicator size="small" color="#fff" /> : <Download size={16} color="#fff" />}
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.passportCloseBtn} onPress={() => setPassportAnimal(null)} activeOpacity={0.8}>
+                <TouchableOpacity style={styles.passportCloseBtn} onPress={() => { setPassportAnimal(null); setLightboxIndex(null); }} activeOpacity={0.8}>
                   <X size={18} color="#fff" />
                 </TouchableOpacity>
               </View>
@@ -465,7 +506,9 @@ export default function HerdScreen({ currentUser }) {
 
             <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
               {passportAnimal.image_url ? (
-                <Image source={{ uri: resolveImageUrl(passportAnimal.image_url) }} style={styles.passportImage} />
+                <TouchableOpacity activeOpacity={0.9} onPress={() => setLightboxIndex(0)}>
+                  <Image source={{ uri: resolveImageUrl(passportAnimal.image_url) }} style={styles.passportImage} />
+                </TouchableOpacity>
               ) : (
                 <View style={[styles.passportImage, { backgroundColor: COLORS.light, alignItems: 'center', justifyContent: 'center' }]}>
                   <Beef size={48} color={COLORS.primary} strokeWidth={1.5} />
@@ -474,11 +517,10 @@ export default function HerdScreen({ currentUser }) {
 
               <Text style={styles.passportSectionTitle}>Photos</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }}>
-                {(passportAnimal.photos && passportAnimal.photos.length > 0
-                  ? passportAnimal.photos
-                  : (passportAnimal.image_url ? [passportAnimal.image_url] : [])
-                ).map((url, i) => (
-                  <Image key={url + i} source={{ uri: resolveImageUrl(url) }} style={styles.galleryThumb} />
+                {passportPhotos.map((url, i) => (
+                  <TouchableOpacity key={url + i} onPress={() => setLightboxIndex(i)} activeOpacity={0.85}>
+                    <Image source={{ uri: url }} style={styles.galleryThumb} />
+                  </TouchableOpacity>
                 ))}
                 <TouchableOpacity style={[styles.galleryThumb, styles.galleryAddThumb]} onPress={addPassportPhotos} activeOpacity={0.8} disabled={passportUploading}>
                   {passportUploading ? <ActivityIndicator size="small" color={COLORS.primary} /> : (
@@ -540,6 +582,13 @@ export default function HerdScreen({ currentUser }) {
           </SafeAreaView>
         )}
       </Modal>
+
+      <PhotoLightbox
+        visible={lightboxIndex !== null}
+        photos={passportPhotos}
+        startIndex={lightboxIndex || 0}
+        onClose={() => setLightboxIndex(null)}
+      />
     </View>
   );
 }

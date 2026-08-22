@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 
 import { API } from '../../config';
+import Lightbox from '../Lightbox';
 
 const CATEGORIES = [
   { id: 'all',       label: 'All Listings',  icon: ShoppingCart, color: 'bg-gray-800'   },
@@ -52,11 +53,19 @@ const resolveImageUrl = (url) => (url && url.startsWith('/uploads/')) ? `${API}$
 // anything without a `photos` array (older cached data).
 const ListingGallery = ({ photos, alt }) => {
   const [i, setI] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   if (!photos || photos.length === 0) return null;
+  const resolved = photos.map(resolveImageUrl);
   const go = (dir) => setI(prev => (prev + dir + photos.length) % photos.length);
   return (
     <div className="relative w-full h-36 bg-gray-100 group">
-      <img src={resolveImageUrl(photos[i])} alt={alt} className="w-full h-full object-cover" />
+      <img
+        src={resolved[i]} alt={alt} onClick={() => setLightboxOpen(true)}
+        className="w-full h-full object-cover cursor-zoom-in"
+      />
+      {lightboxOpen && (
+        <Lightbox photos={resolved} index={i} onIndexChange={setI} onClose={() => setLightboxOpen(false)} alt={alt} />
+      )}
       {photos.length > 1 && (
         <>
           <button type="button" onClick={() => go(-1)} aria-label="Previous photo"

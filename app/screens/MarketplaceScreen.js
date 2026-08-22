@@ -10,6 +10,7 @@ import {
 } from 'lucide-react-native';
 import { API, COLORS } from '../config';
 import { authFetch, authJson } from '../api';
+import PhotoLightbox from '../components/PhotoLightbox';
 
 const CATEGORIES = [
   { id: 'all',       label: 'All',       icon: LayoutGrid },
@@ -284,9 +285,18 @@ const resolveImageUrl = (url) => (url && url.startsWith('/uploads/')) ? `${API}$
 const ListingGallery = ({ photos }) => {
   const [index, setIndex] = useState(0);
   const [width, setWidth] = useState(0);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   if (!photos || photos.length === 0) return null;
-  if (photos.length === 1) {
-    return <Image source={{ uri: resolveImageUrl(photos[0]) }} style={styles.cardImage} />;
+  const resolved = photos.map(resolveImageUrl);
+  if (resolved.length === 1) {
+    return (
+      <>
+        <TouchableOpacity activeOpacity={0.9} onPress={() => setLightboxOpen(true)}>
+          <Image source={{ uri: resolved[0] }} style={styles.cardImage} />
+        </TouchableOpacity>
+        <PhotoLightbox visible={lightboxOpen} photos={resolved} startIndex={0} onClose={() => setLightboxOpen(false)} />
+      </>
+    );
   }
   const onScroll = (e) => {
     if (!width) return;
@@ -300,16 +310,19 @@ const ListingGallery = ({ photos }) => {
           horizontal pagingEnabled showsHorizontalScrollIndicator={false}
           onScroll={onScroll} scrollEventThrottle={32}
         >
-          {photos.map((url, i) => (
-            <Image key={url + i} source={{ uri: resolveImageUrl(url) }} style={[styles.cardImage, { width, marginBottom: 0 }]} />
+          {resolved.map((url, i) => (
+            <TouchableOpacity key={url + i} activeOpacity={0.9} onPress={() => setLightboxOpen(true)}>
+              <Image source={{ uri: url }} style={[styles.cardImage, { width, marginBottom: 0 }]} />
+            </TouchableOpacity>
           ))}
         </ScrollView>
       )}
       <View style={styles.galleryDots}>
-        {photos.map((_, i) => (
+        {resolved.map((_, i) => (
           <View key={i} style={[styles.galleryDot, i === index && styles.galleryDotActive]} />
         ))}
       </View>
+      <PhotoLightbox visible={lightboxOpen} photos={resolved} startIndex={index} onClose={() => setLightboxOpen(false)} />
     </View>
   );
 };

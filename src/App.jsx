@@ -1946,6 +1946,21 @@ function App() {
 
   // Returns { ok, error } so the registration form can show a real error and
   // stay open on failure, instead of silently fabricating a local animal.
+  //
+  // Extra photos upload one request per file rather than bundled together —
+  // some browsers/servers have been inconsistent about carrying more than
+  // one file under the same multipart field name in a single request, and a
+  // per-file request means one failure doesn't undo the others and reports
+  // exactly which photo didn't make it instead of one opaque batch error.
+  const uploadOneAnimalPhoto = async (animalId, file) => {
+    const fd = new FormData();
+    fd.append('photos', file);
+    const res = await authFetch(`/animals/${animalId}/photos`, { method: 'POST', body: fd });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'upload failed');
+    return data.photos?.[0]?.image_url;
+  };
+
   const addAnimal = async (newAnimal, photoFiles) => {
     try {
       let res;
@@ -1954,7 +1969,6 @@ function App() {
         const fd = new FormData();
         Object.entries(newAnimal).forEach(([k, v]) => { if (v !== undefined && v !== null) fd.append(k, v); });
         fd.append('photo', files[0]);
-        files.slice(1).forEach(f => fd.append('photos', f));
         res = await authFetch('/animals', { method: 'POST', body: fd });
       } else {
         res = await authFetch('/animals', {
@@ -1964,9 +1978,15 @@ function App() {
       }
       const data = await res.json();
       if (!res.ok) return { ok: false, error: data.error || 'Could not register animal.' };
+      let extraFailed = 0;
+      for (const f of files.slice(1)) {
+        try { await uploadOneAnimalPhoto(data.id, f); } catch { extraFailed += 1; }
+      }
       await loadUserData(currentUser); // refetch so the real (server-resolved) photo/id are shown
       setActiveTab('profile');
-      return { ok: true };
+      return extraFailed > 0
+        ? { ok: true, warning: `Animal registered, but ${extraFailed} of ${files.length - 1} extra photo(s) didn't upload — add them again from the animal's profile.` }
+        : { ok: true };
     } catch {
       return { ok: false, error: 'Could not reach the PFUMA API. Is the Flask backend running?' };
     }
@@ -1977,12 +1997,13 @@ function App() {
   // gallery; a farmer can keep adding pictures any time from its profile.
   const addAnimalPhotos = async (animalId, photoFiles) => {
     try {
-      const fd = new FormData();
-      photoFiles.forEach(f => fd.append('photos', f));
-      const res = await authFetch(`/animals/${animalId}/photos`, { method: 'POST', body: fd });
-      const data = await res.json();
-      if (!res.ok) return { ok: false, error: data.error || 'Could not add photos.' };
+      let succeeded = 0;
+      let failed = 0;
+      for (const f of photoFiles) {
+        try { await uploadOneAnimalPhoto(animalId, f); succeeded += 1; } catch { failed += 1; }
+      }
       await loadUserData(currentUser);
+      if (failed > 0) return { ok: succeeded > 0, error: `${succeeded} added, ${failed} failed — try adding the missing one(s) again.` };
       return { ok: true };
     } catch {
       return { ok: false, error: 'Could not reach the PFUMA API. Is the Flask backend running?' };

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import LifecycleTimeline from './LifecycleTimeline';
+import Lightbox from '../Lightbox';
 import './AnimalProfile.css';
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -332,14 +333,17 @@ const AnimalProfile = ({ animals, onAddAnimal, onAddAnimalPhotos, auditLog, onLi
   const [isPassportOpen,   setIsPassportOpen]   = useState(false);
   const [activeTab,        setActiveTab]        = useState('lifecycle');
   const [uploadingPhotos,  setUploadingPhotos]  = useState(false);
+  const [lightboxIndex,    setLightboxIndex]    = useState(null); // null = closed
 
   const handleAddPhotos = async (e) => {
     const files = Array.from(e.target.files || []);
     e.target.value = '';
     if (!files.length || !onAddAnimalPhotos || !selectedAnimalId) return;
     setUploadingPhotos(true);
-    await onAddAnimalPhotos(selectedAnimalId, files);
+    const result = await onAddAnimalPhotos(selectedAnimalId, files);
     setUploadingPhotos(false);
+    if (result && !result.ok) alert(result.error || 'Could not add photos — try again.');
+    else if (result?.error) alert(result.error); // partial failure — some uploaded, some didn't
   };
 
   const selectedAnimal = animals.find(a => a.id === selectedAnimalId);
@@ -359,13 +363,13 @@ const AnimalProfile = ({ animals, onAddAnimal, onAddAnimalPhotos, auditLog, onLi
     return (
       <div className="p-6 bg-gray-50 min-h-full space-y-5 text-left">
         {/* Back */}
-        <button onClick={() => { setSelectedAnimalId(null); setActiveTab('lifecycle'); }} className="flex items-center gap-1.5 text-pfuma-green font-black text-xs uppercase tracking-widest hover:underline">
+        <button onClick={() => { setSelectedAnimalId(null); setActiveTab('lifecycle'); setLightboxIndex(null); }} className="flex items-center gap-1.5 text-pfuma-green font-black text-xs uppercase tracking-widest hover:underline">
           <ArrowLeft size={14} /> Back to Herd
         </button>
 
         {/* Hero card */}
         <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 flex flex-col md:flex-row" style={{ minHeight: 280 }}>
-          <div className="w-full md:w-2/5 relative" style={{ minHeight: 220 }}>
+          <div className="w-full md:w-2/5 relative cursor-zoom-in" style={{ minHeight: 220 }} onClick={() => setLightboxIndex(0)}>
             <img src={selectedAnimal.imageUrl} className="w-full h-full object-cover absolute inset-0" alt={selectedAnimal.name} />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex flex-col justify-end p-8">
               <h1 className="text-4xl font-black text-white leading-none mb-2">{selectedAnimal.name}</h1>
@@ -429,9 +433,10 @@ const AnimalProfile = ({ animals, onAddAnimal, onAddAnimalPhotos, auditLog, onLi
           </h4>
           <div className="flex flex-wrap gap-3">
             {(selectedAnimal.photos || []).map((url, i) => (
-              <div key={url + i} className="w-20 h-20 rounded-2xl overflow-hidden bg-gray-100 shrink-0">
+              <button key={url + i} type="button" onClick={() => setLightboxIndex(i)}
+                className="w-20 h-20 rounded-2xl overflow-hidden bg-gray-100 shrink-0 cursor-zoom-in">
                 <img src={url} alt={`${selectedAnimal.name} ${i + 1}`} className="w-full h-full object-cover" />
-              </div>
+              </button>
             ))}
             <label htmlFor="add-more-photos" className={`w-20 h-20 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-200 flex flex-col items-center justify-center shrink-0 transition ${uploadingPhotos ? 'opacity-50' : 'cursor-pointer hover:border-pfuma-green'}`}>
               <Camera size={18} className="text-gray-300" />
@@ -440,6 +445,14 @@ const AnimalProfile = ({ animals, onAddAnimal, onAddAnimalPhotos, auditLog, onLi
             <input id="add-more-photos" type="file" accept="image/*" multiple className="hidden" disabled={uploadingPhotos} onChange={handleAddPhotos} />
           </div>
         </div>
+
+        {lightboxIndex !== null && (
+          <Lightbox
+            photos={selectedAnimal.photos || []} index={lightboxIndex}
+            onIndexChange={setLightboxIndex} onClose={() => setLightboxIndex(null)}
+            alt={selectedAnimal.name}
+          />
+        )}
 
         {/* Tabs */}
         <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
