@@ -2,7 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Search, Plus, MapPin, Phone, ShieldCheck, Package,
   Tag, Filter, X, CheckCircle, AlertTriangle, ArrowRight,
-  ShoppingCart, Leaf, Pill, Wrench, Wheat, RefreshCw, Camera
+  ShoppingCart, Leaf, Pill, Wrench, Wheat, RefreshCw, Camera,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 import { API } from '../../config';
@@ -39,6 +40,42 @@ const STATUS_BADGE = {
   available:         { label: 'Live',              cls: 'bg-green-100 text-green-700'  },
   sold:              { label: 'Sold',               cls: 'bg-gray-200 text-gray-600'    },
   withdrawn:         { label: 'Withdrawn',          cls: 'bg-red-100 text-red-600'      },
+};
+
+// A real uploaded photo is a relative /uploads/... path; anything else
+// (a species stock-image fallback) is already a usable URL as-is.
+const resolveImageUrl = (url) => (url && url.startsWith('/uploads/')) ? `${API}${url}` : url;
+
+// Livestock listings show the linked animal's whole photo gallery — a
+// registration photo plus anything added later — not just a single
+// upload made at listing time. Falls back to `photo_url` alone for
+// anything without a `photos` array (older cached data).
+const ListingGallery = ({ photos, alt }) => {
+  const [i, setI] = useState(0);
+  if (!photos || photos.length === 0) return null;
+  const go = (dir) => setI(prev => (prev + dir + photos.length) % photos.length);
+  return (
+    <div className="relative w-full h-36 bg-gray-100 group">
+      <img src={resolveImageUrl(photos[i])} alt={alt} className="w-full h-full object-cover" />
+      {photos.length > 1 && (
+        <>
+          <button type="button" onClick={() => go(-1)} aria-label="Previous photo"
+            className="absolute left-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+            <ChevronLeft size={14} />
+          </button>
+          <button type="button" onClick={() => go(1)} aria-label="Next photo"
+            className="absolute right-1 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/40 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+            <ChevronRight size={14} />
+          </button>
+          <div className="absolute bottom-1.5 left-0 right-0 flex justify-center gap-1">
+            {photos.map((_, dot) => (
+              <span key={dot} className={`h-1.5 rounded-full transition-all ${dot === i ? 'w-3 bg-white' : 'w-1.5 bg-white/60'}`} />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
 };
 
 const PostForm = ({ currentUser, onSubmit, onCancel, animals }) => {
@@ -505,11 +542,10 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {filtered.map(listing => (
             <div key={listing.id} className={`bg-white rounded-2xl border-2 shadow-sm hover:shadow-md transition flex flex-col overflow-hidden ${CAT_COLORS[listing.category] || 'border-gray-100'}`}>
-              {listing.photo_url && (
-                <div className="w-full h-36 bg-gray-100">
-                  <img src={`${API}${listing.photo_url}`} alt={listing.product_name} className="w-full h-full object-cover" />
-                </div>
-              )}
+              <ListingGallery
+                photos={listing.photos && listing.photos.length > 0 ? listing.photos : (listing.photo_url ? [listing.photo_url] : [])}
+                alt={listing.product_name}
+              />
               {/* Card header */}
               <div className="p-5 flex-1">
                 <div className="flex items-start justify-between gap-2 mb-3">

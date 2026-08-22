@@ -1800,6 +1800,7 @@ const animalFromApi = (a) => ({
   birthDate: a.birth_date, tagId: a.tag_id, brandId: a.brand_id,
   sireId: a.sire_id, damId: a.dam_id, birthWeight: a.birth_weight, currentWeight: a.current_weight,
   imageUrl: resolveImageUrl(a.image_url) || IMAGE_BY_SPECIES[a.species] || IMAGE_BY_SPECIES.Cattle,
+  photos: (a.photos && a.photos.length > 0 ? a.photos : (a.image_url ? [a.image_url] : [])).map(resolveImageUrl),
   weightHistory: (a.weight_history || []).map(w => ({ month: w.month_label, weight: w.weight_kg })),
   forSale: !!a.for_sale, costToDate: a.cost_to_date || 0,
   registeredAt: a.created_at,
@@ -1945,13 +1946,15 @@ function App() {
 
   // Returns { ok, error } so the registration form can show a real error and
   // stay open on failure, instead of silently fabricating a local animal.
-  const addAnimal = async (newAnimal, photoFile) => {
+  const addAnimal = async (newAnimal, photoFiles) => {
     try {
       let res;
-      if (photoFile) {
+      const files = Array.isArray(photoFiles) ? photoFiles : (photoFiles ? [photoFiles] : []);
+      if (files.length > 0) {
         const fd = new FormData();
         Object.entries(newAnimal).forEach(([k, v]) => { if (v !== undefined && v !== null) fd.append(k, v); });
-        fd.append('photo', photoFile);
+        fd.append('photo', files[0]);
+        files.slice(1).forEach(f => fd.append('photos', f));
         res = await authFetch('/animals', { method: 'POST', body: fd });
       } else {
         res = await authFetch('/animals', {
@@ -1963,6 +1966,23 @@ function App() {
       if (!res.ok) return { ok: false, error: data.error || 'Could not register animal.' };
       await loadUserData(currentUser); // refetch so the real (server-resolved) photo/id are shown
       setActiveTab('profile');
+      return { ok: true };
+    } catch {
+      return { ok: false, error: 'Could not reach the PFUMA API. Is the Flask backend running?' };
+    }
+  };
+
+  // Adds more photos to an already-registered animal — the registration
+  // form's photo upload isn't the only chance to build out an animal's
+  // gallery; a farmer can keep adding pictures any time from its profile.
+  const addAnimalPhotos = async (animalId, photoFiles) => {
+    try {
+      const fd = new FormData();
+      photoFiles.forEach(f => fd.append('photos', f));
+      const res = await authFetch(`/animals/${animalId}/photos`, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) return { ok: false, error: data.error || 'Could not add photos.' };
+      await loadUserData(currentUser);
       return { ok: true };
     } catch {
       return { ok: false, error: 'Could not reach the PFUMA API. Is the Flask backend running?' };
@@ -2216,7 +2236,7 @@ function App() {
               {role === 'Police'       && <PoliceDashboard       notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} />}
             </ErrorBoundary>
           )}
-          {activeTab === 'profile'     && <ErrorBoundary><AnimalProfile animals={animals} onAddAnimal={addAnimal} auditLog={auditLog} currentUser={currentUser} onListAnimal={handleListAnimal} /></ErrorBoundary>}
+          {activeTab === 'profile'     && <ErrorBoundary><AnimalProfile animals={animals} onAddAnimal={addAnimal} onAddAnimalPhotos={addAnimalPhotos} auditLog={auditLog} currentUser={currentUser} onListAnimal={handleListAnimal} /></ErrorBoundary>}
           {activeTab === 'health'      && <ErrorBoundary><HealthManagement animals={animals} completedTasks={completedTasks} setCompletedTasks={setCompletedTasks} auditLog={auditLog} onAddAuditLog={addAuditLog} inventory={inventory} onRefreshInventory={refreshInventory} currentUser={currentUser} /></ErrorBoundary>}
           {activeTab === 'disease'     && <ErrorBoundary><DiseaseDetection animals={animals} onAddAuditLog={addAuditLog} onCallVet={requestVetContact} /></ErrorBoundary>}
           {activeTab === 'vet'         && <ErrorBoundary><VetCommunication animals={animals} currentUser={currentUser} intent={vetIntent} onIntentConsumed={() => setVetIntent(null)} /></ErrorBoundary>}

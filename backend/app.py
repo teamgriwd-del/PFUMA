@@ -175,6 +175,16 @@ def ensure_schema():
         )
     """)
     c.execute("""
+        CREATE TABLE IF NOT EXISTS animal_photos (
+          id         INT AUTO_INCREMENT PRIMARY KEY,
+          animal_id  INT NOT NULL,
+          image_url  VARCHAR(300) NOT NULL,
+          sort_order INT DEFAULT 0,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (animal_id) REFERENCES animals(id) ON DELETE CASCADE
+        )
+    """)
+    c.execute("""
         CREATE TABLE IF NOT EXISTS medication_recommendations (
           id             INT AUTO_INCREMENT PRIMARY KEY,
           animal_id      INT NOT NULL,
@@ -373,12 +383,15 @@ def save_upload(file_storage, user_id, doctype):
     return f"{user_id}/{filename}"
 
 
-def save_photo(file_storage, category, entity_id, allowed_ext=None):
+def save_photo(file_storage, category, entity_id, allowed_ext=None, suffix=None):
     """Saves an uploaded animal/listing/attachment/avatar photo under
-    uploads/<category>/<entity_id><ext> and returns the relative path stored
-    in the DB (served publicly, unlike save_upload's private id/credential
-    documents). allowed_ext defaults to images only; pass a wider set (e.g.
-    ALLOWED_ATTACHMENT_EXT) for callers that accept documents too."""
+    uploads/<category>/<entity_id><ext> (or <entity_id>_<suffix><ext> when a
+    suffix is given, so one animal can carry more than one photo without
+    each new upload overwriting the last) and returns the relative path
+    stored in the DB (served publicly, unlike save_upload's private
+    id/credential documents). allowed_ext defaults to images only; pass a
+    wider set (e.g. ALLOWED_ATTACHMENT_EXT) for callers that accept
+    documents too."""
     if not file_storage or not file_storage.filename:
         return None
     allowed_ext = allowed_ext or ALLOWED_IMG_EXT
@@ -387,9 +400,25 @@ def save_photo(file_storage, category, entity_id, allowed_ext=None):
         raise ValueError(f"Unsupported file type '{ext}' — use {', '.join(sorted(e.lstrip('.').upper() for e in allowed_ext))}")
     category_dir = os.path.join(UPLOAD_DIR, category)
     os.makedirs(category_dir, exist_ok=True)
-    filename = f"{entity_id}{ext}"
+    filename = f"{entity_id}_{suffix}{ext}" if suffix else f"{entity_id}{ext}"
     file_storage.save(os.path.join(category_dir, filename))
     return f"{category}/{filename}"
+
+
+def animal_photos(c, animal_id):
+    """Every extra photo for one animal, in display order."""
+    c.execute("SELECT id, image_url FROM animal_photos WHERE animal_id=%s ORDER BY sort_order, id", (animal_id,))
+    return c.fetchall()
+
+
+def animal_photo_urls(c, animal, animal_id=None):
+    """The full gallery for one animal: animal_photos rows, falling back to
+    the cover image_url alone when no extra photos have been added yet —
+    never an empty gallery for an animal that does have a cover photo."""
+    urls = [p['image_url'] for p in animal_photos(c, animal_id or animal['id'])]
+    if not urls and animal.get('image_url'):
+        urls = [animal['image_url']]
+    return urls
 
 
 def create_notification(c, user_id, ntype, title, message, related_user_id=None, listing_id=None, animal_id=None):
@@ -970,6 +999,7 @@ def get_animals():
     for a in animals:
         c.execute("SELECT month_label, weight_kg FROM weight_history WHERE animal_id = %s ORDER BY id", (a['id'],))
         a['weight_history'] = c.fetchall()
+        a['photos'] = animal_photo_urls(c, a)
     db.close()
     return jsonify(animals)
 
@@ -983,6 +1013,7 @@ def add_animal():
     # accepted — request.form is empty for a JSON body, so fall back to it.
     d = request.form if request.form else (request.json or {})
     photo = request.files.get('photo')
+    extra_photos = request.files.getlist('photos')
     db = get_db()
     c = db.cursor()
     species = d['species']
@@ -1005,10 +1036,26 @@ def add_animal():
     if photo and photo.filename:
         try:
             rel_path = save_photo(photo, 'animals', animal_id)
-            c.execute("UPDATE animals SET image_url=%s WHERE id=%s", (f"/uploads/{rel_path}", animal_id))
+            cover_url = f"/uploads/{rel_path}"
+            c.execute("UPDATE animals SET image_url=%s WHERE id=%s", (cover_url, animal_id))
+            c.execute("INSERT INTO animal_photos (animal_id, image_url, sort_order) VALUES (%s,%s,0)", (animal_id, cover_url))
         except ValueError as e:
             db.commit(); db.close()
             return jsonify({"error": str(e)}), 400
+
+    # Extra photos beyond the cover — same "register with several pictures
+    # already attached" flow the marketplace gallery needs, available from
+    # first registration rather than only as a later add-on.
+    for i, f in enumerate(extra_photos, start=1):
+        if not f or not f.filename:
+            continue
+        try:
+            rel_path = save_photo(f, 'animals', animal_id, suffix=f"{i}_{secrets.token_hex(3)}")
+        except ValueError as e:
+            db.commit(); db.close()
+            return jsonify({"error": str(e)}), 400
+        c.execute("INSERT INTO animal_photos (animal_id, image_url, sort_order) VALUES (%s,%s,%s)",
+                   (animal_id, f"/uploads/{rel_path}", i))
 
     bw = d.get('birth_weight') or d.get('birthWeight', 0)
     if bw:
@@ -1035,6 +1082,76 @@ def toggle_sale(animal_id):
     row = c.fetchone()
     db.close()
     return jsonify({"for_sale": bool(row['for_sale']), "message": "Listing status updated ✅"})
+
+
+@app.route('/animals/<int:animal_id>/photos', methods=['GET'])
+@require_auth
+def get_animal_photos_route(animal_id):
+    db = get_db(); c = db.cursor()
+    c.execute("SELECT owner_id FROM animals WHERE id=%s", (animal_id,))
+    animal = c.fetchone()
+    if not animal:
+        db.close(); return jsonify({"error": "Animal not found"}), 404
+    if animal['owner_id'] != g.current_user['id'] and g.current_user['role'] not in ('Veterinarian', 'Police'):
+        db.close(); return jsonify({"error": "Not authorized"}), 403
+    photos = animal_photos(c, animal_id)
+    db.close()
+    return jsonify(photos)
+
+
+@app.route('/animals/<int:animal_id>/photos', methods=['POST'])
+@require_auth
+@require_role('Farmer')
+def add_animal_photos_route(animal_id):
+    db = get_db(); c = db.cursor()
+    c.execute("SELECT owner_id, image_url FROM animals WHERE id=%s", (animal_id,))
+    animal = c.fetchone()
+    if not animal:
+        db.close(); return jsonify({"error": "Animal not found"}), 404
+    if animal['owner_id'] != g.current_user['id']:
+        db.close(); return jsonify({"error": "You can only add photos to your own animals"}), 403
+
+    files = request.files.getlist('photos')
+    if not files and 'photo' in request.files:
+        files = [request.files['photo']]
+    files = [f for f in files if f and f.filename]
+    if not files:
+        db.close(); return jsonify({"error": "No photos provided"}), 400
+
+    c.execute("SELECT COUNT(*) AS n FROM animal_photos WHERE animal_id=%s", (animal_id,))
+    next_order = c.fetchone()['n']
+    saved = []
+    for i, f in enumerate(files):
+        try:
+            rel_path = save_photo(f, 'animals', animal_id, suffix=f"{next_order + i}_{secrets.token_hex(3)}")
+        except ValueError as e:
+            db.commit(); db.close()
+            return jsonify({"error": str(e)}), 400
+        url = f"/uploads/{rel_path}"
+        c.execute("INSERT INTO animal_photos (animal_id, image_url, sort_order) VALUES (%s,%s,%s)",
+                   (animal_id, url, next_order + i))
+        saved.append({"id": c.lastrowid, "image_url": url})
+        if not animal['image_url']:
+            c.execute("UPDATE animals SET image_url=%s WHERE id=%s", (url, animal_id))
+            animal['image_url'] = url
+    db.commit()
+    db.close()
+    return jsonify({"photos": saved, "message": f"{len(saved)} photo(s) added ✅"})
+
+
+@app.route('/animals/<int:animal_id>/photos/<int:photo_id>', methods=['DELETE'])
+@require_auth
+@require_role('Farmer')
+def delete_animal_photo_route(animal_id, photo_id):
+    db = get_db(); c = db.cursor()
+    c.execute("SELECT owner_id FROM animals WHERE id=%s", (animal_id,))
+    animal = c.fetchone()
+    if not animal or animal['owner_id'] != g.current_user['id']:
+        db.close(); return jsonify({"error": "Not authorized"}), 403
+    c.execute("DELETE FROM animal_photos WHERE id=%s AND animal_id=%s", (photo_id, animal_id))
+    db.commit()
+    db.close()
+    return jsonify({"message": "Photo removed ✅"})
 
 
 # ── IOT DEVICES ───────────────────────────────────────────────
@@ -2095,6 +2212,34 @@ def administer_medication_recommendation(rec_id):
 
 
 # ── MARKETPLACE ───────────────────────────────────────────────
+def _attach_listing_photos(c, listings):
+    """Fills in `photo_url` (single, for old clients) and `photos` (the
+    full gallery, for new ones) on each listing in place.
+
+    A livestock listing's photo used to come only from an optional upload
+    made at listing-creation time — decoupled from the animal's own
+    registration photo, so a seller who registered their animal with a
+    picture (the common case) but skipped the separate listing-photo
+    upload (also common, since it was marked optional) ended up with a
+    listing that showed no picture at all on the marketplace, even though
+    a picture of that exact animal existed in the database the whole time.
+    For an animal-linked listing, the animal's photo gallery is now the
+    source of truth; an explicitly-uploaded listing photo is prepended
+    ahead of it rather than discarded."""
+    for l in listings:
+        if l.get('animal_id'):
+            c.execute("SELECT image_url FROM animals WHERE id=%s", (l['animal_id'],))
+            animal = c.fetchone() or {}
+            gallery = animal_photo_urls(c, animal, animal_id=l['animal_id'])
+            if l.get('photo_url') and l['photo_url'] not in gallery:
+                gallery = [l['photo_url']] + gallery
+            l['photos'] = gallery
+            if not l.get('photo_url') and gallery:
+                l['photo_url'] = gallery[0]
+        else:
+            l['photos'] = [l['photo_url']] if l.get('photo_url') else []
+
+
 @app.route('/listings', methods=['GET'])
 @require_auth
 def get_listings():
@@ -2115,6 +2260,7 @@ def get_listings():
     sql += " ORDER BY ml.created_at DESC"
     c.execute(sql, params)
     listings = c.fetchall()
+    _attach_listing_photos(c, listings)
     db.close()
     return jsonify(listings)
 
@@ -2135,6 +2281,7 @@ def get_my_listings():
         ORDER BY ml.created_at DESC
     """, (g.current_user['id'],))
     listings = c.fetchall()
+    _attach_listing_photos(c, listings)
     db.close()
     return jsonify(listings)
 

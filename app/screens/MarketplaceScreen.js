@@ -277,6 +277,43 @@ const BidsPanel = ({ currentUser, listing, onAccepted }) => {
 // already a usable URL.
 const resolveImageUrl = (url) => (url && url.startsWith('/uploads/')) ? `${API}${url}` : url;
 
+// Swipeable multi-photo gallery for a listing card. A livestock listing's
+// photos come from the linked animal's own gallery (registration photo +
+// anything added later) — `photos` falls back to a one-item array built
+// from `photo_url` for anything posted before that existed.
+const ListingGallery = ({ photos }) => {
+  const [index, setIndex] = useState(0);
+  const [width, setWidth] = useState(0);
+  if (!photos || photos.length === 0) return null;
+  if (photos.length === 1) {
+    return <Image source={{ uri: resolveImageUrl(photos[0]) }} style={styles.cardImage} />;
+  }
+  const onScroll = (e) => {
+    if (!width) return;
+    const i = Math.round(e.nativeEvent.contentOffset.x / width);
+    if (i !== index) setIndex(i);
+  };
+  return (
+    <View style={{ marginBottom: 10 }} onLayout={e => setWidth(e.nativeEvent.layout.width)}>
+      {width > 0 && (
+        <ScrollView
+          horizontal pagingEnabled showsHorizontalScrollIndicator={false}
+          onScroll={onScroll} scrollEventThrottle={32}
+        >
+          {photos.map((url, i) => (
+            <Image key={url + i} source={{ uri: resolveImageUrl(url) }} style={[styles.cardImage, { width, marginBottom: 0 }]} />
+          ))}
+        </ScrollView>
+      )}
+      <View style={styles.galleryDots}>
+        {photos.map((_, i) => (
+          <View key={i} style={[styles.galleryDot, i === index && styles.galleryDotActive]} />
+        ))}
+      </View>
+    </View>
+  );
+};
+
 export default function MarketplaceScreen({ currentUser }) {
   const [listings,   setListings]   = useState([]);
   const [myAnimals,  setMyAnimals]  = useState([]); // for the "Which Animal?" picker on livestock listings
@@ -376,7 +413,7 @@ export default function MarketplaceScreen({ currentUser }) {
     const CatIcon = CATEGORIES.find(c => c.id === item.category)?.icon || LayoutGrid;
     return (
     <View style={[styles.card, { borderLeftColor: CAT_COLOR[item.category] || '#999', borderLeftWidth: 4 }]}>
-      {item.photo_url ? <Image source={{ uri: resolveImageUrl(item.photo_url) }} style={styles.cardImage} /> : null}
+      <ListingGallery photos={item.photos && item.photos.length > 0 ? item.photos : (item.photo_url ? [item.photo_url] : [])} />
       <View style={styles.cardHeader}>
         <View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 }}>
@@ -538,6 +575,9 @@ const styles = StyleSheet.create({
   catTabText:  { fontSize: 12, fontWeight: '700', color: COLORS.text },
   card:        { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 14, elevation: 3, overflow: 'hidden' },
   cardImage:   { width: '100%', height: 140, borderRadius: 12, marginBottom: 10 },
+  galleryDots: { flexDirection: 'row', justifyContent: 'center', gap: 5, marginTop: 6 },
+  galleryDot:  { width: 5, height: 5, borderRadius: 3, backgroundColor: '#d8d8d8' },
+  galleryDotActive: { backgroundColor: COLORS.primary, width: 14 },
   cardHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
   catBadge:    { fontSize: 10, fontWeight: '700', color: COLORS.muted, textTransform: 'uppercase' },
   cardName:    { fontSize: 16, fontWeight: '900', color: COLORS.text, maxWidth: 200 },

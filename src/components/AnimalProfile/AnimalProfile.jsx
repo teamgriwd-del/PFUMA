@@ -189,18 +189,18 @@ const RegistrationForm = ({ onSubmit, onCancel }) => {
     name: '', species: 'Cattle', breed: '', birthDate: '',
     tagId: '', brandId: '', sireId: '', damId: '', birthWeight: ''
   });
-  const [photoFile, setPhotoFile]       = useState(null);
-  const [photoPreview, setPhotoPreview] = useState(null);
+  const [photoFiles, setPhotoFiles]     = useState([]); // first is the cover photo
   const [submitting, setSubmitting]     = useState(false);
   const [error, setError]               = useState('');
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
   const handlePhotoChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setPhotoFile(file);
-    setPhotoPreview(URL.createObjectURL(file));
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    setPhotoFiles(prev => [...prev, ...files.map(f => ({ file: f, preview: URL.createObjectURL(f) }))]);
+    e.target.value = ''; // lets picking the same file again re-add it after a removal
   };
+  const removePhoto = (i) => setPhotoFiles(prev => prev.filter((_, idx) => idx !== i));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -209,7 +209,7 @@ const RegistrationForm = ({ onSubmit, onCancel }) => {
     const age = calculateAge(form.birthDate);
     setSubmitting(true);
     setError('');
-    const result = await onSubmit({ ...form, age, birthWeight: bw, currentWeight: bw }, photoFile);
+    const result = await onSubmit({ ...form, age, birthWeight: bw, currentWeight: bw }, photoFiles.map(p => p.file));
     setSubmitting(false);
     if (!result?.ok) setError(result?.error || 'Could not register animal — try again.');
   };
@@ -272,20 +272,28 @@ const RegistrationForm = ({ onSubmit, onCancel }) => {
               </div>
             </div>
 
-            {/* Photo */}
+            {/* Photos */}
             <div>
-              <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-4 pb-2 border-b">Photo <span className="text-gray-400 font-medium normal-case tracking-normal">(optional — a stock photo is used if you skip this)</span></h4>
-              <label htmlFor="f-photo" className="flex items-center gap-4 cursor-pointer">
-                <div className="w-20 h-20 rounded-2xl overflow-hidden bg-gray-100 border-2 border-dashed border-gray-200 flex items-center justify-center shrink-0">
-                  {photoPreview
-                    ? <img src={photoPreview} alt="Preview" className="w-full h-full object-cover" />
-                    : <Camera size={22} className="text-gray-300" />}
-                </div>
-                <span className="text-xs font-black text-pfuma-green hover:underline">
-                  {photoPreview ? 'Change photo' : 'Upload a photo'}
-                </span>
-                <input id="f-photo" type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
-              </label>
+              <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-4 pb-2 border-b">
+                Photos <span className="text-gray-400 font-medium normal-case tracking-normal">(optional — add as many as you like; a stock photo is used if you skip this)</span>
+              </h4>
+              <div className="flex flex-wrap items-center gap-3">
+                {photoFiles.map((p, i) => (
+                  <div key={p.preview} className="relative w-20 h-20 rounded-2xl overflow-hidden bg-gray-100 shrink-0 group">
+                    <img src={p.preview} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                    {i === 0 && <span className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[8px] font-black text-center py-0.5">COVER</span>}
+                    <button type="button" onClick={() => removePhoto(i)} aria-label="Remove photo"
+                      className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                      <X size={11} />
+                    </button>
+                  </div>
+                ))}
+                <label htmlFor="f-photo" className="w-20 h-20 rounded-2xl bg-gray-100 border-2 border-dashed border-gray-200 flex flex-col items-center justify-center shrink-0 cursor-pointer hover:border-pfuma-green transition">
+                  <Camera size={20} className="text-gray-300" />
+                  <span className="text-[9px] font-black text-pfuma-green mt-1">Add</span>
+                </label>
+                <input id="f-photo" type="file" accept="image/*" multiple className="hidden" onChange={handlePhotoChange} />
+              </div>
             </div>
 
             {/* Ownership */}
@@ -318,16 +326,26 @@ const RegistrationForm = ({ onSubmit, onCancel }) => {
 };
 
 // ── MAIN COMPONENT ─────────────────────────────────────────────────────────
-const AnimalProfile = ({ animals, onAddAnimal, auditLog, onListAnimal, currentUser }) => {
+const AnimalProfile = ({ animals, onAddAnimal, onAddAnimalPhotos, auditLog, onListAnimal, currentUser }) => {
   const [selectedAnimalId, setSelectedAnimalId] = useState(null);
   const [isRegistering,    setIsRegistering]    = useState(false);
   const [isPassportOpen,   setIsPassportOpen]   = useState(false);
   const [activeTab,        setActiveTab]        = useState('lifecycle');
+  const [uploadingPhotos,  setUploadingPhotos]  = useState(false);
+
+  const handleAddPhotos = async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (!files.length || !onAddAnimalPhotos || !selectedAnimalId) return;
+    setUploadingPhotos(true);
+    await onAddAnimalPhotos(selectedAnimalId, files);
+    setUploadingPhotos(false);
+  };
 
   const selectedAnimal = animals.find(a => a.id === selectedAnimalId);
 
-  const handleRegister = async (data, photoFile) => {
-    const result = await onAddAnimal(data, photoFile);
+  const handleRegister = async (data, photoFiles) => {
+    const result = await onAddAnimal(data, photoFiles);
     if (result?.ok) setIsRegistering(false);
     return result;
   };
@@ -400,6 +418,26 @@ const AnimalProfile = ({ animals, onAddAnimal, auditLog, onListAnimal, currentUs
               </div>
               <p className="text-2xl font-black text-gray-900">USD ${calculateValue(selectedAnimal, auditLog)}</p>
             </div>
+          </div>
+        </div>
+
+        {/* Photo gallery — every picture of this animal, shown together on
+            listings/marketplace once it's for sale */}
+        <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
+          <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-3">
+            Photos {selectedAnimal.photos?.length > 1 ? `(${selectedAnimal.photos.length})` : ''}
+          </h4>
+          <div className="flex flex-wrap gap-3">
+            {(selectedAnimal.photos || []).map((url, i) => (
+              <div key={url + i} className="w-20 h-20 rounded-2xl overflow-hidden bg-gray-100 shrink-0">
+                <img src={url} alt={`${selectedAnimal.name} ${i + 1}`} className="w-full h-full object-cover" />
+              </div>
+            ))}
+            <label htmlFor="add-more-photos" className={`w-20 h-20 rounded-2xl bg-gray-50 border-2 border-dashed border-gray-200 flex flex-col items-center justify-center shrink-0 transition ${uploadingPhotos ? 'opacity-50' : 'cursor-pointer hover:border-pfuma-green'}`}>
+              <Camera size={18} className="text-gray-300" />
+              <span className="text-[9px] font-black text-pfuma-green mt-1">{uploadingPhotos ? 'Adding…' : 'Add'}</span>
+            </label>
+            <input id="add-more-photos" type="file" accept="image/*" multiple className="hidden" disabled={uploadingPhotos} onChange={handleAddPhotos} />
           </div>
         </div>
 

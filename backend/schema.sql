@@ -85,6 +85,18 @@ CREATE TABLE IF NOT EXISTS weight_history (
   FOREIGN KEY (animal_id) REFERENCES animals(id) ON DELETE CASCADE
 );
 
+-- ── ANIMAL PHOTOS ────────────────────────────────────────────
+-- Extra photos beyond animals.image_url (the cover photo). A listing
+-- for a linked animal shows this whole gallery on the marketplace.
+CREATE TABLE IF NOT EXISTS animal_photos (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  animal_id  INT NOT NULL,
+  image_url  VARCHAR(300) NOT NULL,
+  sort_order INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (animal_id) REFERENCES animals(id) ON DELETE CASCADE
+);
+
 -- ── HEALTH AUDIT LOG ─────────────────────────────────────────
 -- Tracks vaccinations, treatments, diagnostics per animal.
 CREATE TABLE IF NOT EXISTS health_events (

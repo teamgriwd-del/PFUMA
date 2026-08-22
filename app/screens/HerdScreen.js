@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
-  StyleSheet, ActivityIndicator, RefreshControl, Image, Modal, Alert
+  StyleSheet, ActivityIndicator, RefreshControl, Image, Modal, Alert, FlatList
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
@@ -113,7 +113,7 @@ export default function HerdScreen({ currentUser }) {
   const [refreshing, setRefreshing] = useState(false);
   const [showAdd,    setShowAdd]    = useState(false);
   const [form, setForm] = useState({ name:'', species:'Cattle', breed:'', tag_id:'', birth_date: todayStr(), current_weight:'' });
-  const [photo, setPhoto] = useState(null); // { uri, name, type }
+  const [photos, setPhotos] = useState([]); // [{ uri, name, type }] — first is the cover photo
   const [saving, setSaving] = useState(false);
   const [listingAnimal, setListingAnimal] = useState(null); // animal being priced for listing
   const [priceInput, setPriceInput] = useState('');
@@ -121,6 +121,7 @@ export default function HerdScreen({ currentUser }) {
   const [healthEvents, setHealthEvents] = useState([]);
   const [healthLoading, setHealthLoading] = useState(false);
   const [passportExporting, setPassportExporting] = useState(false);
+  const [passportUploading, setPassportUploading] = useState(false);
 
   const openPassport = async (animal) => {
     setPassportAnimal(animal);
@@ -142,6 +143,32 @@ export default function HerdScreen({ currentUser }) {
         Alert.alert('Could not print', 'Try again, or use Download PDF instead.');
       }
     }
+  };
+
+  const addPassportPhotos = async () => {
+    if (!passportAnimal) return;
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) { Alert.alert('Photo access needed', 'Enable photo library access in Settings to attach a photo.'); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7, allowsMultipleSelection: true,
+    });
+    if (result.canceled || !result.assets?.length) return;
+    setPassportUploading(true);
+    const fd = new FormData();
+    result.assets.forEach(asset => {
+      const filename = asset.uri.split('/').pop();
+      const ext = (filename.split('.').pop() || 'jpg').toLowerCase();
+      fd.append('photos', { uri: asset.uri, name: filename, type: `image/${ext === 'jpg' ? 'jpeg' : ext}` });
+    });
+    const res = await authFetch(currentUser, `/animals/${passportAnimal.id}/photos`, { method: 'POST', body: fd });
+    const data = await res.json().catch(() => ({}));
+    setPassportUploading(false);
+    if (!res.ok) { Alert.alert('Could not add photos', data.error || 'Try again.'); return; }
+    const newUrls = (data.photos || []).map(p => p.image_url);
+    setPassportAnimal(prev => ({ ...prev, photos: [...(prev.photos || (prev.image_url ? [prev.image_url] : [])), ...newUrls] }));
+    setAnimals(prev => prev.map(a => a.id === passportAnimal.id
+      ? { ...a, photos: [...(a.photos || (a.image_url ? [a.image_url] : [])), ...newUrls] }
+      : a));
   };
 
   const downloadPassport = async () => {
@@ -175,13 +202,19 @@ export default function HerdScreen({ currentUser }) {
   const pickPhoto = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) { Alert.alert('Photo access needed', 'Enable photo library access in Settings to attach a photo.'); return; }
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
-    if (result.canceled || !result.assets?.[0]) return;
-    const asset = result.assets[0];
-    const filename = asset.uri.split('/').pop();
-    const ext = (filename.split('.').pop() || 'jpg').toLowerCase();
-    setPhoto({ uri: asset.uri, name: filename, type: `image/${ext === 'jpg' ? 'jpeg' : ext}` });
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7, allowsMultipleSelection: true,
+    });
+    if (result.canceled || !result.assets?.length) return;
+    const picked = result.assets.map(asset => {
+      const filename = asset.uri.split('/').pop();
+      const ext = (filename.split('.').pop() || 'jpg').toLowerCase();
+      return { uri: asset.uri, name: filename, type: `image/${ext === 'jpg' ? 'jpeg' : ext}` };
+    });
+    setPhotos(prev => [...prev, ...picked]);
   };
+
+  const removePhoto = (index) => setPhotos(prev => prev.filter((_, i) => i !== index));
 
   const handleAdd = async () => {
     if (!form.name.trim()) return;
@@ -194,7 +227,8 @@ export default function HerdScreen({ currentUser }) {
     fd.append('birth_date', form.birth_date || '');
     fd.append('birth_weight', form.current_weight || '0');
     fd.append('current_weight', form.current_weight || '0');
-    if (photo) fd.append('photo', photo);
+    if (photos[0]) fd.append('photo', photos[0]);
+    photos.slice(1).forEach(p => fd.append('photos', p));
 
     const res = await authFetch(currentUser, '/animals', { method: 'POST', body: fd });
     const data = await res.json().catch(() => ({}));
@@ -204,7 +238,7 @@ export default function HerdScreen({ currentUser }) {
       return;
     }
     await load();
-    setSaving(false); setShowAdd(false); setPhoto(null);
+    setSaving(false); setShowAdd(false); setPhotos([]);
     setForm({ name:'', species:'Cattle', breed:'', tag_id:'', birth_date: todayStr(), current_weight:'' });
   };
 
@@ -315,16 +349,21 @@ export default function HerdScreen({ currentUser }) {
               <TouchableOpacity onPress={() => setShowAdd(false)}><X size={20} color={COLORS.muted} /></TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.photoPicker} onPress={pickPhoto} activeOpacity={0.8}>
-              {photo ? (
-                <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
-              ) : (
-                <View style={[styles.photoPreview, styles.photoPlaceholder]}>
-                  <Camera size={20} color={COLORS.muted} />
+            <Text style={styles.formLabel}>Photos {photos.length > 0 ? `(${photos.length}, first is the cover photo)` : '(optional — add as many as you like)'}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+              {photos.map((p, i) => (
+                <View key={p.uri} style={styles.photoThumbWrap}>
+                  <Image source={{ uri: p.uri }} style={styles.photoThumb} />
+                  {i === 0 && <View style={styles.coverBadge}><Text style={styles.coverBadgeText}>COVER</Text></View>}
+                  <TouchableOpacity style={styles.photoRemoveBtn} onPress={() => removePhoto(i)} activeOpacity={0.8}>
+                    <X size={11} color="#fff" strokeWidth={3} />
+                  </TouchableOpacity>
                 </View>
-              )}
-              <Text style={styles.photoPickerText}>{photo ? 'Change photo' : 'Upload a photo (optional)'}</Text>
-            </TouchableOpacity>
+              ))}
+              <TouchableOpacity style={[styles.photoThumb, styles.photoPlaceholder, { marginRight: 0 }]} onPress={pickPhoto} activeOpacity={0.8}>
+                <Camera size={20} color={COLORS.muted} />
+              </TouchableOpacity>
+            </ScrollView>
 
             {[
               { label: 'Animal Name *', key: 'name',            placeholder: 'e.g. Bessie' },
@@ -433,6 +472,24 @@ export default function HerdScreen({ currentUser }) {
                 </View>
               )}
 
+              <Text style={styles.passportSectionTitle}>Photos</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 20 }}>
+                {(passportAnimal.photos && passportAnimal.photos.length > 0
+                  ? passportAnimal.photos
+                  : (passportAnimal.image_url ? [passportAnimal.image_url] : [])
+                ).map((url, i) => (
+                  <Image key={url + i} source={{ uri: resolveImageUrl(url) }} style={styles.galleryThumb} />
+                ))}
+                <TouchableOpacity style={[styles.galleryThumb, styles.galleryAddThumb]} onPress={addPassportPhotos} activeOpacity={0.8} disabled={passportUploading}>
+                  {passportUploading ? <ActivityIndicator size="small" color={COLORS.primary} /> : (
+                    <>
+                      <Camera size={18} color={COLORS.primary} />
+                      <Text style={styles.galleryAddText}>Add</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              </ScrollView>
+
               <View style={styles.passportValueCard}>
                 <Text style={styles.passportSectionLabel}>Estimated Market Value</Text>
                 <Text style={styles.passportValue}>USD ${calculateValue(passportAnimal, healthEvents)}</Text>
@@ -525,6 +582,11 @@ const styles = StyleSheet.create({
   photoPreview:   { width: 56, height: 56, borderRadius: 14, backgroundColor: '#f5f5f5' },
   photoPlaceholder: { alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#e0e0e0', borderStyle: 'dashed' },
   photoPickerText:{ fontSize: 13, fontWeight: '800', color: COLORS.primary },
+  photoThumbWrap: { marginRight: 10 },
+  photoThumb:     { width: 72, height: 72, borderRadius: 14, backgroundColor: '#f5f5f5', marginRight: 10 },
+  coverBadge:     { position: 'absolute', bottom: 4, left: 4, right: 4, backgroundColor: 'rgba(27,94,32,0.85)', borderRadius: 6, paddingVertical: 2, alignItems: 'center' },
+  coverBadgeText: { color: '#fff', fontSize: 8, fontWeight: '900', letterSpacing: 0.5 },
+  photoRemoveBtn: { position: 'absolute', top: -4, right: 6, width: 18, height: 18, borderRadius: 9, backgroundColor: COLORS.danger || '#d32f2f', alignItems: 'center', justifyContent: 'center' },
   formField:      { marginBottom: 14 },
   formLabel:      { fontSize: 11, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
   formInput:      { backgroundColor: '#f5f5f5', borderRadius: 12, padding: 14, fontSize: 14, color: COLORS.text },
@@ -540,6 +602,9 @@ const styles = StyleSheet.create({
   passportHeaderSub:   { color: 'rgba(255,255,255,0.6)', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginTop: 2 },
   passportCloseBtn:    { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
   passportImage:       { width: '100%', height: 220, borderRadius: 20, marginBottom: 14 },
+  galleryThumb:        { width: 84, height: 84, borderRadius: 14, backgroundColor: COLORS.light, marginRight: 10 },
+  galleryAddThumb:      { alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#e0e0e0', borderStyle: 'dashed', marginRight: 0 },
+  galleryAddText:       { fontSize: 10, fontWeight: '800', color: COLORS.primary, marginTop: 4 },
   passportValueCard:   { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 20, elevation: 2 },
   passportSectionLabel:{ fontSize: 10, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
   passportValue:       { fontSize: 24, fontWeight: '900', color: COLORS.text },
