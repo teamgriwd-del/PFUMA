@@ -1,0 +1,57 @@
+PCB statistics report
+=====================
+- Date: 8/21/2026 7:46:33 AM
+- Project: BS-02
+- Board name: BS-02
+
+Board
+-----
+- Width: 140.0000 mm
+- Height: 120.0000 mm
+- Area: 16800.00 mm²
+- Front copper area: 466.143 mm²
+- Back copper area: 13337.02 mm²
+- Min track clearance: 0.6000 mm
+- Min track width: 0.4000 mm
+- Min drill diameter: 0.8000 mm
+- Board stackup thickness: 1.6000 mm
+
+- Front footprint area: 1097.849 mm²
+- Back footprint area: 749.286 mm²
+- Front component density: 6.53 %
+- Back component density: 4.46 %
+Pads
+----
+- Through hole: 92
+- SMD: 20
+- Connector: 0
+- NPTH: 4
+- Castellated: 0
+- Press-fit: 0
+
+Vias
+----
+- Through vias: 0
+- Blind vias: 0
+- Buried vias: 0
+- Micro vias: 0
+
+Components
+----------
+
+|              | Front Side | Back Side | Total |
+|--------------|------------|-----------|-------|
+|THT:          |         22 |         0 |    22 |
+|SMD:          |          0 |         2 |     2 |
+|Unspecified:  |          4 |         0 |     4 |
+|Total:        |         26 |         2 |    28 |
+
+Drill holes
+-----------
+
+| Count | Shape |    X Size |    Y Size | Plated | Via/Pad | Start Layer | Stop Layer |
+|-------|-------|-----------|-----------|--------|---------|-------------|------------|
+|    66 | Round | 1.0000 mm | 1.0000 mm |    PTH |     Pad |        F.Cu |       B.Cu |
+|    18 | Round | 0.8000 mm | 0.8000 mm |    PTH |     Pad |        F.Cu |       B.Cu |
+|     8 | Round | 0.9000 mm | 0.9000 mm |    PTH |     Pad |        F.Cu |       B.Cu |
+|     4 | Round | 3.2000 mm | 3.2000 mm |   NPTH |     Pad |        F.Cu |       B.Cu |

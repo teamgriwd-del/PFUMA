@@ -1,0 +1,24 @@
+Qty,References,Value,Footprint,Mounting,Notes
+1,C1,100u,CP_Radial_D5.0mm_P2.50mm,top,
+3,C2 C3 C4,100n,C_Disc_D5.0mm_W2.5mm_P5.00mm,top,
+1,CN1,BATT,PinHeader_1x02_P2.54mm_Vertical,top,
+1,CN2,SOLAR,PinHeader_1x02_P2.54mm_Vertical,top,
+1,CN3,TEMP,PinHeader_1x03_P2.54mm_Vertical,top,
+1,CN4,UART,PinHeader_1x04_P2.54mm_Vertical,top,
+1,J1,LORA-SPI,PinHeader_1x08_P2.54mm_Vertical,top,
+1,J2,LORA-CTL,PinHeader_1x03_P2.54mm_Vertical,top,
+1,J3,REG,PinHeader_1x03_P2.54mm_Vertical,top,
+1,LED1,LED,LED_D3.0mm,top,
+1,R1,4k7,R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal,top,
+2,R2 R3,100k,R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal,top,
+1,R4,330R,R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal,top,
+2,R5 R6,4k7-DNF,R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal,top,DO NOT FIT - breakout modules already have I2C pull-ups
+1,U1A,ESP32-L,PinHeader_1x19_P2.54mm_Vertical,top,
+1,U1B,ESP32-R,PinHeader_1x19_P2.54mm_Vertical,top,
+1,U2,NEO-6M,PinHeader_1x04_P2.54mm_Vertical,top,
+1,U3,Ra-02,Ai-Thinker-Ra-01-LoRa,COPPER SIDE (bottom),Solders flat on the copper side. Fit antenna before power-up.
+1,U4,MPU-6050,PinHeader_1x08_P2.54mm_Vertical,top,
+1,U5,MAX30102,PinHeader_1x05_P2.54mm_Vertical,top,
+1,U7,TP4056,PinHeader_1x06_P2.54mm_Vertical,top,
+1,U8,LM1117-3.3,SOT-223-3_TabPin2,COPPER SIDE (bottom),"Bare SMD regulator, copper side. Pin1 GND, Pin2 OUT, Pin3 IN."
+1,U9,MT3608,PinHeader_1x04_P2.54mm_Vertical,top,

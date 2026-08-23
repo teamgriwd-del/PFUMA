@@ -48,3 +48,7 @@ yarn-error.log*
 
 # Runtime user uploads (photos, ID/credential docs) — never commit these
 backend/uploads/
+
+# Arduino local secrets (WiFi password, API host) — template is committed
+hardware/**/secrets.h
+!hardware/**/secrets.h.example

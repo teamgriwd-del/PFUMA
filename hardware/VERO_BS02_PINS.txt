@@ -1,0 +1,194 @@
+BS-02 BASE STATION - SOLDERING SCHEDULE
+========================================================================
+
+Hole address is (col,row). Strips run LEFT-RIGHT: every hole in a row is
+joined unless a cut separates it. CHECK THE STRIP MAP before soldering
+anything into a hole you have not used yet.
+
+SECTION 1 - STRIP MAP (what every piece of copper carries)
+------------------------------------------------------------------------
+ROW   COLS      NET                        PINS IN THIS SEGMENT
+1     0-49      GND                        CN1.2@c2 U5.1@c11 C5.1@c12 C1.1@c13 C2.1@c20
+2     0-49      +3V3                       U5.2@c11 C1.2@c13 C2.2@c20 U2.VDD@c44
+3     0-49      +5V                        CN1.1@c2 U5.3@c11 C5.2@c12
+4     0-19      FREE - devkit 3V3, LEAVE EMPTY U1A.1@c14
+4     20-49     GND                        U1B.1@c24
+5     0-19      FREE - devkit EN, LEAVE EMPTY U1A.2@c14
+5     20-49     SPI_MOSI                   U1B.2@c24 U2.MOSI@c44
+6     0-19      FREE - devkit VP/IO36, LEAVE EMPTY U1A.3@c14
+6     20-49     I2C_SCL                    U1B.3@c24
+7     0-19      FREE - devkit VN/IO39, LEAVE EMPTY U1A.4@c14
+7     20-49     TX0                        U1B.4@c24
+8     0-19      FREE - devkit IO34, LEAVE EMPTY U1A.5@c14
+8     20-49     RX0                        U1B.5@c24
+9     0-19      FREE - devkit IO35, LEAVE EMPTY U1A.6@c14
+9     20-49     I2C_SDA                    U1B.6@c24
+10    0-19      FREE - devkit IO32, LEAVE EMPTY U1A.7@c14
+10    20-49     GND                        U1B.7@c24
+11    0-19      FREE - devkit IO33, LEAVE EMPTY U1A.8@c14
+11    20-49     SPI_MISO                   U1B.8@c24 U2.MISO@c44
+12    0-19      FREE - devkit IO25, LEAVE EMPTY U1A.9@c14
+12    20-49     SPI_SCK                    U1B.9@c24 U2.SCK@c44
+13    0-19      LORA_DIO0                  U1A.10@c14
+13    20-49     LORA_NSS                   U1B.10@c24 U2.NSS@c44
+14    0-19      FREE - devkit IO27, LEAVE EMPTY U1A.11@c14
+14    20-49     FREE - devkit IO17, LEAVE EMPTY U1B.11@c24
+15    0-19      LORA_RST                   U1A.12@c14
+15    20-49     FREE - devkit IO16, LEAVE EMPTY U1B.12@c24
+16    0-19      FREE - devkit IO12, LEAVE EMPTY U1A.13@c14
+16    20-49     LED_B                      U1B.13@c24 R.K2@c34
+17    0-19      GND                        U1A.14@c14
+17    20-49     FREE - devkit IO0, LEAVE EMPTY U1B.14@c24
+18    0-19      LED_R                      R.K4@c8 U1A.15@c14
+18    20-49     LED_G                      U1B.15@c24 R.K1@c30
+19    0-19      FREE - devkit SD2, LEAVE EMPTY U1A.16@c14
+19    20-49     LED_Y                      U1B.16@c24 R.K3@c38
+20    0-19      FREE - devkit SD3, LEAVE EMPTY U1A.17@c14
+20    20-49     FREE - devkit SD1, LEAVE EMPTY U1B.17@c24
+21    0-19      FREE - devkit CMD, LEAVE EMPTY U1A.18@c14
+21    20-49     FREE - devkit SD0, LEAVE EMPTY U1B.18@c24
+22    0-19      +5V                        U1A.19@c14
+22    20-49     FREE - devkit CLK, LEAVE EMPTY U1B.19@c24
+23    0-49      LORA_RST                   U2.RST@c44
+24    0-49      LORA_DIO0                  U2.DIO0@c44
+25    0-49      GND                        U3.1@c6
+26    0-49      +3V3                       U3.2@c6
+27    0-49      I2C_SCL                    U3.3@c6
+28    0-49      I2C_SDA                    U3.4@c6
+29    0-49      K1                         R.K1@c30 LED.K1@c32
+30    0-49      K2                         R.K2@c34 LED.K2@c36
+31    0-49      K3                         R.K3@c38 LED.K3@c40
+32    0-49      K4                         R.K4@c8 LED.K4@c10
+33    0-49      +5V                        CN2.1@c46
+34    0-49      GND                        CN2.2@c46
+35    0-49      RX0                        CN2.3@c46
+36    0-49      TX0                        CN2.4@c46
+37    0-49      GND                        LED.K4@c10 LED.K1@c32 LED.K2@c36 LED.K3@c40 U2.GND@c44
+
+SECTION 2 - EVERY PIN, WHERE IT GOES
+------------------------------------------------------------------------
+PART.PIN     LABEL ON PART    NET           HOLE
+C1.1         1                GND           (col 13, row  1)
+C1.2         2                +3V3          (col 13, row  2)
+C2.1         1                GND           (col 20, row  1)
+C2.2         2                +3V3          (col 20, row  2)
+C5.1         1                GND           (col 12, row  1)
+C5.2         2                +5V           (col 12, row  3)
+CN1.2        2                GND           (col  2, row  1)
+CN1.1        1                +5V           (col  2, row  3)
+CN2.1        1                +5V           (col 46, row 33)
+CN2.2        2                GND           (col 46, row 34)
+CN2.3        3                RX0           (col 46, row 35)
+CN2.4        4                TX0           (col 46, row 36)
+LED.K1       K1               K1            (col 32, row 29)
+LED.K2       K2               K2            (col 36, row 30)
+LED.K3       K3               K3            (col 40, row 31)
+LED.K4       K4               K4            (col 10, row 32)
+LED.K4       K4               GND           (col 10, row 37)
+LED.K1       K1               GND           (col 32, row 37)
+LED.K2       K2               GND           (col 36, row 37)
+LED.K3       K3               GND           (col 40, row 37)
+R.K2         K2               LED_B         (col 34, row 16)
+R.K4         K4               LED_R         (col  8, row 18)
+R.K1         K1               LED_G         (col 30, row 18)
+R.K3         K3               LED_Y         (col 38, row 19)
+R.K1         K1               K1            (col 30, row 29)
+R.K2         K2               K2            (col 34, row 30)
+R.K3         K3               K3            (col 38, row 31)
+R.K4         K4               K4            (col  8, row 32)
+U1A.1        3V3              LEAVE FREE    (col 14, row  4)
+U1A.2        EN               LEAVE FREE    (col 14, row  5)
+U1A.3        VP/IO36          LEAVE FREE    (col 14, row  6)
+U1A.4        VN/IO39          LEAVE FREE    (col 14, row  7)
+U1A.5        IO34             LEAVE FREE    (col 14, row  8)
+U1A.6        IO35             LEAVE FREE    (col 14, row  9)
+U1A.7        IO32             LEAVE FREE    (col 14, row 10)
+U1A.8        IO33             LEAVE FREE    (col 14, row 11)
+U1A.9        IO25             LEAVE FREE    (col 14, row 12)
+U1A.10       IO26             LORA_DIO0     (col 14, row 13)
+U1A.11       IO27             LEAVE FREE    (col 14, row 14)
+U1A.12       IO14             LORA_RST      (col 14, row 15)
+U1A.13       IO12             LEAVE FREE    (col 14, row 16)
+U1A.14       GND              GND           (col 14, row 17)
+U1A.15       IO13             LED_R         (col 14, row 18)
+U1A.16       SD2              LEAVE FREE    (col 14, row 19)
+U1A.17       SD3              LEAVE FREE    (col 14, row 20)
+U1A.18       CMD              LEAVE FREE    (col 14, row 21)
+U1A.19       5V               +5V           (col 14, row 22)
+U1B.1        GND              GND           (col 24, row  4)
+U1B.2        IO23             SPI_MOSI      (col 24, row  5)
+U1B.3        IO22             I2C_SCL       (col 24, row  6)
+U1B.4        TX0              TX0           (col 24, row  7)
+U1B.5        RX0              RX0           (col 24, row  8)
+U1B.6        IO21             I2C_SDA       (col 24, row  9)
+U1B.7        GND              GND           (col 24, row 10)
+U1B.8        IO19             SPI_MISO      (col 24, row 11)
+U1B.9        IO18             SPI_SCK       (col 24, row 12)
+U1B.10       IO5              LORA_NSS      (col 24, row 13)
+U1B.11       IO17             LEAVE FREE    (col 24, row 14)
+U1B.12       IO16             LEAVE FREE    (col 24, row 15)
+U1B.13       IO4              LED_B         (col 24, row 16)
+U1B.14       IO0              LEAVE FREE    (col 24, row 17)
+U1B.15       IO2              LED_G         (col 24, row 18)
+U1B.16       IO15             LED_Y         (col 24, row 19)
+U1B.17       SD1              LEAVE FREE    (col 24, row 20)
+U1B.18       SD0              LEAVE FREE    (col 24, row 21)
+U1B.19       CLK              LEAVE FREE    (col 24, row 22)
+U2.VDD       VDD              +3V3          (col 44, row  2)
+U2.MOSI      MOSI             SPI_MOSI      (col 44, row  5)
+U2.MISO      MISO             SPI_MISO      (col 44, row 11)
+U2.SCK       SCK              SPI_SCK       (col 44, row 12)
+U2.NSS       NSS              LORA_NSS      (col 44, row 13)
+U2.RST       RST              LORA_RST      (col 44, row 23)
+U2.DIO0      DIO0             LORA_DIO0     (col 44, row 24)
+U2.GND       GND              GND           (col 44, row 37)
+U3.1         1                GND           (col  6, row 25)
+U3.2         2                +3V3          (col  6, row 26)
+U3.3         3                I2C_SCL       (col  6, row 27)
+U3.4         4                I2C_SDA       (col  6, row 28)
+U5.1         VIN              GND           (col 11, row  1)
+U5.2         GND              +3V3          (col 11, row  2)
+U5.3         SCL              +5V           (col 11, row  3)
+
+SECTION 3 - WIRE LINKS, HOLE TO HOLE
+------------------------------------------------------------------------
+  [ ] +3V3         from (col 11, row  2)  to (col  6, row 26)
+  [ ] +5V          from (col  2, row  3)  to (col 14, row 22)
+  [ ] +5V          from (col 14, row 22)  to (col 46, row 33)
+  [ ] GND          from (col  2, row  1)  to (col 24, row  4)
+  [ ] GND          from (col  6, row 25)  to (col 46, row 34)
+  [ ] GND          from (col 14, row 17)  to (col  6, row 25)
+  [ ] GND          from (col 24, row  4)  to (col 24, row 10)
+  [ ] GND          from (col 24, row 10)  to (col 14, row 17)
+  [ ] GND          from (col 46, row 34)  to (col 10, row 37)
+  [ ] I2C_SCL      from (col 24, row  6)  to (col  6, row 27)
+  [ ] I2C_SDA      from (col 24, row  9)  to (col  6, row 28)
+  [ ] LORA_DIO0    from (col 14, row 13)  to (col 44, row 24)
+  [ ] LORA_RST     from (col 14, row 15)  to (col 44, row 23)
+  [ ] RX0          from (col 24, row  8)  to (col 46, row 35)
+  [ ] TX0          from (col 24, row  7)  to (col 46, row 36)
+
+SECTION 4 - PINS THAT MUST STAY UNCONNECTED
+------------------------------------------------------------------------
+Solder nothing into these holes. Let no wire or lead touch them.
+
+  (col 14, row  4)  U1A.1    3V3       devkit 3V3 OUTPUT - shorting this kills the regulator
+  (col 14, row  5)  U1A.2    EN        reset pin - pulling it low holds the chip in reset
+  (col 14, row  6)  U1A.3    VP/IO36   unused GPIO - spare
+  (col 14, row  7)  U1A.4    VN/IO39   unused GPIO - spare
+  (col 14, row  8)  U1A.5    IO34      unused GPIO - spare
+  (col 14, row  9)  U1A.6    IO35      unused GPIO - spare
+  (col 14, row 10)  U1A.7    IO32      unused GPIO - spare
+  (col 14, row 11)  U1A.8    IO33      unused GPIO - spare
+  (col 14, row 12)  U1A.9    IO25      unused GPIO - spare
+  (col 14, row 14)  U1A.11   IO27      unused GPIO - spare
+  (col 24, row 14)  U1B.11   IO17      unused GPIO - spare
+  (col 24, row 15)  U1B.12   IO16      unused GPIO - spare
+  (col 14, row 16)  U1A.13   IO12      unused GPIO - spare
+  (col 24, row 17)  U1B.14   IO0       unused GPIO - spare
+  (col 14, row 19)  U1A.16   SD2       FLASH PIN - devkit will not boot if loaded
+  (col 14, row 20)  U1A.17   SD3       FLASH PIN - devkit will not boot if loaded
+  (col 24, row 20)  U1B.17   SD1       FLASH PIN - devkit will not boot if loaded
+  (col 14, row 21)  U1A.18   CMD       FLASH PIN - devkit will not boot if loaded
+  (col 24, row 21)  U1B.18   SD0       FLASH PIN - devkit will not boot if loaded
+  (col 24, row 22)  U1B.19   CLK       FLASH PIN - devkit will not boot if loaded
