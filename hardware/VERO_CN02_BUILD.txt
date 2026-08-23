@@ -1,0 +1,86 @@
+CN-02 COLLAR NODE - VEROBOARD BUILD SHEET
+==========================================================
+
+Strips run LEFT-RIGHT. One strip per row. Row/col numbers are on the diagram.
+
+STEP 1 - CUT 30 STRIPS (do this first, on the copper side)
+----------------------------------------------------------
+  [ ] row 5    cut between col 14 and col 24
+  [ ] row 6    cut between col 14 and col 24
+  [ ] row 7    cut between col 14 and col 24
+  [ ] row 8    cut between col 14 and col 24
+  [ ] row 9    cut between col 14 and col 24
+  [ ] row 10   cut between col 14 and col 24
+  [ ] row 11   cut between col 14 and col 24
+  [ ] row 12   cut between col 14 and col 24
+  [ ] row 13   cut between col 14 and col 24
+  [ ] row 14   cut between col 14 and col 24
+  [ ] row 14   cut between col 34 and col 40
+  [ ] row 15   cut between col 14 and col 24
+  [ ] row 16   cut between col 14 and col 24
+  [ ] row 17   cut between col 14 and col 24
+  [ ] row 17   cut between col 24 and col 40
+  [ ] row 18   cut between col 14 and col 24
+  [ ] row 19   cut between col 14 and col 24
+  [ ] row 20   cut between col 14 and col 24
+  [ ] row 21   cut between col 14 and col 24
+  [ ] row 22   cut between col 14 and col 24
+  [ ] row 23   cut between col 14 and col 24
+  [ ] row 24   cut between col 30 and col 44
+  [ ] row 25   cut between col 31 and col 44
+  [ ] row 26   cut between col 31 and col 44
+  [ ] row 26   cut between col 44 and col 47
+  [ ] row 27   cut between col 34 and col 44
+  [ ] row 27   cut between col 44 and col 47
+  [ ] row 33   cut between col 22 and col 46
+  [ ] row 35   cut between col 26 and col 46
+  [ ] row 36   cut between col 28 and col 46
+
+STEP 2 - FIT COMPONENTS
+----------------------------------------------------------
+  [ ] U1A                               col 14  rows 5-23
+  [ ] U1B                               col 24  rows 5-23
+  [ ] CN1      BATT JST                 col 4   rows 1-2
+  [ ] U7       TP4056 (charge via its USB) col 7   rows 1-2
+  [ ] U9       MT3608 (flying leads)    col 10  rows 1-4
+  [ ] U8       LM1117 SOT-223           col 13  rows 2-4
+  [ ] C1-C4    DECOUPLING               col 16  rows 2-3
+  [ ] R2/R3    100k DIVIDER             col 30  rows 24-26
+  [ ] U3       Ra-02 LANDING HOLES      col 34  rows 3-28
+  [ ] U2       NEO-6M GPS               col 40  rows 14-17
+  [ ] U4       MPU-6050                 col 44  rows 24-31
+  [ ] U5       MAX30102                 col 47  rows 24-27
+  [ ] CN3      TEMP PROBE               col 20  rows 32-34
+  [ ] R1       4k7 PULL-UP              col 22  rows 32-33
+  [ ] R4/LED1  330R + LED               col 26  rows 35-38
+  [ ] CN4      UART DEBUG               col 46  rows 33-36
+
+STEP 3 - SOLDER 27 WIRE LINKS (component side)
+----------------------------------------------------------
+  [ ] +3V3        (col 13,row  3) -> (col 40,row 14)
+  [ ] +3V3        (col 40,row 14) -> (col 44,row 24)
+  [ ] +3V3        (col 44,row 24) -> (col 20,row 32)
+  [ ] +5V         (col 11,row  4) -> (col 14,row 23)
+  [ ] +5V         (col 14,row 23) -> (col 46,row 33)
+  [ ] DS18B20     (col 24,row 17) -> (col 20,row 33)
+  [ ] GND         (col  4,row  2) -> (col 24,row  5)
+  [ ] GND         (col 14,row 18) -> (col 44,row 25)
+  [ ] GND         (col 20,row 34) -> (col 28,row 38)
+  [ ] GND         (col 24,row  5) -> (col 24,row 11)
+  [ ] GND         (col 24,row 11) -> (col 40,row 17)
+  [ ] GND         (col 31,row 26) -> (col 44,row 30)
+  [ ] GND         (col 40,row 17) -> (col 14,row 18)
+  [ ] GND         (col 44,row 25) -> (col 31,row 26)
+  [ ] GND         (col 44,row 30) -> (col 20,row 34)
+  [ ] I2C2_SCL    (col 14,row 15) -> (col 47,row 26)
+  [ ] I2C2_SDA    (col 14,row 13) -> (col 47,row 27)
+  [ ] I2C_SCL     (col 24,row  7) -> (col 44,row 26)
+  [ ] I2C_SDA     (col 24,row 10) -> (col 44,row 27)
+  [ ] LED1_A      (col 24,row 19) -> (col 26,row 35)
+  [ ] LORA_DIO0   (col 14,row 14) -> (col 34,row 28)
+  [ ] LORA_RST    (col 14,row 16) -> (col 34,row 27)
+  [ ] MPU_INT     (col 14,row 10) -> (col 44,row 31)
+  [ ] RX0         (col 24,row  9) -> (col 46,row 35)
+  [ ] TX0         (col 24,row  8) -> (col 46,row 36)
+  [ ] VBAT        (col  4,row  1) -> (col 30,row 24)
+  [ ] VBAT_SENSE  (col 14,row  9) -> (col 30,row 25)

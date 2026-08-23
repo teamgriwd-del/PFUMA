@@ -1,11 +1,16 @@
 /**
- * PFUMA Base Station BS-01 — Firmware v1.0
+ * PFUMA Base Station BS-02 — Firmware v1.1
  * PFUMA Livestock Monitoring System
  *
  * Hardware: ESP32-WROOM-32
  * Radio   : SX1278 LoRa 433 MHz (receives collar packets)
  * Display : SSD1306 OLED 128×64
  * Network : WiFi → Flask API (backend/app.py)
+ * Power   : 5V in on a 2-pin screw terminal -> LM1117 -> 3V3 (no 12V, no LM2596)
+ *
+ * Pin map verified against the BS-02 veroboard (hardware/VEROBOARD.md).
+ * WiFi and API host are set below. The API is HTTPS on 8443, so telemetry
+ * is POSTed through WiFiClientSecure rather than plain HTTPClient.
  *
  * Receives the compact 28-byte binary CollarPacket from collar nodes over
  * LoRa (see collar_node.ino — this struct must match exactly), re-expands it
@@ -24,6 +29,7 @@
 #include <LoRa.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
@@ -46,17 +52,19 @@
 #define PIN_LED_ALERT    13   // Red
 
 // ═══════════════════════════════════════════════════════════════════════
-//  CONFIGURATION — REPLACE THE 4 VALUES BELOW BEFORE FLASHING
+//  CONFIGURATION
 //  See "Connecting Your Physical Hardware" in IOT_HARDWARE_GUIDE.md for the
 //  full step-by-step (non-technical) walkthrough.
 // ═══════════════════════════════════════════════════════════════════════
-#define WIFI_SSID        "YOUR_FARM_WIFI_NAME"      // <-- your router's WiFi name
-#define WIFI_PASS        "YOUR_FARM_WIFI_PASSWORD"  // <-- your router's WiFi password
+// WiFi credentials and the API host live in secrets.h, which is gitignored so
+// the password never reaches the repo. Copy secrets.h.example -> secrets.h and
+// fill it in before flashing.
+#include "secrets.h"
 
-// The IP address of the computer/server running backend/app.py on your farm
-// network (find it with `ipconfig` on Windows or `ifconfig`/`ip addr` on
-// Mac/Linux — look for the local 192.168.x.x address, not 127.0.0.1).
-#define API_HOST         "http://YOUR_SERVER_IP:5000"
+// The VPS certificate is Let's Encrypt, issued to 38-247-146-172.sslip.io.
+// The VPS serves over TLS. Set to true only if you pin the certificate below;
+// with false the ESP32 skips certificate validation (encrypted, not authenticated).
+#define API_VERIFY_TLS   false
 #define API_IOT_ENDPOINT "/api/iot/telemetry"
 #define API_ALERT_ENDPOINT "/api/iot/alert"
 
@@ -72,6 +80,10 @@
 // Devices" panel) to claim this base station under your PFUMA account.
 // Give every base station/collar a unique ID, e.g. "BS-01-<YourFarmCode>".
 #define STATION_ID       "BS-01-HNO"
+
+// Paste the server's root CA here and set API_VERIFY_TLS true to authenticate
+// the server. Leave as-is while API_VERIFY_TLS is false.
+static const char API_ROOT_CA[] PROGMEM = "";
 
 // OLED
 #define OLED_WIDTH       128
@@ -266,13 +278,22 @@ void forwardToAPI(const CollarPacket& pkt, const char* id, int rssi, bool isAler
   String body;
   serializeJson(doc, body);
 
-  HTTPClient http;
   String endpoint = String(API_HOST) + (isAlert ? API_ALERT_ENDPOINT : API_IOT_ENDPOINT);
 
-  http.begin(endpoint);
+  // The API is HTTPS on 8443, so the POST has to go through a TLS client.
+  WiFiClientSecure tls;
+#if API_VERIFY_TLS
+  tls.setCACert(API_ROOT_CA);
+#else
+  tls.setInsecure();          // encrypts, but does not verify who it is talking to
+#endif
+  tls.setTimeout(5);
+
+  HTTPClient http;
+  http.begin(tls, endpoint);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("X-Station-ID", STATION_ID);
-  http.setTimeout(3000);
+  http.setTimeout(5000);   // TLS handshake needs longer than plain HTTP
 
   int code = http.POST(body);
   if (code > 0) {

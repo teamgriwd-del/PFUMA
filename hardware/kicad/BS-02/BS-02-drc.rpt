@@ -1,0 +1,42 @@
+** Drc report for BS-02.kicad_pcb **
+** Created on 2026-08-21T06:33:05 **
+** Report includes: Errors **
+
+** Found 0 DRC violations **
+
+** Found 6 unconnected pads **
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(98.4000 mm, 81.8600 mm): PTH pad 10 [LORA_NSS] of U1B
+    @(107.0000 mm, 106.6500 mm): PTH pad 2 [LORA_NSS] of J1
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(98.4000 mm, 61.5400 mm): PTH pad 2 [SPI_MOSI] of U1B
+    @(107.0000 mm, 109.1900 mm): PTH pad 3 [SPI_MOSI] of J1
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(107.0000 mm, 109.1900 mm): PTH pad 3 [SPI_MOSI] of J1
+    @(122.0000 mm, 110.0000 mm): Pad 14 [SPI_MOSI] of U2 on B.Cu
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(98.4000 mm, 76.7800 mm): PTH pad 8 [SPI_MISO] of U1B
+    @(107.0000 mm, 111.7300 mm): PTH pad 4 [SPI_MISO] of J1
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(73.0000 mm, 104.7200 mm): PTH pad 19 [+5V] of U1A
+    @(147.0000 mm, 87.0000 mm): PTH pad 1 [+5V] of CN2
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(138.0000 mm, 112.0000 mm): Pad 4 [LORA_RST] of U2 on B.Cu
+    @(151.0000 mm, 109.5400 mm): PTH pad 2 [LORA_RST] of J2
+
+** Found 0 Footprint errors **
+
+** Ignored checks **
+    - Footprint has no courtyard defined
+    - Track endpoint not centered on via
+    - Tuning profile track geometries
+    - Footprint doesn't match symbol's footprint filters
+    - Footprint component type doesn't match footprint pads
+
+** End of Report **

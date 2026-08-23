@@ -1,0 +1,17 @@
+CN-02 - WIRES TO FIT BY HAND
+==============================================
+Solder insulated hookup wire on the COMPONENT side between each
+pair below. Everything else is etched copper on the bottom.
+
+  [ ] +3V3         U4.1       -> R5.1        (14 mm)
+  [ ] +3V3         U4.1       -> U2.1        (20 mm)
+  [ ] +5V          U1A.19     -> CN4.1       (92 mm)
+  [ ] I2C_SCL      R6.2       -> U4.3        (6 mm)
+  [ ] I2C_SCL      U5.3       -> R6.2        (26 mm)
+  [ ] LORA_NSS     U1B.10     -> J1.2        (44 mm)
+  [ ] SPI_MISO     U1B.8      -> J1.4        (54 mm)
+  [ ] SPI_MOSI     U1B.2      -> J1.3        (67 mm)
+  [ ] SPI_SCK      U1B.9      -> J1.5        (54 mm)
+  [ ] VBAT_SENSE   R3.1       -> U1A.5       (27 mm)
+
+total: 10 wires

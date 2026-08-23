@@ -1281,12 +1281,19 @@ def _store_iot_reading():
     return jsonify({"received": True})
 
 
+# The reverse proxy in front of this app strips the /api prefix before
+# forwarding, so a station POSTing to https://host/api/iot/telemetry arrives
+# here as /iot/telemetry - which is also the convention every other route in
+# this file follows. Both paths are registered so the endpoint works through
+# the proxy and when the app is hit directly on its own port.
+@app.route('/iot/telemetry', methods=['POST'])
 @app.route('/api/iot/telemetry', methods=['POST'])
 @limiter.limit("60 per minute")
 def ingest_telemetry():
     return _store_iot_reading()
 
 
+@app.route('/iot/alert', methods=['POST'])
 @app.route('/api/iot/alert', methods=['POST'])
 @limiter.limit("60 per minute")
 def ingest_alert():

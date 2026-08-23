@@ -1,11 +1,19 @@
 /**
- * PFUMA Collar Node CN-01  — Firmware v1.0
+ * PFUMA Collar Node CN-02  — Firmware v1.1
  * PFUMA Livestock Monitoring System
  *
  * Hardware: ESP32-WROOM-32
  * Sensors : DS18B20 (temp) | MAX30102 (HR) | MPU-6050 (IMU) | NEO-6M (GPS)
  * Radio   : SX1278 LoRa 433 MHz
- * Power   : LiPo 3.7V + Solar via TP4056
+ * Power   : LiPo 3.7V via TP4056 (charge through the module's own micro-USB;
+ *           no solar panel fitted) -> MT3608 -> 5V -> LM1117 -> 3V3
+ *
+ * v1.1 hardware changes (match the CN-02 veroboard, see hardware/VEROBOARD.md):
+ *   - MAX30102 moved to the SECOND I2C bus: Wire1 on SDA 25 / SCL 27.
+ *     MPU-6050 stays alone on Wire (SDA 21 / SCL 22).
+ *   - LoRa DIO1/DIO2 removed. LoRa.setPins() only ever used DIO0, and DIO2 sat
+ *     on GPIO12 - a strapping pin that stops the ESP32 booting if held high.
+ *   - Solar input removed.
  *
  * Sends a compact 28-byte binary CollarPacket every REPORT_INTERVAL_MS via
  * LoRa to BS-01 Base Station (see the CollarPacket struct + LORA_SF comment
@@ -40,16 +48,16 @@
 // ═══════════════════════════════════════════════════════════════════════
 #define PIN_ONE_WIRE     4
 #define PIN_LORA_NSS     5
-#define PIN_LORA_DIO1   12
-#define PIN_LORA_DIO2   13
 #define PIN_LORA_RST    14
 #define PIN_LED          2
 #define PIN_GPS_RX      16
 #define PIN_GPS_TX      17
 #define PIN_LORA_SCK    18
 #define PIN_LORA_MISO   19
-#define PIN_I2C_SDA     21
+#define PIN_I2C_SDA     21       // Wire  - MPU-6050
 #define PIN_I2C_SCL     22
+#define PIN_I2C2_SDA    25       // Wire1 - MAX30102 (separate bus)
+#define PIN_I2C2_SCL    27
 #define PIN_LORA_MOSI   23
 #define PIN_LORA_DIO0   26
 #define PIN_VBAT_ADC    34
@@ -177,14 +185,15 @@ int           beatAvg      = 0;
 // ═══════════════════════════════════════════════════════════════════════
 void setup() {
   Serial.begin(115200);
-  Serial.println(F("\n=== PFUMA Collar Node CN-01 ==="));
+  Serial.println(F("\n=== PFUMA Collar Node CN-02 ==="));
   Serial.printf("Collar ID: %s  (pair this exact string in the app's IoT tab)\n", COLLAR_ID);
   static_assert(sizeof(CollarPacket) == 28, "CollarPacket drifted from the documented 28-byte layout");
 
   pinMode(PIN_LED, OUTPUT);
   blinkLED(3, 200);
 
-  Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);
+  Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);        // MPU-6050
+  Wire1.begin(PIN_I2C2_SDA, PIN_I2C2_SCL);     // MAX30102
 
   initLoRa();
   initTempSensor();
@@ -273,8 +282,8 @@ void initIMU() {
 
 void initHeartRate() {
   Serial.print(F("[MAX30102] Initialising... "));
-  if (!maxSensor.begin(Wire, I2C_SPEED_FAST)) {
-    Serial.println(F("FAILED — check I2C address 0x57"));
+  if (!maxSensor.begin(Wire1, I2C_SPEED_FAST)) {   // second bus, not Wire
+    Serial.println(F("FAILED — check MAX30102 on GPIO25/27, addr 0x57"));
     return;
   }
   maxSensor.setup();

@@ -1,0 +1,86 @@
+** Drc report for CN-02.kicad_pcb **
+** Created on 2026-08-21T07:11:45 **
+** Report includes: Errors **
+
+** Found 0 DRC violations **
+
+** Found 17 unconnected pads **
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(102.4000 mm, 87.8600 mm): PTH pad 10 [LORA_NSS] of U1B
+    @(113.0000 mm, 130.6500 mm): PTH pad 2 [LORA_NSS] of J1
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(102.4000 mm, 67.5400 mm): PTH pad 2 [SPI_MOSI] of U1B
+    @(113.0000 mm, 133.1900 mm): PTH pad 3 [SPI_MOSI] of J1
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(113.0000 mm, 133.1900 mm): PTH pad 3 [SPI_MOSI] of J1
+    @(125.0000 mm, 134.0000 mm): Pad 14 [SPI_MOSI] of U3 on B.Cu
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(102.4000 mm, 82.7800 mm): PTH pad 8 [SPI_MISO] of U1B
+    @(113.0000 mm, 135.7300 mm): PTH pad 4 [SPI_MISO] of J1
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(102.4000 mm, 85.3200 mm): PTH pad 9 [SPI_SCK] of U1B
+    @(113.0000 mm, 138.2700 mm): PTH pad 5 [SPI_SCK] of J1
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(45.0000 mm, 42.6000 mm): Track [VBAT] on F.Cu, length 4.0000 mm
+    @(55.0000 mm, 49.0000 mm): PTH pad 1 [VBAT] of R2
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(55.0000 mm, 59.0000 mm): PTH pad 1 [VBAT_SENSE] of R3
+    @(77.0000 mm, 75.1600 mm): PTH pad 5 [VBAT_SENSE] of U1A
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(156.6000 mm, 117.8000 mm): Track [+3V3] on B.Cu, length 98.4000 mm
+    @(33.0000 mm, 57.0000 mm): PTH pad 1 [+3V3] of C1
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(151.0000 mm, 91.0000 mm): PTH pad 1 [+3V3] of C4
+    @(157.4000 mm, 101.4000 mm): Track [+3V3] on F.Cu, length 11.2000 mm
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(165.0000 mm, 75.0000 mm): PTH pad 1 [+3V3] of U4
+    @(151.0000 mm, 75.0000 mm): PTH pad 1 [+3V3] of R5
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(165.0000 mm, 75.0000 mm): PTH pad 1 [+3V3] of U4
+    @(165.0000 mm, 55.0000 mm): PTH pad 1 [+3V3] of U2
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(151.0000 mm, 133.5400 mm): PTH pad 2 [LORA_RST] of J2
+    @(141.0000 mm, 136.0000 mm): Pad 4 [LORA_RST] of U3 on B.Cu
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(158.6200 mm, 81.0000 mm): PTH pad 2 [I2C_SCL] of R6
+    @(165.0000 mm, 80.0800 mm): PTH pad 3 [I2C_SCL] of U4
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(165.0000 mm, 106.0800 mm): PTH pad 3 [I2C_SCL] of U5
+    @(158.6200 mm, 81.0000 mm): PTH pad 2 [I2C_SCL] of R6
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(153.4000 mm, 113.0000 mm): Track [I2C_SDA] on B.Cu, length 122.8000 mm
+    @(165.0000 mm, 108.6200 mm): PTH pad 4 [I2C_SDA] of U5
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(165.0000 mm, 82.6200 mm): PTH pad 4 [I2C_SDA] of U4
+    @(158.2000 mm, 75.4000 mm): Track [I2C_SDA] on B.Cu, length 4.8000 mm
+[unconnected_items]: Missing connection between items
+    Local override; error
+    @(77.0000 mm, 110.7200 mm): PTH pad 19 [+5V] of U1A
+    @(165.0000 mm, 137.0000 mm): PTH pad 1 [+5V] of CN4
+
+** Found 0 Footprint errors **
+
+** Ignored checks **
+    - Footprint has no courtyard defined
+    - Track endpoint not centered on via
+    - Tuning profile track geometries
+    - Footprint doesn't match symbol's footprint filters
+    - Footprint component type doesn't match footprint pads
+
+** End of Report **

@@ -1,0 +1,17 @@
+Qty,References,Value,Footprint,Mounting,Notes
+2,C1 C2,100n,C_Disc_D5.0mm_W2.5mm_P5.00mm,top,
+1,C5,100u,CP_Radial_D5.0mm_P2.50mm,top,
+1,CN1,12V-IN,PinHeader_1x02_P2.54mm_Vertical,top,
+1,CN2,UART,PinHeader_1x04_P2.54mm_Vertical,top,
+1,J1,LORA-SPI,PinHeader_1x08_P2.54mm_Vertical,top,
+1,J2,LORA-CTL,PinHeader_1x03_P2.54mm_Vertical,top,
+1,J3,REG,PinHeader_1x03_P2.54mm_Vertical,top,
+4,LED1 LED2 LED3 LED4,LED,LED_D3.0mm,top,
+4,R1 R2 R3 R4,330R,R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal,top,
+2,R5 R6,4k7,R_Axial_DIN0207_L6.3mm_D2.5mm_P7.62mm_Horizontal,top,
+1,U1A,ESP32-L,PinHeader_1x19_P2.54mm_Vertical,top,
+1,U1B,ESP32-R,PinHeader_1x19_P2.54mm_Vertical,top,
+1,U2,Ra-02,Ai-Thinker-Ra-01-LoRa,COPPER SIDE (bottom),Solders flat on the copper side. Fit antenna before power-up.
+1,U3,SSD1306,PinHeader_1x04_P2.54mm_Vertical,top,
+1,U4,LM2596,PinHeader_1x04_P2.54mm_Vertical,top,
+1,U5,LM1117-3.3,SOT-223-3_TabPin2,COPPER SIDE (bottom),"Bare SMD regulator, copper side. Pin1 GND, Pin2 OUT, Pin3 IN."

@@ -1,0 +1,229 @@
+CN-02 COLLAR NODE - SOLDERING SCHEDULE
+========================================================================
+
+Hole address is (col,row). Strips run LEFT-RIGHT: every hole in a row is
+joined unless a cut separates it. CHECK THE STRIP MAP before soldering
+anything into a hole you have not used yet.
+
+SECTION 1 - STRIP MAP (what every piece of copper carries)
+------------------------------------------------------------------------
+ROW   COLS      NET                        PINS IN THIS SEGMENT
+1     0-49      VBAT                       CN1.1@c4 U7.B+@c7 U7.OUT+@c8 U9.IN+@c10
+2     0-49      GND                        CN1.2@c4 U7.B-@c7 U7.OUT-@c8 U9.IN-@c10 U9.OUT-@c11 U8.1@c13 C1.1@c16 C2.1@c17 C3.1@c18 C4.1@c19
+3     0-49      +3V3                       U8.2@c13 C1.2@c16 C2.2@c17 C3.2@c18 C4.2@c19 U3.VDD@c34
+4     0-49      +5V                        U9.OUT+@c11 U8.3@c13
+5     0-19      FREE - devkit 3V3, LEAVE EMPTY U1A.1@c14
+5     20-49     GND                        U1B.1@c24
+6     0-19      FREE - devkit EN, LEAVE EMPTY U1A.2@c14
+6     20-49     SPI_MOSI                   U1B.2@c24 U3.MOSI@c34
+7     0-19      FREE - devkit VP/IO36, LEAVE EMPTY U1A.3@c14
+7     20-49     I2C_SCL                    U1B.3@c24
+8     0-19      FREE - devkit VN/IO39, LEAVE EMPTY U1A.4@c14
+8     20-49     TX0                        U1B.4@c24
+9     0-19      VBAT_SENSE                 U1A.5@c14
+9     20-49     RX0                        U1B.5@c24
+10    0-19      MPU_INT                    U1A.6@c14
+10    20-49     I2C_SDA                    U1B.6@c24
+11    0-19      FREE - devkit IO32, LEAVE EMPTY U1A.7@c14
+11    20-49     GND                        U1B.7@c24
+12    0-19      FREE - devkit IO33, LEAVE EMPTY U1A.8@c14
+12    20-49     SPI_MISO                   U1B.8@c24 U3.MISO@c34
+13    0-19      I2C2_SDA                   U1A.9@c14
+13    20-49     SPI_SCK                    U1B.9@c24 U3.SCK@c34
+14    0-19      LORA_DIO0                  U1A.10@c14
+14    20-37     LORA_NSS                   U1B.10@c24 U3.NSS@c34
+14    38-49     +3V3                       U2.1@c40
+15    0-19      I2C2_SCL                   U1A.11@c14
+15    20-49     GPS_RX                     U1B.11@c24 U2.2@c40
+16    0-19      LORA_RST                   U1A.12@c14
+16    20-49     GPS_TX                     U1B.12@c24 U2.3@c40
+17    0-19      FREE - devkit IO12, LEAVE EMPTY U1A.13@c14
+17    20-32     DS18B20                    U1B.13@c24
+17    33-49     GND                        U2.4@c40
+18    0-19      GND                        U1A.14@c14
+18    20-49     FREE - devkit IO0, LEAVE EMPTY U1B.14@c24
+19    0-19      FREE - devkit IO13, LEAVE EMPTY U1A.15@c14
+19    20-49     LED1_A                     U1B.15@c24
+20    0-19      FREE - devkit SD2, LEAVE EMPTY U1A.16@c14
+20    20-49     FREE - devkit IO15, LEAVE EMPTY U1B.16@c24
+21    0-19      FREE - devkit SD3, LEAVE EMPTY U1A.17@c14
+21    20-49     FREE - devkit SD1, LEAVE EMPTY U1B.17@c24
+22    0-19      FREE - devkit CMD, LEAVE EMPTY U1A.18@c14
+22    20-49     FREE - devkit SD0, LEAVE EMPTY U1B.18@c24
+23    0-19      +5V                        U1A.19@c14
+23    20-49     FREE - devkit CLK, LEAVE EMPTY U1B.19@c24
+24    0-37      VBAT                       R2.1@c30
+24    38-49     +3V3                       U4.1@c44 U5.1@c47
+25    0-37      VBAT_SENSE                 R2.2@c30 R3.1@c31
+25    38-49     GND                        U4.2@c44 U5.2@c47
+26    0-37      GND                        R3.2@c31
+26    38-45     I2C_SCL                    U4.3@c44
+26    46-49     I2C2_SCL                   U5.3@c47
+27    0-39      LORA_RST                   U3.RST@c34
+27    40-45     I2C_SDA                    U4.4@c44
+27    46-49     I2C2_SDA                   U5.4@c47
+28    0-49      LORA_DIO0                  U3.DIO0@c34
+30    0-49      GND                        U4.7@c44
+31    0-49      MPU_INT                    U4.8@c44
+32    0-49      +3V3                       CN3.1@c20 R1.1@c22
+33    0-34      DS18B20                    CN3.2@c20 R1.2@c22
+33    35-49     +5V                        CN4.1@c46
+34    0-49      GND                        CN3.3@c20 CN4.2@c46
+35    0-36      LED1_A                     R4.1@c26
+35    37-49     RX0                        CN4.3@c46
+36    0-37      K1                         R4.2@c26 LED1.A@c28
+36    38-49     TX0                        CN4.4@c46
+38    0-49      GND                        LED1.K@c28 U3.GND@c34
+
+SECTION 2 - EVERY PIN, WHERE IT GOES
+------------------------------------------------------------------------
+PART.PIN     LABEL ON PART    NET           HOLE
+C1.1         1                GND           (col 16, row  2)
+C1.2         2                +3V3          (col 16, row  3)
+C2.1         1                GND           (col 17, row  2)
+C2.2         2                +3V3          (col 17, row  3)
+C3.1         1                GND           (col 18, row  2)
+C3.2         2                +3V3          (col 18, row  3)
+C4.1         1                GND           (col 19, row  2)
+C4.2         2                +3V3          (col 19, row  3)
+CN1.1        1                VBAT          (col  4, row  1)
+CN1.2        2                GND           (col  4, row  2)
+CN3.1        1 3V3            +3V3          (col 20, row 32)
+CN3.2        2 DATA (yellow)  DS18B20       (col 20, row 33)
+CN3.3        3 GND (black)    GND           (col 20, row 34)
+CN4.1        1 5V             +5V           (col 46, row 33)
+CN4.2        2 GND            GND           (col 46, row 34)
+CN4.3        3 RX0            RX0           (col 46, row 35)
+CN4.4        4 TX0            TX0           (col 46, row 36)
+LED1.A       A                K1            (col 28, row 36)
+LED1.K       K                GND           (col 28, row 38)
+R1.1         1                +3V3          (col 22, row 32)
+R1.2         2                DS18B20       (col 22, row 33)
+R2.1         1                VBAT          (col 30, row 24)
+R2.2         2                VBAT_SENSE    (col 30, row 25)
+R3.1         1                VBAT_SENSE    (col 31, row 25)
+R3.2         2                GND           (col 31, row 26)
+R4.1         1                LED1_A        (col 26, row 35)
+R4.2         2                K1            (col 26, row 36)
+U1A.1        3V3              LEAVE FREE    (col 14, row  5)
+U1A.2        EN               LEAVE FREE    (col 14, row  6)
+U1A.3        VP/IO36          LEAVE FREE    (col 14, row  7)
+U1A.4        VN/IO39          LEAVE FREE    (col 14, row  8)
+U1A.5        IO34             VBAT_SENSE    (col 14, row  9)
+U1A.6        IO35             MPU_INT       (col 14, row 10)
+U1A.7        IO32             LEAVE FREE    (col 14, row 11)
+U1A.8        IO33             LEAVE FREE    (col 14, row 12)
+U1A.9        IO25             I2C2_SDA      (col 14, row 13)
+U1A.10       IO26             LORA_DIO0     (col 14, row 14)
+U1A.11       IO27             I2C2_SCL      (col 14, row 15)
+U1A.12       IO14             LORA_RST      (col 14, row 16)
+U1A.13       IO12             LEAVE FREE    (col 14, row 17)
+U1A.14       GND              GND           (col 14, row 18)
+U1A.15       IO13             LEAVE FREE    (col 14, row 19)
+U1A.16       SD2              LEAVE FREE    (col 14, row 20)
+U1A.17       SD3              LEAVE FREE    (col 14, row 21)
+U1A.18       CMD              LEAVE FREE    (col 14, row 22)
+U1A.19       5V               +5V           (col 14, row 23)
+U1B.1        GND              GND           (col 24, row  5)
+U1B.2        IO23             SPI_MOSI      (col 24, row  6)
+U1B.3        IO22             I2C_SCL       (col 24, row  7)
+U1B.4        TX0              TX0           (col 24, row  8)
+U1B.5        RX0              RX0           (col 24, row  9)
+U1B.6        IO21             I2C_SDA       (col 24, row 10)
+U1B.7        GND              GND           (col 24, row 11)
+U1B.8        IO19             SPI_MISO      (col 24, row 12)
+U1B.9        IO18             SPI_SCK       (col 24, row 13)
+U1B.10       IO5              LORA_NSS      (col 24, row 14)
+U1B.11       IO17             GPS_RX        (col 24, row 15)
+U1B.12       IO16             GPS_TX        (col 24, row 16)
+U1B.13       IO4              DS18B20       (col 24, row 17)
+U1B.14       IO0              LEAVE FREE    (col 24, row 18)
+U1B.15       IO2              LED1_A        (col 24, row 19)
+U1B.16       IO15             LEAVE FREE    (col 24, row 20)
+U1B.17       SD1              LEAVE FREE    (col 24, row 21)
+U1B.18       SD0              LEAVE FREE    (col 24, row 22)
+U1B.19       CLK              LEAVE FREE    (col 24, row 23)
+U2.1         1                +3V3          (col 40, row 14)
+U2.2         2                GPS_RX        (col 40, row 15)
+U2.3         3                GPS_TX        (col 40, row 16)
+U2.4         4                GND           (col 40, row 17)
+U3.VDD       VDD              +3V3          (col 34, row  3)
+U3.MOSI      MOSI             SPI_MOSI      (col 34, row  6)
+U3.MISO      MISO             SPI_MISO      (col 34, row 12)
+U3.SCK       SCK              SPI_SCK       (col 34, row 13)
+U3.NSS       NSS              LORA_NSS      (col 34, row 14)
+U3.RST       RST              LORA_RST      (col 34, row 27)
+U3.DIO0      DIO0             LORA_DIO0     (col 34, row 28)
+U3.GND       GND              GND           (col 34, row 38)
+U4.1         VCC              +3V3          (col 44, row 24)
+U4.2         GND              GND           (col 44, row 25)
+U4.3         SCL              I2C_SCL       (col 44, row 26)
+U4.4         SDA              I2C_SDA       (col 44, row 27)
+U4.7         AD0              GND           (col 44, row 30)
+U4.8         INT              MPU_INT       (col 44, row 31)
+U5.1         VIN              +3V3          (col 47, row 24)
+U5.2         GND              GND           (col 47, row 25)
+U5.3         SCL              I2C2_SCL      (col 47, row 26)
+U5.4         SDA              I2C2_SDA      (col 47, row 27)
+U7.B+        B+               VBAT          (col  7, row  1)
+U7.OUT+      OUT+             VBAT          (col  8, row  1)
+U7.B-        B-               GND           (col  7, row  2)
+U7.OUT-      OUT-             GND           (col  8, row  2)
+U8.1         1 GND/ADJ        GND           (col 13, row  2)
+U8.2         2 VOUT (+tab)    +3V3          (col 13, row  3)
+U8.3         3 VIN            +5V           (col 13, row  4)
+U9.IN+       IN+              VBAT          (col 10, row  1)
+U9.IN-       IN-              GND           (col 10, row  2)
+U9.OUT-      OUT-             GND           (col 11, row  2)
+U9.OUT+      OUT+             +5V           (col 11, row  4)
+
+SECTION 3 - WIRE LINKS, HOLE TO HOLE
+------------------------------------------------------------------------
+  [ ] +3V3         from (col 13, row  3)  to (col 40, row 14)
+  [ ] +3V3         from (col 40, row 14)  to (col 44, row 24)
+  [ ] +3V3         from (col 44, row 24)  to (col 20, row 32)
+  [ ] +5V          from (col 11, row  4)  to (col 14, row 23)
+  [ ] +5V          from (col 14, row 23)  to (col 46, row 33)
+  [ ] DS18B20      from (col 24, row 17)  to (col 20, row 33)
+  [ ] GND          from (col  4, row  2)  to (col 24, row  5)
+  [ ] GND          from (col 14, row 18)  to (col 44, row 25)
+  [ ] GND          from (col 20, row 34)  to (col 28, row 38)
+  [ ] GND          from (col 24, row  5)  to (col 24, row 11)
+  [ ] GND          from (col 24, row 11)  to (col 40, row 17)
+  [ ] GND          from (col 31, row 26)  to (col 44, row 30)
+  [ ] GND          from (col 40, row 17)  to (col 14, row 18)
+  [ ] GND          from (col 44, row 25)  to (col 31, row 26)
+  [ ] GND          from (col 44, row 30)  to (col 20, row 34)
+  [ ] I2C2_SCL     from (col 14, row 15)  to (col 47, row 26)
+  [ ] I2C2_SDA     from (col 14, row 13)  to (col 47, row 27)
+  [ ] I2C_SCL      from (col 24, row  7)  to (col 44, row 26)
+  [ ] I2C_SDA      from (col 24, row 10)  to (col 44, row 27)
+  [ ] LED1_A       from (col 24, row 19)  to (col 26, row 35)
+  [ ] LORA_DIO0    from (col 14, row 14)  to (col 34, row 28)
+  [ ] LORA_RST     from (col 14, row 16)  to (col 34, row 27)
+  [ ] MPU_INT      from (col 14, row 10)  to (col 44, row 31)
+  [ ] RX0          from (col 24, row  9)  to (col 46, row 35)
+  [ ] TX0          from (col 24, row  8)  to (col 46, row 36)
+  [ ] VBAT         from (col  4, row  1)  to (col 30, row 24)
+  [ ] VBAT_SENSE   from (col 14, row  9)  to (col 30, row 25)
+
+SECTION 4 - PINS THAT MUST STAY UNCONNECTED
+------------------------------------------------------------------------
+Solder nothing into these holes. Let no wire or lead touch them.
+
+  (col 14, row  5)  U1A.1    3V3       devkit 3V3 OUTPUT - shorting this kills the regulator
+  (col 14, row  6)  U1A.2    EN        reset pin - pulling it low holds the chip in reset
+  (col 14, row  7)  U1A.3    VP/IO36   unused GPIO - spare
+  (col 14, row  8)  U1A.4    VN/IO39   unused GPIO - spare
+  (col 14, row 11)  U1A.7    IO32      unused GPIO - spare
+  (col 14, row 12)  U1A.8    IO33      unused GPIO - spare
+  (col 14, row 17)  U1A.13   IO12      unused GPIO - spare
+  (col 24, row 18)  U1B.14   IO0       unused GPIO - spare
+  (col 14, row 19)  U1A.15   IO13      unused GPIO - spare
+  (col 14, row 20)  U1A.16   SD2       FLASH PIN - devkit will not boot if loaded
+  (col 24, row 20)  U1B.16   IO15      unused GPIO - spare
+  (col 14, row 21)  U1A.17   SD3       FLASH PIN - devkit will not boot if loaded
+  (col 24, row 21)  U1B.17   SD1       FLASH PIN - devkit will not boot if loaded
+  (col 14, row 22)  U1A.18   CMD       FLASH PIN - devkit will not boot if loaded
+  (col 24, row 22)  U1B.18   SD0       FLASH PIN - devkit will not boot if loaded
+  (col 24, row 23)  U1B.19   CLK       FLASH PIN - devkit will not boot if loaded
