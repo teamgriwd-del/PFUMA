@@ -4,6 +4,8 @@
 // this header, which the real backend has always rejected with 401 — they
 // only ever *looked* wired up because the 401 silently fell through to each
 // screen's own hardcoded demo-data fallback.
+import { File } from 'expo-file-system';
+
 import { API } from './config';
 
 export async function authFetch(currentUser, path, opts = {}) {
@@ -22,19 +24,15 @@ export async function authJson(currentUser, path, opts = {}) {
   return { ok: res.ok, status: res.status, data };
 }
 
-// Turns an expo-image-picker asset into a { uri, name, type } object safe
-// to pass to FormData.append(). Parsing a filename/extension out of
-// asset.uri is unreliable — Android's system Photo Picker (and some
-// gallery apps) return content:// URIs with no file extension in the path
-// at all, so `uri.split('/').pop().split('.').pop()` silently produces an
-// extension-less or garbage "extension" (e.g. a raw numeric media id),
-// which becomes an invalid MIME type the backend correctly rejects as an
-// unsupported file type — the exact cause of some-but-not-all picked
-// photos failing to upload. expo-image-picker already gives us the real
-// mimeType (and often fileName); use those instead of guessing.
-export function assetToFormFile(asset, fallbackBase = 'photo') {
-  const mimeType = asset.mimeType || 'image/jpeg';
-  const ext = mimeType.split('/')[1] || 'jpg';
-  const name = asset.fileName || `${fallbackBase}_${Date.now()}.${ext}`;
-  return { uri: asset.uri, name, type: mimeType };
+// Turns an expo-image-picker asset into something safe to pass to
+// FormData.append(). SDK 56 made expo/fetch the default global fetch, and
+// its native FormData only accepts real File/Blob parts — a plain
+// { uri, name, type } object throws "Unsupported FormDataPart
+// implementation" at request time. expo-file-system's File wraps a uri
+// (file:// or content://) and resolves the real name/MIME type natively
+// (via ContentResolver on Android), which also sidesteps the earlier bug
+// where content:// picker URIs with no file extension in the path produced
+// a garbage/invalid MIME type from naive uri string-parsing.
+export function assetToFormFile(asset) {
+  return new File(asset.uri);
 }

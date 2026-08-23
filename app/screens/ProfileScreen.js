@@ -41,7 +41,7 @@ export default function ProfileScreen({ navigation, currentUser, onLogout, onUse
 
     setAvatarUploading(true);
     const fd = new FormData();
-    fd.append('photo', assetToFormFile(asset, 'avatar'));
+    fd.append('photo', assetToFormFile(asset));
     const res = await authFetch(currentUser, '/users/me/avatar', { method: 'POST', body: fd });
     const data = await res.json().catch(() => ({}));
     setAvatarUploading(false);

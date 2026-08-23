@@ -41,7 +41,7 @@ const PostModal = ({ visible, onClose, onSubmit, error, animals = [] }) => {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
     if (result.canceled || !result.assets?.[0]) return;
     const asset = result.assets[0];
-    setPhoto(assetToFormFile(asset, 'listing'));
+    setPhoto(assetToFormFile(asset));
   };
 
   const needsClearance = form.category === 'livestock' && !!form.animal_id;

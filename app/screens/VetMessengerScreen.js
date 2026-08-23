@@ -149,7 +149,7 @@ export default function VetMessengerScreen({ currentUser, route }) {
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
     if (result.canceled || !result.assets?.[0]) return;
     const asset = result.assets[0];
-    setAttachment(assetToFormFile(asset, 'attachment'));
+    setAttachment(assetToFormFile(asset));
   };
 
   // The other party's phone/email — public_user_view() on the backend

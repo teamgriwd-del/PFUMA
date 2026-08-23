@@ -156,7 +156,7 @@ export default function HerdScreen({ currentUser }) {
   // failed instead of one opaque "could not add photos" for the whole batch.
   const uploadOnePhoto = async (animalId, asset) => {
     const fd = new FormData();
-    fd.append('photos', assetToFormFile(asset, 'animal'));
+    fd.append('photos', assetToFormFile(asset));
     const res = await authFetch(currentUser, `/animals/${animalId}/photos`, { method: 'POST', body: fd });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || 'upload failed');
@@ -234,7 +234,7 @@ export default function HerdScreen({ currentUser }) {
       mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7, allowsMultipleSelection: true,
     });
     if (result.canceled || !result.assets?.length) return;
-    const picked = result.assets.map(asset => assetToFormFile(asset, 'animal'));
+    const picked = result.assets.map(asset => assetToFormFile(asset));
     setPhotos(prev => [...prev, ...picked]);
   };
 
