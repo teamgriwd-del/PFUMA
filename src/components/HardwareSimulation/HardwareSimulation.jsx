@@ -12,9 +12,33 @@ import './HardwareSimulation.css';
 import { API } from '../../config';
 
 // ── Constants ──────────────────────────────────────────────────────────────
-const SAFE_ZONE = { lat: -17.3601, lon: 30.1918, radius: 0.005, name: 'Mashonaland Farm A' };
+// Fallback zone shown only until the real geofence loads (or for a farmer
+// who hasn't drawn one yet) — mirrors the backend's DEFAULT_GEOFENCE.
+const FALLBACK_ZONE = { name: 'Demo Safe Zone', center_lat: -17.8216, center_lon: 31.0233, radius_m: 500 };
 const MAX_HISTORY = 20;
 const BATTERY_DRAIN_RATE = 0.02;
+// Geofence circle is drawn at 80px from center in the UI (see the w-44
+// boundary ring below) — everything geo-related converts lat/lon degrees
+// to real-world meters, then meters to that fixed pixel radius, so the
+// dot's on-screen distance from center always matches its real distance
+// from the zone boundary, whatever the zone's actual radius_m is.
+const METERS_PER_DEG_LAT = 110540;
+const metersPerDegLon = (lat) => 111320 * Math.cos((lat * Math.PI) / 180);
+const metersOffset = (lat, lon, zone) => {
+  const dx = (lon - zone.center_lon) * metersPerDegLon(zone.center_lat);
+  const dy = (lat - zone.center_lat) * METERS_PER_DEG_LAT;
+  return { dx, dy, distance: Math.sqrt(dx * dx + dy * dy) };
+};
+const ZONE_RING_PX = 80;
+const MAX_OFFSET_PX = 130;
+const metersToPixels = (dx, dy, zone) => {
+  const scale = ZONE_RING_PX / zone.radius_m;
+  let x = dx * scale;
+  let y = -dy * scale; // screen y grows downward — flip so north is up
+  const mag = Math.sqrt(x * x + y * y);
+  if (mag > MAX_OFFSET_PX) { const f = MAX_OFFSET_PX / mag; x *= f; y *= f; }
+  return { x, y };
+};
 
 const NORMAL_RANGES = {
   temperature: { min: 37.5, max: 39.5, unit: '°C', label: 'Normal 37.5 – 39.5 °C' },
@@ -214,10 +238,11 @@ const HardwareSimulation = ({ animals = [], currentUser }) => {
   const [history, setHistory] = useState([]);
   const [currentData, setCurrentData] = useState({
     temperature: 38.5, heartRate: 72, activity: 'Normal',
-    lat: SAFE_ZONE.lat, lon: SAFE_ZONE.lon,
+    lat: FALLBACK_ZONE.center_lat, lon: FALLBACK_ZONE.center_lon,
     status: 'Optimal', vitalityScore: 98,
     battery: 88, isBreach: false
   });
+  const [zone, setZone] = useState(FALLBACK_ZONE);
   const [alerts, setAlerts] = useState([]);
   const [isRunning, setIsRunning] = useState(true);
   const [trackerOffset, setTrackerOffset] = useState({ x: 0, y: 0 });
@@ -230,6 +255,22 @@ const HardwareSimulation = ({ animals = [], currentUser }) => {
   const prevHR     = useRef(72);
 
   const selectedAnimal = animals.find(a => a.id === selectedAnimalId) ?? animals[0] ?? null;
+
+  // ── Geofence — the real per-farmer safe zone (drawn by the farmer, or by
+  // an admin for a show demo). Falls back to FALLBACK_ZONE until it loads.
+  useEffect(() => {
+    if (!selectedAnimalId || !currentUser?.token) { setZone(FALLBACK_ZONE); return; }
+    (async () => {
+      try {
+        const res = await fetch(`${API}/animals/${selectedAnimalId}/geofence`, {
+          headers: { Authorization: `Bearer ${currentUser.token}` },
+        });
+        if (!res.ok) { setZone(FALLBACK_ZONE); return; }
+        const z = await res.json();
+        setZone({ name: z.name, center_lat: z.center_lat, center_lon: z.center_lon, radius_m: z.radius_m });
+      } catch { setZone(FALLBACK_ZONE); }
+    })();
+  }, [selectedAnimalId, currentUser?.token]);
 
   // ── Real device readings — takes over from the simulator whenever the
   // selected animal has a paired collar that has reported in the last 2
@@ -286,9 +327,9 @@ const HardwareSimulation = ({ animals = [], currentUser }) => {
     setHistory(points.slice(-MAX_HISTORY));
     const latest = points[points.length - 1];
     setCurrentData(latest);
-    const dLat = parseFloat(latest.lat) - SAFE_ZONE.lat, dLon = parseFloat(latest.lon) - SAFE_ZONE.lon;
-    setTrackerOffset({ x: (dLat / 0.015) * 55, y: (dLon / 0.015) * 55 });
-  }, [liveReadings, isLiveDevice, readingToPoint]);
+    const { dx, dy } = metersOffset(parseFloat(latest.lat), parseFloat(latest.lon), zone);
+    setTrackerOffset(metersToPixels(dx, dy, zone));
+  }, [liveReadings, isLiveDevice, readingToPoint, zone]);
 
   const generateTick = useCallback(() => {
     const rawTemp = 37.8 + Math.random() * 2.5;
@@ -300,12 +341,14 @@ const HardwareSimulation = ({ animals = [], currentUser }) => {
     tempBuffer.current = tBuf;
     hrBuffer.current   = hBuf;
 
-    const latDrift = SAFE_ZONE.lat + (Math.random() - 0.5) * 0.015;
-    const lonDrift = SAFE_ZONE.lon + (Math.random() - 0.5) * 0.015;
-    const dist     = Math.sqrt((latDrift - SAFE_ZONE.lat) ** 2 + (lonDrift - SAFE_ZONE.lon) ** 2);
-    const isBreach = dist > SAFE_ZONE.radius;
-    const offsetX  = ((latDrift - SAFE_ZONE.lat) / 0.015) * 55;
-    const offsetY  = ((lonDrift - SAFE_ZONE.lon) / 0.015) * 55;
+    const jitterM  = zone.radius_m * 1.3;
+    const dxM      = (Math.random() - 0.5) * 2 * jitterM;
+    const dyM      = (Math.random() - 0.5) * 2 * jitterM;
+    const latDrift = zone.center_lat + dyM / METERS_PER_DEG_LAT;
+    const lonDrift = zone.center_lon + dxM / metersPerDegLon(zone.center_lat);
+    const dist     = Math.sqrt(dxM * dxM + dyM * dyM);
+    const isBreach = dist > zone.radius_m;
+    const { x: offsetX, y: offsetY } = metersToPixels(dxM, dyM, zone);
 
     let vitality = 100;
     if (filteredTemp > 39.5) vitality -= 25;
@@ -346,7 +389,7 @@ const HardwareSimulation = ({ animals = [], currentUser }) => {
     });
 
     return { newData, newAlerts, offsetX, offsetY };
-  }, [selectedAnimal]);
+  }, [selectedAnimal, zone]);
 
   useEffect(() => {
     if (!isRunning || isLiveDevice) return;  // real device data takes priority over the simulator
@@ -598,23 +641,39 @@ const HardwareSimulation = ({ animals = [], currentUser }) => {
 
           <DevicePairingPanel animals={animals} currentUser={currentUser} />
 
-          {/* Geofencing */}
+          {/* Live Tracking & Geofencing */}
           <div className="bg-gray-900 rounded-2xl p-5 relative overflow-hidden">
             <div className="relative z-10">
               <div className="flex justify-between items-start mb-1">
-                <h4 className="text-sm font-black text-white">GPS Safe Zone</h4>
+                <h4 className="text-sm font-black text-white flex items-center gap-1.5">
+                  <MapPin size={13} className="text-pfuma-green" /> Live Tracking &amp; Geofencing
+                </h4>
                 <div className={`w-2.5 h-2.5 rounded-full mt-1 ${currentData.isBreach ? 'bg-red-500 animate-ping' : 'bg-green-400 animate-pulse'}`} aria-label={currentData.isBreach ? 'Outside safe zone' : 'Inside safe zone'} />
               </div>
               <p className="text-[11px] text-gray-500 font-medium mb-4">
-                The circle below is your farm boundary ({SAFE_ZONE.name}). The dot is your animal's real-time GPS position. If the dot exits the circle, you get an alert.
+                The dashed circle is your farm's geofence boundary — <strong className="text-gray-300">{zone.name}</strong>, {zone.radius_m}m radius. The green dot is your animal's live GPS position; the faint trail behind it is where it's been. It turns red and alerts you the moment it steps outside the circle.
               </p>
 
-              <div className="flex justify-center mb-4">
+              <div className="flex justify-center mb-5">
                 <div className="w-44 h-44 rounded-full border-2 border-dashed border-pfuma-green/30 flex items-center justify-center relative bg-pfuma-green/5">
                   {/* inner ring */}
                   <div className="absolute inset-6 rounded-full border border-pfuma-green/10" />
-                  {/* farm label */}
-                  <span className="absolute top-3 text-[8px] font-black text-gray-600 uppercase tracking-widest">{SAFE_ZONE.name}</span>
+                  {/* compass */}
+                  <span className="absolute top-1.5 left-1/2 -translate-x-1/2 text-[8px] font-black text-gray-500">N</span>
+                  <span className="absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[8px] font-black text-gray-500">S</span>
+                  <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[8px] font-black text-gray-500">W</span>
+                  <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[8px] font-black text-gray-500">E</span>
+                  {/* zone label */}
+                  <span className="absolute top-6 text-[8px] font-black text-gray-600 uppercase tracking-widest max-w-[70%] text-center truncate">{zone.name}</span>
+                  {/* breadcrumb trail */}
+                  {history.slice(-6, -1).map((h, i) => {
+                    const { dx, dy } = metersOffset(parseFloat(h.lat), parseFloat(h.lon), zone);
+                    const { x, y } = metersToPixels(dx, dy, zone);
+                    return (
+                      <div key={i} className="absolute w-1.5 h-1.5 rounded-full bg-pfuma-green/25"
+                        style={{ transform: `translate(${x}px, ${y}px)`, opacity: 0.25 + i * 0.1 }} />
+                    );
+                  })}
                   {/* animal dot */}
                   <div
                     className={`w-4 h-4 rounded-full shadow-lg transition-all duration-1000 flex items-center justify-center ${currentData.isBreach ? 'bg-red-500' : 'bg-pfuma-green'}`}
@@ -624,7 +683,7 @@ const HardwareSimulation = ({ animals = [], currentUser }) => {
                   >
                     {selectedAnimal && <span className="text-[6px] font-black text-white">{selectedAnimal.name[0]}</span>}
                   </div>
-                  <span className="absolute bottom-[-20px] text-[8px] font-black text-gray-600 uppercase tracking-widest whitespace-nowrap">Boundary: 500 m radius</span>
+                  <span className="absolute bottom-[-20px] text-[8px] font-black text-gray-600 uppercase tracking-widest whitespace-nowrap">Boundary: {zone.radius_m}m radius</span>
                 </div>
               </div>
 
@@ -633,7 +692,7 @@ const HardwareSimulation = ({ animals = [], currentUser }) => {
                   <AlertTriangle size={14} className="text-red-400 shrink-0 mt-0.5" />
                   <div>
                     <p className="text-[10px] text-red-400 font-black uppercase leading-none mb-0.5">Animal Outside Safe Zone</p>
-                    <p className="text-[10px] text-red-300 font-medium">Check East boundary fencing</p>
+                    <p className="text-[10px] text-red-300 font-medium">Check fencing near {zone.name}</p>
                   </div>
                 </div>
               ) : (
@@ -651,6 +710,13 @@ const HardwareSimulation = ({ animals = [], currentUser }) => {
                 <div className="bg-white/5 p-2.5 rounded-xl">
                   <span className="text-[9px] text-gray-500 font-bold uppercase block mb-0.5">Longitude</span>
                   <strong className="text-white text-[11px] font-black">{currentData.lon}</strong>
+                </div>
+                <div className="bg-white/5 p-2.5 rounded-xl col-span-2">
+                  <span className="text-[9px] text-gray-500 font-bold uppercase block mb-0.5">Distance From Zone Center</span>
+                  <strong className={`text-[11px] font-black ${currentData.isBreach ? 'text-red-400' : 'text-white'}`}>
+                    {Math.round(metersOffset(parseFloat(currentData.lat), parseFloat(currentData.lon), zone).distance)}m
+                    <span className="text-gray-500 font-medium"> of {zone.radius_m}m allowed</span>
+                  </strong>
                 </div>
               </div>
             </div>

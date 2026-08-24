@@ -501,6 +501,23 @@ CREATE TABLE IF NOT EXISTS iot_readings (
 );
 CREATE INDEX IF NOT EXISTS idx_iot_readings_device_time ON iot_readings (device_id, received_at DESC);
 
+-- ── GEOFENCES ──────────────────────────────────────────────────
+-- A farmer's safe-zone boundary. One farmer can have several rows over
+-- time (e.g. redrawn for a show demo); the most recent one per owner_id
+-- is treated as the active zone everywhere it's read.
+CREATE TABLE IF NOT EXISTS geofences (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  owner_id    INT NOT NULL,
+  name        VARCHAR(120) NOT NULL,
+  center_lat  DECIMAL(9,6) NOT NULL,
+  center_lon  DECIMAL(9,6) NOT NULL,
+  radius_m    INT NOT NULL,
+  created_by  INT NULL,          -- admin/user who drew this zone, if known
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (owner_id)   REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
 
 -- ── VACCINATION COMPLIANCE CASES ──────────────────────────────
 -- A missed mandatory vaccination is not just a red badge on a dashboard —

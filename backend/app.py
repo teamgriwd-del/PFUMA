@@ -2,6 +2,8 @@ import os
 import re
 import json
 import glob
+import math
+import random
 import secrets
 import functools
 import datetime
@@ -182,6 +184,20 @@ def ensure_schema():
           sort_order INT DEFAULT 0,
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           FOREIGN KEY (animal_id) REFERENCES animals(id) ON DELETE CASCADE
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS geofences (
+          id          INT AUTO_INCREMENT PRIMARY KEY,
+          owner_id    INT NOT NULL,
+          name        VARCHAR(120) NOT NULL,
+          center_lat  DECIMAL(9,6) NOT NULL,
+          center_lon  DECIMAL(9,6) NOT NULL,
+          radius_m    INT NOT NULL,
+          created_by  INT NULL,
+          created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (owner_id)   REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
         )
     """)
     c.execute("""
@@ -1312,7 +1328,7 @@ def get_iot_readings(animal_id):
     animal = c.fetchone()
     if not animal:
         db.close(); return jsonify({"error": "Animal not found"}), 404
-    if g.current_user['role'] not in ('Veterinarian', 'Police') and animal['owner_id'] != g.current_user['id']:
+    if g.current_user['role'] not in ('Veterinarian', 'Police', 'Admin') and animal['owner_id'] != g.current_user['id']:
         db.close(); return jsonify({"error": "Not authorized to view this animal's readings"}), 403
 
     limit = min(int(request.args.get('limit', 20)), 100)
@@ -1325,6 +1341,41 @@ def get_iot_readings(animal_id):
     rows = c.fetchall()
     db.close()
     return jsonify(rows)
+
+
+# Default fallback zone (Zimbabwe Agricultural Show grounds, Harare) used
+# only when a farmer has no geofence configured yet.
+DEFAULT_GEOFENCE = {"name": "Demo Safe Zone", "center_lat": -17.8216, "center_lon": 31.0233, "radius_m": 500}
+
+
+def _latest_geofence(owner_id):
+    db = get_db(); c = db.cursor()
+    c.execute("SELECT * FROM geofences WHERE owner_id=%s ORDER BY created_at DESC LIMIT 1", (owner_id,))
+    row = c.fetchone()
+    db.close()
+    return row
+
+
+@app.route('/animals/<int:animal_id>/geofence', methods=['GET'])
+@require_auth
+def get_animal_geofence(animal_id):
+    db = get_db(); c = db.cursor()
+    c.execute("SELECT owner_id FROM animals WHERE id=%s", (animal_id,))
+    animal = c.fetchone()
+    db.close()
+    if not animal:
+        return jsonify({"error": "Animal not found"}), 404
+    if g.current_user['role'] not in ('Veterinarian', 'Police', 'Admin') and animal['owner_id'] != g.current_user['id']:
+        return jsonify({"error": "Not authorized to view this animal's geofence"}), 403
+
+    zone = _latest_geofence(animal['owner_id'])
+    if not zone:
+        return jsonify({**DEFAULT_GEOFENCE, "is_default": True})
+    return jsonify({
+        "id": zone['id'], "name": zone['name'],
+        "center_lat": float(zone['center_lat']), "center_lon": float(zone['center_lon']),
+        "radius_m": zone['radius_m'], "is_default": False,
+    })
 
 
 # ── HEALTH EVENTS ─────────────────────────────────────────────
@@ -3722,6 +3773,179 @@ def admin_activity():
     feed = signups + listings + outbreak_reports + cooperatives
     feed.sort(key=lambda x: x['at'], reverse=True)
     return jsonify(feed[:50])
+
+
+# ── ADMIN IOT DEMO CONTROL ────────────────────────────────────────
+# Show-floor backup plan: the real CN-01/BS-01 hardware isn't finished, so
+# instead of leaving the IoT tab dark for the exhibit, an admin drives it
+# by hand from here. Every push lands in the same `iot_readings` table a
+# real base station would write to, tagged to a dedicated "SIM-<animal_id>"
+# virtual collar (never a farmer's real paired device) — so the ordinary
+# Farmer/Vet/Police IoT dashboard picks it up through its normal "live
+# reading" path with zero special-casing on that side.
+METERS_PER_DEG_LAT = 110540
+
+def _meters_per_deg_lon(lat):
+    return 111320 * math.cos(math.radians(lat))
+
+DIRECTION_OFFSETS = {
+    'N': (1, 0), 'S': (-1, 0), 'E': (0, 1), 'W': (0, -1),
+    'NE': (1, 1), 'NW': (1, -1), 'SE': (-1, 1), 'SW': (-1, -1),
+}
+
+
+@app.route('/admin/iot/targets', methods=['GET'])
+@require_auth
+@require_admin
+def admin_iot_targets():
+    db = get_db(); c = db.cursor()
+    c.execute("""
+        SELECT a.id AS animal_id, a.name AS animal_name, a.species,
+               u.id AS owner_id, u.full_name AS owner_name
+        FROM animals a JOIN users u ON a.owner_id = u.id
+        ORDER BY u.full_name, a.name
+    """)
+    rows = c.fetchall()
+    db.close()
+    farmers = {}
+    for r in rows:
+        f = farmers.setdefault(r['owner_id'], {"owner_id": r['owner_id'], "owner_name": r['owner_name'], "animals": []})
+        f['animals'].append({"id": r['animal_id'], "name": r['animal_name'], "species": r['species']})
+    return jsonify(list(farmers.values()))
+
+
+@app.route('/admin/iot/geofence/<int:owner_id>', methods=['GET'])
+@require_auth
+@require_admin
+def admin_get_geofence(owner_id):
+    zone = _latest_geofence(owner_id)
+    if not zone:
+        return jsonify({**DEFAULT_GEOFENCE, "is_default": True})
+    return jsonify({
+        "id": zone['id'], "name": zone['name'],
+        "center_lat": float(zone['center_lat']), "center_lon": float(zone['center_lon']),
+        "radius_m": zone['radius_m'], "is_default": False,
+    })
+
+
+@app.route('/admin/iot/geofence', methods=['POST'])
+@require_auth
+@require_admin
+def admin_set_geofence():
+    d = request.json or {}
+    owner_id = d.get('owner_id')
+    name = (d.get('name') or 'Demo Safe Zone').strip()[:120]
+    try:
+        center_lat = float(d['center_lat']); center_lon = float(d['center_lon']); radius_m = int(d['radius_m'])
+    except (KeyError, TypeError, ValueError):
+        return jsonify({"error": "center_lat, center_lon, radius_m are required numbers"}), 400
+    if not owner_id or radius_m <= 0:
+        return jsonify({"error": "owner_id is required and radius_m must be positive"}), 400
+
+    db = get_db(); c = db.cursor()
+    c.execute("SELECT id FROM users WHERE id=%s", (owner_id,))
+    if not c.fetchone():
+        db.close(); return jsonify({"error": "Farmer not found"}), 404
+    c.execute("""
+        INSERT INTO geofences (owner_id, name, center_lat, center_lon, radius_m, created_by)
+        VALUES (%s,%s,%s,%s,%s,%s)
+    """, (owner_id, name, center_lat, center_lon, radius_m, g.current_user['id']))
+    zone_id = c.lastrowid
+    db.commit(); db.close()
+    return jsonify({"id": zone_id, "message": "Geofence saved ✅"})
+
+
+@app.route('/admin/iot/simulate', methods=['POST'])
+@require_auth
+@require_admin
+def admin_iot_simulate():
+    d = request.json or {}
+    animal_id = d.get('animal_id')
+    if not animal_id:
+        return jsonify({"error": "animal_id is required"}), 400
+
+    db = get_db(); c = db.cursor()
+    c.execute("SELECT id, owner_id, name FROM animals WHERE id=%s", (animal_id,))
+    animal = c.fetchone()
+    if not animal:
+        db.close(); return jsonify({"error": "Animal not found"}), 404
+
+    sim_serial = f"SIM-{animal_id}"
+    c.execute("SELECT id FROM iot_devices WHERE device_serial=%s", (sim_serial,))
+    device = c.fetchone()
+    if not device:
+        c.execute(
+            "INSERT INTO iot_devices (device_serial, device_type, animal_id, owner_id) VALUES (%s,'collar',%s,%s)",
+            (sim_serial, animal_id, animal['owner_id'])
+        )
+        device_id = c.lastrowid
+    else:
+        device_id = device['id']
+
+    zone = _latest_geofence(animal['owner_id'])
+    center_lat = float(zone['center_lat']) if zone else DEFAULT_GEOFENCE['center_lat']
+    center_lon = float(zone['center_lon']) if zone else DEFAULT_GEOFENCE['center_lon']
+    radius_m = zone['radius_m'] if zone else DEFAULT_GEOFENCE['radius_m']
+
+    c.execute("""
+        SELECT latitude, longitude, temp_c, heart_rate, battery_pct FROM iot_readings
+        WHERE device_id=%s ORDER BY received_at DESC LIMIT 1
+    """, (device_id,))
+    last = c.fetchone()
+    lat = float(last['latitude']) if last and last['latitude'] is not None else center_lat
+    lon = float(last['longitude']) if last and last['longitude'] is not None else center_lon
+    temp = float(last['temp_c']) if last and last['temp_c'] is not None else 38.5
+    hr = int(last['heart_rate']) if last and last['heart_rate'] is not None else 72
+    battery = int(last['battery_pct']) if last and last['battery_pct'] is not None else 88
+
+    direction = d.get('direction')
+    step_m = float(d.get('step_m', 20))
+    if direction == 'reset':
+        lat, lon = center_lat, center_lon
+    elif direction == 'random':
+        lat += (random.uniform(-1, 1) * step_m) / METERS_PER_DEG_LAT
+        lon += (random.uniform(-1, 1) * step_m) / _meters_per_deg_lon(center_lat)
+    elif direction in DIRECTION_OFFSETS:
+        d_lat, d_lon = DIRECTION_OFFSETS[direction]
+        lat += (d_lat * step_m) / METERS_PER_DEG_LAT
+        lon += (d_lon * step_m) / _meters_per_deg_lon(center_lat)
+
+    if d.get('temp_c') is not None:
+        temp = float(d['temp_c'])
+    if d.get('heart_rate') is not None:
+        hr = int(d['heart_rate'])
+    if d.get('battery_pct') is not None:
+        battery = int(d['battery_pct'])
+    battery = max(0, min(100, battery))
+
+    dx = (lon - center_lon) * _meters_per_deg_lon(center_lat)
+    dy = (lat - center_lat) * METERS_PER_DEG_LAT
+    distance_m = math.sqrt(dx * dx + dy * dy)
+    in_zone = distance_m <= radius_m
+
+    fever_alert = bool(d.get('fever')) or temp > 40.2
+    theft_alert = bool(d.get('theft')) or not in_zone
+    activity = d.get('activity') or ('Elevated' if hr > 95 else 'Resting' if hr < 65 else 'Normal')
+
+    c.execute("""
+        INSERT INTO iot_readings
+            (device_id, temp_c, heart_rate, latitude, longitude, gps_accuracy,
+             activity, move_mag, in_zone, battery_pct, fever_alert, theft_alert,
+             packet_no, rssi)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+    """, (
+        device_id, round(temp, 1), hr, lat, lon, 4.5,
+        activity, int(step_m), in_zone, battery, fever_alert, theft_alert,
+        None, random.randint(-85, -55),
+    ))
+    db.commit(); db.close()
+
+    return jsonify({
+        "message": "Reading pushed ✅", "animal_name": animal['name'],
+        "latitude": lat, "longitude": lon, "distance_from_center_m": round(distance_m, 1),
+        "in_zone": in_zone, "temp_c": round(temp, 1), "heart_rate": hr, "battery_pct": battery,
+        "fever_alert": fever_alert, "theft_alert": theft_alert,
+    })
 
 
 if __name__ == '__main__':
