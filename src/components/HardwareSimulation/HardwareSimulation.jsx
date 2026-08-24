@@ -235,6 +235,14 @@ const DevicePairingPanel = ({ animals, currentUser }) => {
 // ── Main Component ──────────────────────────────────────────────────────────
 const HardwareSimulation = ({ animals = [], currentUser }) => {
   const [selectedAnimalId, setSelectedAnimalId] = useState(animals[0]?.id ?? null);
+
+  // `animals` is fetched async by the parent and can still be empty on this
+  // component's first mount — pick a default once it arrives instead of
+  // leaving selectedAnimalId permanently null (which starved every
+  // animal-scoped fetch below, including the geofence lookup).
+  useEffect(() => {
+    if (!selectedAnimalId && animals.length > 0) setSelectedAnimalId(animals[0].id);
+  }, [animals, selectedAnimalId]);
   const [history, setHistory] = useState([]);
   const [currentData, setCurrentData] = useState({
     temperature: 38.5, heartRate: 72, activity: 'Normal',
