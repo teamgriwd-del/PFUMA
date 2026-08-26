@@ -484,10 +484,15 @@ def register():
 
     db = get_db()
     c = db.cursor()
-    c.execute("SELECT id FROM users WHERE phone = %s", (phone,))
+    # One phone number can hold a separate account per role — a real person
+    # is often a Farmer *and* a Supplier, say — each with its own password,
+    # since a phone number identifies a person, not a single account. What's
+    # not allowed is two accounts with the *same* phone and the *same* role,
+    # which would just be an ambiguous duplicate at login time.
+    c.execute("SELECT id FROM users WHERE phone = %s AND role = %s", (phone, role))
     if c.fetchone():
         db.close()
-        return jsonify({"error": "An account with this phone number already exists"}), 409
+        return jsonify({"error": f"You already have a {role} account with this phone number. Log in, or sign up with a different role."}), 409
 
     password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
     c.execute("""
@@ -534,10 +539,17 @@ def login():
     password = d.get('password', '')
     db = get_db()
     c = db.cursor()
+    # A phone number can hold one account per role (see register()), so more
+    # than one row can share this phone — the password is what picks which
+    # role account to log into, not the phone alone.
     c.execute("SELECT * FROM users WHERE phone = %s", (phone,))
-    user = c.fetchone()
+    candidates = c.fetchall()
     db.close()
-    if not user or not user['password_hash'] or not bcrypt.checkpw(password.encode(), user['password_hash'].encode()):
+    user = next(
+        (u for u in candidates if u['password_hash'] and bcrypt.checkpw(password.encode(), u['password_hash'].encode())),
+        None
+    )
+    if not user:
         return jsonify({"error": "Invalid phone number or password"}), 401
     if user['account_status'] == 'suspended':
         return jsonify({"error": "This account has been suspended.", "reason": user.get('suspension_reason')}), 403
