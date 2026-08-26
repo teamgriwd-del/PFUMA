@@ -659,7 +659,7 @@ def get_document(user_id, doctype):
 # documents above), same as a stock product photo would be on any marketplace.
 @app.route('/uploads/<category>/<path:filename>', methods=['GET'])
 def get_photo(category, filename):
-    if category not in ('animals', 'listings', 'avatars'):
+    if category not in ('animals', 'listings', 'avatars', 'clearances'):
         return jsonify({"error": "Not found"}), 404
     return send_from_directory(os.path.join(UPLOAD_DIR, category), filename)
 
