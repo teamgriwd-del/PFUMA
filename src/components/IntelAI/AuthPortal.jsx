@@ -54,7 +54,7 @@ const ROLES = [
     desc: 'Supply vaccines, medicines and feed to registered farms.',
   },
   {
-    name: 'Retailer',
+    name: 'Buyer',
     icon: ShoppingBag,
     color: 'bg-purple-600',
     border: 'border-purple-600',
@@ -171,8 +171,8 @@ const AuthPortal = ({ onLogin }) => {
     licenseNumber: '', speciality: '',
     // supplier
     businessReg: '', supplyCategories: [],
-    // retailer
-    retailerReg: '', tradingAreas: '',
+    // buyer
+    buyerReg: '', tradingAreas: '',
     // verification documents (required for every role)
     idDocument: null, credentialDocument: null,
   });
@@ -251,7 +251,7 @@ const AuthPortal = ({ onLogin }) => {
       fd.append('species_farmed', form.species.join(','));
       fd.append('license_number', form.licenseNumber);
       fd.append('speciality', form.speciality);
-      fd.append('business_reg', form.businessReg || form.retailerReg);
+      fd.append('business_reg', form.businessReg || form.buyerReg);
       fd.append('supply_categories', form.supplyCategories.join(','));
       fd.append('trading_areas', form.tradingAreas);
       if (form.idDocument) fd.append('id_document', form.idDocument);
@@ -467,14 +467,14 @@ const AuthPortal = ({ onLogin }) => {
       </div>
     );
 
-    if (form.role === 'Retailer') return (
+    if (form.role === 'Buyer') return (
       <div className="space-y-4">
         <div>
           <h3 className="text-2xl font-black text-gray-900 mb-1">Trading Details</h3>
           <p className="text-sm text-gray-400 font-medium">Farmers and vets verify your trading identity before completing a sale.</p>
         </div>
         <Field label="Business Registration Number">
-          <input className={inputCls} type="text" placeholder="e.g. BP 67890/2023" value={form.retailerReg} onChange={e => set('retailerReg', e.target.value)} />
+          <input className={inputCls} type="text" placeholder="e.g. BP 67890/2023" value={form.buyerReg} onChange={e => set('buyerReg', e.target.value)} />
         </Field>
         <Field label="Trading Areas / Provinces Served">
           <input className={inputCls} type="text" placeholder="e.g. Mashonaland West, Midlands, Harare" value={form.tradingAreas} onChange={e => set('tradingAreas', e.target.value)} />
@@ -534,7 +534,7 @@ const AuthPortal = ({ onLogin }) => {
               form.species.length && { label: 'Species', value: form.species.join(', ') },
               form.licenseNumber  && { label: 'DVS License', value: form.licenseNumber },
               form.speciality     && { label: 'Speciality', value: form.speciality },
-              (form.businessReg || form.retailerReg) && { label: 'Business Reg', value: form.businessReg || form.retailerReg },
+              (form.businessReg || form.buyerReg) && { label: 'Business Reg', value: form.businessReg || form.buyerReg },
               form.supplyCategories.length && { label: 'Products', value: form.supplyCategories.join(', ') },
               form.tradingAreas   && { label: 'Trading Areas', value: form.tradingAreas },
               { label: 'ID Document',         value: form.idDocument ? form.idDocument.name : 'Not attached' },
@@ -624,7 +624,7 @@ const AuthPortal = ({ onLogin }) => {
             </div>
             <h2 className="text-xl md:text-3xl font-black leading-tight mb-2 md:mb-4">Zimbabwe's Livestock Intelligence Platform</h2>
             <p className="hidden md:block text-green-200 text-sm font-medium leading-relaxed opacity-80">
-              Connecting farmers, veterinarians, suppliers, and retailers into one verified digital ecosystem.
+              Connecting farmers, veterinarians, suppliers, and buyers into one verified digital ecosystem.
             </p>
           </div>
 

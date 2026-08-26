@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
   phone         VARCHAR(20)  NOT NULL,
   national_id_number VARCHAR(20),   -- Zimbabwe national ID, e.g. 63-1234567A00 (format-checked, see backend/app.py)
   email         VARCHAR(120),
-  role          ENUM('Farmer','Veterinarian','Supplier','Retailer','Police','Admin') NOT NULL,
+  role          ENUM('Farmer','Veterinarian','Supplier','Buyer','Police','Admin') NOT NULL,
   org_name      VARCHAR(120),          -- farm/business/practice name
   province      VARCHAR(60),
   district      VARCHAR(60),
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS users (
   -- Vet-specific
   license_number VARCHAR(60),
   speciality     VARCHAR(100),
-  -- Supplier/Retailer
+  -- Supplier/Buyer
   business_reg   VARCHAR(60),
   supply_categories VARCHAR(200),      -- comma-separated
   trading_areas  VARCHAR(200),
@@ -49,9 +49,15 @@ CREATE TABLE IF NOT EXISTS users (
   FOREIGN KEY (verified_by)  REFERENCES users(id) ON DELETE SET NULL,
   FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE SET NULL
 );
--- Upgrades an existing database that predates the Admin role. MODIFY is
--- idempotent (safe to re-run) unlike ADD COLUMN, so no IF NOT EXISTS needed.
-ALTER TABLE users MODIFY COLUMN role ENUM('Farmer','Veterinarian','Supplier','Retailer','Police','Admin') NOT NULL;
+-- Upgrades an existing database that predates the Admin role, and/or still
+-- has the old 'Retailer' role name instead of 'Buyer'. MODIFY is idempotent
+-- (safe to re-run) unlike ADD COLUMN, so no IF NOT EXISTS needed — but if any
+-- row still holds 'Retailer' this alone isn't enough (MySQL blanks values
+-- outside the new ENUM list rather than erroring); backend/app.py's
+-- ensure_schema() runs the real widen → UPDATE → narrow migration for that
+-- automatically on every startup, so a fresh manual run of just this file is
+-- the only place this simple form is safe.
+ALTER TABLE users MODIFY COLUMN role ENUM('Farmer','Veterinarian','Supplier','Buyer','Police','Admin') NOT NULL;
 
 -- ── ANIMALS ──────────────────────────────────────────────────
 -- Arnold's web app animal registry, available via API.
@@ -642,9 +648,9 @@ VALUES (2, 'Dr T. Moyo', '0772000002', '63-1000002B12', 'tmoyo@dvs.gov.zw', 'Vet
 INSERT IGNORE INTO users (id, full_name, phone, national_id_number, role, org_name, province, business_reg, supply_categories, password_hash, verification_status, verified_by)
 VALUES (3, 'Chido Ncube', '0773000003', '63-1000003C08', 'Supplier', 'AgroChem Zimbabwe', 'Harare', 'BP-12345/2024', 'Vaccines,Antibiotics,Antiparasitcs', '$2b$12$ehzt67O363Q.ihnPFIXf5uNgjqwdMcLgcCoYe7RaGV7lCl1uVblHG', 'verified', 5);
 
--- Demo user: Retailer
+-- Demo user: Buyer
 INSERT IGNORE INTO users (id, full_name, phone, national_id_number, role, org_name, province, business_reg, trading_areas, password_hash, verification_status, verified_by)
-VALUES (4, 'ZimAgro Enterprise', '0774000004', '63-1000004D19', 'Retailer', 'ZimAgro Ltd', 'Harare', 'BP-67890/2023', 'Mashonaland West,Midlands,Harare', '$2b$12$ehzt67O363Q.ihnPFIXf5uNgjqwdMcLgcCoYe7RaGV7lCl1uVblHG', 'verified', 5);
+VALUES (4, 'ZimAgro Enterprise', '0774000004', '63-1000004D19', 'Buyer', 'ZimAgro Ltd', 'Harare', 'BP-67890/2023', 'Mashonaland West,Midlands,Harare', '$2b$12$ehzt67O363Q.ihnPFIXf5uNgjqwdMcLgcCoYe7RaGV7lCl1uVblHG', 'verified', 5);
 
 -- Demo animals (owned by Arnold)
 INSERT IGNORE INTO animals (id, owner_id, name, species, breed, birth_date, tag_id, brand_id, birth_weight, current_weight, for_sale)
@@ -687,8 +693,8 @@ VALUES
   (202, 1, 'Soya Bean Meal', 'feed',    0.65, 'kg', 500,  'Harare',    'High quality soya meal', 'available'),
   (203, 1, 'Maize Grain',    'feed',    0.35, 'kg', 1000, 'Bulawayo',  'Fresh maize grain',      'available');
 
--- Past sold livestock (Arnold selling, ZimAgro Retailer buying) so the
--- Retailer Dashboard's real "Recent Bids" and "Price Trend" have something
+-- Past sold livestock (Arnold selling, ZimAgro Buyer buying) so the
+-- Buyer Dashboard's real "Recent Bids" and "Price Trend" have something
 -- to show out of the box instead of being empty for a first-run demo.
 INSERT IGNORE INTO animals (id, owner_id, name, species, breed, birth_date, tag_id, brand_id, birth_weight, current_weight, for_sale)
 VALUES

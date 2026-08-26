@@ -224,7 +224,7 @@ html = f"""<!doctype html>
         <li><span><b>Farmers</b> — track your herd's health and sell with confidence.</span></li>
         <li><span><b>Vets</b> — reach the farmers who need you and issue certificates.</span></li>
         <li><span><b>Suppliers</b> — deliver medicine and feed where it's needed.</span></li>
-        <li><span><b>Retailers</b> — buy livestock knowing the paperwork is real.</span></li>
+        <li><span><b>Buyers</b> — buy livestock knowing the paperwork is real.</span></li>
         <li><span><b>Police</b> — verify ownership and stop stolen cattle from being sold.</span></li>
       </ul>
       <div class="stat-row">

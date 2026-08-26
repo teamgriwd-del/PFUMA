@@ -56,7 +56,7 @@ const ROLE_TABS = {
     { name: 'Vet',       icon: MessageSquare, label: 'Messages',screen: VetMessengerScreen },
     { name: 'Profile',   icon: User,          label: 'More',    screen: ProfileScreen },
   ],
-  Retailer: [
+  Buyer: [
     { name: 'Dashboard', icon: Store,         label: 'Home',    screen: DashboardScreen },
     { name: 'Market',    icon: ShoppingCart,  label: 'Market',  screen: MarketplaceScreen },
     { name: 'Feed',      icon: Wheat,         label: 'Feed',    screen: FeedAnalyzerScreen },
@@ -79,7 +79,7 @@ const ROLE_TABS = {
 
 const ROLE_COLORS = {
   Farmer: COLORS.primary, Veterinarian: '#1565c0',
-  Supplier: '#e65100',    Retailer: '#6a1b9a',
+  Supplier: '#e65100',    Buyer: '#6a1b9a',
   Police: '#c62828',
 };
 

@@ -20,7 +20,7 @@ const detectSpecies = (t) => Object.entries(SPECIES_ALIASES).find(([, words]) =>
 
 const ROLE_ALIASES = {
   Farmer: ['farmer'], Veterinarian: ['vet', 'veterinarian'], Supplier: ['supplier'],
-  Retailer: ['retailer'], Police: ['police', 'officer'],
+  Buyer: ['buyer'], Police: ['police', 'officer'],
 };
 const detectRole = (t) => Object.entries(ROLE_ALIASES).find(([, words]) => words.some(w => hasWord(t, w)))?.[0] || null;
 
@@ -123,14 +123,14 @@ const Jinda = ({ setActiveTab, animals, currentUser }) => {
             + "• Vapfuwi vanonyoresa mhuka dzavo, vachitevedzera hutano nemajekiso, uye vachiisa mhuka pakutengeswa\n"
             + "• VaVet vanosimbisa hutano hwemhuka uye vanotonga zvirwere zvinopararira\n"
             + "• Vatengesi (Suppliers) vanotengesa majekiso, mishonga nezvokudya kuvapfuwi vakanyoreswa\n"
-            + "• Vatengi vemakitini (Retailers) vanoongorora mhuka dzakasimbiswa uye vanotenga vaine chivimbo\n"
+            + "• Vatengi vemakitini (Buyers) vanoongorora mhuka dzakasimbiswa uye vanotenga vaine chivimbo\n"
             + "• Mapurisa anosimbisa uumwe hwemhuka uye anobvumira kutengeswa kwega kwega kusati kwaitika\n\n"
             + "Mhuka imwe neimwe inowana pasipoti yedhijitari — nhamba yenzeve, mhando, nhoroondo yemajekiso — kuitira kuti kutengesa kuvimbike kubva kupurazi kusvika kumusika. Ndibvunzei nezvemhuka dzenyu, mitemo, kana kuti chinhu chiri papi mune application."
           : "PFUMA is Zimbabwe's Livestock Intelligence Platform — a digital identity and health record for every animal, built to connect the whole trade chain in one trusted place:\n"
             + "• Farmers register their herd, track health & vaccines, and list animals for sale\n"
             + "• Veterinarians certify animal health and manage disease outbreaks\n"
             + "• Suppliers sell vaccines, medicine and feed to registered farms\n"
-            + "• Retailers browse certified listings and buy with confidence\n"
+            + "• Buyers browse certified listings and buy with confidence\n"
             + "• Police verify ownership and clear every sale before it can go through\n\n"
             + "Every animal gets a digital passport — ear tag, breed, vaccination history — so a sale can be trusted from farm to market. Ask me about your own herd, compliance rules, or where to find something in the app.",
         type: 'info'
@@ -140,7 +140,7 @@ const Jinda = ({ setActiveTab, animals, currentUser }) => {
     // 3. Data-privacy guard — never discuss another user's animals, contacts, or
     // financial data, regardless of who's asking. Only the current user's own
     // herd/cases, or public marketplace listings, are fair game.
-    const asksAboutOthers = /(other|another|someone else'?s|everyone'?s|all (farmers|users|vets|retailers|suppliers)'?)\s*(farmer|user|vet|retailer|supplier|animal|herd|contact|phone|account|data|record)/i.test(lowerText)
+    const asksAboutOthers = /(other|another|someone else'?s|everyone'?s|all (farmers|users|vets|buyers|suppliers)'?)\s*(farmer|user|vet|buyer|supplier|animal|herd|contact|phone|account|data|record)/i.test(lowerText)
       || /\bwhose\b.*(animal|herd|account)/i.test(lowerText);
     if (asksAboutOthers) {
       return {
@@ -201,7 +201,7 @@ const Jinda = ({ setActiveTab, animals, currentUser }) => {
           type: 'info'
         };
       }
-      return { text: "Every role needs a National ID plus role-specific documents (land proof for Farmers, a CVSZ number for Vets, business registration for Suppliers/Retailers). Police accounts aren't self-service — tell me which role you mean and I'll give the full list.", type: 'help' };
+      return { text: "Every role needs a National ID plus role-specific documents (land proof for Farmers, a CVSZ number for Vets, business registration for Suppliers/Buyers). Police accounts aren't self-service — tell me which role you mean and I'll give the full list.", type: 'help' };
     }
 
     // 7. Disease/diagnosis lookup by species — points to the Diagnostics tab

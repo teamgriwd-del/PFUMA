@@ -41,10 +41,10 @@ const ROLE_GRADIENT = {
   Farmer:       [COLORS.primary, COLORS.medium],
   Veterinarian: ['#0f172a', '#334155'],
   Supplier:     [COLORS.gold, '#f59e0b'],
-  Retailer:     [COLORS.purple, '#a78bfa'],
+  Buyer:     [COLORS.purple, '#a78bfa'],
 };
 const ROLE_ACCENT = {
-  Farmer: '#fbc02d', Veterinarian: '#86efac', Supplier: '#fef9c3', Retailer: '#ede9fe',
+  Farmer: '#fbc02d', Veterinarian: '#86efac', Supplier: '#fef9c3', Buyer: '#ede9fe',
 };
 
 // ── Shared UI primitives ────────────────────────────────────────────────────
@@ -136,7 +136,7 @@ const StakeholderMap = () => (
     {[
       { icon: Sprout,      role: 'Farmer',       color: COLORS.light,  text: COLORS.primary, desc: 'Registers animals, tracks health, orders medicines, lists livestock for sale.' },
       { icon: Pill,        role: 'Supplier',      color: COLORS.goldBg, text: '#92400e',      desc: 'Distributes vaccines, medicines, and feed to farmers.' },
-      { icon: Store,       role: 'Retailer',      color: COLORS.purpleBg, text: COLORS.purple, desc: 'Browses certified livestock, places bids, receives DVS certificates.' },
+      { icon: Store,       role: 'Buyer',      color: COLORS.purpleBg, text: COLORS.purple, desc: 'Browses certified livestock, places bids, receives DVS certificates.' },
       { icon: Stethoscope, role: 'Veterinarian',  color: '#e3f2fd', text: '#0d47a1', desc: 'Certifies animal health, issues movement permits, manages outbreaks.' },
     ].map(r => (
       <View key={r.role} style={[s.smRow, { backgroundColor: r.color }]}>
@@ -154,9 +154,9 @@ const StakeholderMap = () => (
       {[
         { fromIcon: Sprout,      from: 'Farmer',   toIcon: Pill,        to: 'Supplier', desc: 'orders medicines & vaccines' },
         { fromIcon: Sprout,      from: 'Farmer',   toIcon: Stethoscope, to: 'Vet',      desc: 'requests health checks & movement certs' },
-        { fromIcon: Sprout,      from: 'Farmer',   toIcon: Store,       to: 'Retailer', desc: 'lists animals for sale' },
-        { fromIcon: Store,       from: 'Retailer', toIcon: Sprout,      to: 'Farmer',   desc: 'places a bid / makes an offer' },
-        { fromIcon: Stethoscope, from: 'Vet',      toIcon: Store,       to: 'Retailer', desc: 'issues DVS movement certificate' },
+        { fromIcon: Sprout,      from: 'Farmer',   toIcon: Store,       to: 'Buyer', desc: 'lists animals for sale' },
+        { fromIcon: Store,       from: 'Buyer', toIcon: Sprout,      to: 'Farmer',   desc: 'places a bid / makes an offer' },
+        { fromIcon: Stethoscope, from: 'Vet',      toIcon: Store,       to: 'Buyer', desc: 'issues DVS movement certificate' },
       ].map((f, i) => (
         <View key={i} style={s.smFlowRow}>
           <f.fromIcon size={12} color="#374151" />
@@ -275,7 +275,7 @@ function FarmerDashboard({ currentUser, navigation }) {
         <Text style={{ fontSize: 10, fontWeight: '800', color: COLORS.primary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Your Role on PFUMA</Text>
         <Text style={{ fontSize: 14, fontWeight: '900', color: '#1a1a1a', marginBottom: 6 }}>You are the heart of the herd</Text>
         <Text style={{ fontSize: 12, color: '#666', lineHeight: 18, marginBottom: 10 }}>
-          Register your animals, track their health, and reorder medicine before stocks run low. When ready, list animals on the Marketplace — a DVS vet certifies them so retailers across Zimbabwe can bid with confidence.
+          Register your animals, track their health, and reorder medicine before stocks run low. When ready, list animals on the Marketplace — a DVS vet certifies them so buyers across Zimbabwe can bid with confidence.
         </Text>
         <View style={s.flowRow}>
           <Sprout size={16} color={COLORS.primary} />
@@ -285,7 +285,7 @@ function FarmerDashboard({ currentUser, navigation }) {
           <Text style={s.flowText}>Vet certifies health</Text>
           <ArrowRight size={12} color={COLORS.primary} />
           <Store size={16} color={COLORS.primary} />
-          <Text style={s.flowText}>Retailer buys</Text>
+          <Text style={s.flowText}>Buyer buys</Text>
         </View>
       </View>
 
@@ -356,7 +356,7 @@ function FarmerDashboard({ currentUser, navigation }) {
       <SectionLabel icon={Tag}>SELL YOUR ANIMALS</SectionLabel>
       <View style={s.panel}>
         <Text style={s.panelDesc}>
-          Toggle any animal to list it on the PFUMA Marketplace. Retailers and livestock buyers will immediately see it.
+          Toggle any animal to list it on the PFUMA Marketplace. Buyers and livestock buyers will immediately see it.
         </Text>
         {localAnimals.length === 0 ? (
           <View style={s.emptyInner}>
@@ -371,7 +371,7 @@ function FarmerDashboard({ currentUser, navigation }) {
               {a.forSale && (
                 <View style={s.animalListedRow}>
                   <Check size={11} color="#92400e" />
-                  <Text style={s.animalListed}>Visible to retailers now</Text>
+                  <Text style={s.animalListed}>Visible to buyers now</Text>
                 </View>
               )}
             </View>
@@ -751,8 +751,8 @@ function SupplierDashboard({ currentUser, navigation }) {
   );
 }
 
-// ── RETAILER DASHBOARD ──────────────────────────────────────────────────────
-function RetailerDashboard({ currentUser, navigation }) {
+// ── BUYER DASHBOARD ──────────────────────────────────────────────────────
+function BuyerDashboard({ currentUser, navigation }) {
   const [listings, setListings]     = useState([]);
   const [priceTrend, setPriceTrend] = useState([]);
   const [myBids, setMyBids]         = useState([]);
@@ -782,7 +782,7 @@ function RetailerDashboard({ currentUser, navigation }) {
     <ScrollView style={s.bg} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
 
       {/* Banner */}
-      <GradientBanner colors={ROLE_GRADIENT.Retailer}>
+      <GradientBanner colors={ROLE_GRADIENT.Buyer}>
         <View style={s.bannerTopRow}>
           <View style={s.bannerIconBadge}>
             <Store size={22} color="#fff" />
@@ -792,7 +792,7 @@ function RetailerDashboard({ currentUser, navigation }) {
             <Text style={s.bannerAlertText}>Bullish</Text>
           </View>
         </View>
-        <Text style={s.bannerEyebrow}>{greet()}, Retailer</Text>
+        <Text style={s.bannerEyebrow}>{greet()}, Buyer</Text>
         <Text style={s.bannerTitle}>Livestock Marketplace</Text>
         <Text style={[s.bannerSub, { color: '#ede9fe' }]}>
           {listings.length} active listing{listings.length !== 1 ? 's' : ''} · Market sentiment: Bullish
@@ -961,7 +961,7 @@ export default function DashboardScreen({ currentUser, onLogout, navigation }) {
       {role === 'Farmer'       && <FarmerDashboard       currentUser={currentUser} navigation={navigation} />}
       {role === 'Veterinarian' && <VeterinarianDashboard  currentUser={currentUser} navigation={navigation} />}
       {role === 'Supplier'     && <SupplierDashboard      currentUser={currentUser} navigation={navigation} />}
-      {role === 'Retailer'     && <RetailerDashboard      currentUser={currentUser} navigation={navigation} />}
+      {role === 'Buyer'     && <BuyerDashboard      currentUser={currentUser} navigation={navigation} />}
       {(role === 'Admin' || role === 'Police') && (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
           <ShieldCheck size={40} color={COLORS.muted} />
@@ -1119,7 +1119,7 @@ const s = StyleSheet.create({
   smFlowName:      { fontSize: 11, fontWeight: '900', color: '#374151' },
   smFlowDesc:      { fontSize: 11, color: '#6b7280', fontWeight: '500' },
 
-  // Inline flow rows (Supplier/Retailer "how it works")
+  // Inline flow rows (Supplier/Buyer "how it works")
   flowRow:         { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
   flowText:        { fontSize: 12, color: '#888', fontWeight: '500' },
 

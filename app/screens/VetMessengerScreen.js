@@ -17,11 +17,11 @@ const ROLE_META = {
   Vet:      { icon: Stethoscope, color: COLORS.primary, label: 'Vets' },
   Supplier: { icon: Pill,        color: COLORS.gold,    label: 'Suppliers' },
   Farmer:   { icon: Sprout,      color: '#16a34a',       label: 'Farmers' },
-  Retailer: { icon: Store,       color: COLORS.purple,  label: 'Retailers' },
+  Buyer: { icon: Store,       color: COLORS.purple,  label: 'Buyers' },
 };
 
 // Backend role string → the local grouping key used above.
-const TYPE_BY_ROLE = { Veterinarian: 'Vet', Supplier: 'Supplier', Farmer: 'Farmer', Retailer: 'Retailer' };
+const TYPE_BY_ROLE = { Veterinarian: 'Vet', Supplier: 'Supplier', Farmer: 'Farmer', Buyer: 'Buyer' };
 
 // Maps a /users directory row (redacted per-viewer by the backend) into the
 // contact card shape this screen renders.
@@ -42,7 +42,7 @@ const FILTERS = [
   { key: 'Vet',      label: 'Vets',      icon: Stethoscope },
   { key: 'Supplier', label: 'Suppliers', icon: Pill },
   { key: 'Farmer',   label: 'Farmers',   icon: Sprout },
-  { key: 'Retailer', label: 'Retailers', icon: Store },
+  { key: 'Buyer', label: 'Buyers', icon: Store },
 ];
 
 const CATEGORIES = ['Emergency', 'Vaccination', 'Trade Certification', 'General'];
@@ -233,7 +233,7 @@ export default function VetMessengerScreen({ currentUser, route }) {
         <View style={s.header}>
           <Text style={s.headerSub}>PFUMA</Text>
           <Text style={s.headerTitle}>PFUMA Messenger</Text>
-          <Text style={s.headerDesc}>Chat with vets, suppliers, farmers & retailers across Zimbabwe</Text>
+          <Text style={s.headerDesc}>Chat with vets, suppliers, farmers & buyers across Zimbabwe</Text>
         </View>
 
         {/* Role filter chips */}
@@ -301,7 +301,7 @@ export default function VetMessengerScreen({ currentUser, route }) {
               <Text style={s.infoTitle}>How PFUMA Messenger Works</Text>
             </View>
             {[
-              { icon: ClipboardList, text: 'Pick anyone on the platform — a vet, supplier, fellow farmer, or retailer' },
+              { icon: ClipboardList, text: 'Pick anyone on the platform — a vet, supplier, fellow farmer, or buyer' },
               { icon: MessageSquare, text: 'Send a message describing your animal, order, or listing' },
               { icon: FileText,      text: 'Vets can issue official certificates directly in the chat' },
               { icon: CheckCircle,   text: 'DVS-certified documents are valid for all livestock trade' },

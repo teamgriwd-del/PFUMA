@@ -17,7 +17,7 @@ const ROLES = [
   { name: 'Farmer',       icon: Sprout,      color: COLORS.primary, desc: 'Register animals, track health, list for sale' },
   { name: 'Veterinarian', icon: Stethoscope, color: '#1565c0',      desc: 'Certify animals, manage outbreaks, consult farmers' },
   { name: 'Supplier',     icon: Pill,        color: '#e65100',      desc: 'Supply medicines and feed to farmers' },
-  { name: 'Retailer',     icon: Store,       color: '#6a1b9a',      desc: 'Browse verified livestock and place bids' },
+  { name: 'Buyer',     icon: Store,       color: '#6a1b9a',      desc: 'Browse verified livestock and place bids' },
   { name: 'Police',       icon: Shield,      color: '#c62828',      desc: 'Verify papers and clear livestock sales' },
 ];
 

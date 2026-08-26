@@ -22,8 +22,8 @@ const MenuItem = ({ icon: Icon, label, desc, color, onPress }) => (
   </TouchableOpacity>
 );
 
-const ROLE_ICON  = { Farmer: Sprout, Veterinarian: Stethoscope, Supplier: Pill, Retailer: Store };
-const ROLE_COLOR = { Farmer: COLORS.primary, Veterinarian: '#1e293b', Supplier: '#ea580c', Retailer: '#6d28d9' };
+const ROLE_ICON  = { Farmer: Sprout, Veterinarian: Stethoscope, Supplier: Pill, Buyer: Store };
+const ROLE_COLOR = { Farmer: COLORS.primary, Veterinarian: '#1e293b', Supplier: '#ea580c', Buyer: '#6d28d9' };
 
 export default function ProfileScreen({ navigation, currentUser, onLogout, onUserUpdate }) {
   const role      = currentUser?.role || 'Farmer';
@@ -142,7 +142,7 @@ export default function ProfileScreen({ navigation, currentUser, onLogout, onUse
           <Text style={styles.aboutTagline}>Zimbabwe's Livestock Intelligence Platform</Text>
           <Text style={styles.aboutDesc}>Built by Arnold Mapindu &amp; Addy · 2026{'\n'}React Native (Expo) · Flask API · MySQL</Text>
           <View style={styles.stakeholderRow}>
-            {['Farmer', 'Vet', 'Supplier', 'Retailer'].map(s => (
+            {['Farmer', 'Vet', 'Supplier', 'Buyer'].map(s => (
               <View key={s} style={styles.stakeholderChip}><Text style={styles.stakeholderText}>{s}</Text></View>
             ))}
           </View>

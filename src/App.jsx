@@ -50,7 +50,7 @@ const StakeholderMap = () => (
       {[
         { icon: Sprout,      role: 'Farmer',      color: 'bg-green-50 border-green-200',   text: 'text-green-800',  desc: 'Registers animals, tracks health, orders medicines, and lists livestock for sale.' },
         { icon: Pill,        role: 'Supplier',     color: 'bg-orange-50 border-orange-200', text: 'text-orange-800', desc: 'Distributes vaccines, medicines, and feed to farmers. Receives orders through PFUMA.' },
-        { icon: Store,       role: 'Retailer',     color: 'bg-purple-50 border-purple-200', text: 'text-purple-800', desc: 'Browses certified livestock listed by farmers, places bids, and receives DVS trade certificates.' },
+        { icon: Store,       role: 'Buyer',     color: 'bg-purple-50 border-purple-200', text: 'text-purple-800', desc: 'Browses certified livestock listed by farmers, places bids, and receives DVS trade certificates.' },
         { icon: Stethoscope, role: 'Veterinarian', color: 'bg-blue-50 border-blue-200',     text: 'text-blue-800',   desc: 'Certifies animal health, issues movement permits, and manages regional disease outbreaks.' },
       ].map(r => (
         <div key={r.role} className={`${r.color} border rounded-xl p-3`}>
@@ -66,9 +66,9 @@ const StakeholderMap = () => (
       {[
         { fromIcon: Sprout,      from: 'Farmer',   toIcon: Pill,        to: 'Supplier', desc: 'orders medicines & vaccines' },
         { fromIcon: Sprout,      from: 'Farmer',   toIcon: Stethoscope, to: 'Vet',      desc: 'requests health checks & movement certificates' },
-        { fromIcon: Sprout,      from: 'Farmer',   toIcon: Store,       to: 'Retailer', desc: 'lists animals for sale on the marketplace' },
-        { fromIcon: Store,       from: 'Retailer', toIcon: Sprout,      to: 'Farmer',   desc: 'places a bid / makes an offer to buy' },
-        { fromIcon: Stethoscope, from: 'Vet',      toIcon: Store,       to: 'Retailer', desc: 'issues official DVS movement certificate for the sale' },
+        { fromIcon: Sprout,      from: 'Farmer',   toIcon: Store,       to: 'Buyer', desc: 'lists animals for sale on the marketplace' },
+        { fromIcon: Store,       from: 'Buyer', toIcon: Sprout,      to: 'Farmer',   desc: 'places a bid / makes an offer to buy' },
+        { fromIcon: Stethoscope, from: 'Vet',      toIcon: Store,       to: 'Buyer', desc: 'issues official DVS movement certificate for the sale' },
       ].map((f, i) => (
         <div key={i} className="flex items-center gap-1.5 text-[10px] font-medium text-gray-600 flex-wrap">
           <f.fromIcon size={12} className="text-gray-700 shrink-0" />
@@ -220,7 +220,7 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
         <p className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1.5">Your Role on PFUMA</p>
         <h3 className="text-sm font-black text-gray-900 mb-2">You are the heart of the herd</h3>
         <p className="text-[11px] text-gray-500 font-medium leading-relaxed mb-4">
-          Register your animals, track their health, and reorder medicine before stocks run low. When ready, list animals on the Marketplace — a DVS vet certifies them so retailers across Zimbabwe can bid with confidence.
+          Register your animals, track their health, and reorder medicine before stocks run low. When ready, list animals on the Marketplace — a DVS vet certifies them so buyers across Zimbabwe can bid with confidence.
         </p>
         <div className="flex items-center gap-2 flex-wrap bg-green-50 rounded-xl px-3 py-2.5 text-[11px] font-bold text-pfuma-green">
           <Sprout size={15} />
@@ -230,7 +230,7 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
           <span>Vet certifies health</span>
           <ArrowRight size={12} className="text-pfuma-green/50" />
           <Store size={15} />
-          <span>Retailer buys</span>
+          <span>Buyer buys</span>
         </div>
       </div>
 
@@ -304,7 +304,7 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
               <h3 className="text-sm font-black text-gray-800">Sell Your Animals</h3>
             </div>
             <p className="text-[11px] text-gray-400 font-medium mb-4 leading-snug">
-              List any animal below on the PFUMA Marketplace. Every livestock listing waits for Police sale-clearance before retailers can see it or bid — a sold animal can never be listed again.
+              List any animal below on the PFUMA Marketplace. Every livestock listing waits for Police sale-clearance before buyers can see it or bid — a sold animal can never be listed again.
             </p>
 
             {animals.length === 0 ? (
@@ -376,7 +376,7 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
               <div className="mt-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
                 <p className="text-[10px] font-black text-purple-700 uppercase mb-1">What happens next</p>
                 <div className="space-y-1">
-                  {['Police review and clear the sale (papers, brand, movement permit)', 'Once cleared, retailers browse your listing on the Marketplace', 'A retailer places a bid — you receive it via PFUMA Messenger', 'Vet issues a DVS movement certificate for the sale'].map((s, i) => (
+                  {['Police review and clear the sale (papers, brand, movement permit)', 'Once cleared, buyers browse your listing on the Marketplace', 'A buyer places a bid — you receive it via PFUMA Messenger', 'Vet issues a DVS movement certificate for the sale'].map((s, i) => (
                     <div key={i} className="flex items-start gap-2 text-[10px] text-purple-600 font-medium">
                       <span className="w-4 h-4 bg-purple-200 text-purple-700 rounded-full flex items-center justify-center text-[8px] font-black shrink-0 mt-0.5">{i + 1}</span>
                       {s}
@@ -1059,8 +1059,8 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser }) => {
   );
 };
 
-// ── RETAILER DASHBOARD ─────────────────────────────────────────────────────
-const RetailerDashboard = ({ setActiveTab, currentUser }) => {
+// ── BUYER DASHBOARD ─────────────────────────────────────────────────────
+const BuyerDashboard = ({ setActiveTab, currentUser }) => {
   const [listings,   setListings]   = useState([]);
   const [priceTrend, setPriceTrend] = useState([]);
   const [myBids,     setMyBids]     = useState([]);
@@ -1098,7 +1098,7 @@ const RetailerDashboard = ({ setActiveTab, currentUser }) => {
         <div className="bg-pfuma-plum rounded-3xl p-6 relative overflow-hidden">
           <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 80% 50%, #fff 0%, transparent 60%)' }} aria-hidden="true" />
           <div className="relative z-10">
-            <p className="text-purple-300 text-xs font-black uppercase tracking-[3px] mb-1">{greet()}, Retailer</p>
+            <p className="text-purple-300 text-xs font-black uppercase tracking-[3px] mb-1">{greet()}, Buyer</p>
             <h2 className="text-xl font-black text-white leading-tight">Livestock Marketplace</h2>
             <p className="text-purple-200/80 text-sm font-medium mt-1">
               {listings.length} active listing{listings.length !== 1 ? 's' : ''} · Market sentiment: Bullish
@@ -1303,7 +1303,7 @@ const RetailerDashboard = ({ setActiveTab, currentUser }) => {
 // ── POLICE DASHBOARD ───────────────────────────────────────────────────────
 const DEMO_PENDING_VERIFICATIONS = [
   { id: 201, full_name: 'Tendai Chiweshe', role: 'Farmer',   org_name: 'Chiweshe Homestead',  province: 'Mashonaland Central', created_at: '2026-07-14' },
-  { id: 202, full_name: 'Blessing Moyo',   role: 'Retailer', org_name: 'Moyo Livestock Traders', province: 'Midlands',         created_at: '2026-07-15' },
+  { id: 202, full_name: 'Blessing Moyo',   role: 'Buyer', org_name: 'Moyo Livestock Traders', province: 'Midlands',         created_at: '2026-07-15' },
 ];
 const DEMO_PENDING_CLEARANCES = [
   { id: 301, animal_name: 'Zodwa', species: 'Cattle', seller_name: 'Tendai Chiweshe', product_name: 'Zodwa — Mashona Cow', created_at: '2026-07-15' },
@@ -1570,7 +1570,7 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
         <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
           <div className="flex justify-between items-start mb-2"><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Pending Signups</p><ShieldCheck size={16} className="text-yellow-400" /></div>
           <p className="text-3xl font-black text-white">{verifications.length}</p>
-          <p className="text-[11px] text-gray-500 font-medium mt-1">Farmer / Retailer / Supplier applications awaiting review</p>
+          <p className="text-[11px] text-gray-500 font-medium mt-1">Farmer / Buyer / Supplier applications awaiting review</p>
         </div>
         <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
           <div className="flex justify-between items-start mb-2"><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Pending Clearances</p><Tag size={16} className="text-orange-400" /></div>
@@ -1739,7 +1739,7 @@ const NAV_SECTIONS = {
       section: 'Trade & Market',
       items: [
         { tab: 'marketplace', icon: Store,           label: 'Marketplace',   desc: 'Buy & sell livestock, feed, produce' },
-        { tab: 'vet',         icon: MessageSquare,   label: 'Messenger',     desc: 'Vets, suppliers, farmers & retailers' },
+        { tab: 'vet',         icon: MessageSquare,   label: 'Messenger',     desc: 'Vets, suppliers, farmers & buyers' },
       ]
     },
     {
@@ -1769,7 +1769,7 @@ const NAV_SECTIONS = {
       section: 'Authority',
       items: [
         { tab: 'compliance',  icon: ShieldAlert,     label: 'Follow-Ups',    desc: 'Overdue vaccinations in your province' },
-        { tab: 'vet',         icon: MessageSquare,   label: 'Messenger',     desc: 'Vets, suppliers, farmers & retailers' },
+        { tab: 'vet',         icon: MessageSquare,   label: 'Messenger',     desc: 'Vets, suppliers, farmers & buyers' },
         { tab: 'marketplace', icon: Store,           label: 'Marketplace',   desc: 'Monitor trade & listings' },
       ]
     },
@@ -1793,11 +1793,11 @@ const NAV_SECTIONS = {
         { tab: 'marketplace', icon: Store,           label: 'Marketplace',   desc: 'List medicines, feed & equipment' },
         { tab: 'feed',        icon: Wheat,           label: 'Feed Database', desc: 'Nutritional specs for your products' },
         { tab: 'health',      icon: Package,         label: 'Supply Chain',  desc: 'Inventory & order management' },
-        { tab: 'vet',         icon: MessageSquare,   label: 'Messenger',     desc: 'Vets, suppliers, farmers & retailers' },
+        { tab: 'vet',         icon: MessageSquare,   label: 'Messenger',     desc: 'Vets, suppliers, farmers & buyers' },
       ]
     },
   ],
-  Retailer: [
+  Buyer: [
     {
       section: 'Overview',
       items: [
@@ -1815,7 +1815,7 @@ const NAV_SECTIONS = {
     {
       section: 'Connect',
       items: [
-        { tab: 'vet',         icon: MessageSquare,   label: 'Messenger',       desc: 'Vets, suppliers, farmers & retailers' },
+        { tab: 'vet',         icon: MessageSquare,   label: 'Messenger',       desc: 'Vets, suppliers, farmers & buyers' },
       ]
     },
   ],
@@ -1830,7 +1830,7 @@ const NAV_SECTIONS = {
       section: 'Oversight',
       items: [
         { tab: 'marketplace', icon: Store,           label: 'Marketplace',   desc: 'Monitor livestock trade activity' },
-        { tab: 'vet',         icon: MessageSquare,   label: 'Messenger',     desc: 'Vets, suppliers, farmers & retailers' },
+        { tab: 'vet',         icon: MessageSquare,   label: 'Messenger',     desc: 'Vets, suppliers, farmers & buyers' },
       ]
     },
     {
@@ -1846,14 +1846,14 @@ const ROLE_ACCENT = {
   Farmer:      'bg-pfuma-green',
   Veterinarian:'bg-pfuma-slate',
   Supplier:    'bg-pfuma-gold',
-  Retailer:    'bg-pfuma-plum',
+  Buyer:    'bg-pfuma-plum',
   Police:      'bg-red-800',
 };
 const ROLE_ACTIVE_BG = {
   Farmer:      'bg-white/10',
   Veterinarian:'bg-white/10',
   Supplier:    'bg-white/15',
-  Retailer:    'bg-white/10',
+  Buyer:    'bg-white/10',
   Police:      'bg-white/10',
 };
 
@@ -2181,7 +2181,7 @@ function App() {
 
   if (!sessionChecked) return null;
   if (!currentUser) return <AuthPortal onLogin={handleLoginSuccess} />;
-  // Admin doesn't fit the client-facing Farmer/Vet/Supplier/Retailer/Police
+  // Admin doesn't fit the client-facing Farmer/Vet/Supplier/Buyer/Police
   // shell at all — a separate full-page dashboard, bypassing the normal
   // sidebar/nav entirely.
   if (currentUser.role === 'Admin') return <AdminDashboard currentUser={currentUser} onLogout={handleSignOut} />;
@@ -2394,7 +2394,7 @@ function App() {
               {role === 'Farmer'       && <FarmerDashboard      animals={animals} auditLog={auditLog} inventory={inventory} notifications={notifications} nearbyFarmers={nearbyFarmers} currentUser={currentUser} setActiveTab={setActiveTab} onListAnimal={handleListAnimal} />}
               {role === 'Veterinarian' && <VeterinarianDashboard animals={animals} notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} />}
               {role === 'Supplier'     && <SupplierDashboard     inventory={inventory} setActiveTab={setActiveTab} currentUser={currentUser} />}
-              {role === 'Retailer'     && <RetailerDashboard     setActiveTab={setActiveTab} currentUser={currentUser} />}
+              {role === 'Buyer'     && <BuyerDashboard     setActiveTab={setActiveTab} currentUser={currentUser} />}
               {role === 'Police'       && <PoliceDashboard       notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} />}
             </ErrorBoundary>
           )}

@@ -71,7 +71,7 @@ export const SIGNUP_REQUIREMENTS = {
     'Business registration — ZIMRA BP number and/or company/PBC registration.',
     'If dealing in veterinary medicines/vaccines/acaricides: a Medicines Control Authority of Zimbabwe (MCAZ) Veterinary Medicines General Dealers Permit (VMGD). Not required for a feed/equipment-only supplier.',
   ],
-  Retailer: [
+  Buyer: [
     'National ID of the responsible individual.',
     'Business registration — BP number, company registration, or Private Business Corporation (PBC) for small operators.',
     'Acknowledgement of Consumer Protection Act obligations (disclosure, pricing, no blanket "no refund" policies) before listing.',

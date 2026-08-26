@@ -28,7 +28,7 @@ const NLP_RULES = [
   { keywords: ['thief', 'stole', 'security', 'mbavha', 'where'],
     reply: 'PFUMA monitors movement 24/7. My sensors detect a "Theft Signature" — rapid movement outside the safe zone. You will be alerted instantly when this happens.' },
   { keywords: ['sell', 'list', 'market', 'trade', 'buyer'],
-    reply: 'To list an animal for sale: go to the Herd tab, tap an animal, and toggle "List for Sale". Retailers on the Marketplace will immediately see it and can place a bid.' },
+    reply: 'To list an animal for sale: go to the Herd tab, tap an animal, and toggle "List for Sale". Buyers on the Marketplace will immediately see it and can place a bid.' },
   { keywords: ['vaccine', 'vaccin', 'inject', 'shot', 'fmd', 'anthrax'],
     reply: 'Key vaccines for Zimbabwe livestock: FMD (annual), Anthrax (yearly in high-risk zones), Blackleg (6 months), Brucellosis (heifers only). Check your Herd screen for overdue alerts.' },
   { keywords: ['sick', 'ill', 'disease', 'symptom', 'blister', 'lame'],

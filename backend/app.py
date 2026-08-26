@@ -78,7 +78,7 @@ ADMIN_PROVISIONED_ROLES = {'Police'}
 # above — or the hidden Admin oversight role) is rejected with the same
 # generic message, so probing the API with an unexpected role value never
 # confirms whether that role even exists.
-ALLOWED_SELF_SIGNUP_ROLES = {'Farmer', 'Veterinarian', 'Supplier', 'Retailer'}
+ALLOWED_SELF_SIGNUP_ROLES = {'Farmer', 'Veterinarian', 'Supplier', 'Buyer'}
 
 # Stock photo used only when a Farmer skips the photo-upload step — mirrors
 # src/App.jsx's IMAGE_BY_SPECIES so web/mobile show the same fallback.
@@ -263,6 +263,27 @@ def ensure_schema():
     add_column_if_missing('conversation_messages', 'attachment_url', "attachment_url VARCHAR(300)")
     add_column_if_missing('conversation_messages', 'attachment_name', "attachment_name VARCHAR(150)")
 
+    # The 'Retailer' role was renamed to 'Buyer' — an ENUM value rename, not a
+    # new column, so add_column_if_missing above doesn't cover it. Changing a
+    # MySQL ENUM's allowed values directly would silently blank out any row
+    # still holding the old value (rows outside the new list become '', not
+    # an error), so this widens the ENUM to include both values first, moves
+    # every existing row over, then narrows it back down once none are left —
+    # safe to re-run: once 'Retailer' is gone from the column definition,
+    # this whole block is skipped on every later startup.
+    try:
+        c.execute("""
+            SELECT COLUMN_TYPE AS t FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'users' AND column_name = 'role'
+        """)
+        role_col = c.fetchone()
+        if role_col and 'Retailer' in role_col['t']:
+            c.execute("ALTER TABLE users MODIFY COLUMN role ENUM('Farmer','Veterinarian','Supplier','Retailer','Buyer','Police','Admin') NOT NULL")
+            c.execute("UPDATE users SET role='Buyer' WHERE role='Retailer'")
+            c.execute("ALTER TABLE users MODIFY COLUMN role ENUM('Farmer','Veterinarian','Supplier','Buyer','Police','Admin') NOT NULL")
+    except Exception as e:
+        print(f"[WARNING] could not migrate role 'Retailer' -> 'Buyer': {e}")
+
     db.commit()
     db.close()
 
@@ -365,7 +386,7 @@ def public_user_view(user, requester):
     }
     # Business-facing roles publish contact info as part of their function on the
     # platform; Farmers and Police do not (contact happens via listings/messenger).
-    if user['role'] in ('Veterinarian', 'Supplier', 'Retailer'):
+    if user['role'] in ('Veterinarian', 'Supplier', 'Buyer'):
         base['phone'] = user['phone']
         base['speciality'] = user.get('speciality')
         base['supply_categories'] = user.get('supply_categories')
@@ -2720,7 +2741,7 @@ def get_bids(listing_id):
 @app.route('/bids/mine', methods=['GET'])
 @require_auth
 def get_my_bids():
-    """Real recent-bids feed for the current user (e.g. the Retailer
+    """Real recent-bids feed for the current user (e.g. the Buyer
     Dashboard's "Recent Bids" panel) — bids they've personally placed,
     newest first."""
     db = get_db()

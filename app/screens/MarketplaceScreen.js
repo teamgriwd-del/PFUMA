@@ -454,7 +454,7 @@ export default function MarketplaceScreen({ currentUser }) {
           </TouchableOpacity>
         ) : null}
         <TouchableOpacity style={[styles.bidBtn, { backgroundColor: CAT_COLOR[item.category] || COLORS.primary }]} onPress={() => item.category !== 'livestock' && currentUser?.role === 'Farmer' ? openOrderModal(item) : openBidModal(item)} activeOpacity={0.8}>
-          <Text style={styles.bidBtnText}>{item.category !== 'livestock' && currentUser?.role === 'Farmer' ? 'Order →' : currentUser?.role === 'Retailer' ? 'Bid →' : 'Enquire →'}</Text>
+          <Text style={styles.bidBtnText}>{item.category !== 'livestock' && currentUser?.role === 'Farmer' ? 'Order →' : currentUser?.role === 'Buyer' ? 'Bid →' : 'Enquire →'}</Text>
         </TouchableOpacity>
       </View>
       {item.user_id === currentUser?.id && (
@@ -523,7 +523,7 @@ export default function MarketplaceScreen({ currentUser }) {
         <View style={styles.modalOverlay}>
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{currentUser?.role === 'Retailer' ? 'Place a Bid' : 'Enquire'}</Text>
+              <Text style={styles.modalTitle}>{currentUser?.role === 'Buyer' ? 'Place a Bid' : 'Enquire'}</Text>
               <TouchableOpacity onPress={() => setBidTarget(null)}><X size={20} color={COLORS.muted} /></TouchableOpacity>
             </View>
             <Text style={{ fontSize: 12, color: COLORS.muted, marginBottom: 14 }}>

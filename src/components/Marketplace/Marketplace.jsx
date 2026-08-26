@@ -139,7 +139,7 @@ const PostForm = ({ currentUser, onSubmit, onCancel, animals, initialAnimalId })
       <div className="flex justify-between items-center mb-5">
         <div>
           <h3 className="text-sm font-black text-gray-900">Post a Listing</h3>
-          <p className="text-[11px] text-gray-400 font-medium mt-0.5">Visible to all PFUMA users — farmers, retailers, and suppliers</p>
+          <p className="text-[11px] text-gray-400 font-medium mt-0.5">Visible to all PFUMA users — farmers, buyers, and suppliers</p>
         </div>
         <button onClick={onCancel} className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-700 transition">
           <X size={16} />
@@ -391,7 +391,7 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal, presetAnimalId, 
 
   const handleBid = async (listing) => {
     if (!currentUser) return;
-    const amount = window.prompt(`Enter your ${currentUser.role === 'Retailer' ? 'bid' : 'enquiry offer'} amount (USD) for "${listing.product_name}":`, listing.price);
+    const amount = window.prompt(`Enter your ${currentUser.role === 'Buyer' ? 'bid' : 'enquiry offer'} amount (USD) for "${listing.product_name}":`, listing.price);
     if (!amount || isNaN(Number(amount))) return;
     try {
       const res = await fetch(`${API}/listings/${listing.id}/bid`, {
@@ -646,7 +646,7 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal, presetAnimalId, 
                   ) : (
                     <button onClick={() => handleBid(listing)} className="flex items-center gap-1.5 px-4 py-2 bg-pfuma-green text-white rounded-xl text-[10px] font-black uppercase hover:bg-green-700 transition shadow-sm">
                       <ArrowRight size={12} />
-                      {currentUser?.role === 'Retailer' ? 'Bid' : 'Enquire'}
+                      {currentUser?.role === 'Buyer' ? 'Bid' : 'Enquire'}
                     </button>
                   )}
                 </div>

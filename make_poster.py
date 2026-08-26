@@ -253,7 +253,7 @@ html = f"""<!doctype html>
 
       <h2>Objective</h2>
       <p>Build and deploy a role-aware digital platform &mdash; Farmer, Veterinarian, Supplier,
-      Retailer, Police &mdash; that operationalizes Zimbabwe's actual legal framework for
+      Buyer, Police &mdash; that operationalizes Zimbabwe's actual legal framework for
       livestock trade (Stock Theft Prevention Act, Animal Health Act, Veterinary Surgeons Act,
       Consumer Protection Act) as working software, not an afterthought bolted onto a generic
       farm app.</p>

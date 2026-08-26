@@ -15,7 +15,7 @@ const ROLE_META = {
   Veterinarian: { icon: Stethoscope, color: 'bg-emerald-600', label: 'Vets' },
   Supplier:     { icon: Pill,        color: 'bg-amber-500',   label: 'Suppliers' },
   Farmer:       { icon: Sprout,      color: 'bg-green-600',   label: 'Farmers' },
-  Retailer:     { icon: Store,       color: 'bg-purple-700',  label: 'Retailers' },
+  Buyer:     { icon: Store,       color: 'bg-purple-700',  label: 'Buyers' },
   Police:       { icon: ShieldCheck, color: 'bg-red-700',     label: 'Police' },
 };
 
@@ -24,7 +24,7 @@ const FILTERS = [
   { key: 'Veterinarian', label: 'Vets' },
   { key: 'Supplier',     label: 'Suppliers' },
   { key: 'Farmer',       label: 'Farmers' },
-  { key: 'Retailer',     label: 'Retailers' },
+  { key: 'Buyer',     label: 'Buyers' },
 ];
 
 const sanitize = (str) => str.replace(/[<>]/g, '').trim().slice(0, 2000);
@@ -451,7 +451,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
               <Plus size={18} />
             </button>
           </div>
-          <p className="text-[11px] text-gray-400 font-medium mb-4">Any verified PFUMA member can message any other — vets, suppliers, farmers &amp; retailers.</p>
+          <p className="text-[11px] text-gray-400 font-medium mb-4">Any verified PFUMA member can message any other — vets, suppliers, farmers &amp; buyers.</p>
           {!apiOnline && (
             <div className="mb-3 flex items-center gap-2 bg-yellow-50 border border-yellow-200 px-3 py-2 rounded-xl text-[11px] font-bold text-yellow-700">
               Can't reach the PFUMA API — check the Flask backend is running.
@@ -828,7 +828,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
             </div>
             <h3 className="text-2xl font-black text-gray-800 mb-2">PFUMA Messenger</h3>
             <p className="text-gray-400 font-medium text-sm max-w-xs leading-relaxed mb-8">
-              Search for anyone by name or phone number — vets, suppliers, farmers, or retailers — and start a real conversation.
+              Search for anyone by name or phone number — vets, suppliers, farmers, or buyers — and start a real conversation.
             </p>
             <button
               onClick={() => { setIsComposing(true); setSelectedContact(null); setPeopleQuery(''); }}
