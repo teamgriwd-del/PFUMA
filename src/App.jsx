@@ -133,7 +133,7 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
   }, [currentUser?.token]);
 
   const totalValue  = animals.reduce((acc, a) => acc + 500 + a.currentWeight * 1.5, 0);
-  const forSale     = animals.filter(a => a.forSale).length;
+  const forSale     = animals.filter(a => a.marketplaceStatus === 'pending_clearance' || a.marketplaceStatus === 'available').length;
   const lowStock    = inventory.filter(i => i.stock <= i.min);
   // Real outbreak reports in the farmer's own province (filed by a Vet/Police
   // officer) — replaces the old static/fake "critical alert" content.
@@ -239,7 +239,7 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
         <KpiCard label="Total Animals"    value={animals.length}            sub="In your herd registry"                icon={Tag}         iconColor="text-pfuma-green"  onClick={() => setActiveTab('profile')} />
         <KpiCard label="Herd Value"       value={`$${totalValue.toLocaleString()}`} sub="Estimated market value"       icon={DollarSign}  iconColor="text-pfuma-gold"   accent="bg-pfuma-gold/5 border-pfuma-gold/20" />
         <KpiCard label="Overdue Vaccines" value={overdueVaccines.length}    sub={overdueVaccines.length ? 'Open the follow-up list' : 'All vaccinations current'} icon={ShieldCheck} iconColor={overdueVaccines.length ? 'text-red-500' : 'text-green-500'} accent={overdueVaccines.length ? 'bg-red-50 border-red-200' : 'bg-white border-gray-100'} textColor={overdueVaccines.length ? 'text-red-600' : 'text-gray-900'} onClick={() => setActiveTab('compliance')} />
-        <KpiCard label="Listed for Sale"  value={forSale}                   sub={forSale ? 'Visible on marketplace' : 'None listed yet'} icon={ShoppingCart} iconColor="text-purple-500" onClick={() => setActiveTab('profile')} />
+        <KpiCard label="Listed for Sale"  value={forSale}                   sub={forSale ? 'Pending clearance or live' : 'None listed yet'} icon={ShoppingCart} iconColor="text-purple-500" onClick={() => setActiveTab('profile')} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -304,7 +304,7 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
               <h3 className="text-sm font-black text-gray-800">Sell Your Animals</h3>
             </div>
             <p className="text-[11px] text-gray-400 font-medium mb-4 leading-snug">
-              Toggle any animal below to list it on the PFUMA Marketplace. Retailers and livestock buyers will immediately see it and can place a bid. You control the listing — remove it any time.
+              List any animal below on the PFUMA Marketplace. Every livestock listing waits for Police sale-clearance before retailers can see it or bid — a sold animal can never be listed again.
             </p>
 
             {animals.length === 0 ? (
@@ -313,41 +313,70 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
                 <p className="text-xs text-gray-400 font-medium mt-2">No animals registered yet</p>
                 <button onClick={() => setActiveTab('profile')} className="mt-3 px-4 py-2 bg-pfuma-green text-white rounded-xl text-xs font-black uppercase hover:bg-green-700 transition">Register an Animal</button>
               </div>
-            ) : (
-              <div className="space-y-3">
-                {animals.map(a => (
-                  <div key={a.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition ${a.forSale ? 'bg-yellow-50 border-yellow-300' : 'bg-gray-50 border-gray-100'}`}>
-                    <div className="w-10 h-10 rounded-xl bg-gray-200 overflow-hidden shrink-0">
+            ) : (() => {
+              // Sold animals are split into their own section below — they
+              // can never be listed again, so mixing them into the sellable
+              // list would be misleading.
+              const unsoldAnimals = animals.filter(a => a.marketplaceStatus !== 'sold');
+              const soldAnimals   = animals.filter(a => a.marketplaceStatus === 'sold');
+              const renderRow = (a) => {
+                const status = a.marketplaceStatus;
+                const rowCls = status === 'sold' ? 'bg-red-50 border-red-200 opacity-80'
+                  : status === 'pending_clearance' ? 'bg-amber-50 border-amber-200'
+                  : status === 'available' ? 'bg-yellow-50 border-yellow-300'
+                  : 'bg-gray-50 border-gray-100';
+                return (
+                  <div key={a.id} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition ${rowCls}`}>
+                    <div className={`w-10 h-10 rounded-xl bg-gray-200 overflow-hidden shrink-0 ${status === 'sold' ? 'grayscale' : ''}`}>
                       <img src={a.imageUrl} className="w-full h-full object-cover" alt={a.name} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-black text-gray-800">{a.name}</p>
                       <p className="text-[10px] text-gray-400 font-medium">{a.species} · {a.currentWeight}kg</p>
-                      {a.forSale && (
-                        <p className="text-[9px] font-black text-yellow-700 mt-0.5 flex items-center gap-1"><Check size={10} /> Visible to retailers now</p>
+                      {status === 'sold' && (
+                        <p className="text-[9px] font-black text-red-700 mt-0.5 flex items-center gap-1">🔴 Sold</p>
+                      )}
+                      {status === 'pending_clearance' && (
+                        <p className="text-[9px] font-black text-amber-700 mt-0.5 flex items-center gap-1">⏳ Awaiting Police clearance</p>
+                      )}
+                      {status === 'available' && (
+                        <p className="text-[9px] font-black text-yellow-700 mt-0.5 flex items-center gap-1"><Check size={10} /> Cleared — live on Marketplace</p>
                       )}
                     </div>
-                    <button
-                      onClick={() => onListAnimal(a.id)}
-                      className={`shrink-0 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wide transition ${
-                        a.forSale
-                          ? 'bg-yellow-400 text-gray-900 hover:bg-yellow-500'
-                          : 'bg-pfuma-green text-white hover:bg-green-700'
-                      }`}
-                    >
-                      {a.forSale ? 'Unlist' : 'List for Sale'}
-                    </button>
+                    {status ? (
+                      <span className="shrink-0 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wide bg-gray-100 text-gray-400 cursor-not-allowed">
+                        {status === 'sold' ? 'Sold' : status === 'pending_clearance' ? 'Pending' : 'Listed'}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => onListAnimal(a.id)}
+                        className="shrink-0 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wide transition bg-pfuma-green text-white hover:bg-green-700"
+                      >
+                        List for Sale
+                      </button>
+                    )}
                   </div>
-                ))}
-              </div>
-            )}
+                );
+              };
+              return (
+                <>
+                  <div className="space-y-3">{unsoldAnimals.map(renderRow)}</div>
+                  {soldAnimals.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-2">Sold — {soldAnimals.length}</p>
+                      <div className="space-y-3">{soldAnimals.map(renderRow)}</div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
 
             {/* What happens next */}
-            {animals.some(a => a.forSale) && (
+            {animals.some(a => a.marketplaceStatus === 'pending_clearance' || a.marketplaceStatus === 'available') && (
               <div className="mt-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
                 <p className="text-[10px] font-black text-purple-700 uppercase mb-1">What happens next</p>
                 <div className="space-y-1">
-                  {['Retailers browse your listing on the Marketplace', 'A retailer places a bid — you receive it via PFUMA Messenger', 'Vet issues a DVS movement certificate for the sale'].map((s, i) => (
+                  {['Police review and clear the sale (papers, brand, movement permit)', 'Once cleared, retailers browse your listing on the Marketplace', 'A retailer places a bid — you receive it via PFUMA Messenger', 'Vet issues a DVS movement certificate for the sale'].map((s, i) => (
                     <div key={i} className="flex items-start gap-2 text-[10px] text-purple-600 font-medium">
                       <span className="w-4 h-4 bg-purple-200 text-purple-700 rounded-full flex items-center justify-center text-[8px] font-black shrink-0 mt-0.5">{i + 1}</span>
                       {s}
@@ -1803,6 +1832,9 @@ const animalFromApi = (a) => ({
   photos: (a.photos && a.photos.length > 0 ? a.photos : (a.image_url ? [a.image_url] : [])).map(resolveImageUrl),
   weightHistory: (a.weight_history || []).map(w => ({ month: w.month_label, weight: w.weight_kg })),
   forSale: !!a.for_sale, costToDate: a.cost_to_date || 0,
+  // Real marketplace state, from the animal's most recent linked listing —
+  // null (never listed), 'pending_clearance', 'available', or 'sold'.
+  marketplaceStatus: a.marketplace_status || null,
   registeredAt: a.created_at,
   // Only present when a Vet/Police oversight role fetches /animals (it
   // spans every farm, not just the caller's own) — undefined for a Farmer.
@@ -1845,6 +1877,7 @@ function App() {
   // specific person (a notification's "Message" action).
   const [vetIntent,   setVetIntent]   = useState(null);
   const requestVetContact = (intent) => { setVetIntent(intent); setActiveTab('vet'); };
+  const [marketplaceAnimalId, setMarketplaceAnimalId] = useState(null);
   const [completedTasks, setCompletedTasks] = useState([]);
   const [auditLog,    setAuditLog]    = useState([]);
   const [inventory,   setInventory]   = useState([]);
@@ -2046,9 +2079,16 @@ function App() {
     } catch { /* offline */ }
   };
 
-  const handleListAnimal = async (id) => {
-    setAnimals(prev => prev.map(a => a.id === id ? { ...a, forSale: !a.forSale } : a));
-    try { await authFetch(`/animals/${id}/sale`, { method: 'PATCH' }); } catch { /* offline — local toggle already applied */ }
+  // Listing an animal is a real, police-clearance-gated Marketplace posting —
+  // not a one-click toggle — so this just opens the Post a Listing form with
+  // the animal pre-selected. An animal already sold or already listed can't
+  // get here (the UI disables that button), but the Marketplace form itself
+  // re-checks against the animal's real marketplaceStatus too.
+  const handleListAnimal = (id) => {
+    const animal = animals.find(a => a.id === id);
+    if (animal && animal.marketplaceStatus) return;
+    setMarketplaceAnimalId(id);
+    setActiveTab('marketplace');
   };
 
   const handleAvatarChange = async (file) => {
@@ -2261,7 +2301,7 @@ function App() {
           {activeTab === 'health'      && <ErrorBoundary><HealthManagement animals={animals} completedTasks={completedTasks} setCompletedTasks={setCompletedTasks} auditLog={auditLog} onAddAuditLog={addAuditLog} inventory={inventory} onRefreshInventory={refreshInventory} currentUser={currentUser} /></ErrorBoundary>}
           {activeTab === 'disease'     && <ErrorBoundary><DiseaseDetection animals={animals} onAddAuditLog={addAuditLog} onCallVet={requestVetContact} /></ErrorBoundary>}
           {activeTab === 'vet'         && <ErrorBoundary><VetCommunication animals={animals} currentUser={currentUser} intent={vetIntent} onIntentConsumed={() => setVetIntent(null)} /></ErrorBoundary>}
-          {activeTab === 'marketplace' && <ErrorBoundary><Marketplace currentUser={currentUser} animals={animals} onListAnimal={handleListAnimal} /></ErrorBoundary>}
+          {activeTab === 'marketplace' && <ErrorBoundary><Marketplace currentUser={currentUser} animals={animals} onListAnimal={handleListAnimal} presetAnimalId={marketplaceAnimalId} onPresetConsumed={() => setMarketplaceAnimalId(null)} /></ErrorBoundary>}
           {activeTab === 'feed'        && <ErrorBoundary><FeedAnalyzer currentUser={currentUser} animals={animals} onUpdateAnimal={(id, patch) => setAnimals(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a))} /></ErrorBoundary>}
           {activeTab === 'compliance' && <ErrorBoundary><ComplianceCenter currentUser={currentUser} /></ErrorBoundary>}
           {activeTab === 'cooperative' && <ErrorBoundary><Cooperative currentUser={currentUser} /></ErrorBoundary>}

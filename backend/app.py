@@ -1016,6 +1016,14 @@ def get_animals():
         c.execute("SELECT month_label, weight_kg FROM weight_history WHERE animal_id = %s ORDER BY id", (a['id'],))
         a['weight_history'] = c.fetchall()
         a['photos'] = animal_photo_urls(c, a)
+        # Marketplace status of this animal's most recent listing (if any) —
+        # lets the UI show a clear SOLD / pending-clearance badge and block
+        # re-listing an animal that's already sold or already active.
+        c.execute("""SELECT status FROM marketplace_listings
+                      WHERE animal_id=%s AND status IN ('pending_clearance','available','sold')
+                      ORDER BY created_at DESC LIMIT 1""", (a['id'],))
+        row = c.fetchone()
+        a['marketplace_status'] = row['status'] if row else None
     db.close()
     return jsonify(animals)
 
@@ -1092,6 +1100,12 @@ def toggle_sale(animal_id):
         db.close(); return jsonify({"error": "Animal not found"}), 404
     if row['owner_id'] != g.current_user['id']:
         db.close(); return jsonify({"error": "You can only list your own animals"}), 403
+    c.execute("""SELECT status FROM marketplace_listings
+                  WHERE animal_id=%s AND status IN ('pending_clearance','available','sold')
+                  ORDER BY created_at DESC LIMIT 1""", (animal_id,))
+    existing = c.fetchone()
+    if existing and existing['status'] == 'sold':
+        db.close(); return jsonify({"error": "This animal has already been sold."}), 409
     c.execute("UPDATE animals SET for_sale = NOT for_sale WHERE id = %s", (animal_id,))
     db.commit()
     c.execute("SELECT for_sale FROM animals WHERE id = %s", (animal_id,))
@@ -2369,11 +2383,22 @@ def add_listing():
         # scoped to the one animal, so the seller's other stock, feed and
         # produce listings are untouched.
         block = animal_trade_block(c, animal_id) if animal else None
+        # An animal that's already sold, or already has a listing awaiting
+        # clearance / live on the marketplace, must not be listed again —
+        # otherwise a sold animal could be re-posted and traded a second time.
+        c.execute("""SELECT status FROM marketplace_listings
+                      WHERE animal_id=%s AND status IN ('pending_clearance','available','sold')
+                      ORDER BY created_at DESC LIMIT 1""", (animal_id,))
+        existing = c.fetchone()
         db.close()
         if not animal or animal['owner_id'] != g.current_user['id']:
             return jsonify({"error": "You can only list your own animals"}), 403
         if block:
             return jsonify({"error": block, "trade_locked": True}), 409
+        if existing and existing['status'] == 'sold':
+            return jsonify({"error": "This animal has already been sold and cannot be listed again."}), 409
+        if existing:
+            return jsonify({"error": "This animal already has an active marketplace listing."}), 409
 
     # Livestock listings tied to a specific animal must clear police review
     # (ownership/brand papers checked) before they're visible on the marketplace.

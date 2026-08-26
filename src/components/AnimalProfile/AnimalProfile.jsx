@@ -402,16 +402,34 @@ const AnimalProfile = ({ animals, onAddAnimal, onAddAnimalPhotos, auditLog, onLi
                 <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Weight</p>
                 <p className="text-lg font-black text-gray-900">{selectedAnimal.currentWeight} kg</p>
               </div>
-              <button
-                onClick={() => onListAnimal && onListAnimal(selectedAnimal.id)}
-                className={`p-4 rounded-2xl border-2 text-left transition hover:scale-105 ${selectedAnimal.forSale ? 'bg-yellow-50 border-yellow-300' : 'bg-gray-50 border-gray-100 hover:border-pfuma-green'}`}
-              >
-                <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Market</p>
-                <p className={`text-sm font-black ${selectedAnimal.forSale ? 'text-yellow-600' : 'text-pfuma-green'}`}>
-                  {selectedAnimal.forSale ? '🏷 For Sale' : 'Not Listed'}
-                </p>
-                <p className="text-[9px] text-gray-400 font-medium mt-0.5">{selectedAnimal.forSale ? 'Tap to delist' : 'Tap to list'}</p>
-              </button>
+              {selectedAnimal.marketplaceStatus === 'sold' ? (
+                <div className="p-4 rounded-2xl border-2 text-left bg-red-50 border-red-300">
+                  <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Market</p>
+                  <p className="text-sm font-black text-red-600">🔴 SOLD</p>
+                  <p className="text-[9px] text-gray-400 font-medium mt-0.5">Cannot be listed again</p>
+                </div>
+              ) : selectedAnimal.marketplaceStatus === 'pending_clearance' ? (
+                <div className="p-4 rounded-2xl border-2 text-left bg-amber-50 border-amber-300">
+                  <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Market</p>
+                  <p className="text-sm font-black text-amber-600">⏳ Awaiting Clearance</p>
+                  <p className="text-[9px] text-gray-400 font-medium mt-0.5">Not visible until Police clear it</p>
+                </div>
+              ) : selectedAnimal.marketplaceStatus === 'available' ? (
+                <div className="p-4 rounded-2xl border-2 text-left bg-green-50 border-green-300">
+                  <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Market</p>
+                  <p className="text-sm font-black text-pfuma-green">✅ Live on Marketplace</p>
+                  <p className="text-[9px] text-gray-400 font-medium mt-0.5">Cleared by Police</p>
+                </div>
+              ) : (
+                <button
+                  onClick={() => onListAnimal && onListAnimal(selectedAnimal.id)}
+                  className="p-4 rounded-2xl border-2 text-left transition hover:scale-105 bg-gray-50 border-gray-100 hover:border-pfuma-green"
+                >
+                  <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Market</p>
+                  <p className="text-sm font-black text-pfuma-green">Not Listed</p>
+                  <p className="text-[9px] text-gray-400 font-medium mt-0.5">Tap to list on Marketplace</p>
+                </button>
+              )}
             </div>
 
             {/* Valuation */}
@@ -538,8 +556,65 @@ const AnimalProfile = ({ animals, onAddAnimal, onAddAnimalPhotos, auditLog, onLi
 
   // ── LIST VIEW ─────────────────────────────────────────────────────────────
   const totalValue   = animals.reduce((acc, a) => acc + (500 + a.currentWeight * 1.5), 0);
-  const forSaleCount = animals.filter(a => a.forSale).length;
+  const forSaleCount = animals.filter(a => a.marketplaceStatus === 'pending_clearance' || a.marketplaceStatus === 'available').length;
+  const soldCount    = animals.filter(a => a.marketplaceStatus === 'sold').length;
   const speciesCounts = ['Cattle', 'Goat', 'Sheep', 'Pig'].map(s => ({ s, n: animals.filter(a => a.species === s).length })).filter(x => x.n > 0);
+  // Sold animals are kept for record-keeping but split into their own
+  // section, well away from the active herd — they can't be listed again
+  // and shouldn't be mistaken for stock still available to sell.
+  const activeAnimals = animals.filter(a => a.marketplaceStatus !== 'sold');
+  const soldAnimals   = animals.filter(a => a.marketplaceStatus === 'sold');
+
+  const renderAnimalCard = (a, { sold = false } = {}) => {
+    const logs = auditLog.filter(l => l.animalId === a.id).length;
+    return (
+      <button
+        key={a.id}
+        onClick={() => setSelectedAnimalId(a.id)}
+        className={`w-full group p-4 rounded-2xl shadow-sm flex items-center gap-4 text-left transition ${
+          sold
+            ? 'bg-gray-50 border-2 border-red-100 hover:border-red-300 opacity-80 hover:opacity-100'
+            : 'bg-white border-2 border-transparent hover:border-pfuma-green/30 hover:shadow-lg'
+        }`}
+      >
+        <div className={`w-20 h-20 rounded-2xl bg-gray-100 overflow-hidden shrink-0 ${sold ? 'grayscale' : ''}`}>
+          <img
+            src={a.imageUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${a.name}`}
+            className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
+            alt={a.name}
+          />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="text-[10px] font-black text-pfuma-green bg-green-50 px-2 py-0.5 rounded uppercase">{a.tagId || 'No Tag'}</span>
+            <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase ${SPECIES_COLORS[a.species] || 'bg-gray-100 text-gray-600'}`}>{speciesEmoji[a.species]} {a.species}</span>
+            {a.marketplaceStatus === 'sold' && <span className="text-[9px] font-black text-red-700 bg-red-100 px-2 py-0.5 rounded-full uppercase">🔴 Sold</span>}
+            {a.marketplaceStatus === 'pending_clearance' && <span className="text-[9px] font-black text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full uppercase">⏳ Awaiting Clearance</span>}
+            {a.marketplaceStatus === 'available' && <span className="text-[9px] font-black text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full uppercase">🏷 On Marketplace</span>}
+          </div>
+          <h4 className="text-lg font-black text-gray-900 truncate">{a.name}</h4>
+          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+            <span className="text-xs text-gray-400 font-medium">{a.breed || 'Unknown breed'}</span>
+            <span className="text-gray-300">·</span>
+            <span className="text-xs text-gray-400 font-medium">{a.age}</span>
+            <span className="text-gray-300">·</span>
+            <span className="text-xs text-gray-400 font-medium">{a.currentWeight} kg</span>
+            {logs > 0 && (
+              <>
+                <span className="text-gray-300">·</span>
+                <span className="text-[11px] text-pfuma-green font-black">{logs} health record{logs !== 1 ? 's' : ''}</span>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-[10px] text-gray-400 font-bold uppercase">Est. Value</p>
+          <p className="text-sm font-black text-gray-800">${calculateValue(a, auditLog)}</p>
+          <ChevronRight size={18} className="text-gray-200 group-hover:text-pfuma-green transition ml-auto mt-1" />
+        </div>
+      </button>
+    );
+  };
 
   return (
     <div className="p-6 bg-gray-50 min-h-full space-y-6 text-left">
@@ -572,7 +647,13 @@ const AnimalProfile = ({ animals, onAddAnimal, onAddAnimalPhotos, auditLog, onLi
               {forSaleCount > 0 && (
                 <div className="bg-yellow-400/20 border border-yellow-400/30 rounded-2xl px-5 py-3 text-center">
                   <p className="text-2xl font-black text-yellow-400">{forSaleCount}</p>
-                  <p className="text-[10px] font-bold text-yellow-400/70 uppercase">For Sale</p>
+                  <p className="text-[10px] font-bold text-yellow-400/70 uppercase">On Marketplace</p>
+                </div>
+              )}
+              {soldCount > 0 && (
+                <div className="bg-red-400/20 border border-red-400/30 rounded-2xl px-5 py-3 text-center">
+                  <p className="text-2xl font-black text-red-400">{soldCount}</p>
+                  <p className="text-[10px] font-bold text-red-400/70 uppercase">Sold</p>
                 </div>
               )}
             </div>
@@ -585,7 +666,7 @@ const AnimalProfile = ({ animals, onAddAnimal, onAddAnimalPhotos, auditLog, onLi
         <div className="flex-1 space-y-4 min-w-0">
           <div className="flex justify-between items-center">
             <h3 className="text-sm font-black text-gray-700">
-              {animals.length === 0 ? 'No animals registered yet' : `${animals.length} registered animal${animals.length !== 1 ? 's' : ''}`}
+              {animals.length === 0 ? 'No animals registered yet' : `${activeAnimals.length} active animal${activeAnimals.length !== 1 ? 's' : ''}`}
             </h3>
             <button
               onClick={() => setIsRegistering(true)}
@@ -608,50 +689,29 @@ const AnimalProfile = ({ animals, onAddAnimal, onAddAnimalPhotos, auditLog, onLi
               </button>
             </div>
           ) : (
-            animals.map(a => {
-              const logs = auditLog.filter(l => l.animalId === a.id).length;
-              return (
-                <button
-                  key={a.id}
-                  onClick={() => setSelectedAnimalId(a.id)}
-                  className="w-full group bg-white p-4 rounded-2xl shadow-sm border-2 border-transparent hover:border-pfuma-green/30 hover:shadow-lg flex items-center gap-4 text-left transition"
-                >
-                  <div className="w-20 h-20 rounded-2xl bg-gray-100 overflow-hidden shrink-0">
-                    <img
-                      src={a.imageUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${a.name}`}
-                      className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
-                      alt={a.name}
-                    />
+            <>
+              {activeAnimals.length === 0 ? (
+                <div className="bg-white border-2 border-dashed border-gray-200 rounded-2xl p-10 flex flex-col items-center text-center">
+                  <p className="text-xs font-black text-gray-500">Every registered animal has been sold</p>
+                  <p className="text-[11px] text-gray-400 font-medium mt-1">Register a new animal to keep growing your herd.</p>
+                </div>
+              ) : (
+                activeAnimals.map(a => renderAnimalCard(a))
+              )}
+
+              {soldAnimals.length > 0 && (
+                <div className="pt-2">
+                  <div className="flex items-center gap-2 mb-3 mt-2">
+                    <span className="w-2 h-2 rounded-full bg-red-400" />
+                    <h3 className="text-sm font-black text-gray-700">Sold — {soldAnimals.length} animal{soldAnimals.length !== 1 ? 's' : ''}</h3>
+                    <span className="text-[10px] text-gray-400 font-medium">Kept for record-keeping · cannot be listed again</span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-[10px] font-black text-pfuma-green bg-green-50 px-2 py-0.5 rounded uppercase">{a.tagId || 'No Tag'}</span>
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase ${SPECIES_COLORS[a.species] || 'bg-gray-100 text-gray-600'}`}>{speciesEmoji[a.species]} {a.species}</span>
-                      {a.forSale && <span className="text-[9px] font-black text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full uppercase">🏷 For Sale</span>}
-                    </div>
-                    <h4 className="text-lg font-black text-gray-900 truncate">{a.name}</h4>
-                    <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                      <span className="text-xs text-gray-400 font-medium">{a.breed || 'Unknown breed'}</span>
-                      <span className="text-gray-300">·</span>
-                      <span className="text-xs text-gray-400 font-medium">{a.age}</span>
-                      <span className="text-gray-300">·</span>
-                      <span className="text-xs text-gray-400 font-medium">{a.currentWeight} kg</span>
-                      {logs > 0 && (
-                        <>
-                          <span className="text-gray-300">·</span>
-                          <span className="text-[11px] text-pfuma-green font-black">{logs} health record{logs !== 1 ? 's' : ''}</span>
-                        </>
-                      )}
-                    </div>
+                  <div className="space-y-4">
+                    {soldAnimals.map(a => renderAnimalCard(a, { sold: true }))}
                   </div>
-                  <div className="text-right shrink-0">
-                    <p className="text-[10px] text-gray-400 font-bold uppercase">Est. Value</p>
-                    <p className="text-sm font-black text-gray-800">${calculateValue(a, auditLog)}</p>
-                    <ChevronRight size={18} className="text-gray-200 group-hover:text-pfuma-green transition ml-auto mt-1" />
-                  </div>
-                </button>
-              );
-            })
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -696,7 +756,7 @@ const AnimalProfile = ({ animals, onAddAnimal, onAddAnimalPhotos, auditLog, onLi
               <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
                 <p className="text-[11px] font-black text-yellow-700 uppercase tracking-wide mb-1">🏷 Marketplace</p>
                 <p className="text-[11px] text-gray-600 font-medium leading-relaxed">
-                  Open an animal's profile and tap "Market Status" to list it for sale. Listed animals appear in the Retailer Marketplace.
+                  Open an animal's profile and tap "Not Listed" under Market to start a listing. It stays hidden until Police clear the sale, then it appears on the Marketplace.
                 </p>
               </div>
             )}

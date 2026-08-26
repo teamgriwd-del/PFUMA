@@ -87,8 +87,14 @@ const ListingGallery = ({ photos, alt }) => {
   );
 };
 
-const PostForm = ({ currentUser, onSubmit, onCancel, animals }) => {
-  const [form, setForm] = useState({ product_name: '', category: 'livestock', price: '', unit: 'head', quantity: '1', location: currentUser?.district ? `${currentUser.district}, ${currentUser.province}` : (currentUser?.province || ''), description: '', animal_id: '',
+const PostForm = ({ currentUser, onSubmit, onCancel, animals, initialAnimalId }) => {
+  // An animal that's already sold, or already has a listing pending police
+  // clearance or live on the marketplace, cannot be picked again here —
+  // the dropdown only ever offers animals that are actually free to list.
+  const listableAnimals = animals.filter(a => !a.marketplaceStatus);
+  const blockedCount = animals.length - listableAnimals.length;
+  const initialAnimal = initialAnimalId ? listableAnimals.find(a => String(a.id) === String(initialAnimalId)) : null;
+  const [form, setForm] = useState({ product_name: initialAnimal ? `${initialAnimal.name} — ${initialAnimal.breed} ${initialAnimal.species}` : '', category: 'livestock', price: '', unit: 'head', quantity: '1', location: currentUser?.district ? `${currentUser.district}, ${currentUser.province}` : (currentUser?.province || ''), description: '', animal_id: initialAnimal ? String(initialAnimal.id) : '',
     leader_clearance: '', leader_type: 'Sabuku', leader_name: '', leader_village: '',
     leader_cleared_on: '', leader_reference: '', leader_na_reason: '' });
   const [photoFile, setPhotoFile]       = useState(null);
@@ -153,13 +159,18 @@ const PostForm = ({ currentUser, onSubmit, onCancel, animals }) => {
           {form.category === 'livestock' && (
             <div>
               <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Which Animal? *</label>
-              {animals.length > 0 ? (
-                <select className={inputCls + ' appearance-none'} value={form.animal_id} onChange={e => { set('animal_id', e.target.value); const a = animals.find(a => String(a.id) === e.target.value); if (a) set('product_name', `${a.name} — ${a.breed} ${a.species}`); }}>
+              {listableAnimals.length > 0 ? (
+                <select className={inputCls + ' appearance-none'} value={form.animal_id} onChange={e => { set('animal_id', e.target.value); const a = listableAnimals.find(a => String(a.id) === e.target.value); if (a) set('product_name', `${a.name} — ${a.breed} ${a.species}`); }}>
                   <option value="">Select an animal…</option>
-                  {animals.map(a => <option key={a.id} value={a.id}>{a.name} ({a.species})</option>)}
+                  {listableAnimals.map(a => <option key={a.id} value={a.id}>{a.name} ({a.species})</option>)}
                 </select>
               ) : (
                 <p className="text-[11px] text-gray-500 font-medium p-3 bg-gray-50 rounded-xl">Register an animal in your Herd first — livestock listings must be linked to one.</p>
+              )}
+              {blockedCount > 0 && (
+                <p className="text-[10px] text-gray-400 font-medium mt-1.5">
+                  {blockedCount} of your animal{blockedCount !== 1 ? 's are' : ' is'} not shown — already sold or already has an active listing.
+                </p>
               )}
             </div>
           )}
@@ -280,13 +291,20 @@ const PostForm = ({ currentUser, onSubmit, onCancel, animals }) => {
   );
 };
 
-const Marketplace = ({ currentUser, animals = [], onListAnimal }) => {
+const Marketplace = ({ currentUser, animals = [], onListAnimal, presetAnimalId, onPresetConsumed }) => {
   const [listings, setListings]     = useState([]);
   const [loading, setLoading]       = useState(true);
   const [apiOnline, setApiOnline]   = useState(false);
   const [activeCategory, setActiveCategory] = useState('all');
   const [search, setSearch]         = useState('');
-  const [showForm, setShowForm]     = useState(false);
+  // Arriving here via "List for Sale" on an animal's own profile opens the
+  // form pre-selected to that animal, instead of the old fake one-click
+  // toggle that claimed to list an animal without ever really doing so.
+  const [showForm, setShowForm]     = useState(!!presetAnimalId);
+  useEffect(() => {
+    if (presetAnimalId) { setShowForm(true); onPresetConsumed && onPresetConsumed(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetAnimalId]);
   const [feedback, setFeedback]     = useState(null);
   const [openBidsId, setOpenBidsId] = useState(null);
   const [bidsByListing, setBidsByListing] = useState({});
@@ -472,7 +490,7 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal }) => {
       )}
 
       {/* Post form */}
-      {showForm && <PostForm currentUser={currentUser} animals={animals} onSubmit={handlePost} onCancel={() => setShowForm(false)} />}
+      {showForm && <PostForm currentUser={currentUser} animals={animals} onSubmit={handlePost} onCancel={() => setShowForm(false)} initialAnimalId={presetAnimalId} />}
 
       {/* Market vs. mine — a seller's own listings (any status) are easy to
           lose track of in the shared public feed, so this pulls them out
