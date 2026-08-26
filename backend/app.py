@@ -817,6 +817,38 @@ def upload_avatar():
     return jsonify({"avatar_url": f"/uploads/{rel_path}", "message": "Profile picture updated ✅"})
 
 
+@app.route('/users/me', methods=['PATCH'])
+@require_auth
+def update_own_profile():
+    """A user's registered name is exactly what Police/DVS checked against
+    their ID document to grant verification — changing it invalidates that
+    check, so it forces the account back to 'pending' and re-locks anything
+    gated by @require_verified (listing on the marketplace, etc.) until an
+    officer reviews it again under the new name."""
+    d = request.json or {}
+    new_name = (d.get('full_name') or '').strip()
+    if not new_name:
+        return jsonify({"error": "full_name is required"}), 400
+
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT full_name, verification_status FROM users WHERE id=%s", (g.current_user['id'],))
+    current = c.fetchone()
+    name_changed = new_name != current['full_name']
+    if name_changed and current['verification_status'] == 'verified':
+        c.execute("UPDATE users SET full_name=%s, verification_status='pending' WHERE id=%s", (new_name, g.current_user['id']))
+    else:
+        c.execute("UPDATE users SET full_name=%s WHERE id=%s", (new_name, g.current_user['id']))
+    db.commit()
+    c.execute("SELECT * FROM users WHERE id=%s", (g.current_user['id'],))
+    user = c.fetchone()
+    db.close()
+    return jsonify({
+        "user": public_user_view(user, user),
+        "message": "Name updated — your account needs to be re-verified before this change is trusted." if name_changed and current['verification_status'] == 'verified' else "Name updated ✅"
+    })
+
+
 # ── MESSENGER (real conversations, any verified user to any other) ──────
 def _conversation_participant_or_404(c, conversation_id, requester_id):
     c.execute("SELECT * FROM conversations WHERE id=%s", (conversation_id,))
@@ -3702,6 +3734,34 @@ def admin_set_user_status(user_id):
     db.commit()
     db.close()
     return jsonify({"message": f"Account {new_status}"})
+
+
+@app.route('/admin/users/<int:user_id>', methods=['DELETE'])
+@require_auth
+@require_admin
+def admin_delete_user(user_id):
+    """Permanently removes an account and everything tied to it — animals,
+    listings, health records, messages, cooperative membership, IoT devices —
+    via the ON DELETE CASCADE relationships already defined in schema.sql.
+    This cannot be undone (suspend is the reversible alternative for a
+    scammer/abuse case where the record itself still has value); reserve
+    this for junk/duplicate/test signups a user asked to be rid of."""
+    if user_id == g.current_user['id']:
+        return jsonify({"error": "You can't delete your own account"}), 400
+
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT id, role, full_name FROM users WHERE id=%s", (user_id,))
+    target = c.fetchone()
+    if not target:
+        db.close(); return jsonify({"error": "User not found"}), 404
+    if target['role'] == 'Admin':
+        db.close(); return jsonify({"error": "Admin accounts can't be deleted from here"}), 400
+
+    c.execute("DELETE FROM users WHERE id=%s", (user_id,))
+    db.commit()
+    db.close()
+    return jsonify({"message": f"{target['full_name']}'s account was permanently deleted"})
 
 
 @app.route('/admin/listings/<int:listing_id>/status', methods=['PATCH'])

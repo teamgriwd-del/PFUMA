@@ -3,7 +3,7 @@ import {
   ShieldCheck, Users, TrendingUp, Activity, LogOut, Search,
   CheckCircle, XCircle, ShoppingCart, AlertTriangle, Handshake, Package,
   Ban, RotateCcw, Satellite, Navigation, Crosshair, Thermometer, Heart,
-  BatteryMedium, Play, Pause, RadioTower, Target, Save,
+  BatteryMedium, Play, Pause, RadioTower, Target, Save, Trash2,
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
@@ -66,6 +66,26 @@ const UsersTab = ({ currentUser }) => {
         body: JSON.stringify({ status, reason }),
       });
       await load();
+    } catch { /* offline */ }
+    setBusyId(null);
+  };
+
+  const deleteUser = async (u) => {
+    // Permanent and cascading (their animals, listings, health records —
+    // everything) — suspend is the reversible option for a scammer/abuse
+    // case where the record still has value. This is only for junk/
+    // duplicate/test signups, so make sure that's actually what's happening.
+    const confirmed = window.confirm(
+      `Permanently delete ${u.full_name}'s ${u.role} account?\n\nThis cannot be undone — it also deletes everything tied to it: animals, marketplace listings, health records, messages, and more.\n\nOnly do this for a junk, duplicate, or test signup. For a scammer or abusive user, Suspend instead so the record is preserved.`
+    );
+    if (!confirmed) return;
+    setBusyId(u.id);
+    try {
+      const res = await fetch(`${API}/admin/users/${u.id}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${currentUser.token}` },
+      });
+      if (res.ok) await load();
+      else { const data = await res.json().catch(() => ({})); window.alert(data.error || 'Could not delete this account.'); }
     } catch { /* offline */ }
     setBusyId(null);
   };
@@ -141,6 +161,9 @@ const UsersTab = ({ currentUser }) => {
                         <Ban size={14} />
                       </button>
                     )}
+                    <button onClick={() => deleteUser(u)} disabled={busyId === u.id} className="p-1.5 bg-gray-50 hover:bg-red-100 text-gray-500 hover:text-red-700 rounded-lg transition disabled:opacity-50" aria-label={`Delete ${u.full_name}`} title="Delete permanently (junk/duplicate/test accounts only)">
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 )}
               </div>

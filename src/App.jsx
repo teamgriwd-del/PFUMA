@@ -22,7 +22,7 @@ import {
   Zap, Clock, ArrowRight, Tag, Pill, MapPin, FileText,
   RefreshCw, DollarSign, Target, Box, PhoneCall, Star, Wheat, Store,
   Sprout, Check, Syringe, Shield, UserPlus, X, Menu, Eye, EyeOff, Handshake, Radio, FlaskConical, Camera,
-  ShieldAlert,
+  ShieldAlert, Pencil,
 } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis } from 'recharts';
 import './App.css';
@@ -1888,6 +1888,9 @@ function App() {
   ]);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [nameSaving, setNameSaving] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   // Real per-user events (a bid came in, a bid you placed was accepted, a
   // vet recommended a medication) — separate from the static regional
@@ -2104,6 +2107,32 @@ function App() {
     setAvatarUploading(false);
   };
 
+  // Changing your registered name invalidates the ID-document check that
+  // earned verification in the first place, so the backend drops a verified
+  // account back to pending — surface that here rather than let the badge
+  // silently change on the next page a user happens to visit.
+  const handleNameChange = async () => {
+    const trimmed = nameDraft.trim();
+    if (!trimmed || trimmed === currentUser.name) { setIsEditingName(false); return; }
+    setNameSaving(true);
+    try {
+      const res = await authFetch('/users/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ full_name: trimmed }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCurrentUser(prev => ({ ...prev, name: data.user.full_name, verificationStatus: data.user.verification_status }));
+        if (data.user.verification_status === 'pending') {
+          window.alert('Your name has been updated. Since this affects identity verification, your account now needs to be re-verified before actions like listing on the Marketplace are available again.');
+        }
+        setIsEditingName(false);
+      }
+    } catch { /* offline — name keeps its previous value */ }
+    setNameSaving(false);
+  };
+
   if (!sessionChecked) return null;
   if (!currentUser) return <AuthPortal onLogin={handleLoginSuccess} />;
   // Admin doesn't fit the client-facing Farmer/Vet/Supplier/Retailer/Police
@@ -2198,7 +2227,33 @@ function App() {
               />
             </label>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-black text-white leading-none truncate">{currentUser.name}</p>
+              {isEditingName ? (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    autoFocus
+                    value={nameDraft}
+                    onChange={e => setNameDraft(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleNameChange(); if (e.key === 'Escape') setIsEditingName(false); }}
+                    disabled={nameSaving}
+                    className="w-full min-w-0 bg-white/10 text-white text-xs font-black rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-yellow-400"
+                  />
+                  <button onClick={handleNameChange} disabled={nameSaving} aria-label="Save name" className="text-yellow-400 hover:text-yellow-300 shrink-0 disabled:opacity-50">
+                    <Check size={14} />
+                  </button>
+                  <button onClick={() => setIsEditingName(false)} disabled={nameSaving} aria-label="Cancel" className="text-white/40 hover:text-white shrink-0 disabled:opacity-50">
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => { setNameDraft(currentUser.name); setIsEditingName(true); }}
+                  className="flex items-center gap-1.5 group/name text-left w-full min-w-0"
+                  title="Edit your registered name"
+                >
+                  <p className="text-xs font-black text-white leading-none truncate">{currentUser.name}</p>
+                  <Pencil size={10} className="text-white/0 group-hover/name:text-white/50 transition shrink-0" />
+                </button>
+              )}
               <p className="text-[10px] text-yellow-400 font-black uppercase tracking-widest leading-none mt-0.5">{role}</p>
             </div>
           </div>
