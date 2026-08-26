@@ -177,6 +177,7 @@ CREATE TABLE IF NOT EXISTS sale_clearances (
   leader_reference VARCHAR(80),         -- reference on the written clearance, if any
   leader_document_path VARCHAR(300),    -- photo of the written clearance
   leader_na_reason VARCHAR(200),        -- why no traditional clearance applies
+  officer_photo_path VARCHAR(300),      -- photo of the animal taken by the officer at clearance
   created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   resolved_at   TIMESTAMP NULL,
   FOREIGN KEY (animal_id)  REFERENCES animals(id) ON DELETE CASCADE,

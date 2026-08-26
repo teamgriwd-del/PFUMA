@@ -369,8 +369,12 @@ const AnimalProfile = ({ animals, onAddAnimal, onAddAnimalPhotos, auditLog, onLi
 
         {/* Hero card */}
         <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 flex flex-col md:flex-row" style={{ minHeight: 280 }}>
-          <div className="w-full md:w-2/5 relative cursor-zoom-in" style={{ minHeight: 220 }} onClick={() => setLightboxIndex(0)}>
-            <img src={selectedAnimal.imageUrl} className="w-full h-full object-cover absolute inset-0" alt={selectedAnimal.name} />
+          <div className="w-full md:w-2/5 relative cursor-zoom-in bg-gray-900" style={{ minHeight: 220 }} onClick={() => setLightboxIndex(0)}>
+            {/* object-contain, not object-cover — a cover crop was cutting
+                animals out of frame on anything but a square photo; farmers
+                want the whole animal visible without having to click through
+                to the lightbox to see it. */}
+            <img src={selectedAnimal.imageUrl} className="w-full h-full object-contain absolute inset-0" alt={selectedAnimal.name} />
             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex flex-col justify-end p-8">
               <h1 className="text-4xl font-black text-white leading-none mb-2">{selectedAnimal.name}</h1>
               <div className="flex items-center gap-2 flex-wrap">

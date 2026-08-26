@@ -248,6 +248,7 @@ def ensure_schema():
     add_column_if_missing('sale_clearances', 'leader_reference', "leader_reference VARCHAR(80)")
     add_column_if_missing('sale_clearances', 'leader_document_path', "leader_document_path VARCHAR(300)")
     add_column_if_missing('sale_clearances', 'leader_na_reason', "leader_na_reason VARCHAR(200)")
+    add_column_if_missing('sale_clearances', 'officer_photo_path', "officer_photo_path VARCHAR(300)")
 
     add_column_if_missing('users', 'account_status', "account_status ENUM('active','suspended') NOT NULL DEFAULT 'active'")
     add_column_if_missing('users', 'suspension_reason', "suspension_reason VARCHAR(300)")
@@ -2533,7 +2534,7 @@ def get_clearances():
     c = db.cursor()
     status = request.args.get('status')
     sql = """
-        SELECT sc.*, a.name AS animal_name, a.species, a.tag_id, a.brand_id,
+        SELECT sc.*, a.name AS animal_name, a.species, a.tag_id, a.brand_id, a.image_url AS animal_image_url,
                ml.product_name, u.full_name AS seller_name, u.phone AS seller_phone
         FROM sale_clearances sc
         JOIN animals a ON sc.animal_id = a.id
@@ -2628,6 +2629,32 @@ def resolve_clearance(clearance_id):
     db.commit()
     db.close()
     return jsonify({"status": status, "message": f"Sale {status} ✅"})
+
+
+@app.route('/clearances/<int:clearance_id>/photo', methods=['POST'])
+@require_auth
+@require_role('Police')
+def upload_clearance_photo(clearance_id):
+    """A photo the officer takes of the animal itself at the point of
+    clearance — physical proof it was actually inspected, distinct from the
+    seller's own animal photos and from the traditional-authority's written
+    clearance document (leader_document_path)."""
+    photo = request.files.get('photo')
+    if not photo or not photo.filename:
+        return jsonify({"error": "No photo uploaded"}), 400
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT id FROM sale_clearances WHERE id=%s", (clearance_id,))
+    if not c.fetchone():
+        db.close(); return jsonify({"error": "Clearance not found"}), 404
+    try:
+        rel_path = save_photo(photo, 'clearances', clearance_id)
+    except ValueError as e:
+        db.close(); return jsonify({"error": str(e)}), 400
+    c.execute("UPDATE sale_clearances SET officer_photo_path=%s WHERE id=%s", (f"/uploads/{rel_path}", clearance_id))
+    db.commit()
+    db.close()
+    return jsonify({"officer_photo_path": f"/uploads/{rel_path}", "message": "Clearance photo uploaded ✅"})
 
 
 # ── MARKETPLACE BIDS ─────────────────────────────────────────────

@@ -58,10 +58,13 @@ const ListingGallery = ({ photos, alt }) => {
   const resolved = photos.map(resolveImageUrl);
   const go = (dir) => setI(prev => (prev + dir + photos.length) % photos.length);
   return (
-    <div className="relative w-full h-36 bg-gray-100 group">
+    <div className="relative w-full h-48 bg-gray-100 group">
+      {/* object-contain — a cover crop was cutting the animal out of frame
+          on non-square photos; the full picture should be visible on the
+          card itself, not only after opening the lightbox. */}
       <img
         src={resolved[i]} alt={alt} onClick={() => setLightboxOpen(true)}
-        className="w-full h-full object-cover cursor-zoom-in"
+        className="w-full h-full object-contain cursor-zoom-in"
       />
       {lightboxOpen && (
         <Lightbox photos={resolved} index={i} onIndexChange={setI} onClose={() => setLightboxOpen(false)} alt={alt} />

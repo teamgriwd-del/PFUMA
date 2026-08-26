@@ -1331,6 +1331,7 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
   const [apiOnline,     setApiOnline]     = useState(false);
   const [busyId,        setBusyId]        = useState(null);
   const [feedback,      setFeedback]      = useState(null);
+  const [photoUploadingId, setPhotoUploadingId] = useState(null);
 
   const [showAddOfficer, setShowAddOfficer] = useState(false);
   const [officerForm,    setOfficerForm]    = useState(EMPTY_OFFICER_FORM);
@@ -1418,6 +1419,26 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
     setFeedback(status === 'cleared' ? 'Sale cleared for listing.' : 'Sale clearance rejected.');
     setBusyId(null);
     setTimeout(() => setFeedback(null), 2500);
+  };
+
+  // Proof the officer physically inspected the animal, distinct from the
+  // seller's own listing photos — attaches to the clearance record itself,
+  // not the animal, so it stays tied to this specific review.
+  const uploadClearancePhoto = async (clearanceId, file) => {
+    if (!file) return;
+    setPhotoUploadingId(clearanceId);
+    try {
+      const fd = new FormData();
+      fd.append('photo', file);
+      const res = await fetch(`${API}/clearances/${clearanceId}/photo`, { method: 'POST', headers: authHeaders, body: fd });
+      const data = await res.json();
+      if (res.ok) {
+        setClearances(prev => prev.map(c => c.id === clearanceId ? { ...c, officer_photo_path: data.officer_photo_path } : c));
+      } else {
+        window.alert(data.error || 'Could not upload photo.');
+      }
+    } catch { window.alert('Could not reach the PFUMA API — the photo was not uploaded.'); }
+    setPhotoUploadingId(null);
   };
 
   const theftAlerts = (notifications || []).filter(n => /theft|breach|security/i.test(`${n.title} ${n.msg}`));
@@ -1609,9 +1630,14 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
               {clearances.map(c => (
                 <div key={c.id} className="p-4 bg-white/5 rounded-xl border border-white/10">
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <div>
-                      <p className="text-xs font-black text-white">{c.product_name || c.animal_name}</p>
-                      <p className="text-[10px] text-gray-400 font-medium">Seller: {c.seller_name} · {c.species || 'Livestock'}</p>
+                    <div className="flex items-start gap-3 min-w-0">
+                      {c.animal_image_url && (
+                        <img src={resolveImageUrl(c.animal_image_url)} alt={c.animal_name} className="w-14 h-14 rounded-lg object-contain bg-black/30 shrink-0" />
+                      )}
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-white">{c.product_name || c.animal_name}</p>
+                        <p className="text-[10px] text-gray-400 font-medium">Seller: {c.seller_name} · {c.species || 'Livestock'}</p>
+                      </div>
                     </div>
                     <span className="text-[9px] font-black text-orange-400 bg-orange-400/10 px-2 py-0.5 rounded-full uppercase shrink-0">Pending</span>
                   </div>
@@ -1638,6 +1664,26 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
                       <p className="text-[11px] text-red-300 font-medium">No Sabuku or Mambo clearance on record. Ask the seller to record it, or to state why none applies, before clearing.</p>
                     </div>
                   )}
+
+                  {/* Officer's own photo of the animal — proof of physical
+                      inspection, separate from the seller's listing photos. */}
+                  <div className="flex items-center gap-2 mt-2">
+                    {c.officer_photo_path ? (
+                      <img src={resolveImageUrl(c.officer_photo_path)} alt="Animal at clearance" className="w-12 h-12 rounded-lg object-cover border border-white/10" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-white/5 border border-dashed border-white/20 flex items-center justify-center shrink-0">
+                        <Camera size={14} className="text-gray-500" />
+                      </div>
+                    )}
+                    <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide border border-white/10 transition ${photoUploadingId === c.id ? 'opacity-50' : 'cursor-pointer text-gray-300 hover:bg-white/10'}`}>
+                      {photoUploadingId === c.id ? <RefreshCw size={11} className="animate-spin" /> : <Camera size={11} />}
+                      {c.officer_photo_path ? 'Replace photo' : 'Upload photo of animal'}
+                      <input
+                        type="file" accept="image/*" className="hidden" disabled={photoUploadingId === c.id}
+                        onChange={e => { uploadClearancePhoto(c.id, e.target.files?.[0]); e.target.value = ''; }}
+                      />
+                    </label>
+                  </div>
 
                   <div className="flex gap-2 mt-3">
                     <button
