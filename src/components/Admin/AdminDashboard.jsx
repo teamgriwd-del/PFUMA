@@ -4,7 +4,8 @@ import {
   CheckCircle, XCircle, ShoppingCart, AlertTriangle, Handshake, Package,
   Ban, RotateCcw, Satellite, Navigation, Crosshair, Thermometer, Heart,
   BatteryMedium, Play, Pause, RadioTower, Target, Save, Trash2,
-  Upload, Database, FileSpreadsheet, UserPlus,
+  Upload, Database, FileSpreadsheet, UserPlus, Eye, X, FileText, Mail, Phone, MapPin,
+  CreditCard, Calendar, Shield,
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
@@ -20,6 +21,153 @@ const StatCard = ({ label, value, icon: Icon, color }) => (
   </div>
 );
 
+// Every field admin_list_users' SELECT u.* already sends down (minus the
+// password hash), just not previously rendered anywhere — the compact row
+// only ever showed name/role/phone/org/province. This is the full record.
+const DetailRow = ({ icon: Icon, label, value }) => value ? (
+  <div className="flex items-start gap-2.5 py-2">
+    {Icon && <Icon size={13} className="text-gray-400 shrink-0 mt-0.5" />}
+    <div className="min-w-0">
+      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{label}</p>
+      <p className="text-xs font-bold text-gray-800 break-words">{value}</p>
+    </div>
+  </div>
+) : null;
+
+const UserDetailModal = ({ user, currentUser, onClose }) => {
+  const [docBusy, setDocBusy] = useState(null);
+
+  const viewDocument = async (doctype) => {
+    setDocBusy(doctype);
+    try {
+      const res = await fetch(`${API}/documents/${user.id}/${doctype}`, { headers: { Authorization: `Bearer ${currentUser.token}` } });
+      if (!res.ok) { window.alert('No document on file, or not authorized to view it.'); setDocBusy(null); return; }
+      const blob = await res.blob();
+      window.open(URL.createObjectURL(blob), '_blank');
+    } catch { window.alert('Could not reach the PFUMA API.'); }
+    setDocBusy(null);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-gray-900/80 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-3xl shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between z-10">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-white font-black text-xs shrink-0 overflow-hidden">
+              {user.avatar_url ? <img src={`${API}${user.avatar_url}`} className="w-full h-full object-cover" alt="" /> : (user.full_name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-gray-900">{user.full_name}</h3>
+              <p className="text-[10px] text-gray-400 font-bold uppercase">{user.role} · Account #{user.id}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-700 transition"><X size={18} /></button>
+        </div>
+
+        <div className="p-6 space-y-6">
+          <section>
+            <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Identity</h4>
+            <div className="grid grid-cols-2 gap-x-4">
+              <DetailRow icon={Phone} label="Phone" value={user.phone} />
+              <DetailRow icon={Mail} label="Email" value={user.email} />
+              <DetailRow icon={CreditCard} label="National ID" value={user.national_id_number} />
+              <DetailRow icon={Calendar} label="Registered" value={user.created_at ? new Date(user.created_at).toLocaleString() : null} />
+            </div>
+          </section>
+
+          <section>
+            <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Location & Organisation</h4>
+            <div className="grid grid-cols-2 gap-x-4">
+              <DetailRow icon={MapPin} label="Org / Farm / Business Name" value={user.org_name} />
+              <DetailRow icon={MapPin} label="Province" value={user.province} />
+              <DetailRow icon={MapPin} label="District" value={user.district} />
+              <DetailRow icon={MapPin} label="Address" value={user.address} />
+            </div>
+          </section>
+
+          {(user.farm_size_ha || user.species_farmed) && (
+            <section>
+              <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Farmer Details</h4>
+              <div className="grid grid-cols-2 gap-x-4">
+                <DetailRow label="Farm Size" value={user.farm_size_ha ? `${user.farm_size_ha} ha` : null} />
+                <DetailRow label="Species Farmed" value={user.species_farmed} />
+              </div>
+            </section>
+          )}
+
+          {(user.license_number || user.speciality) && (
+            <section>
+              <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Veterinary Credentials</h4>
+              <div className="grid grid-cols-2 gap-x-4">
+                <DetailRow label="Licence Number" value={user.license_number} />
+                <DetailRow label="Speciality" value={user.speciality} />
+              </div>
+            </section>
+          )}
+
+          {(user.business_reg || user.supply_categories || user.trading_areas) && (
+            <section>
+              <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Business Details</h4>
+              <div className="grid grid-cols-2 gap-x-4">
+                <DetailRow label="Business Registration" value={user.business_reg} />
+                <DetailRow label="Supply Categories" value={user.supply_categories} />
+                <DetailRow label="Trading Areas" value={user.trading_areas} />
+              </div>
+            </section>
+          )}
+
+          {(user.badge_number || user.station) && (
+            <section>
+              <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Police Details</h4>
+              <div className="grid grid-cols-2 gap-x-4">
+                <DetailRow label="Badge Number" value={user.badge_number} />
+                <DetailRow label="Station" value={user.station} />
+                <DetailRow label="Jurisdiction Province" value={user.jurisdiction_province} />
+                <DetailRow label="Nominated By" value={user.requested_by_name ? `${user.requested_by_name}${user.requested_by_badge ? ` (${user.requested_by_badge})` : ''}` : null} />
+              </div>
+            </section>
+          )}
+
+          <section>
+            <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Verification & Account Status</h4>
+            <div className="grid grid-cols-2 gap-x-4">
+              <DetailRow icon={Shield} label="Verification Status" value={user.verification_status} />
+              <DetailRow icon={Shield} label="Account Status" value={user.account_status} />
+              <DetailRow label="Verification Notes" value={user.verification_notes} />
+              <DetailRow label="Suspension Reason" value={user.suspension_reason} />
+            </div>
+            <div className="flex gap-2 mt-2">
+              {user.id_document_path && (
+                <button onClick={() => viewDocument('id')} disabled={docBusy === 'id'} className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-[10px] font-black uppercase text-gray-600 transition disabled:opacity-50">
+                  <FileText size={12} /> {docBusy === 'id' ? 'Opening…' : 'View ID Document'}
+                </button>
+              )}
+              {user.credential_document_path && (
+                <button onClick={() => viewDocument('credential')} disabled={docBusy === 'credential'} className="flex items-center gap-1.5 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-[10px] font-black uppercase text-gray-600 transition disabled:opacity-50">
+                  <FileText size={12} /> {docBusy === 'credential' ? 'Opening…' : 'View Credential Document'}
+                </button>
+              )}
+            </div>
+          </section>
+
+          {user.next_of_kin_name && (
+            <section>
+              <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Next of Kin</h4>
+              <div className="grid grid-cols-2 gap-x-4">
+                <DetailRow label="Name" value={user.next_of_kin_name} />
+                <DetailRow label="Phone" value={user.next_of_kin_phone} />
+                <DetailRow label="Relationship" value={user.next_of_kin_relationship} />
+                <DetailRow label="National ID" value={user.next_of_kin_national_id} />
+                <DetailRow icon={Shield} label="Verification Status" value={user.next_of_kin_verification_status} />
+              </div>
+            </section>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const UsersTab = ({ currentUser }) => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,6 +175,7 @@ const UsersTab = ({ currentUser }) => {
   const [roleFilter, setRoleFilter] = useState('');
   const [verFilter, setVerFilter] = useState('');
   const [busyId, setBusyId] = useState(null);
+  const [viewingUser, setViewingUser] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -143,6 +292,9 @@ const UsersTab = ({ currentUser }) => {
                     </p>
                   )}
                 </div>
+                <button onClick={() => setViewingUser(u)} className="shrink-0 p-1.5 bg-gray-50 hover:bg-gray-100 text-gray-500 rounded-lg transition" aria-label={`View ${u.full_name}'s full details`} title="View full details">
+                  <Eye size={14} />
+                </button>
                 <span className={`shrink-0 text-[9px] font-black px-2.5 py-1 rounded-full uppercase ${
                   u.verification_status === 'verified' ? 'bg-green-100 text-green-700' :
                   u.verification_status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
@@ -188,6 +340,8 @@ const UsersTab = ({ currentUser }) => {
           </div>
         )}
       </div>
+
+      {viewingUser && <UserDetailModal user={viewingUser} currentUser={currentUser} onClose={() => setViewingUser(null)} />}
     </div>
   );
 };

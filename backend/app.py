@@ -719,7 +719,7 @@ def get_document(user_id, doctype):
 
     allowed = (
         requester['id'] == user_id or
-        requester['role'] == 'Police' or
+        requester['role'] in ('Police', 'Admin') or
         (requester['role'] == 'Veterinarian' and requester['verification_status'] == 'verified' and target['role'] == 'Veterinarian')
     )
     if not allowed:
@@ -2550,6 +2550,7 @@ def _active_marketplace_listing(c, animal_id):
 
 @app.route('/animals/<int:animal_id>/transfer', methods=['POST'])
 @require_auth
+@require_verified
 def create_animal_transfer(animal_id):
     db = get_db()
     c = db.cursor()
@@ -2615,6 +2616,7 @@ def cancel_animal_transfer(animal_id):
 
 @app.route('/transfers/claim', methods=['POST'])
 @require_auth
+@require_verified
 def claim_animal_transfer():
     d = request.json or {}
     code = (d.get('transfer_code') or '').strip().upper()
@@ -2657,6 +2659,40 @@ def claim_animal_transfer():
         "animal_id": transfer['animal_id'], "animal_name": transfer['animal_name'],
         "species": transfer['species'], "breed": transfer['breed'], "seller_name": transfer['seller_name'],
     })
+
+
+@app.route('/transfers', methods=['GET'])
+@require_auth
+@require_role('Police')
+@require_verified
+def list_animal_transfers():
+    """Oversight visibility, not a blocking gate — an off-platform transfer
+    completes without any police review (there's no listing to clear), so
+    this is the only place an officer can see the pattern at all: who's
+    generating codes, who's claiming them, how often. Mirrors the
+    sale-clearance queue's shape without being a queue to act on."""
+    db = get_db()
+    c = db.cursor()
+    status = request.args.get('status')
+    sql = """
+        SELECT at.id, at.transfer_code, at.status, at.created_at, at.expires_at, at.claimed_at,
+               a.id AS animal_id, a.name AS animal_name, a.species, a.tag_id, a.brand_id,
+               seller.full_name AS seller_name, seller.phone AS seller_phone, seller.province AS seller_province,
+               buyer.full_name AS buyer_name, buyer.phone AS buyer_phone
+        FROM animal_transfers at
+        JOIN animals a ON at.animal_id = a.id
+        JOIN users seller ON at.from_owner_id = seller.id
+        LEFT JOIN users buyer ON at.claimed_by = buyer.id
+        WHERE 1=1
+    """
+    params = []
+    if status:
+        sql += " AND at.status = %s"; params.append(status)
+    sql += " ORDER BY at.created_at DESC LIMIT 200"
+    c.execute(sql, params)
+    rows = c.fetchall()
+    db.close()
+    return jsonify(rows)
 
 
 @app.route('/listings', methods=['POST'])

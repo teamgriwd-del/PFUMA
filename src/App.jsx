@@ -1542,6 +1542,7 @@ const EMPTY_OFFICER_FORM = { full_name: '', phone: '', national_id_number: '', b
 const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
   const [verifications, setVerifications] = useState([]);
   const [clearances,    setClearances]    = useState([]);
+  const [transfers,     setTransfers]     = useState([]);
   const [apiOnline,     setApiOnline]     = useState(false);
   const [busyId,        setBusyId]        = useState(null);
   const [feedback,      setFeedback]      = useState(null);
@@ -1604,6 +1605,20 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
   }, [currentUser?.token]);
 
   useEffect(() => { loadQueues(); }, [loadQueues]);
+
+  // Off-platform transfers never go through a listing, so there's nothing
+  // for this queue to act on — it's visibility only: who's generating codes,
+  // who's claiming them, so an unusual pattern is at least seen.
+  useEffect(() => {
+    if (!currentUser?.token) return;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/transfers`, { headers: authHeaders });
+        if (res.ok) setTransfers(await res.json());
+      } catch { /* offline — leave empty, no fake fallback */ }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.token]);
 
   const resolveVerification = async (userId, verification_status) => {
     setBusyId(userId);
@@ -1913,6 +1928,34 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Off-platform transfers — oversight only, nothing to approve/reject
+          here. A cash sale never creates a listing for this unit to clear,
+          so this is the only place an officer can see the pattern at all. */}
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+        <h3 className="text-sm font-black text-white mb-1">Off-Platform Transfers</h3>
+        <p className="text-[11px] text-gray-500 font-medium mb-4">Animals moved via a seller-generated code instead of a cleared Marketplace sale — visibility only, nothing to approve here.</p>
+        {transfers.length === 0 ? (
+          <p className="text-xs text-gray-500 font-medium italic text-center py-4">No off-platform transfers recorded yet.</p>
+        ) : (
+          <div className="space-y-2.5">
+            {transfers.slice(0, 20).map(t => (
+              <div key={t.id} className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/10">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-black text-white">{t.animal_name} <span className="text-gray-500 font-medium">· {t.species}</span></p>
+                  <p className="text-[10px] text-gray-400 font-medium">
+                    {t.seller_name} ({t.seller_phone}){t.buyer_name ? ` → ${t.buyer_name} (${t.buyer_phone})` : ''}
+                  </p>
+                </div>
+                <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase shrink-0 ${
+                  t.status === 'claimed' ? 'bg-green-500/10 text-green-400' :
+                  t.status === 'cancelled' ? 'bg-gray-500/10 text-gray-400' : 'bg-yellow-400/10 text-yellow-400'
+                }`}>{t.status}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Quick nav */}
