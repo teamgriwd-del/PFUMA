@@ -342,6 +342,8 @@ def ensure_schema():
     add_column_if_missing('sale_clearances', 'buyer_signature_path', "buyer_signature_path VARCHAR(300)")
     add_column_if_missing('sale_clearances', 'buyer_signed_at', "buyer_signed_at TIMESTAMP NULL")
     add_column_if_missing('sale_clearances', 'not_stolen_certified', "not_stolen_certified BOOLEAN NOT NULL DEFAULT FALSE")
+    add_column_if_missing('sale_clearances', 'officer_signature_path', "officer_signature_path VARCHAR(300)")
+    add_column_if_missing('sale_clearances', 'officer_signed_at', "officer_signed_at TIMESTAMP NULL")
 
     add_column_if_missing('users', 'account_status', "account_status ENUM('active','suspended') NOT NULL DEFAULT 'active'")
     add_column_if_missing('users', 'suspension_reason', "suspension_reason VARCHAR(300)")
@@ -702,18 +704,47 @@ def get_verifications():
         # Police-role applicants are excluded — only Admin can resolve those
         # (see resolve_verification), so listing them here would show a
         # pending officer with no action this viewer is allowed to take.
-        c.execute("SELECT id, full_name, role, org_name, province, id_document_path, credential_document_path, created_at "
-                   "FROM users WHERE verification_status=%s AND role NOT IN ('Veterinarian','Admin','Police') ORDER BY created_at ASC", (status,))
+        # Full row (minus password) — an officer needs to see everything
+        # Admin sees before deciding, not just name/org/province.
+        c.execute("SELECT * FROM users WHERE verification_status=%s AND role NOT IN ('Veterinarian','Admin','Police') ORDER BY created_at ASC", (status,))
     elif requester['role'] == 'Veterinarian' and requester['verification_status'] == 'verified':
-        c.execute("SELECT id, full_name, role, org_name, province, id_document_path, credential_document_path, created_at "
-                   "FROM users WHERE verification_status=%s AND role='Veterinarian' AND id != %s ORDER BY created_at ASC",
+        c.execute("SELECT * FROM users WHERE verification_status=%s AND role='Veterinarian' AND id != %s ORDER BY created_at ASC",
                    (status, requester['id']))
     else:
         db.close()
         return jsonify({"error": "Only Police (or a verified Veterinarian reviewing peers) can view this queue"}), 403
     rows = c.fetchall()
+    for r in rows:
+        r.pop('password_hash', None)
     db.close()
     return jsonify(rows)
+
+
+@app.route('/admin/users/<int:user_id>/id-check', methods=['GET'])
+@require_auth
+def check_duplicate_national_id(user_id):
+    """Whether this applicant's national ID already belongs to another
+    account — a real person's ID reused across accounts (or someone else's ID
+    used to fake a new one) is exactly the kind of thing a reviewer should
+    see before verifying, not discover afterward."""
+    if g.current_user['role'] not in ('Admin', 'Police'):
+        return jsonify({"error": "Not authorized"}), 403
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT national_id_number FROM users WHERE id=%s", (user_id,))
+    target = c.fetchone()
+    if not target:
+        db.close(); return jsonify({"error": "User not found"}), 404
+    nid = target['national_id_number']
+    if not nid:
+        db.close(); return jsonify({"matches": []})
+    c.execute("""
+        SELECT id, full_name, role, phone, verification_status, created_at
+        FROM users WHERE national_id_number=%s AND id!=%s
+    """, (nid, user_id))
+    matches = c.fetchall()
+    db.close()
+    return jsonify({"matches": matches})
 
 
 @app.route('/verifications/<int:user_id>', methods=['PATCH'])
@@ -2961,7 +2992,10 @@ def create_clearance():
 @require_role('Police')
 @require_verified
 def resolve_clearance(clearance_id):
-    d = request.json
+    # Multipart, not JSON — Part E now carries the officer's own signature
+    # alongside the certification, the same "sign to act" pattern as the
+    # vet's witness line and the V27 permit.
+    d = request.form
     status = d.get('status')
     if status not in ('cleared', 'rejected'):
         return jsonify({"error": "status must be 'cleared' or 'rejected'"}), 400
@@ -2969,14 +3003,15 @@ def resolve_clearance(clearance_id):
     db = get_db()
     c = db.cursor()
 
+    c.execute("SELECT leader_clearance, animal_id, seller_id FROM sale_clearances WHERE id=%s", (clearance_id,))
+    row = c.fetchone()
+    if not row:
+        db.close(); return jsonify({"error": "Clearance not found"}), 404
+
     # A sale cannot be cleared until the traditional-authority step has been
     # answered — either a Sabuku/Mambo attestation, or an explicit reason why
     # none applies. Rejecting is always allowed; only approval is gated.
     if status == 'cleared':
-        c.execute("SELECT leader_clearance, animal_id FROM sale_clearances WHERE id=%s", (clearance_id,))
-        row = c.fetchone()
-        if not row:
-            db.close(); return jsonify({"error": "Clearance not found"}), 404
         if not row['leader_clearance']:
             db.close()
             return jsonify({"error": "No Sabuku or Mambo clearance on record for this sale. "
@@ -2990,28 +3025,54 @@ def resolve_clearance(clearance_id):
         if block:
             db.close()
             return jsonify({"error": block, "trade_locked": True}), 409
-        # Part E's whole content is this certification — an officer can't
-        # clear a sale without actually making it, mirroring the paper form's
-        # own printed statement rather than treating it as a UI afterthought.
+        # Part E's whole content is this certification and signature — an
+        # officer can't clear a sale without actually making it, mirroring
+        # the paper form's own printed statement and signature line rather
+        # than treating either as a UI afterthought.
         if not d.get('not_stolen_certified'):
             db.close()
             return jsonify({"error": "You must certify that the livestock had not been reported stolen at the time of clearance."}), 400
+        signature = request.files.get('signature')
+        if not signature or not signature.filename:
+            db.close()
+            return jsonify({"error": "Your signature is required to clear a sale."}), 400
+        try:
+            rel_path = save_photo(signature, 'signatures', clearance_id, suffix='officer')
+        except ValueError as e:
+            db.close(); return jsonify({"error": str(e)}), 400
+        c.execute("""
+            UPDATE sale_clearances
+            SET status=%s, movement_permit_number=%s, clearance_register_no=%s,
+                not_stolen_certified=%s, officer_signature_path=%s, officer_signed_at=NOW(),
+                officer_id=%s, notes=%s, resolved_at=NOW()
+            WHERE id=%s
+        """, (
+            status, d.get('movement_permit_number'), d.get('clearance_register_no'),
+            True, f"/uploads/{rel_path}", g.current_user['id'], d.get('notes'), clearance_id,
+        ))
+    else:
+        c.execute("""
+            UPDATE sale_clearances
+            SET status=%s, officer_id=%s, notes=%s, resolved_at=NOW()
+            WHERE id=%s
+        """, (status, g.current_user['id'], d.get('notes'), clearance_id))
 
-    c.execute("""
-        UPDATE sale_clearances
-        SET status=%s, movement_permit_number=%s, clearance_register_no=%s,
-            not_stolen_certified=%s, officer_id=%s, notes=%s, resolved_at=NOW()
-        WHERE id=%s
-    """, (
-        status, d.get('movement_permit_number'), d.get('clearance_register_no'),
-        bool(d.get('not_stolen_certified')), g.current_user['id'], d.get('notes'), clearance_id,
-    ))
-
-    c.execute("SELECT listing_id FROM sale_clearances WHERE id=%s", (clearance_id,))
-    row = c.fetchone()
-    if row and row['listing_id']:
+    c.execute("SELECT listing_id, animal_id FROM sale_clearances WHERE id=%s", (clearance_id,))
+    listing_row = c.fetchone()
+    if listing_row and listing_row['listing_id']:
         new_listing_status = 'available' if status == 'cleared' else 'withdrawn'
-        c.execute("UPDATE marketplace_listings SET status=%s WHERE id=%s", (new_listing_status, row['listing_id']))
+        c.execute("UPDATE marketplace_listings SET status=%s WHERE id=%s", (new_listing_status, listing_row['listing_id']))
+
+    # The seller otherwise has no way to know their clearance moved at all —
+    # they'd only find out by noticing the listing itself changed status.
+    c.execute("SELECT name FROM animals WHERE id=%s", (listing_row['animal_id'],))
+    animal_name = (c.fetchone() or {}).get('name', 'Your animal')
+    create_notification(
+        c, row['seller_id'], 'clearance_resolved',
+        f"Sale clearance {status}" if status == 'cleared' else "Sale clearance rejected",
+        f"{animal_name}'s Police sale clearance was {status}." + (" It's now live on the Marketplace." if status == 'cleared' else ""),
+        related_user_id=g.current_user['id'], animal_id=listing_row['animal_id'],
+    )
 
     db.commit()
     db.close()
@@ -3094,7 +3155,7 @@ def sign_clearance(clearance_id):
 
     db = get_db()
     c = db.cursor()
-    c.execute("SELECT seller_id, status FROM sale_clearances WHERE id=%s", (clearance_id,))
+    c.execute("SELECT seller_id, status, animal_id FROM sale_clearances WHERE id=%s", (clearance_id,))
     row = c.fetchone()
     if not row:
         db.close(); return jsonify({"error": "Clearance not found"}), 404
@@ -3118,6 +3179,16 @@ def sign_clearance(clearance_id):
     if role == 'vet':
         c.execute(f"UPDATE sale_clearances SET {column}=%s, {signed_at_column}=NOW(), vet_officer_id=%s WHERE id=%s",
                   (f"/uploads/{rel_path}", g.current_user['id'], clearance_id))
+        # The seller otherwise has no way to know a vet witnessed their
+        # clearance at all — only Police could previously see this.
+        c.execute("SELECT name FROM animals WHERE id=%s", (row['animal_id'],))
+        animal_name = (c.fetchone() or {}).get('name', 'Your animal')
+        create_notification(
+            c, row['seller_id'], 'clearance_witnessed',
+            f"Vet witnessed {animal_name}'s clearance",
+            f"Dr. {g.current_user['full_name']} signed as the vet witness on your sale clearance (ZRP Form 392, Part D).",
+            related_user_id=g.current_user['id'], animal_id=row['animal_id'],
+        )
     else:
         c.execute(f"UPDATE sale_clearances SET {column}=%s, {signed_at_column}=NOW() WHERE id=%s",
                   (f"/uploads/{rel_path}", clearance_id))
@@ -3234,7 +3305,7 @@ def issue_movement_permit(permit_id):
 
     db = get_db()
     c = db.cursor()
-    c.execute("SELECT status, period_days FROM movement_permits WHERE id=%s", (permit_id,))
+    c.execute("SELECT status, period_days, owner_id, animal_id FROM movement_permits WHERE id=%s", (permit_id,))
     row = c.fetchone()
     if not row:
         db.close(); return jsonify({"error": "Permit request not found"}), 404
@@ -3259,6 +3330,12 @@ def issue_movement_permit(permit_id):
         request.form.get('vet_station') or g.current_user.get('org_name'),
         f"/uploads/{rel_path}", row['period_days'], permit_id,
     ))
+    create_notification(
+        c, row['owner_id'], 'permit_issued',
+        f"Movement permit {permit_number} issued",
+        f"Dr. {g.current_user['full_name']} ({vet_rank}) signed and issued your movement permit — valid for {row['period_days']} day(s).",
+        related_user_id=g.current_user['id'], animal_id=row['animal_id'],
+    )
     db.commit()
     db.close()
     return jsonify({"permit_number": permit_number, "message": "Movement permit issued ✅"})
@@ -3272,14 +3349,21 @@ def reject_movement_permit(permit_id):
     d = request.json or {}
     db = get_db()
     c = db.cursor()
-    c.execute("SELECT status FROM movement_permits WHERE id=%s", (permit_id,))
+    c.execute("SELECT status, owner_id, animal_id FROM movement_permits WHERE id=%s", (permit_id,))
     row = c.fetchone()
     if not row:
         db.close(); return jsonify({"error": "Permit request not found"}), 404
     if row['status'] != 'pending':
         db.close(); return jsonify({"error": "This request has already been resolved"}), 409
+    reason = (d.get('reason') or '').strip() or None
     c.execute("UPDATE movement_permits SET status='rejected', vet_id=%s, rejection_reason=%s WHERE id=%s",
-              (g.current_user['id'], (d.get('reason') or '').strip() or None, permit_id))
+              (g.current_user['id'], reason, permit_id))
+    create_notification(
+        c, row['owner_id'], 'permit_rejected',
+        "Movement permit request rejected",
+        f"Dr. {g.current_user['full_name']} rejected your movement permit request." + (f" Reason: {reason}" if reason else ""),
+        related_user_id=g.current_user['id'], animal_id=row['animal_id'],
+    )
     db.commit()
     db.close()
     return jsonify({"message": "Movement permit request rejected"})

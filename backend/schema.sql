@@ -211,6 +211,8 @@ CREATE TABLE IF NOT EXISTS sale_clearances (
   buyer_signature_path      VARCHAR(300), -- Part D: Signature of Buyer/Receiver
   buyer_signed_at           TIMESTAMP NULL,
   not_stolen_certified  BOOLEAN NOT NULL DEFAULT FALSE, -- Part E: officer certifies not reported stolen
+  officer_signature_path VARCHAR(300),   -- Part E: the officer's own signature, alongside not_stolen_certified
+  officer_signed_at      TIMESTAMP NULL,
   created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   resolved_at   TIMESTAMP NULL,
   FOREIGN KEY (animal_id)  REFERENCES animals(id) ON DELETE CASCADE,
@@ -249,7 +251,9 @@ ALTER TABLE sale_clearances
   ADD COLUMN IF NOT EXISTS seller_signed_at TIMESTAMP NULL,
   ADD COLUMN IF NOT EXISTS buyer_signature_path VARCHAR(300),
   ADD COLUMN IF NOT EXISTS buyer_signed_at TIMESTAMP NULL,
-  ADD COLUMN IF NOT EXISTS not_stolen_certified BOOLEAN NOT NULL DEFAULT FALSE;
+  ADD COLUMN IF NOT EXISTS not_stolen_certified BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS officer_signature_path VARCHAR(300),
+  ADD COLUMN IF NOT EXISTS officer_signed_at TIMESTAMP NULL;
 
 -- ── VET MOVEMENT PERMITS ─────────────────────────────────────
 -- Digitizes DVS Form V27 "Movement of Animal Permit" — the vet's own

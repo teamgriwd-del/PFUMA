@@ -15,6 +15,7 @@ import Jinda      from './components/IntelAI/PfumaIntelAI';
 import AuthPortal        from './components/IntelAI/AuthPortal';
 import ErrorBoundary     from './components/ErrorBoundary';
 import SignaturePad      from './components/SignaturePad';
+import UserDetailModal   from './components/UserDetailModal';
 import { HEALTH_PROTOCOLS } from './components/HealthManagement/healthData';
 import { DOSAGE_RATES } from './components/HealthManagement/dosageData';
 import {
@@ -204,6 +205,54 @@ const SellDirectlyCard = ({ animals, currentUser }) => {
           {busy ? 'Generating…' : 'Generate Transfer Code'}
         </button>
       )}
+    </div>
+  );
+};
+
+// Surfaces movement permit status right on the main dashboard — the request
+// form itself lives on the animal's own profile (DVS Form V27 needs an
+// anchor animal), but a farmer shouldn't have to already know that to see
+// whether a vet has actually cleared/signed their request.
+const MovementPermitsSummaryCard = ({ currentUser, setActiveTab }) => {
+  const [permits, setPermits] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!currentUser?.token) return;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/movement-permits/mine`, { headers: { Authorization: `Bearer ${currentUser.token}` } });
+        if (res.ok) setPermits(await res.json());
+      } catch { /* offline */ }
+      setLoading(false);
+    })();
+  }, [currentUser?.token]);
+
+  if (loading || permits.length === 0) return null; // nothing requested yet — no need to take up dashboard space
+
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <FileText size={15} className="text-pfuma-green" />
+          <h3 className="text-sm font-black text-gray-800">Movement Permits (DVS Form V27)</h3>
+        </div>
+        <button onClick={() => setActiveTab('profile')} className="text-[10px] font-black text-pfuma-green hover:underline uppercase">Request Another →</button>
+      </div>
+      <p className="text-[11px] text-gray-400 font-medium mb-3">Status of your requests — nothing is authorized to move until a vet signs it.</p>
+      <div className="space-y-2.5">
+        {permits.slice(0, 5).map(p => (
+          <div key={p.id} className="flex items-center justify-between bg-gray-50 rounded-xl p-3">
+            <div>
+              <p className="text-xs font-black text-gray-800">{p.animal_name} <span className="text-gray-400 font-medium">· {p.from_district} → {p.to_district}</span></p>
+              {p.status === 'issued' && <p className="text-[10px] text-green-600 font-bold mt-0.5">Permit {p.permit_number} · signed by {p.vet_name_block} ({p.vet_rank}) · expires {new Date(p.expires_at).toLocaleDateString()}</p>}
+              {p.status === 'pending' && <p className="text-[10px] text-amber-600 font-bold mt-0.5">Awaiting a vet's signature</p>}
+              {p.status === 'rejected' && <p className="text-[10px] text-red-500 font-bold mt-0.5">Rejected{p.rejection_reason ? `: ${p.rejection_reason}` : ''}</p>}
+            </div>
+            <span className={`text-[9px] font-black px-2 py-1 rounded-full uppercase shrink-0 ${p.status === 'issued' ? 'bg-green-100 text-green-700' : p.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{p.status}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
@@ -477,6 +526,8 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
           </div>
 
           <SellDirectlyCard animals={animals} currentUser={currentUser} />
+
+          <MovementPermitsSummaryCard currentUser={currentUser} setActiveTab={setActiveTab} />
 
           {/* Medicine cabinet */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
@@ -1720,6 +1771,7 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
   const [busyId,        setBusyId]        = useState(null);
   const [feedback,      setFeedback]      = useState(null);
   const [photoUploadingId, setPhotoUploadingId] = useState(null);
+  const [viewingUser,   setViewingUser]   = useState(null);
 
   const [showAddOfficer, setShowAddOfficer] = useState(false);
   const [officerForm,    setOfficerForm]    = useState(EMPTY_OFFICER_FORM);
@@ -1814,21 +1866,21 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
 
   const resolveClearance = async (clearanceId, status) => {
     const draft = clearanceDrafts[clearanceId] || {};
-    if (status === 'cleared' && !draft.certified) return;
+    if (status === 'cleared' && (!draft.certified || !draft.signatureBlob)) return;
     setBusyId(clearanceId);
     try {
-      await fetch(`${API}/clearances/${clearanceId}`, {
-        method: 'PATCH', headers: { ...authHeaders, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          status,
-          movement_permit_number: draft.permitNumber || null,
-          clearance_register_no: draft.registerNo || null,
-          not_stolen_certified: !!draft.certified,
-        }),
-      });
-    } catch { /* offline — reflect locally only */ }
+      const fd = new FormData();
+      fd.append('status', status);
+      if (draft.permitNumber) fd.append('movement_permit_number', draft.permitNumber);
+      if (draft.registerNo) fd.append('clearance_register_no', draft.registerNo);
+      fd.append('not_stolen_certified', draft.certified ? 'true' : 'false');
+      if (draft.signatureBlob) fd.append('signature', draft.signatureBlob, 'signature.png');
+      const res = await fetch(`${API}/clearances/${clearanceId}`, { method: 'PATCH', headers: authHeaders, body: fd });
+      const data = await res.json();
+      if (!res.ok) { setFeedback(data.error || 'Could not resolve this clearance.'); setBusyId(null); setTimeout(() => setFeedback(null), 4000); return; }
+      setFeedback(status === 'cleared' ? 'Sale cleared for listing.' : 'Sale clearance rejected.');
+    } catch { setFeedback('Could not reach the PFUMA API.'); }
     setClearances(prev => prev.filter(c => c.id !== clearanceId));
-    setFeedback(status === 'cleared' ? 'Sale cleared for listing.' : 'Sale clearance rejected.');
     setBusyId(null);
     setTimeout(() => setFeedback(null), 2500);
   };
@@ -2018,7 +2070,10 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
                     </div>
                     <span className="text-[9px] font-black text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full uppercase shrink-0">Pending</span>
                   </div>
-                  <div className="flex gap-2 mt-3">
+                  <button onClick={() => setViewingUser(v)} className="flex items-center gap-1.5 text-[10px] font-black text-gray-300 hover:text-white uppercase tracking-wide mb-2">
+                    <Eye size={12} /> View Full Details
+                  </button>
+                  <div className="flex gap-2 mt-1">
                     <button disabled={busyId === v.id} onClick={() => resolveVerification(v.id, 'verified')} className="flex-1 py-2 bg-green-600 text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition disabled:opacity-40">Verify</button>
                     <button disabled={busyId === v.id} onClick={() => resolveVerification(v.id, 'rejected')} className="flex-1 py-2 bg-white/10 text-gray-300 rounded-lg text-[10px] font-black uppercase hover:bg-white/20 transition disabled:opacity-40">Reject</button>
                   </div>
@@ -2150,12 +2205,16 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
                       <input type="checkbox" className="mt-0.5" checked={!!clearanceDrafts[c.id]?.certified} onChange={e => setDraft(c.id, { certified: e.target.checked })} />
                       I certify that at the time of clearance the livestock described above had not been reported stolen.
                     </label>
+                    <div>
+                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Your Signature</p>
+                      <SignaturePad onChange={blob => setDraft(c.id, { signatureBlob: blob })} height={100} />
+                    </div>
                   </div>
 
                   <div className="flex gap-2 mt-3">
                     <button
-                      disabled={busyId === c.id || !c.leader_clearance || !clearanceDrafts[c.id]?.certified}
-                      title={!c.leader_clearance ? 'Sabuku or Mambo clearance must be on record first' : !clearanceDrafts[c.id]?.certified ? 'Certify the livestock was not reported stolen first' : undefined}
+                      disabled={busyId === c.id || !c.leader_clearance || !clearanceDrafts[c.id]?.certified || !clearanceDrafts[c.id]?.signatureBlob}
+                      title={!c.leader_clearance ? 'Sabuku or Mambo clearance must be on record first' : !clearanceDrafts[c.id]?.certified ? 'Certify the livestock was not reported stolen first' : !clearanceDrafts[c.id]?.signatureBlob ? 'Sign above first' : undefined}
                       onClick={() => resolveClearance(c.id, 'cleared')}
                       className="flex-1 py-2 bg-green-600 text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
                     >Clear Sale</button>
@@ -2206,6 +2265,8 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
       </div>
 
       <StakeholderMap />
+
+      {viewingUser && <UserDetailModal user={viewingUser} currentUser={currentUser} onClose={() => setViewingUser(null)} />}
     </div>
   );
 };
