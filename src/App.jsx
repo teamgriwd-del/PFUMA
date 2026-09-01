@@ -120,6 +120,85 @@ const SectionLabel = ({ children }) => (
 );
 
 // ── FARMER DASHBOARD ───────────────────────────────────────────────────────
+// Generates an off-platform transfer code right from the dashboard — the
+// seller-side counterpart to the Buyer dashboard's "Claim an Animal" widget,
+// surfaced here (not just on the animal's own profile page) so a farmer
+// doesn't need to already know this feature exists to find it.
+const SellDirectlyCard = ({ animals, currentUser }) => {
+  const sellable = animals.filter(a => a.marketplaceStatus !== 'sold');
+  const [animalId, setAnimalId] = useState(sellable[0]?.id || '');
+  const [transfer, setTransfer] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!sellable.length && animalId) setAnimalId('');
+    else if (sellable.length && !sellable.some(a => a.id === animalId)) setAnimalId(sellable[0].id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [animals]);
+
+  useEffect(() => {
+    setTransfer(null); setError('');
+    if (!animalId || !currentUser?.token) return;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/animals/${animalId}/transfer`, { headers: { Authorization: `Bearer ${currentUser.token}` } });
+        if (res.ok) setTransfer(await res.json());
+      } catch { /* offline */ }
+    })();
+  }, [animalId, currentUser?.token]);
+
+  const generate = async () => {
+    setBusy(true); setError('');
+    try {
+      const res = await fetch(`${API}/animals/${animalId}/transfer`, { method: 'POST', headers: { Authorization: `Bearer ${currentUser.token}` } });
+      const data = await res.json();
+      if (res.ok) setTransfer(data); else setError(data.error || 'Could not generate a code.');
+    } catch { setError('Could not reach the PFUMA API.'); }
+    setBusy(false);
+  };
+
+  const cancel = async () => {
+    setBusy(true);
+    try {
+      await fetch(`${API}/animals/${animalId}/transfer`, { method: 'DELETE', headers: { Authorization: `Bearer ${currentUser.token}` } });
+      setTransfer(null);
+    } catch { /* offline */ }
+    setBusy(false);
+  };
+
+  if (sellable.length === 0) return null; // nothing to offer a code for yet
+
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+      <div className="flex items-center gap-2 mb-1">
+        <Users size={15} className="text-pfuma-green" />
+        <h3 className="text-sm font-black text-gray-800">Sold to Someone Directly?</h3>
+      </div>
+      <p className="text-[11px] text-gray-400 font-medium mb-4 leading-snug">
+        Sold an animal for cash, off-platform? Generate a code and share it with the buyer — they enter it on their own account to claim it, with its full health history intact. Not needed for a Marketplace sale, which transfers automatically.
+      </p>
+      <select value={animalId} onChange={e => setAnimalId(Number(e.target.value))} className="w-full mb-3 px-3.5 py-2.5 bg-gray-50 rounded-xl border-2 border-transparent focus:border-pfuma-green outline-none font-bold text-sm text-gray-800">
+        {sellable.map(a => <option key={a.id} value={a.id}>{a.name} — {a.species}</option>)}
+      </select>
+      {error && <p className="text-[11px] text-red-500 font-bold mb-3">{error}</p>}
+      {transfer ? (
+        <div className="flex items-center justify-between bg-pfuma-green/5 border border-pfuma-green/20 rounded-xl p-4">
+          <div>
+            <p className="text-xl font-black text-gray-900 tracking-[0.25em]">{transfer.transfer_code}</p>
+            <p className="text-[10px] text-gray-400 font-medium mt-1">Expires {new Date(transfer.expires_at).toLocaleDateString()}</p>
+          </div>
+          <button onClick={cancel} disabled={busy} className="px-4 py-2 bg-white border-2 border-gray-200 rounded-lg font-black text-[10px] uppercase hover:bg-gray-50 transition disabled:opacity-50">Cancel</button>
+        </div>
+      ) : (
+        <button onClick={generate} disabled={busy || !animalId} className="w-full py-2.5 bg-gray-800 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-900 transition disabled:opacity-50">
+          {busy ? 'Generating…' : 'Generate Transfer Code'}
+        </button>
+      )}
+    </div>
+  );
+};
+
 const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFarmers, currentUser, setActiveTab, onListAnimal }) => {
   const [outbreaks, setOutbreaks] = useState([]);
 
@@ -387,6 +466,8 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
               </div>
             )}
           </div>
+
+          <SellDirectlyCard animals={animals} currentUser={currentUser} />
 
           {/* Medicine cabinet */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
