@@ -235,6 +235,37 @@ def ensure_schema():
         )
     """)
     c.execute("""
+        CREATE TABLE IF NOT EXISTS movement_permits (
+          id                 INT AUTO_INCREMENT PRIMARY KEY,
+          permit_number      VARCHAR(20) UNIQUE,
+          animal_id          INT NOT NULL,
+          owner_id           INT NOT NULL,
+          vet_id             INT NULL,
+          status             ENUM('pending','issued','rejected') NOT NULL DEFAULT 'pending',
+          bulls INT DEFAULT 0, calves INT DEFAULT 0, cows INT DEFAULT 0, oxen INT DEFAULT 0, steers INT DEFAULT 0,
+          pigs  INT DEFAULT 0, sheep  INT DEFAULT 0, goats INT DEFAULT 0,
+          other_count INT DEFAULT 0, other_description VARCHAR(120),
+          from_district      VARCHAR(80) NOT NULL,
+          to_district        VARCHAR(80) NOT NULL,
+          period_days        INT NOT NULL,
+          route_method       VARCHAR(300),
+          fee_amount         DECIMAL(10,2),
+          fee_words          VARCHAR(200),
+          special_instructions VARCHAR(300),
+          vet_rank           ENUM('VEA','AHI','GVO') NULL,
+          vet_name_block     VARCHAR(120),
+          vet_station        VARCHAR(120),
+          vet_signature_path VARCHAR(300),
+          rejection_reason   VARCHAR(300),
+          issued_at          TIMESTAMP NULL,
+          expires_at         TIMESTAMP NULL,
+          created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (animal_id) REFERENCES animals(id) ON DELETE CASCADE,
+          FOREIGN KEY (owner_id)  REFERENCES users(id)   ON DELETE CASCADE,
+          FOREIGN KEY (vet_id)    REFERENCES users(id)   ON DELETE SET NULL
+        )
+    """)
+    c.execute("""
         CREATE TABLE IF NOT EXISTS animal_transfers (
           id              INT AUTO_INCREMENT PRIMARY KEY,
           animal_id       INT NOT NULL,
@@ -293,6 +324,24 @@ def ensure_schema():
     add_column_if_missing('sale_clearances', 'leader_document_path', "leader_document_path VARCHAR(300)")
     add_column_if_missing('sale_clearances', 'leader_na_reason', "leader_na_reason VARCHAR(200)")
     add_column_if_missing('sale_clearances', 'officer_photo_path', "officer_photo_path VARCHAR(300)")
+    add_column_if_missing('sale_clearances', 'livestock_register_no', "livestock_register_no VARCHAR(60)")
+    add_column_if_missing('sale_clearances', 'dip_tank_name', "dip_tank_name VARCHAR(120)")
+    add_column_if_missing('sale_clearances', 'buyer_name', "buyer_name VARCHAR(120)")
+    add_column_if_missing('sale_clearances', 'buyer_national_id', "buyer_national_id VARCHAR(20)")
+    add_column_if_missing('sale_clearances', 'buyer_address', "buyer_address VARCHAR(200)")
+    add_column_if_missing('sale_clearances', 'buyer_destination', "buyer_destination VARCHAR(200)")
+    add_column_if_missing('sale_clearances', 'transport_mode', "transport_mode ENUM('drover','vehicle') NULL")
+    add_column_if_missing('sale_clearances', 'transport_reference', "transport_reference VARCHAR(200)")
+    add_column_if_missing('sale_clearances', 'animal_description_note', "animal_description_note VARCHAR(300)")
+    add_column_if_missing('sale_clearances', 'clearance_register_no', "clearance_register_no VARCHAR(60)")
+    add_column_if_missing('sale_clearances', 'vet_officer_id', "vet_officer_id INT NULL")
+    add_column_if_missing('sale_clearances', 'vet_officer_signature_path', "vet_officer_signature_path VARCHAR(300)")
+    add_column_if_missing('sale_clearances', 'vet_officer_signed_at', "vet_officer_signed_at TIMESTAMP NULL")
+    add_column_if_missing('sale_clearances', 'seller_signature_path', "seller_signature_path VARCHAR(300)")
+    add_column_if_missing('sale_clearances', 'seller_signed_at', "seller_signed_at TIMESTAMP NULL")
+    add_column_if_missing('sale_clearances', 'buyer_signature_path', "buyer_signature_path VARCHAR(300)")
+    add_column_if_missing('sale_clearances', 'buyer_signed_at', "buyer_signed_at TIMESTAMP NULL")
+    add_column_if_missing('sale_clearances', 'not_stolen_certified', "not_stolen_certified BOOLEAN NOT NULL DEFAULT FALSE")
 
     add_column_if_missing('users', 'account_status', "account_status ENUM('active','suspended') NOT NULL DEFAULT 'active'")
     add_column_if_missing('users', 'suspension_reason', "suspension_reason VARCHAR(300)")
@@ -737,7 +786,7 @@ def get_document(user_id, doctype):
 # documents above), same as a stock product photo would be on any marketplace.
 @app.route('/uploads/<category>/<path:filename>', methods=['GET'])
 def get_photo(category, filename):
-    if category not in ('animals', 'listings', 'avatars', 'clearances'):
+    if category not in ('animals', 'listings', 'avatars', 'clearances', 'signatures'):
         return jsonify({"error": "Not found"}), 404
     return send_from_directory(os.path.join(UPLOAD_DIR, category), filename)
 
@@ -2754,6 +2803,7 @@ def add_listing():
         d.get('quantity', 1), d.get('location', ''), d.get('description', ''), status
     ))
     listing_id = c.lastrowid
+    clearance_id = None
 
     if photo and photo.filename:
         try:
@@ -2766,6 +2816,7 @@ def add_listing():
     if needs_clearance:
         try:
             att = _leader_attestation(d)
+            form392 = _form392_fields(d)
         except ValueError as e:
             db.commit(); db.close()
             return jsonify({"error": str(e)}), 400
@@ -2773,15 +2824,20 @@ def add_listing():
             INSERT INTO sale_clearances
                 (animal_id, listing_id, seller_id, status,
                  leader_clearance, leader_type, leader_name, leader_village,
-                 leader_cleared_on, leader_reference, leader_na_reason)
-            VALUES (%s,%s,%s,'pending',%s,%s,%s,%s,%s,%s,%s)
-        """, (animal_id, listing_id, g.current_user['id']) + att)
+                 leader_cleared_on, leader_reference, leader_na_reason,
+                 livestock_register_no, dip_tank_name, buyer_name, buyer_national_id,
+                 buyer_address, buyer_destination, transport_mode, transport_reference,
+                 animal_description_note)
+            VALUES (%s,%s,%s,'pending',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """, (animal_id, listing_id, g.current_user['id']) + att + form392)
+        clearance_id = c.lastrowid
 
     db.commit()
     db.close()
     return jsonify({
         "id": listing_id,
         "status": status,
+        "clearance_id": clearance_id,
         "message": "Listing submitted for police clearance ✅" if needs_clearance else "Listing added ✅"
     })
 
@@ -2816,10 +2872,32 @@ def _leader_attestation(d):
     )
 
 
+def _form392_fields(d):
+    """Optional ZRP Form 392 Part A/B/C fields. All nullable — a buyer isn't
+    always known yet when a listing goes up on the open Marketplace, so this
+    fills in whatever's known now; PATCH /clearances/<id>/details fills in
+    the rest once a buyer is arranged, same as a paper form completed in
+    stages in practice."""
+    mode = (d.get('transport_mode') or '').strip() or None
+    if mode not in (None, 'drover', 'vehicle'):
+        raise ValueError("transport_mode must be 'drover' or 'vehicle'")
+    return (
+        (d.get('livestock_register_no') or '').strip() or None,
+        (d.get('dip_tank_name') or '').strip() or None,
+        (d.get('buyer_name') or '').strip() or None,
+        (d.get('buyer_national_id') or '').strip() or None,
+        (d.get('buyer_address') or '').strip() or None,
+        (d.get('buyer_destination') or '').strip() or None,
+        mode,
+        (d.get('transport_reference') or '').strip() or None,
+        (d.get('animal_description_note') or '').strip() or None,
+    )
+
+
 # ── SALE CLEARANCES ─────────────────────────────────────────────
 @app.route('/clearances', methods=['GET'])
 @require_auth
-@require_role('Police')
+@require_role('Police', 'Veterinarian')
 @require_verified
 def get_clearances():
     db = get_db()
@@ -2827,11 +2905,14 @@ def get_clearances():
     status = request.args.get('status')
     sql = """
         SELECT sc.*, a.name AS animal_name, a.species, a.tag_id, a.brand_id, a.image_url AS animal_image_url,
-               ml.product_name, u.full_name AS seller_name, u.phone AS seller_phone
+               ml.product_name, u.full_name AS seller_name, u.phone AS seller_phone,
+               u.national_id_number AS seller_national_id, u.address AS seller_address,
+               vo.full_name AS vet_officer_name
         FROM sale_clearances sc
         JOIN animals a ON sc.animal_id = a.id
         JOIN users u   ON sc.seller_id = u.id
         LEFT JOIN marketplace_listings ml ON sc.listing_id = ml.id
+        LEFT JOIN users vo ON sc.vet_officer_id = vo.id
         WHERE 1=1
     """
     params = []
@@ -2856,15 +2937,19 @@ def create_clearance():
         db.close(); return jsonify({"error": "You can only request clearance for your own animals"}), 403
     try:
         att = _leader_attestation(d)
+        form392 = _form392_fields(d)
     except ValueError as e:
         db.close(); return jsonify({"error": str(e)}), 400
     c.execute("""
         INSERT INTO sale_clearances
             (animal_id, listing_id, seller_id, status,
              leader_clearance, leader_type, leader_name, leader_village,
-             leader_cleared_on, leader_reference, leader_na_reason)
-        VALUES (%s,%s,%s,'pending',%s,%s,%s,%s,%s,%s,%s)
-    """, (d['animal_id'], d.get('listing_id'), g.current_user['id']) + att)
+             leader_cleared_on, leader_reference, leader_na_reason,
+             livestock_register_no, dip_tank_name, buyer_name, buyer_national_id,
+             buyer_address, buyer_destination, transport_mode, transport_reference,
+             animal_description_note)
+        VALUES (%s,%s,%s,'pending',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+    """, (d['animal_id'], d.get('listing_id'), g.current_user['id']) + att + form392)
     clearance_id = c.lastrowid
     db.commit()
     db.close()
@@ -2905,12 +2990,22 @@ def resolve_clearance(clearance_id):
         if block:
             db.close()
             return jsonify({"error": block, "trade_locked": True}), 409
+        # Part E's whole content is this certification — an officer can't
+        # clear a sale without actually making it, mirroring the paper form's
+        # own printed statement rather than treating it as a UI afterthought.
+        if not d.get('not_stolen_certified'):
+            db.close()
+            return jsonify({"error": "You must certify that the livestock had not been reported stolen at the time of clearance."}), 400
 
     c.execute("""
         UPDATE sale_clearances
-        SET status=%s, movement_permit_number=%s, officer_id=%s, notes=%s, resolved_at=NOW()
+        SET status=%s, movement_permit_number=%s, clearance_register_no=%s,
+            not_stolen_certified=%s, officer_id=%s, notes=%s, resolved_at=NOW()
         WHERE id=%s
-    """, (status, d.get('movement_permit_number'), g.current_user['id'], d.get('notes'), clearance_id))
+    """, (
+        status, d.get('movement_permit_number'), d.get('clearance_register_no'),
+        bool(d.get('not_stolen_certified')), g.current_user['id'], d.get('notes'), clearance_id,
+    ))
 
     c.execute("SELECT listing_id FROM sale_clearances WHERE id=%s", (clearance_id,))
     row = c.fetchone()
@@ -2947,6 +3042,247 @@ def upload_clearance_photo(clearance_id):
     db.commit()
     db.close()
     return jsonify({"officer_photo_path": f"/uploads/{rel_path}", "message": "Clearance photo uploaded ✅"})
+
+
+@app.route('/clearances/<int:clearance_id>/details', methods=['PATCH'])
+@require_auth
+def update_clearance_details(clearance_id):
+    """Fills in or amends the ZRP Form 392 Part A/B/C fields after the
+    clearance was first requested — a buyer arranged after the listing went
+    up, say. Seller-only, and only while still pending; once Police has
+    resolved it the record reflects what was actually reviewed."""
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT seller_id, status FROM sale_clearances WHERE id=%s", (clearance_id,))
+    row = c.fetchone()
+    if not row:
+        db.close(); return jsonify({"error": "Clearance not found"}), 404
+    if row['seller_id'] != g.current_user['id']:
+        db.close(); return jsonify({"error": "Only the seller can update these details"}), 403
+    if row['status'] != 'pending':
+        db.close(); return jsonify({"error": "This clearance has already been resolved"}), 409
+    d = request.json or {}
+    try:
+        form392 = _form392_fields(d)
+    except ValueError as e:
+        db.close(); return jsonify({"error": str(e)}), 400
+    c.execute("""
+        UPDATE sale_clearances
+        SET livestock_register_no=%s, dip_tank_name=%s, buyer_name=%s, buyer_national_id=%s,
+            buyer_address=%s, buyer_destination=%s, transport_mode=%s, transport_reference=%s,
+            animal_description_note=%s
+        WHERE id=%s
+    """, form392 + (clearance_id,))
+    db.commit()
+    db.close()
+    return jsonify({"message": "Clearance details updated ✅"})
+
+
+@app.route('/clearances/<int:clearance_id>/signature', methods=['POST'])
+@require_auth
+def sign_clearance(clearance_id):
+    """One shared endpoint for every Part D signature line — role picks which
+    column gets written and who's allowed to write it. Buyer signatures are
+    seller-uploaded too (a buyer without their own PFUMA account still signs
+    in person, on the seller's device, exactly as they would on paper)."""
+    role = (request.form.get('role') or '').strip().lower()
+    if role not in ('seller', 'vet', 'buyer'):
+        return jsonify({"error": "role must be 'seller', 'vet', or 'buyer'"}), 400
+    signature = request.files.get('signature')
+    if not signature or not signature.filename:
+        return jsonify({"error": "No signature image uploaded"}), 400
+
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT seller_id, status FROM sale_clearances WHERE id=%s", (clearance_id,))
+    row = c.fetchone()
+    if not row:
+        db.close(); return jsonify({"error": "Clearance not found"}), 404
+    if row['status'] != 'pending':
+        db.close(); return jsonify({"error": "This clearance has already been resolved"}), 409
+
+    if role == 'seller' and row['seller_id'] != g.current_user['id']:
+        db.close(); return jsonify({"error": "Only the seller can sign the Seller/Owner line"}), 403
+    if role == 'buyer' and row['seller_id'] != g.current_user['id']:
+        db.close(); return jsonify({"error": "The buyer's signature is captured by the seller, in person"}), 403
+    if role == 'vet' and not (g.current_user['role'] == 'Veterinarian' and g.current_user['verification_status'] == 'verified'):
+        db.close(); return jsonify({"error": "Only a verified Veterinarian can witness this line"}), 403
+
+    try:
+        rel_path = save_photo(signature, 'signatures', clearance_id, suffix=role)
+    except ValueError as e:
+        db.close(); return jsonify({"error": str(e)}), 400
+
+    column = f"{role}_signature_path" if role != 'vet' else 'vet_officer_signature_path'
+    signed_at_column = f"{role}_signed_at" if role != 'vet' else 'vet_officer_signed_at'
+    if role == 'vet':
+        c.execute(f"UPDATE sale_clearances SET {column}=%s, {signed_at_column}=NOW(), vet_officer_id=%s WHERE id=%s",
+                  (f"/uploads/{rel_path}", g.current_user['id'], clearance_id))
+    else:
+        c.execute(f"UPDATE sale_clearances SET {column}=%s, {signed_at_column}=NOW() WHERE id=%s",
+                  (f"/uploads/{rel_path}", clearance_id))
+    db.commit()
+    db.close()
+    return jsonify({column: f"/uploads/{rel_path}", "message": "Signature recorded ✅"})
+
+
+# ── VET MOVEMENT PERMITS (DVS Form V27) ──────────────────────────
+ANIMAL_COUNT_FIELDS = ('bulls', 'calves', 'cows', 'oxen', 'steers', 'pigs', 'sheep', 'goats')
+
+
+@app.route('/movement-permits', methods=['POST'])
+@require_auth
+@require_role('Farmer')
+@require_verified
+def request_movement_permit():
+    d = request.json or {}
+    c_ = None
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT owner_id FROM animals WHERE id=%s", (d.get('animal_id'),))
+    animal = c.fetchone()
+    if not animal or animal['owner_id'] != g.current_user['id']:
+        db.close(); return jsonify({"error": "You can only request a movement permit for your own animals"}), 403
+    if not (d.get('from_district') or '').strip() or not (d.get('to_district') or '').strip():
+        db.close(); return jsonify({"error": "from_district and to_district are required"}), 400
+    try:
+        period_days = int(d.get('period_days') or 0)
+    except (TypeError, ValueError):
+        period_days = 0
+    if period_days <= 0:
+        db.close(); return jsonify({"error": "period_days must be a positive number"}), 400
+
+    counts = [int(d.get(f) or 0) for f in ANIMAL_COUNT_FIELDS]
+    c.execute(f"""
+        INSERT INTO movement_permits
+            (animal_id, owner_id, {', '.join(ANIMAL_COUNT_FIELDS)}, other_count, other_description,
+             from_district, to_district, period_days, route_method, fee_amount, fee_words, special_instructions)
+        VALUES (%s,%s,{','.join(['%s'] * len(ANIMAL_COUNT_FIELDS))},%s,%s,%s,%s,%s,%s,%s,%s,%s)
+    """, (
+        d['animal_id'], g.current_user['id'], *counts,
+        int(d.get('other_count') or 0), (d.get('other_description') or '').strip() or None,
+        d['from_district'].strip(), d['to_district'].strip(), period_days,
+        (d.get('route_method') or '').strip() or None,
+        d.get('fee_amount') or None, (d.get('fee_words') or '').strip() or None,
+        (d.get('special_instructions') or '').strip() or None,
+    ))
+    permit_id = c.lastrowid
+    db.commit()
+    db.close()
+    return jsonify({"id": permit_id, "message": "Movement permit requested — pending a Vet's signature ✅"}), 201
+
+
+@app.route('/movement-permits/mine', methods=['GET'])
+@require_auth
+@require_role('Farmer')
+def get_my_movement_permits():
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT mp.*, a.name AS animal_name, a.species,
+               v.full_name AS vet_name
+        FROM movement_permits mp
+        JOIN animals a ON mp.animal_id = a.id
+        LEFT JOIN users v ON mp.vet_id = v.id
+        WHERE mp.owner_id=%s ORDER BY mp.created_at DESC
+    """, (g.current_user['id'],))
+    rows = c.fetchall()
+    db.close()
+    return jsonify(rows)
+
+
+@app.route('/movement-permits', methods=['GET'])
+@require_auth
+@require_role('Veterinarian')
+@require_verified
+def get_movement_permit_queue():
+    db = get_db()
+    c = db.cursor()
+    status = request.args.get('status', 'pending')
+    sql = """
+        SELECT mp.*, a.name AS animal_name, a.species, a.tag_id, a.brand_id,
+               u.full_name AS owner_name, u.phone AS owner_phone, u.province AS owner_province
+        FROM movement_permits mp
+        JOIN animals a ON mp.animal_id = a.id
+        JOIN users u ON mp.owner_id = u.id
+        WHERE 1=1
+    """
+    params = []
+    if status:
+        sql += " AND mp.status = %s"; params.append(status)
+    sql += " ORDER BY mp.created_at ASC"
+    c.execute(sql, params)
+    rows = c.fetchall()
+    db.close()
+    return jsonify(rows)
+
+
+@app.route('/movement-permits/<int:permit_id>/issue', methods=['POST'])
+@require_auth
+@require_role('Veterinarian')
+@require_verified
+def issue_movement_permit(permit_id):
+    """The vet's digital signature IS the act of issuing the permit — matches
+    the paper form, where nothing is authorized until the VEA/AHI/GVO signs
+    the 'Authorized person' line."""
+    signature = request.files.get('signature')
+    if not signature or not signature.filename:
+        return jsonify({"error": "A signature is required to issue a permit"}), 400
+    vet_rank = (request.form.get('vet_rank') or '').strip()
+    if vet_rank not in ('VEA', 'AHI', 'GVO'):
+        return jsonify({"error": "vet_rank must be 'VEA', 'AHI', or 'GVO'"}), 400
+
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT status, period_days FROM movement_permits WHERE id=%s", (permit_id,))
+    row = c.fetchone()
+    if not row:
+        db.close(); return jsonify({"error": "Permit request not found"}), 404
+    if row['status'] != 'pending':
+        db.close(); return jsonify({"error": "This request has already been resolved"}), 409
+
+    try:
+        rel_path = save_photo(signature, 'signatures', permit_id, suffix='vet-permit')
+    except ValueError as e:
+        db.close(); return jsonify({"error": str(e)}), 400
+
+    permit_number = f"V27-{permit_id:06d}"
+    c.execute("""
+        UPDATE movement_permits
+        SET status='issued', vet_id=%s, permit_number=%s, vet_rank=%s,
+            vet_name_block=%s, vet_station=%s, vet_signature_path=%s,
+            issued_at=NOW(), expires_at=DATE_ADD(NOW(), INTERVAL %s DAY)
+        WHERE id=%s
+    """, (
+        g.current_user['id'], permit_number, vet_rank,
+        request.form.get('vet_name_block') or g.current_user['full_name'],
+        request.form.get('vet_station') or g.current_user.get('org_name'),
+        f"/uploads/{rel_path}", row['period_days'], permit_id,
+    ))
+    db.commit()
+    db.close()
+    return jsonify({"permit_number": permit_number, "message": "Movement permit issued ✅"})
+
+
+@app.route('/movement-permits/<int:permit_id>/reject', methods=['PATCH'])
+@require_auth
+@require_role('Veterinarian')
+@require_verified
+def reject_movement_permit(permit_id):
+    d = request.json or {}
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT status FROM movement_permits WHERE id=%s", (permit_id,))
+    row = c.fetchone()
+    if not row:
+        db.close(); return jsonify({"error": "Permit request not found"}), 404
+    if row['status'] != 'pending':
+        db.close(); return jsonify({"error": "This request has already been resolved"}), 409
+    c.execute("UPDATE movement_permits SET status='rejected', vet_id=%s, rejection_reason=%s WHERE id=%s",
+              (g.current_user['id'], (d.get('reason') or '').strip() or None, permit_id))
+    db.commit()
+    db.close()
+    return jsonify({"message": "Movement permit request rejected"})
 
 
 # ── MARKETPLACE BIDS ─────────────────────────────────────────────

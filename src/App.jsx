@@ -14,6 +14,7 @@ import AdminDashboard    from './components/Admin/AdminDashboard';
 import Jinda      from './components/IntelAI/PfumaIntelAI';
 import AuthPortal        from './components/IntelAI/AuthPortal';
 import ErrorBoundary     from './components/ErrorBoundary';
+import SignaturePad      from './components/SignaturePad';
 import { HEALTH_PROTOCOLS } from './components/HealthManagement/healthData';
 import { DOSAGE_RATES } from './components/HealthManagement/dosageData';
 import {
@@ -32,6 +33,14 @@ import { API } from './config';
 
 
 // ── shared helpers ─────────────────────────────────────────────────────────
+// Matches backend ANIMAL_COUNT_FIELDS — DVS Form V27's own "Number and
+// Description of Animals" layout (Cattle: Bulls/Calves/Cows/Oxen/Steers;
+// Other: Pigs/Sheep/Goats).
+const ANIMAL_COUNT_LABELS = [
+  ['bulls', 'bulls'], ['calves', 'calves'], ['cows', 'cows'], ['oxen', 'oxen'], ['steers', 'steers'],
+  ['pigs', 'pigs'], ['sheep', 'sheep'], ['goats', 'goats'],
+];
+
 const greet = () => {
   const h = new Date().getHours();
   return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
@@ -690,6 +699,44 @@ const VetMedicationRecommender = ({ animals, currentUser }) => {
   );
 };
 
+// Inline "open a signature pad, draw, submit" widget — shared by the
+// clearance witness line and the movement-permit issue action so the
+// capture UX (and its busy/error handling) isn't duplicated per queue.
+const VetSignAction = ({ label, onSubmit, extraFields, children }) => {
+  const [open, setOpen] = useState(false);
+  const [blob, setBlob] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async () => {
+    if (!blob) { setError('Draw a signature first.'); return; }
+    setBusy(true); setError('');
+    const result = await onSubmit(blob);
+    setBusy(false);
+    if (result?.error) setError(result.error);
+    else setOpen(false);
+  };
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)} className="px-3 py-2 bg-pfuma-green text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition">
+        {label}
+      </button>
+    );
+  }
+  return (
+    <div className="w-full mt-2 p-3 bg-white/5 border border-white/10 rounded-xl space-y-2">
+      {children}
+      <SignaturePad onChange={setBlob} height={110} />
+      {error && <p className="text-[10px] text-red-400 font-bold">{error}</p>}
+      <div className="flex gap-2">
+        <button onClick={() => setOpen(false)} disabled={busy} className="flex-1 py-2 bg-white/10 text-gray-300 rounded-lg text-[10px] font-black uppercase hover:bg-white/20 transition disabled:opacity-40">Cancel</button>
+        <button onClick={submit} disabled={busy} className="flex-1 py-2 bg-pfuma-green text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition disabled:opacity-40">{busy ? 'Signing…' : 'Sign & Submit'}</button>
+      </div>
+    </div>
+  );
+};
+
 const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUser }) => {
   const [farms, setFarms] = useState([]);
   const [reportingHealth, setReportingHealth] = useState([]);
@@ -697,6 +744,9 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
   const [outbreaks, setOutbreaks] = useState([]);
   const [vetRequests, setVetRequests] = useState([]);
   const [claimBusyId, setClaimBusyId] = useState(null);
+  const [witnessQueue, setWitnessQueue] = useState([]);
+  const [permitQueue, setPermitQueue] = useState([]);
+  const [permitRanks, setPermitRanks] = useState({});
   const [showReportForm, setShowReportForm] = useState(false);
   const [reportForm, setReportForm] = useState({ disease_name: '', district: '', details: '', affected_farms: '', animals_at_risk: '' });
   const [reportBusy, setReportBusy] = useState(false);
@@ -729,9 +779,60 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
       const res = await fetch(`${API}/vet-requests?status=open`, { headers });
       if (res.ok) setVetRequests(await res.json());
     } catch { /* offline */ }
+    try {
+      const res = await fetch(`${API}/clearances?status=pending`, { headers });
+      if (res.ok) setWitnessQueue((await res.json()).filter(c => !c.vet_officer_signature_path));
+    } catch { /* offline */ }
+    try {
+      const res = await fetch(`${API}/movement-permits?status=pending`, { headers });
+      if (res.ok) setPermitQueue(await res.json());
+    } catch { /* offline */ }
   }, [currentUser?.token]);
 
   useEffect(() => { loadVetData(); }, [loadVetData]);
+
+  const witnessClearance = async (clearanceId, blob) => {
+    try {
+      const fd = new FormData();
+      fd.append('role', 'vet');
+      fd.append('signature', blob, 'signature.png');
+      const res = await fetch(`${API}/clearances/${clearanceId}/signature`, {
+        method: 'POST', headers: { Authorization: `Bearer ${currentUser.token}` }, body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) return { error: data.error || 'Could not record signature.' };
+      await loadVetData();
+      return { ok: true };
+    } catch { return { error: 'Could not reach the PFUMA API.' }; }
+  };
+
+  const issuePermit = async (permitId, blob) => {
+    const rank = permitRanks[permitId];
+    if (!rank) return { error: 'Choose VEA, AHI, or GVO first.' };
+    try {
+      const fd = new FormData();
+      fd.append('vet_rank', rank);
+      fd.append('signature', blob, 'signature.png');
+      const res = await fetch(`${API}/movement-permits/${permitId}/issue`, {
+        method: 'POST', headers: { Authorization: `Bearer ${currentUser.token}` }, body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) return { error: data.error || 'Could not issue permit.' };
+      await loadVetData();
+      return { ok: true };
+    } catch { return { error: 'Could not reach the PFUMA API.' }; }
+  };
+
+  const rejectPermit = async (permitId) => {
+    const reason = window.prompt('Reason for rejecting this movement permit request (shown to the farmer):') || '';
+    try {
+      await fetch(`${API}/movement-permits/${permitId}/reject`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentUser.token}` },
+        body: JSON.stringify({ reason }),
+      });
+      await loadVetData();
+    } catch { /* offline */ }
+  };
 
   const claimVetRequest = async (reqId) => {
     setClaimBusyId(reqId);
@@ -935,6 +1036,78 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
 
         {/* Farm registry */}
         <div className="col-span-2 space-y-5">
+          {/* Clearance witness queue — ZRP Form 392 Part D. This is the vet's
+              first real role in the sale-clearance flow: witnessing a pending
+              clearance with an actual signature, same as the paper form's
+              "Vet Officer/Dip Tank Attendant" line. */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <ShieldCheck size={15} className="text-pfuma-green" />
+              <h3 className="text-sm font-black text-white">Clearance Witness Queue</h3>
+            </div>
+            <p className="text-[11px] text-gray-500 font-medium mb-4">Pending livestock sale clearances waiting on your witness signature (ZRP Form 392, Part D).</p>
+            {witnessQueue.length === 0 ? (
+              <p className="text-[11px] text-gray-500 font-medium italic text-center py-4">Nothing waiting on you right now.</p>
+            ) : (
+              <div className="space-y-3">
+                {witnessQueue.map(w => (
+                  <div key={w.id} className="p-3.5 bg-white/5 border border-white/10 rounded-xl">
+                    <p className="text-xs font-black text-white">{w.animal_name} <span className="text-gray-500 font-medium">· {w.species}</span></p>
+                    <p className="text-[10px] text-gray-400 font-medium mt-0.5">Seller: {w.seller_name} · {w.seller_phone}</p>
+                    <div className="mt-2">
+                      <VetSignAction label="Witness & Sign" onSubmit={(blob) => witnessClearance(w.id, blob)} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Movement permit queue — DVS Form V27. Nothing is authorized
+              until a VEA/AHI/GVO signs; this is that signature, digitized. */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+            <div className="flex items-center gap-2 mb-1">
+              <FileText size={15} className="text-pfuma-green" />
+              <h3 className="text-sm font-black text-white">Movement Permit Requests</h3>
+            </div>
+            <p className="text-[11px] text-gray-500 font-medium mb-4">Farmer requests for a DVS Movement of Animal Permit (Form V27) — nothing is authorized until you sign.</p>
+            {permitQueue.length === 0 ? (
+              <p className="text-[11px] text-gray-500 font-medium italic text-center py-4">No pending requests.</p>
+            ) : (
+              <div className="space-y-3">
+                {permitQueue.map(p => (
+                  <div key={p.id} className="p-3.5 bg-white/5 border border-white/10 rounded-xl">
+                    <p className="text-xs font-black text-white">{p.animal_name} <span className="text-gray-500 font-medium">· {p.species}</span></p>
+                    <p className="text-[10px] text-gray-400 font-medium mt-0.5">{p.owner_name} · {p.owner_phone}</p>
+                    <p className="text-[10px] text-gray-400 font-medium mt-1">
+                      {p.from_district} → {p.to_district} · {p.period_days} day{p.period_days !== 1 ? 's' : ''}
+                      {p.route_method ? ` · ${p.route_method}` : ''}
+                    </p>
+                    <p className="text-[10px] text-gray-500 font-medium mt-0.5">
+                      {ANIMAL_COUNT_LABELS.map(([key, label]) => p[key] > 0 ? `${p[key]} ${label}` : null).filter(Boolean).join(', ') || (p.other_count > 0 ? `${p.other_count} ${p.other_description || 'other'}` : 'No animal count given')}
+                    </p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <select
+                        value={permitRanks[p.id] || ''}
+                        onChange={e => setPermitRanks(prev => ({ ...prev, [p.id]: e.target.value }))}
+                        className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-[11px] text-white"
+                      >
+                        <option value="">Sign as…</option>
+                        <option value="VEA">VEA</option>
+                        <option value="AHI">AHI</option>
+                        <option value="GVO">GVO</option>
+                      </select>
+                      <button onClick={() => rejectPermit(p.id)} className="px-3 py-1.5 bg-white/10 text-gray-300 rounded-lg text-[10px] font-black uppercase hover:bg-white/20 transition">Reject</button>
+                    </div>
+                    <div className="mt-2">
+                      <VetSignAction label="Sign & Issue Permit" onSubmit={(blob) => issuePermit(p.id, blob)} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
             <div className="flex justify-between items-center mb-5">
               <div>
@@ -1634,14 +1807,24 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
     setTimeout(() => setFeedback(null), 2500);
   };
 
+  // Per-card draft for the Part E fields an officer fills in at the moment
+  // of clearing — keyed by clearance id since several cards can be open at once.
+  const [clearanceDrafts, setClearanceDrafts] = useState({});
+  const setDraft = (id, patch) => setClearanceDrafts(prev => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+
   const resolveClearance = async (clearanceId, status) => {
-    const permit = status === 'cleared' ? window.prompt('Enter DVS/ZRP movement permit number to issue with this clearance:') : null;
-    if (status === 'cleared' && !permit) return;
+    const draft = clearanceDrafts[clearanceId] || {};
+    if (status === 'cleared' && !draft.certified) return;
     setBusyId(clearanceId);
     try {
       await fetch(`${API}/clearances/${clearanceId}`, {
         method: 'PATCH', headers: { ...authHeaders, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status, movement_permit_number: permit }),
+        body: JSON.stringify({
+          status,
+          movement_permit_number: draft.permitNumber || null,
+          clearance_register_no: draft.registerNo || null,
+          not_stolen_certified: !!draft.certified,
+        }),
       });
     } catch { /* offline — reflect locally only */ }
     setClearances(prev => prev.filter(c => c.id !== clearanceId));
@@ -1914,10 +2097,65 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
                     </label>
                   </div>
 
+                  {/* ZRP Form 392 Part A/B/C — whatever the seller has filled in so far */}
+                  <div className="mt-2 rounded-lg bg-white/5 border border-white/10 px-3 py-2 space-y-1">
+                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Livestock Clearance Certificate — Part A/B/C</p>
+                    <p className="text-[11px] text-gray-300 font-medium">
+                      Seller Nat. ID: {c.seller_national_id || '—'} · Register No: {c.livestock_register_no || '—'} · Dip Tank: {c.dip_tank_name || '—'}
+                    </p>
+                    <p className="text-[11px] text-gray-300 font-medium">
+                      Buyer: {c.buyer_name || 'not yet arranged'}{c.buyer_national_id ? ` (${c.buyer_national_id})` : ''}{c.buyer_destination ? ` → ${c.buyer_destination}` : ''}
+                    </p>
+                    {c.transport_mode && (
+                      <p className="text-[11px] text-gray-300 font-medium">Transport: {c.transport_mode} — {c.transport_reference || '—'}</p>
+                    )}
+                    {c.animal_description_note && <p className="text-[11px] text-gray-300 font-medium">Description: {c.animal_description_note}</p>}
+                  </div>
+
+                  {/* Part D — witness signatures on file */}
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {[
+                      ['Seller', c.seller_signature_path],
+                      ['Vet Officer', c.vet_officer_signature_path, c.vet_officer_name],
+                      ['Buyer', c.buyer_signature_path],
+                    ].map(([label, path, extra]) => (
+                      <div key={label} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase ${path ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-gray-500'}`}>
+                        {path ? <CheckCircle size={11} /> : <X size={11} />} {label}{extra ? ` (${extra})` : ''} signed
+                      </div>
+                    ))}
+                    {c.movement_permit_number && (
+                      <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase bg-blue-500/10 text-blue-400">
+                        Vet Permit {c.movement_permit_number}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Part E — the officer's own certification, filled in right before clearing */}
+                  <div className="mt-3 space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        placeholder="Clearance Register No."
+                        value={clearanceDrafts[c.id]?.registerNo || ''}
+                        onChange={e => setDraft(c.id, { registerNo: e.target.value })}
+                        className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-2 text-[11px] text-white placeholder:text-gray-600 focus:outline-none focus:border-pfuma-green/50"
+                      />
+                      <input
+                        placeholder="Vet/DVS Permit No. (if any)"
+                        value={clearanceDrafts[c.id]?.permitNumber ?? c.movement_permit_number ?? ''}
+                        onChange={e => setDraft(c.id, { permitNumber: e.target.value })}
+                        className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-2 text-[11px] text-white placeholder:text-gray-600 focus:outline-none focus:border-pfuma-green/50"
+                      />
+                    </div>
+                    <label className="flex items-start gap-2 text-[11px] text-gray-300 font-medium">
+                      <input type="checkbox" className="mt-0.5" checked={!!clearanceDrafts[c.id]?.certified} onChange={e => setDraft(c.id, { certified: e.target.checked })} />
+                      I certify that at the time of clearance the livestock described above had not been reported stolen.
+                    </label>
+                  </div>
+
                   <div className="flex gap-2 mt-3">
                     <button
-                      disabled={busyId === c.id || !c.leader_clearance}
-                      title={!c.leader_clearance ? 'Sabuku or Mambo clearance must be on record first' : undefined}
+                      disabled={busyId === c.id || !c.leader_clearance || !clearanceDrafts[c.id]?.certified}
+                      title={!c.leader_clearance ? 'Sabuku or Mambo clearance must be on record first' : !clearanceDrafts[c.id]?.certified ? 'Certify the livestock was not reported stolen first' : undefined}
                       onClick={() => resolveClearance(c.id, 'cleared')}
                       className="flex-1 py-2 bg-green-600 text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
                     >Clear Sale</button>

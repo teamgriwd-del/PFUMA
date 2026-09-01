@@ -8,6 +8,7 @@ import {
 
 import { API } from '../../config';
 import Lightbox from '../Lightbox';
+import SignaturePad from '../SignaturePad';
 
 const CATEGORIES = [
   { id: 'all',       label: 'All Listings',  icon: ShoppingCart, color: 'bg-gray-800'   },
@@ -99,9 +100,15 @@ const PostForm = ({ currentUser, onSubmit, onCancel, animals, initialAnimalId })
   const initialAnimal = initialAnimalId ? listableAnimals.find(a => String(a.id) === String(initialAnimalId)) : null;
   const [form, setForm] = useState({ product_name: initialAnimal ? `${initialAnimal.name} — ${initialAnimal.breed} ${initialAnimal.species}` : '', category: 'livestock', price: '', unit: 'head', quantity: '1', location: currentUser?.district ? `${currentUser.district}, ${currentUser.province}` : (currentUser?.province || ''), description: '', animal_id: initialAnimal ? String(initialAnimal.id) : '',
     leader_clearance: '', leader_type: 'Sabuku', leader_name: '', leader_village: '',
-    leader_cleared_on: '', leader_reference: '', leader_na_reason: '' });
+    leader_cleared_on: '', leader_reference: '', leader_na_reason: '',
+    // ZRP Form 392 Part A/B/C — optional, filled now or amended later once a buyer is arranged
+    livestock_register_no: '', dip_tank_name: '', buyer_name: '', buyer_national_id: '',
+    buyer_address: '', buyer_destination: '', transport_mode: '', transport_reference: '',
+    animal_description_note: '' });
   const [photoFile, setPhotoFile]       = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
+  const [showBuyerFields, setShowBuyerFields] = useState(false);
+  const [sellerSignatureBlob, setSellerSignatureBlob] = useState(null);
   const [submitting, setSubmitting]     = useState(false);
   const [formError, setFormError]       = useState(null);
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
@@ -128,7 +135,7 @@ const PostForm = ({ currentUser, onSubmit, onCancel, animals, initialAnimalId })
       return;
     }
     setSubmitting(true);
-    await onSubmit({ ...form, price: parseFloat(form.price), quantity: parseFloat(form.quantity) }, photoFile);
+    await onSubmit({ ...form, price: parseFloat(form.price), quantity: parseFloat(form.quantity) }, photoFile, sellerSignatureBlob);
     setSubmitting(false);
   };
 
@@ -244,6 +251,59 @@ const PostForm = ({ currentUser, onSubmit, onCancel, animals, initialAnimalId })
                 </div>
               )}
             </div>
+
+            {/* ZRP Form 392 "Livestock Clearance Certificate" — Part A/B/C,
+                digitized from the real paper form. All optional here since a
+                buyer isn't always known yet; can be filled in or amended
+                later from My Listings while the clearance is still pending. */}
+            <div className="border border-gray-200 rounded-xl p-3.5 space-y-3">
+              <div>
+                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Livestock Clearance Certificate (ZRP Form 392)</label>
+                <p className="text-[11px] text-gray-500">Optional now — fill in what you know. The rest can be added later once a buyer is arranged, or left for the officer to complete on-site.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Livestock Register No.</label>
+                  <input className={inputCls} type="text" placeholder="Your Livestock Card/Register No" value={form.livestock_register_no} onChange={e => set('livestock_register_no', e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Dip Tank / Farm No.</label>
+                  <input className={inputCls} type="text" value={form.dip_tank_name} onChange={e => set('dip_tank_name', e.target.value)} />
+                </div>
+              </div>
+
+              <button type="button" onClick={() => setShowBuyerFields(s => !s)} className="text-[11px] font-black text-pfuma-green hover:underline uppercase tracking-wide">
+                {showBuyerFields ? '− Hide buyer/receiver details' : '+ I already have a buyer (Part B)'}
+              </button>
+              {showBuyerFields && (
+                <div className="space-y-2.5 pt-1">
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <input className={inputCls} type="text" placeholder="Buyer full name" value={form.buyer_name} onChange={e => set('buyer_name', e.target.value)} />
+                    <input className={inputCls} type="text" placeholder="Buyer National ID" value={form.buyer_national_id} onChange={e => set('buyer_national_id', e.target.value)} />
+                  </div>
+                  <input className={inputCls} type="text" placeholder="Buyer residential address" value={form.buyer_address} onChange={e => set('buyer_address', e.target.value)} />
+                  <input className={inputCls} type="text" placeholder="Intended destination of animal(s)" value={form.buyer_destination} onChange={e => set('buyer_destination', e.target.value)} />
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <select className={inputCls + ' appearance-none'} value={form.transport_mode} onChange={e => set('transport_mode', e.target.value)}>
+                      <option value="">Mode of transport…</option>
+                      <option value="drover">Drover(s) on foot</option>
+                      <option value="vehicle">Vehicle</option>
+                    </select>
+                    <input className={inputCls} type="text" placeholder={form.transport_mode === 'vehicle' ? 'Vehicle reg. no' : 'Drover name(s) & Nat ID'} value={form.transport_reference} onChange={e => set('transport_reference', e.target.value)} />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Animal Description (colour, marks, etc.)</label>
+                <input className={inputCls} type="text" placeholder="Optional — beyond species/breed already on record" value={form.animal_description_note} onChange={e => set('animal_description_note', e.target.value)} />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Your Signature (Seller/Owner)</label>
+                <SignaturePad onChange={setSellerSignatureBlob} height={120} />
+              </div>
+            </div>
           </>
         )}
         <div>
@@ -341,7 +401,7 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal, presetAnimalId, 
 
   useEffect(() => { fetchListings(); }, [fetchListings]);
 
-  const handlePost = async (formData, photoFile) => {
+  const handlePost = async (formData, photoFile, sellerSignatureBlob) => {
     const needsClearance = formData.category === 'livestock' && formData.animal_id;
     try {
       let res;
@@ -359,6 +419,19 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal, presetAnimalId, 
       }
       const data = await res.json();
       if (!res.ok) { setFeedback(data.error || 'Could not post — try again.'); setShowForm(false); setTimeout(() => setFeedback(null), 4000); return; }
+      // The clearance record only exists once the listing does — the seller's
+      // signature is attached in this follow-up call rather than blocking
+      // the listing itself if the signature upload happens to fail.
+      if (sellerSignatureBlob && data.clearance_id) {
+        try {
+          const sigFd = new FormData();
+          sigFd.append('role', 'seller');
+          sigFd.append('signature', sellerSignatureBlob, 'signature.png');
+          await fetch(`${API}/clearances/${data.clearance_id}/signature`, {
+            method: 'POST', headers: { Authorization: `Bearer ${currentUser?.token}` }, body: sigFd,
+          });
+        } catch { /* listing already succeeded — signature can be added later */ }
+      }
       setFeedback(data.message || (needsClearance
         ? 'Listing submitted for police clearance — it will appear here once approved.'
         : 'Listing posted successfully.'));

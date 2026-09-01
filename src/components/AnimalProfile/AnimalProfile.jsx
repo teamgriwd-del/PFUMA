@@ -3,7 +3,7 @@ import { BREED_PROFILES } from '../HealthManagement/healthData';
 import {
   PlusCircle, ChevronRight, Users, ShieldCheck, X,
   TrendingUp, Tag, ArrowLeft, Calendar, Weight,
-  Info, CheckCircle, Edit3, BarChart2, Camera, AlertTriangle, Landmark
+  Info, CheckCircle, Edit3, BarChart2, Camera, AlertTriangle, Landmark, FileText, Truck,
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import LifecycleTimeline from './LifecycleTimeline';
@@ -546,6 +546,110 @@ const TransferCard = ({ animal, currentUser }) => {
   );
 };
 
+// ── MOVEMENT PERMIT REQUEST (DVS Form V27) ──────────────────────────────────
+const EMPTY_PERMIT_FORM = { bulls: '', calves: '', cows: '', oxen: '', steers: '', pigs: '', sheep: '', goats: '', other_count: '', other_description: '', from_district: '', to_district: '', period_days: '7', route_method: '', fee_amount: '', fee_words: '', special_instructions: '' };
+
+const MovementPermitCard = ({ animal, currentUser }) => {
+  const [permits, setPermits] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState(EMPTY_PERMIT_FORM);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const load = async () => {
+    try {
+      const res = await fetch(`${API}/movement-permits/mine`, { headers: { Authorization: `Bearer ${currentUser?.token}` } });
+      if (res.ok) setPermits((await res.json()).filter(p => p.animal_id === animal.id));
+    } catch { /* offline */ }
+  };
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [animal.id]);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!form.from_district.trim() || !form.to_district.trim() || !form.period_days) return;
+    setBusy(true); setError('');
+    try {
+      const res = await fetch(`${API}/movement-permits`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentUser?.token}` },
+        body: JSON.stringify({ ...form, animal_id: animal.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Could not submit request.'); setBusy(false); return; }
+      setForm(EMPTY_PERMIT_FORM);
+      setShowForm(false);
+      await load();
+    } catch { setError('Could not reach the PFUMA API.'); }
+    setBusy(false);
+  };
+
+  const countCls = 'p-2 bg-gray-50 rounded-lg border-2 border-transparent focus:border-pfuma-green outline-none font-semibold text-xs text-center';
+  const fieldCls = 'w-full p-2.5 bg-gray-50 rounded-lg border-2 border-transparent focus:border-pfuma-green outline-none font-semibold text-xs';
+
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <Truck size={15} className="text-pfuma-green" />
+          <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest">Movement Permit (DVS Form V27)</h4>
+        </div>
+        <button onClick={() => setShowForm(s => !s)} className="text-[10px] font-black text-pfuma-green hover:underline uppercase">{showForm ? 'Cancel' : '+ Request'}</button>
+      </div>
+      <p className="text-[11px] text-gray-400 font-medium mb-3">Authorization to move livestock between districts — a vet signs before it's valid, same as the paper form.</p>
+
+      {permits.length > 0 && (
+        <div className="space-y-2 mb-3">
+          {permits.map(p => (
+            <div key={p.id} className="flex items-center justify-between bg-gray-50 rounded-xl p-3">
+              <div>
+                <p className="text-xs font-black text-gray-800">{p.from_district} → {p.to_district} <span className="text-gray-400 font-medium">· {p.period_days}d</span></p>
+                {p.status === 'issued' && <p className="text-[10px] text-green-600 font-bold mt-0.5">Permit {p.permit_number} · signed by {p.vet_name_block} ({p.vet_rank}) · expires {new Date(p.expires_at).toLocaleDateString()}</p>}
+                {p.status === 'pending' && <p className="text-[10px] text-amber-600 font-bold mt-0.5">Awaiting a vet's signature</p>}
+                {p.status === 'rejected' && <p className="text-[10px] text-red-500 font-bold mt-0.5">Rejected{p.rejection_reason ? `: ${p.rejection_reason}` : ''}</p>}
+              </div>
+              <span className={`text-[9px] font-black px-2 py-1 rounded-full uppercase shrink-0 ${p.status === 'issued' ? 'bg-green-100 text-green-700' : p.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{p.status}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showForm && (
+        <form onSubmit={submit} className="space-y-3 border-t border-gray-100 pt-3">
+          <div>
+            <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Number and Description of Animals</label>
+            <div className="grid grid-cols-4 gap-1.5">
+              {['bulls', 'calves', 'cows', 'oxen', 'steers', 'pigs', 'sheep', 'goats'].map(f => (
+                <div key={f}>
+                  <input type="number" min="0" placeholder="0" className={countCls + ' w-full'} value={form[f]} onChange={e => set(f, e.target.value)} />
+                  <p className="text-[8px] text-gray-400 font-bold uppercase text-center mt-0.5">{f}</p>
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <input type="number" min="0" placeholder="Other (count)" className={fieldCls} value={form.other_count} onChange={e => set('other_count', e.target.value)} />
+              <input type="text" placeholder="Other (description)" className={fieldCls} value={form.other_description} onChange={e => set('other_description', e.target.value)} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <input required type="text" placeholder="From district *" className={fieldCls} value={form.from_district} onChange={e => set('from_district', e.target.value)} />
+            <input required type="text" placeholder="To district *" className={fieldCls} value={form.to_district} onChange={e => set('to_district', e.target.value)} />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <input required type="number" min="1" placeholder="Period (days) *" className={fieldCls} value={form.period_days} onChange={e => set('period_days', e.target.value)} />
+            <input type="text" placeholder="Fee paid (USD)" className={fieldCls} value={form.fee_amount} onChange={e => set('fee_amount', e.target.value)} />
+          </div>
+          <input type="text" placeholder="Route and method of movement" className={fieldCls} value={form.route_method} onChange={e => set('route_method', e.target.value)} />
+          <input type="text" placeholder="Special instructions (optional)" className={fieldCls} value={form.special_instructions} onChange={e => set('special_instructions', e.target.value)} />
+          {error && <p className="text-[10px] text-red-500 font-bold">{error}</p>}
+          <button type="submit" disabled={busy} className="w-full py-2.5 bg-gray-800 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-900 transition disabled:opacity-50">
+            {busy ? 'Submitting…' : 'Submit Request'}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+};
+
 // ── MAIN COMPONENT ─────────────────────────────────────────────────────────
 const AnimalProfile = ({ animals, onAddAnimal, onAddAnimalPhotos, auditLog, onListAnimal, currentUser, onAnimalsChanged }) => {
   const [selectedAnimalId, setSelectedAnimalId] = useState(null);
@@ -698,6 +802,7 @@ const AnimalProfile = ({ animals, onAddAnimal, onAddAnimalPhotos, auditLog, onLi
         )}
 
         <TransferCard animal={selectedAnimal} currentUser={currentUser} />
+        <MovementPermitCard animal={selectedAnimal} currentUser={currentUser} />
 
         {/* Tabs */}
         <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">

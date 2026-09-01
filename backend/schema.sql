@@ -184,12 +184,40 @@ CREATE TABLE IF NOT EXISTS sale_clearances (
   leader_document_path VARCHAR(300),    -- photo of the written clearance
   leader_na_reason VARCHAR(200),        -- why no traditional clearance applies
   officer_photo_path VARCHAR(300),      -- photo of the animal taken by the officer at clearance
+  -- ── ZRP Form 392 "Livestock Clearance Certificate" fields ──────
+  -- Digitizes the real paper form police provided at ZAS 2026, field for
+  -- field. Part A (seller) fields not already covered by the users/animals
+  -- tables; Part B (buyer/receiver) is optional since a buyer isn't always
+  -- known yet on the open Marketplace — filled in once arranged, same as a
+  -- partially-completed paper form in practice.
+  livestock_register_no VARCHAR(60),      -- Part A: seller's Livestock Card/Register No
+  dip_tank_name         VARCHAR(120),     -- Part A: Name of Dip Tank/Farm No
+  buyer_name            VARCHAR(120),     -- Part B
+  buyer_national_id     VARCHAR(20),      -- Part B: Nat Reg No
+  buyer_address         VARCHAR(200),     -- Part B: residential address
+  buyer_destination     VARCHAR(200),     -- Part B: intended destination of animal(s) bought
+  transport_mode        ENUM('drover','vehicle') NULL,  -- Part B
+  transport_reference   VARCHAR(200),     -- Part B: drover name(s)/Nat Reg No, or vehicle reg no
+  animal_description_note VARCHAR(300),   -- Part C: free-text description beyond species/breed
+  clearance_register_no VARCHAR(60),      -- form header: Livestock Clearance Register No (Part E, officer-assigned)
+  -- Part D "VET PERMIT No" is the pre-existing movement_permit_number column
+  -- below, filled in by the officer at clearance time (from a movement_permits
+  -- permit_number, if one was issued) — not a separate column.
+  vet_officer_id            INT NULL,     -- FK → users.id (Part D witness — Vet Officer/Dip Tank Attendant)
+  vet_officer_signature_path VARCHAR(300),
+  vet_officer_signed_at     TIMESTAMP NULL,
+  seller_signature_path     VARCHAR(300), -- Part D: Signature of Seller/Owner
+  seller_signed_at          TIMESTAMP NULL,
+  buyer_signature_path      VARCHAR(300), -- Part D: Signature of Buyer/Receiver
+  buyer_signed_at           TIMESTAMP NULL,
+  not_stolen_certified  BOOLEAN NOT NULL DEFAULT FALSE, -- Part E: officer certifies not reported stolen
   created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   resolved_at   TIMESTAMP NULL,
   FOREIGN KEY (animal_id)  REFERENCES animals(id) ON DELETE CASCADE,
   FOREIGN KEY (listing_id) REFERENCES marketplace_listings(id) ON DELETE SET NULL,
   FOREIGN KEY (seller_id)  REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (officer_id) REFERENCES users(id) ON DELETE SET NULL
+  FOREIGN KEY (officer_id) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (vet_officer_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 -- Upgrades a database that predates traditional-authority attestation.
@@ -203,7 +231,62 @@ ALTER TABLE sale_clearances
   ADD COLUMN IF NOT EXISTS leader_cleared_on DATE,
   ADD COLUMN IF NOT EXISTS leader_reference VARCHAR(80),
   ADD COLUMN IF NOT EXISTS leader_document_path VARCHAR(300),
-  ADD COLUMN IF NOT EXISTS leader_na_reason VARCHAR(200);
+  ADD COLUMN IF NOT EXISTS leader_na_reason VARCHAR(200),
+  ADD COLUMN IF NOT EXISTS livestock_register_no VARCHAR(60),
+  ADD COLUMN IF NOT EXISTS dip_tank_name VARCHAR(120),
+  ADD COLUMN IF NOT EXISTS buyer_name VARCHAR(120),
+  ADD COLUMN IF NOT EXISTS buyer_national_id VARCHAR(20),
+  ADD COLUMN IF NOT EXISTS buyer_address VARCHAR(200),
+  ADD COLUMN IF NOT EXISTS buyer_destination VARCHAR(200),
+  ADD COLUMN IF NOT EXISTS transport_mode ENUM('drover','vehicle') NULL,
+  ADD COLUMN IF NOT EXISTS transport_reference VARCHAR(200),
+  ADD COLUMN IF NOT EXISTS animal_description_note VARCHAR(300),
+  ADD COLUMN IF NOT EXISTS clearance_register_no VARCHAR(60),
+  ADD COLUMN IF NOT EXISTS vet_officer_id INT NULL,
+  ADD COLUMN IF NOT EXISTS vet_officer_signature_path VARCHAR(300),
+  ADD COLUMN IF NOT EXISTS vet_officer_signed_at TIMESTAMP NULL,
+  ADD COLUMN IF NOT EXISTS seller_signature_path VARCHAR(300),
+  ADD COLUMN IF NOT EXISTS seller_signed_at TIMESTAMP NULL,
+  ADD COLUMN IF NOT EXISTS buyer_signature_path VARCHAR(300),
+  ADD COLUMN IF NOT EXISTS buyer_signed_at TIMESTAMP NULL,
+  ADD COLUMN IF NOT EXISTS not_stolen_certified BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- ── VET MOVEMENT PERMITS ─────────────────────────────────────
+-- Digitizes DVS Form V27 "Movement of Animal Permit" — the vet's own
+-- authorization to move livestock between districts, independent of a sale
+-- (a farmer can request one just to relocate their own herd). A sale
+-- clearance's movement_permit_number (above) can reference one of these
+-- permit_numbers once issued.
+CREATE TABLE IF NOT EXISTS movement_permits (
+  id                 INT AUTO_INCREMENT PRIMARY KEY,
+  permit_number      VARCHAR(20) UNIQUE,
+  animal_id          INT NOT NULL,
+  owner_id           INT NOT NULL,
+  vet_id             INT NULL,            -- FK → users.id (Vet who signs/issues)
+  status             ENUM('pending','issued','rejected') NOT NULL DEFAULT 'pending',
+  -- "Number and Description of Animals" — matches the form's own layout
+  bulls INT DEFAULT 0, calves INT DEFAULT 0, cows INT DEFAULT 0, oxen INT DEFAULT 0, steers INT DEFAULT 0,
+  pigs  INT DEFAULT 0, sheep  INT DEFAULT 0, goats INT DEFAULT 0,
+  other_count INT DEFAULT 0, other_description VARCHAR(120),
+  from_district      VARCHAR(80) NOT NULL,
+  to_district        VARCHAR(80) NOT NULL,
+  period_days        INT NOT NULL,
+  route_method       VARCHAR(300),
+  fee_amount         DECIMAL(10,2),
+  fee_words          VARCHAR(200),
+  special_instructions VARCHAR(300),
+  vet_rank           ENUM('VEA','AHI','GVO') NULL,
+  vet_name_block     VARCHAR(120),
+  vet_station        VARCHAR(120),
+  vet_signature_path VARCHAR(300),
+  rejection_reason   VARCHAR(300),
+  issued_at          TIMESTAMP NULL,
+  expires_at         TIMESTAMP NULL,
+  created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (animal_id) REFERENCES animals(id) ON DELETE CASCADE,
+  FOREIGN KEY (owner_id)  REFERENCES users(id)   ON DELETE CASCADE,
+  FOREIGN KEY (vet_id)    REFERENCES users(id)   ON DELETE SET NULL
+);
 
 -- ── MARKETPLACE BIDS ──────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS bids (
