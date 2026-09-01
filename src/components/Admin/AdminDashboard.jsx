@@ -4,6 +4,7 @@ import {
   CheckCircle, XCircle, ShoppingCart, AlertTriangle, Handshake, Package,
   Ban, RotateCcw, Satellite, Navigation, Crosshair, Thermometer, Heart,
   BatteryMedium, Play, Pause, RadioTower, Target, Save, Trash2,
+  Upload, Database, FileSpreadsheet, UserPlus,
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
@@ -64,6 +65,17 @@ const UsersTab = ({ currentUser }) => {
       await fetch(`${API}/admin/users/${id}/status`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentUser.token}` },
         body: JSON.stringify({ status, reason }),
+      });
+      await load();
+    } catch { /* offline */ }
+    setBusyId(null);
+  };
+
+  const verifyNextOfKin = async (id) => {
+    setBusyId(id);
+    try {
+      await fetch(`${API}/admin/users/${id}/next-of-kin-verify`, {
+        method: 'PATCH', headers: { Authorization: `Bearer ${currentUser.token}` },
       });
       await load();
     } catch { /* offline */ }
@@ -149,6 +161,11 @@ const UsersTab = ({ currentUser }) => {
                       <XCircle size={14} />
                     </button>
                   </div>
+                )}
+                {u.next_of_kin_name && u.next_of_kin_verification_status === 'pending' && (
+                  <button onClick={() => verifyNextOfKin(u.id)} disabled={busyId === u.id} className="shrink-0 p-1.5 bg-orange-50 hover:bg-orange-100 text-orange-600 rounded-lg transition disabled:opacity-50" aria-label={`Verify ${u.full_name}'s next of kin`} title={`Verify next of kin: ${u.next_of_kin_name}`}>
+                    <UserPlus size={14} />
+                  </button>
                 )}
                 {u.role !== 'Admin' && u.id !== currentUser.id && (
                   <div className="flex gap-1.5 shrink-0">
@@ -664,12 +681,135 @@ const IoTControlTab = ({ currentUser }) => {
   );
 };
 
+// ── DATA IMPORT & FUSION ─────────────────────────────────────────────
+// Lets an Admin (not a developer) bulk-fuse an external registry export —
+// a DVS/CVSZ vet list, a ZRP roster — into existing accounts, matched by
+// national_id_number. Every write goes through POST /admin/import, which
+// is audit-logged server-side; this tab is a thin UI over that one endpoint.
+const DataImportTab = ({ currentUser }) => {
+  const [sourceLabel, setSourceLabel] = useState('');
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [logs, setLogs] = useState([]);
+  const [logsLoading, setLogsLoading] = useState(true);
+
+  const loadLogs = useCallback(async () => {
+    setLogsLoading(true);
+    try {
+      const res = await fetch(`${API}/admin/import-logs`, { headers: { Authorization: `Bearer ${currentUser.token}` } });
+      if (res.ok) setLogs(await res.json());
+    } catch { /* offline — leave empty, no fake fallback */ }
+    setLogsLoading(false);
+  }, [currentUser.token]);
+
+  useEffect(() => { loadLogs(); }, [loadLogs]);
+
+  const runImport = async (commit) => {
+    if (!file || !sourceLabel.trim()) return;
+    setBusy(true); setError('');
+    try {
+      const fd = new FormData();
+      fd.append('csv_file', file);
+      fd.append('source_label', sourceLabel);
+      fd.append('commit', commit ? 'true' : 'false');
+      const res = await fetch(`${API}/admin/import`, {
+        method: 'POST', headers: { Authorization: `Bearer ${currentUser.token}` }, body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Import failed.'); setBusy(false); return; }
+      setPreview(data);
+      if (commit) await loadLogs();
+    } catch { setError('Could not reach the PFUMA API.'); }
+    setBusy(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 space-y-4">
+        <div>
+          <h3 className="text-sm font-black text-gray-800">Import & Fuse External Data</h3>
+          <p className="text-[11px] text-gray-400 font-medium mt-0.5">
+            Upload a CSV (e.g. a DVS vet registry export, a ZRP roster) to verify and update matching accounts.
+            Rows are matched to existing users by their <code className="bg-gray-100 px-1 rounded">national_id_number</code> column —
+            every CSV must include one. Optional columns: <code className="bg-gray-100 px-1 rounded">license_number</code>,{' '}
+            <code className="bg-gray-100 px-1 rounded">badge_number</code>, <code className="bg-gray-100 px-1 rounded">station</code>.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <input value={sourceLabel} onChange={e => setSourceLabel(e.target.value)} placeholder="Source name, e.g. DVS Vet Registry"
+            className="px-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm font-medium outline-none focus:ring-2 focus:ring-pfuma-green/30" />
+          <label className="flex items-center gap-2.5 px-3.5 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-sm font-medium cursor-pointer">
+            <Upload size={15} className="text-gray-400 shrink-0" />
+            <span className="truncate">{file ? file.name : 'Choose a .csv file…'}</span>
+            <input type="file" accept=".csv" className="hidden" onChange={e => { setFile(e.target.files?.[0] || null); setPreview(null); setError(''); }} />
+          </label>
+        </div>
+        {error && <p className="text-[11px] text-red-500 font-bold">{error}</p>}
+        <div className="flex gap-3">
+          <button onClick={() => runImport(false)} disabled={busy || !file || !sourceLabel.trim()}
+            className="px-5 py-2.5 bg-white border-2 border-gray-200 rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-gray-50 transition disabled:opacity-50">
+            {busy ? 'Working…' : 'Preview (Dry Run)'}
+          </button>
+          <button onClick={() => runImport(true)} disabled={busy || !preview || preview.committed}
+            className="px-5 py-2.5 bg-pfuma-green text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-green-700 transition disabled:opacity-50">
+            {busy ? 'Working…' : 'Confirm & Import'}
+          </button>
+        </div>
+
+        {preview && (
+          <div className={`rounded-xl border p-4 ${preview.committed ? 'bg-pfuma-green/5 border-pfuma-green/20' : 'bg-gray-50 border-gray-200'}`}>
+            <p className="text-xs font-black text-gray-800">
+              {preview.committed ? 'Imported ✅' : 'Preview — nothing written yet'}
+            </p>
+            <p className="text-[11px] text-gray-500 font-medium mt-1">
+              {preview.row_count} row{preview.row_count !== 1 ? 's' : ''} · {preview.matched_count} matched to existing accounts · {preview.unmatched_count} unmatched
+            </p>
+            {preview.preview?.length > 0 && (
+              <div className="mt-3 space-y-1.5">
+                {preview.preview.map(m => (
+                  <p key={m.id} className="text-[11px] text-gray-600 font-medium">— {m.full_name} ({m.role})</p>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-gray-50">
+          <h3 className="text-sm font-black text-gray-800 flex items-center gap-2"><Database size={14} className="text-gray-400" /> Import History</h3>
+        </div>
+        {logsLoading ? (
+          <p className="text-xs text-gray-400 font-medium italic text-center py-8">Loading…</p>
+        ) : logs.length === 0 ? (
+          <p className="text-xs text-gray-400 font-medium italic text-center py-8">No imports yet.</p>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {logs.map(l => (
+              <div key={l.id} className="flex items-center gap-3 p-4">
+                <FileSpreadsheet size={16} className="text-gray-300 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-black text-gray-800">{l.source_label} <span className="text-gray-400 font-medium">— {l.filename}</span></p>
+                  <p className="text-[10px] text-gray-500 font-medium">{l.matched_count}/{l.row_count} matched · by {l.admin_name} · {new Date(l.created_at).toLocaleString()}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const TABS = [
   { id: 'users', label: 'Users', icon: Users },
   { id: 'listings', label: 'Listings', icon: Package },
   { id: 'iot', label: 'IoT Control', icon: Satellite },
   { id: 'trends', label: 'Trends', icon: TrendingUp },
   { id: 'activity', label: 'Activity', icon: Activity },
+  { id: 'import', label: 'Data Import', icon: Database },
 ];
 
 const AdminDashboard = ({ currentUser, onLogout }) => {
@@ -705,6 +845,7 @@ const AdminDashboard = ({ currentUser, onLogout }) => {
         {tab === 'iot' && <IoTControlTab currentUser={currentUser} />}
         {tab === 'trends' && <TrendsTab currentUser={currentUser} />}
         {tab === 'activity' && <ActivityTab currentUser={currentUser} />}
+        {tab === 'import' && <DataImportTab currentUser={currentUser} />}
       </div>
     </div>
   );

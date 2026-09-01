@@ -164,6 +164,8 @@ const AuthPortal = ({ onLogin }) => {
     fullName: '', phone: '', nationalId: '', email: '', password: '', confirmPassword: '',
     // step 2 — organisation
     orgName: '', province: 'Mashonaland West', district: '', physicalAddress: '',
+    // step 2 — next of kin (every role, for account succession)
+    nextOfKinName: '', nextOfKinPhone: '', nextOfKinNationalId: '', nextOfKinRelationship: '',
     // step 3 — role-specific
     // farmer
     farmSize: '', species: [],
@@ -207,6 +209,11 @@ const AuthPortal = ({ onLogin }) => {
     station: apiUser.station,
     jurisdictionProvince: apiUser.jurisdiction_province,
     verificationStatus: apiUser.verification_status,
+    nextOfKinName: apiUser.next_of_kin_name,
+    nextOfKinPhone: apiUser.next_of_kin_phone,
+    nextOfKinNationalId: apiUser.next_of_kin_national_id,
+    nextOfKinRelationship: apiUser.next_of_kin_relationship,
+    nextOfKinVerificationStatus: apiUser.next_of_kin_verification_status,
     // Real uploaded profile photo when the user has set one; otherwise the
     // same deterministic placeholder avatar as always.
     avatar: apiUser.avatar_url ? `${API}${apiUser.avatar_url}` : `https://api.dicebear.com/7.x/avataaars/svg?seed=${apiUser.full_name || 'PFUMA'}`,
@@ -247,6 +254,10 @@ const AuthPortal = ({ onLogin }) => {
       fd.append('province', form.province);
       fd.append('district', form.district);
       fd.append('address', form.physicalAddress);
+      fd.append('next_of_kin_name', form.nextOfKinName);
+      fd.append('next_of_kin_phone', form.nextOfKinPhone);
+      fd.append('next_of_kin_national_id', form.nextOfKinNationalId);
+      fd.append('next_of_kin_relationship', form.nextOfKinRelationship);
       fd.append('farm_size_ha', form.farmSize || '');
       fd.append('species_farmed', form.species.join(','));
       fd.append('license_number', form.licenseNumber);
@@ -271,7 +282,7 @@ const AuthPortal = ({ onLogin }) => {
   // ── step validation ──
   const canAdvance = () => {
     if (step === 1) return form.fullName.trim() && isValidZwPhone(form.phone) && isValidZwNationalId(form.nationalId) && form.password.length >= 8 && form.password === form.confirmPassword;
-    if (step === 2) return form.orgName.trim() && form.province;
+    if (step === 2) return form.orgName.trim() && form.province && form.nextOfKinName.trim() && isValidZwPhone(form.nextOfKinPhone);
     return true;
   };
 
@@ -392,6 +403,33 @@ const AuthPortal = ({ onLogin }) => {
       <Field label="Physical Address / Farm Location">
         <input className={inputCls} type="text" placeholder="e.g. Plot 23, Chegutu Road, Zvimba" value={form.physicalAddress} onChange={e => set('physicalAddress', e.target.value)} />
       </Field>
+
+      <div className="pt-2 border-t border-gray-100">
+        <h4 className="text-sm font-black text-gray-900 mb-1">Next of Kin</h4>
+        <p className="text-[11px] text-gray-400 font-medium mb-3">
+          Who should PFUMA contact — and who can request to take over this account — if something happens to you. Required for every role.
+        </p>
+      </div>
+      <Field label="Next of Kin Full Name" required>
+        <input className={inputCls} type="text" placeholder="e.g. Rudo Moyo" value={form.nextOfKinName} onChange={e => set('nextOfKinName', e.target.value)} />
+      </Field>
+      <Field label="Next of Kin Phone Number" required>
+        <div className="relative">
+          <Phone size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input className={inputCls + ' pl-10'} type="tel" placeholder="+263 77 123 4567" value={form.nextOfKinPhone} onChange={e => set('nextOfKinPhone', e.target.value)} />
+        </div>
+        {form.nextOfKinPhone.trim() && !isValidZwPhone(form.nextOfKinPhone) && (
+          <p className="text-[10px] text-red-500 font-bold mt-1">Enter a valid Zimbabwean mobile number.</p>
+        )}
+      </Field>
+      <div className="grid grid-cols-2 gap-4">
+        <Field label="Relationship">
+          <input className={inputCls} type="text" placeholder="e.g. Spouse, Sibling" value={form.nextOfKinRelationship} onChange={e => set('nextOfKinRelationship', e.target.value)} />
+        </Field>
+        <Field label="National ID (optional)">
+          <input className={inputCls} type="text" placeholder="e.g. 63-1234567A00" value={form.nextOfKinNationalId} onChange={e => set('nextOfKinNationalId', e.target.value)} />
+        </Field>
+      </div>
     </div>
   );
 

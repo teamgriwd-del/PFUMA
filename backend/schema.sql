@@ -600,6 +600,54 @@ CREATE TABLE IF NOT EXISTS compliance_actions (
 );
 
 
+-- ── NEXT OF KIN ──────────────────────────────────────────────
+-- Account-succession contact, requested at signup for every role so an
+-- account can be legitimately handed over if the holder dies or is
+-- incapacitated. Independent of the account's own verification_status —
+-- changing next-of-kin details never touches identity verification.
+ALTER TABLE users
+  ADD COLUMN next_of_kin_name              VARCHAR(120),
+  ADD COLUMN next_of_kin_phone             VARCHAR(20),
+  ADD COLUMN next_of_kin_national_id       VARCHAR(20),
+  ADD COLUMN next_of_kin_relationship      VARCHAR(60),
+  ADD COLUMN next_of_kin_verification_status ENUM('pending','verified') NOT NULL DEFAULT 'pending';
+
+-- ── VALUATION CERTIFICATES ───────────────────────────────────
+-- A signed, independently-checkable snapshot of an animal's estimated
+-- value — the documentary evidence a bank/insurer accepts for a
+-- livestock-as-collateral loan or policy. verification_code is looked up
+-- via a public, no-auth endpoint so a loan officer can check it without a
+-- PFUMA account.
+CREATE TABLE IF NOT EXISTS valuation_certificates (
+  id                 INT AUTO_INCREMENT PRIMARY KEY,
+  animal_id          INT NOT NULL,
+  owner_id_at_issue  INT NOT NULL,
+  estimated_value    DECIMAL(10,2) NOT NULL,
+  issued_by          INT NOT NULL,
+  verification_code  VARCHAR(20) NOT NULL UNIQUE,
+  created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (animal_id)         REFERENCES animals(id) ON DELETE CASCADE,
+  FOREIGN KEY (owner_id_at_issue) REFERENCES users(id)   ON DELETE CASCADE,
+  FOREIGN KEY (issued_by)         REFERENCES users(id)   ON DELETE CASCADE
+);
+
+-- ── ADMIN DATA IMPORTS ───────────────────────────────────────
+-- Audit trail for every CSV bulk-import an Admin runs from the Data Import
+-- tab (fusing in a DVS/CVSZ vet list, a ZRP roster, etc.) — every write
+-- from an import goes through the endpoint that writes this row, so there
+-- is always a record of who imported what and how many rows matched.
+CREATE TABLE IF NOT EXISTS import_logs (
+  id             INT AUTO_INCREMENT PRIMARY KEY,
+  admin_id       INT NOT NULL,
+  source_label   VARCHAR(80) NOT NULL,   -- e.g. 'DVS Vet Registry', 'ZRP Roster'
+  filename       VARCHAR(200),
+  row_count      INT NOT NULL DEFAULT 0,
+  matched_count  INT NOT NULL DEFAULT 0,
+  created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+
 -- ── UPGRADES FOR EXISTING DATABASES ───────────────────────────
 -- Columns added after the first release. A database created earlier will not
 -- pick these up from CREATE TABLE IF NOT EXISTS, and the seed data below

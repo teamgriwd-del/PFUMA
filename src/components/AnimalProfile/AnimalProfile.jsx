@@ -3,11 +3,12 @@ import { BREED_PROFILES } from '../HealthManagement/healthData';
 import {
   PlusCircle, ChevronRight, Users, ShieldCheck, X,
   TrendingUp, Tag, ArrowLeft, Calendar, Weight,
-  Info, CheckCircle, Edit3, BarChart2, Camera, AlertTriangle
+  Info, CheckCircle, Edit3, BarChart2, Camera, AlertTriangle, Landmark
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import LifecycleTimeline from './LifecycleTimeline';
 import Lightbox from '../Lightbox';
+import { API } from '../../config';
 import './AnimalProfile.css';
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -54,19 +55,22 @@ const Field = ({ id, label, required, children }) => (
 // clones the passport markup into a separate, isolated print window (same
 // compiled stylesheet, none of the modal's fixed/blur baggage) and prints
 // that — the standard robust pattern for printing one part of a page.
-const HealthPassport = ({ animal, auditLog, onClose }) => {
+const HealthPassport = ({ animal, auditLog, currentUser, onClose }) => {
   const printRef = useRef(null);
+  const [certData, setCertData] = useState(null);
+  const [certBusy, setCertBusy] = useState(false);
+  const [certError, setCertError] = useState('');
 
-  const handlePrint = () => {
+  const printNode = (node, title) => {
     const printWindow = window.open('', '_blank', 'width=900,height=1200');
-    if (!printWindow || !printRef.current) {
+    if (!printWindow || !node) {
       window.alert('Your browser blocked the print window — allow pop-ups for this site and try again.');
       return;
     }
     const styleTags = Array.from(document.querySelectorAll('link[rel="stylesheet"], style'))
       .map(el => el.outerHTML).join('\n');
     printWindow.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8" />
-      <title>${animal.name} — Health Passport</title>
+      <title>${title}</title>
       ${styleTags}
       <style>
         body{margin:0;background:#fff;}
@@ -82,13 +86,36 @@ const HealthPassport = ({ animal, auditLog, onClose }) => {
         #pfuma-passport-root { max-height: none !important; overflow: visible !important; }
         #pfuma-passport-body { overflow: visible !important; flex: none !important; }
       </style>
-    </head><body>${printRef.current.outerHTML}</body></html>`);
+    </head><body>${node.outerHTML}</body></html>`);
     printWindow.document.close();
     printWindow.onload = () => {
       printWindow.focus();
       printWindow.print();
     };
   };
+
+  const handlePrint = () => printNode(printRef.current, `${animal.name} — Health Passport`);
+
+  // The estimated value shown above is a client-side display-only number —
+  // not evidence a bank/insurer should trust. Issuing a certificate asks the
+  // backend to compute the same figure server-side and hand back a
+  // verification code anyone can independently check at /verify/certificate,
+  // with no PFUMA account needed.
+  const issueCertificate = async () => {
+    setCertBusy(true); setCertError('');
+    try {
+      const res = await fetch(`${API}/animals/${animal.id}/valuation-certificate`, {
+        method: 'POST', headers: { Authorization: `Bearer ${currentUser?.token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) { setCertError(data.error || 'Could not issue a certificate.'); setCertBusy(false); return; }
+      setCertData(data);
+    } catch { setCertError('Could not reach the PFUMA API.'); }
+    setCertBusy(false);
+  };
+
+  const certRef = useRef(null);
+  const handlePrintCertificate = () => printNode(certRef.current, `${animal.name} — Valuation Certificate`);
 
   return (
   <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-gray-900/90 backdrop-blur-md">
@@ -122,6 +149,32 @@ const HealthPassport = ({ animal, auditLog, onClose }) => {
                 <strong className="text-3xl font-black text-gray-800">${calculateValue(animal, auditLog)}</strong>
               </div>
               <p className="text-[10px] text-gray-400 font-medium mt-1">Based on weight, species, and health records</p>
+            </div>
+
+            {/* Bank/insurer collateral evidence — a server-issued, independently
+                verifiable certificate, distinct from the display-only estimate above. */}
+            <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm print:hidden">
+              <div className="flex items-center gap-2 mb-2">
+                <Landmark size={14} className="text-pfuma-green" />
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Valuation Certificate</p>
+              </div>
+              {certData ? (
+                <>
+                  <p className="text-xs font-black text-gray-800">Certificate issued ✅</p>
+                  <p className="text-[10px] text-gray-400 font-medium mt-1 mb-3">Code: {certData.verification_code}</p>
+                  <button onClick={handlePrintCertificate} className="w-full py-2 bg-pfuma-green text-white rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-green-700 transition">
+                    Print Certificate
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-[11px] text-gray-500 font-medium mb-3">A signed, independently-checkable document a bank or insurer can accept as collateral evidence.</p>
+                  <button onClick={issueCertificate} disabled={certBusy} className="w-full py-2 bg-gray-800 text-white rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-gray-900 transition disabled:opacity-50">
+                    {certBusy ? 'Issuing…' : 'Issue Valuation Certificate'}
+                  </button>
+                  {certError && <p className="text-[10px] text-red-500 font-bold mt-2">{certError}</p>}
+                </>
+              )}
             </div>
           </div>
 
@@ -180,6 +233,47 @@ const HealthPassport = ({ animal, auditLog, onClose }) => {
         </div>
       </div>
     </div>
+
+    {/* Off-screen — never shown in the modal itself, only cloned into the
+        print window by handlePrintCertificate (same pattern as printRef above). */}
+    {certData && (
+      <div hidden>
+        <div ref={certRef} id="pfuma-passport-root" className="bg-white w-full max-w-2xl mx-auto p-10">
+          <div className="flex items-center gap-3 mb-8 border-b-2 border-pfuma-green pb-6">
+            <ShieldCheck size={32} className="text-pfuma-green" />
+            <div>
+              <h2 className="text-xl font-black text-gray-900 uppercase tracking-tight">PFUMA Livestock Valuation Certificate</h2>
+              <p className="text-xs text-gray-400 font-medium">Issued {new Date(certData.issued_at).toLocaleString()}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-6 mb-8">
+            {[
+              { label: 'Animal', value: animal.name },
+              { label: 'Species / Breed', value: `${animal.species}${animal.breed ? ' — ' + animal.breed : ''}` },
+              { label: 'Ear Tag', value: animal.tagId ? `#${animal.tagId}` : '—' },
+              { label: 'Owner', value: currentUser?.name || '—' },
+            ].map(f => (
+              <div key={f.label}>
+                <p className="text-[10px] font-black text-pfuma-green uppercase mb-0.5">{f.label}</p>
+                <p className="text-base font-black text-gray-800">{f.value}</p>
+              </div>
+            ))}
+          </div>
+          <div className="bg-gray-50 rounded-2xl p-6 mb-8 text-center">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Certified Estimated Value</p>
+            <p className="text-4xl font-black text-gray-900">USD {Number(certData.estimated_value).toLocaleString()}</p>
+          </div>
+          <div className="border-t border-gray-100 pt-6">
+            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Independent Verification</p>
+            <p className="text-sm font-black text-gray-800">Code: {certData.verification_code}</p>
+            <p className="text-[11px] text-gray-500 font-medium mt-1">
+              A bank, insurer, or any third party can verify this certificate at any time — no PFUMA account required — by
+              checking code <strong>{certData.verification_code}</strong> against PFUMA's public certificate lookup.
+            </p>
+          </div>
+        </div>
+      </div>
+    )}
   </div>
   );
 };
@@ -553,7 +647,7 @@ const AnimalProfile = ({ animals, onAddAnimal, onAddAnimalPhotos, auditLog, onLi
           </div>
         </div>
 
-        {isPassportOpen && <HealthPassport animal={selectedAnimal} auditLog={auditLog} onClose={() => setIsPassportOpen(false)} />}
+        {isPassportOpen && <HealthPassport animal={selectedAnimal} auditLog={auditLog} currentUser={currentUser} onClose={() => setIsPassportOpen(false)} />}
       </div>
     );
   }

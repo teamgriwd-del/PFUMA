@@ -7,6 +7,7 @@ import VetCommunication  from './components/VetCommunication/VetCommunication';
 import Marketplace       from './components/Marketplace/Marketplace';
 import FeedAnalyzer      from './components/FeedAnalyzer/FeedAnalyzer';
 import Cooperative       from './components/Cooperative/Cooperative';
+import TradingJournal    from './components/TradingJournal/TradingJournal';
 import HardwareSimulation from './components/HardwareSimulation/HardwareSimulation';
 import ComplianceCenter  from './components/Compliance/ComplianceCenter';
 import AdminDashboard    from './components/Admin/AdminDashboard';
@@ -22,7 +23,7 @@ import {
   Zap, Clock, ArrowRight, Tag, Pill, MapPin, FileText,
   RefreshCw, DollarSign, Target, Box, PhoneCall, Star, Wheat, Store,
   Sprout, Check, Syringe, Shield, UserPlus, X, Menu, Eye, EyeOff, Handshake, Radio, FlaskConical, Camera,
-  ShieldAlert, Pencil,
+  ShieldAlert, Pencil, BookOpen,
 } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis } from 'recharts';
 import './App.css';
@@ -618,6 +619,11 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
   const [showReportForm, setShowReportForm] = useState(false);
   const [reportForm, setReportForm] = useState({ disease_name: '', district: '', details: '', affected_farms: '', animals_at_risk: '' });
   const [reportBusy, setReportBusy] = useState(false);
+  const [reportFeedback, setReportFeedback] = useState('');
+  const [showBroadcastForm, setShowBroadcastForm] = useState(false);
+  const [broadcastForm, setBroadcastForm] = useState({ title: '', message: '', district: '' });
+  const [broadcastBusy, setBroadcastBusy] = useState(false);
+  const [broadcastFeedback, setBroadcastFeedback] = useState('');
 
   const loadVetData = useCallback(async () => {
     if (!currentUser?.token) return;
@@ -666,13 +672,36 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentUser.token}` },
         body: JSON.stringify(reportForm),
       });
+      const data = await res.json();
       if (res.ok) {
         setShowReportForm(false);
         setReportForm({ disease_name: '', district: '', details: '', affected_farms: '', animals_at_risk: '' });
+        setReportFeedback(`Reported — ${data.notified_count ?? 0} farmer(s) in ${currentUser?.province || 'your province'} notified.`);
+        setTimeout(() => setReportFeedback(''), 5000);
         await loadVetData();
       }
     } catch { /* offline */ }
     setReportBusy(false);
+  };
+
+  const submitBroadcast = async (e) => {
+    e.preventDefault();
+    if (!broadcastForm.message.trim()) return;
+    setBroadcastBusy(true);
+    try {
+      const res = await fetch(`${API}/broadcasts`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentUser.token}` },
+        body: JSON.stringify({ ...broadcastForm, province: currentUser?.province }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setShowBroadcastForm(false);
+        setBroadcastForm({ title: '', message: '', district: '' });
+        setBroadcastFeedback(`Sent to ${data.notified_count} farmer(s).`);
+        setTimeout(() => setBroadcastFeedback(''), 5000);
+      }
+    } catch { /* offline */ }
+    setBroadcastBusy(false);
   };
 
   const activeOutbreak = outbreaks[0];
@@ -772,6 +801,34 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
                 </button>
               </form>
             )}
+            {reportFeedback && <p className="mt-3 text-[11px] text-green-400 font-bold">{reportFeedback}</p>}
+          </div>
+
+          {/* Broadcast to farmers — a general alert, not tied to a specific
+              outbreak report (that one fans out on its own automatically). */}
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <MessageSquare size={16} className="text-pfuma-green" />
+                <h3 className="text-sm font-black text-white">Broadcast to Farmers</h3>
+              </div>
+              <button onClick={() => setShowBroadcastForm(p => !p)} className="text-[10px] font-black text-pfuma-green hover:underline uppercase">Compose →</button>
+            </div>
+            <p className="text-[11px] text-gray-500 font-medium">Send a message to every farmer in {currentUser?.province || 'your province'} at once — not just one at a time.</p>
+            {showBroadcastForm && (
+              <form onSubmit={submitBroadcast} className="mt-4 space-y-2 border-t border-white/10 pt-4">
+                <input placeholder="Title (optional)" value={broadcastForm.title} onChange={e => setBroadcastForm(p => ({ ...p, title: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-pfuma-green/50" />
+                <textarea required placeholder="Message *" rows={3} value={broadcastForm.message} onChange={e => setBroadcastForm(p => ({ ...p, message: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-pfuma-green/50 resize-none" />
+                <input placeholder="District (optional — leave blank for whole province)" value={broadcastForm.district} onChange={e => setBroadcastForm(p => ({ ...p, district: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-pfuma-green/50" />
+                <button type="submit" disabled={broadcastBusy} className="w-full py-2.5 bg-pfuma-green text-white rounded-lg text-[11px] font-black uppercase hover:bg-green-700 transition disabled:opacity-50">
+                  {broadcastBusy ? 'Sending…' : 'Send Broadcast'}
+                </button>
+              </form>
+            )}
+            {broadcastFeedback && <p className="mt-3 text-[11px] text-green-400 font-bold">{broadcastFeedback}</p>}
           </div>
 
           {/* Quick actions */}
@@ -1064,6 +1121,7 @@ const BuyerDashboard = ({ setActiveTab, currentUser }) => {
   const [listings,   setListings]   = useState([]);
   const [priceTrend, setPriceTrend] = useState([]);
   const [myBids,     setMyBids]     = useState([]);
+  const [purchases,  setPurchases]  = useState([]);
 
   useEffect(() => {
     if (!currentUser?.token) return;
@@ -1080,6 +1138,10 @@ const BuyerDashboard = ({ setActiveTab, currentUser }) => {
       try {
         const res = await fetch(`${API}/bids/mine`, { headers });
         if (res.ok) setMyBids(await res.json());
+      } catch { /* offline */ }
+      try {
+        const res = await fetch(`${API}/purchases/mine`, { headers });
+        if (res.ok) setPurchases(await res.json());
       } catch { /* offline */ }
     })();
   }, [currentUser?.token]);
@@ -1243,6 +1305,28 @@ const BuyerDashboard = ({ setActiveTab, currentUser }) => {
 
         {/* Right: recent bids + tips */}
         <div className="col-span-1 space-y-5">
+          {/* My purchases — read-only: a Buyer account gets no animal-management
+              UI (that's a Farmer's Herd Registry), just a record of what they own. */}
+          {purchases.length > 0 && (
+            <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+              <h3 className="text-sm font-black text-gray-800 mb-4">My Purchases</h3>
+              <div className="space-y-3">
+                {purchases.map(p => (
+                  <div key={p.bid_id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-200 shrink-0">
+                      <img src={resolveImageUrl(p.image_url) || IMAGE_BY_SPECIES[p.species] || IMAGE_BY_SPECIES.Cattle} className="w-full h-full object-cover" alt={p.animal_name || p.product_name} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-black text-gray-800 truncate">{p.animal_name || p.product_name}</p>
+                      <p className="text-[10px] text-gray-400 font-medium">{p.breed || p.species} · {new Date(p.purchased_at).toLocaleDateString()}</p>
+                    </div>
+                    <p className="text-xs font-black text-pfuma-plum shrink-0">${Number(p.amount).toLocaleString()}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Recent bids */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
             <h3 className="text-sm font-black text-gray-800 mb-4">Recent Bids</h3>
@@ -1793,6 +1877,7 @@ const NAV_SECTIONS = {
         { tab: 'marketplace', icon: Store,           label: 'Marketplace',   desc: 'List medicines, feed & equipment' },
         { tab: 'feed',        icon: Wheat,           label: 'Feed Database', desc: 'Nutritional specs for your products' },
         { tab: 'health',      icon: Package,         label: 'Supply Chain',  desc: 'Inventory & order management' },
+        { tab: 'tradingJournal', icon: BookOpen,      label: 'Trading Journal', desc: 'Trade history & top farmers' },
         { tab: 'vet',         icon: MessageSquare,   label: 'Messenger',     desc: 'Vets, suppliers, farmers & buyers' },
       ]
     },
@@ -1810,6 +1895,7 @@ const NAV_SECTIONS = {
         { tab: 'marketplace', icon: Store,           label: 'Marketplace',   desc: 'Browse all livestock & produce' },
         { tab: 'profile',     icon: ShoppingCart,    label: 'Verified Stock', desc: 'Animals with health passports' },
         { tab: 'feed',        icon: Wheat,           label: 'Feed Analyzer', desc: 'Check nutrition before purchasing' },
+        { tab: 'tradingJournal', icon: BookOpen,      label: 'Trading Journal', desc: 'Purchase history & top sellers' },
       ]
     },
     {
@@ -1928,21 +2014,31 @@ function App() {
   const [auditLog,    setAuditLog]    = useState([]);
   const [inventory,   setInventory]   = useState([]);
   const [nearbyFarmers, setNearbyFarmers] = useState([]);
-  const [notifications] = useState([
-    { id: 1, title: 'January Disease Alert', msg: 'Chegutu Area — increased tick counts detected.', type: 'Critical', time: '1h ago' },
-    { id: 2, title: 'Vaccine Recall',         msg: 'Lot #992 Oxytetracycline recalled by supplier.',  type: 'Info',     time: '4h ago' },
-  ]);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [nameSaving, setNameSaving] = useState(false);
+  const [isEditingKin, setIsEditingKin] = useState(false);
+  const [kinDraft, setKinDraft] = useState({ name: '', phone: '', relationship: '', nationalId: '' });
+  const [kinSaving, setKinSaving] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   // Real per-user events (a bid came in, a bid you placed was accepted, a
   // vet recommended a medication) — separate from the static regional
   // alerts array above, which is a different concept (disease/security
   // alerts shown inside the role dashboards, not personal activity).
   const [realNotifications, setRealNotifications] = useState([]);
+  // Regional alerts shown in the bell dropdown's second section — real
+  // outbreak/broadcast notifications, filtered out of the same feed
+  // real per-user events (bid accepted, etc.) already populate. Used to be
+  // two hardcoded placeholder rows; now it's the same data, just filtered.
+  const notifications = useMemo(() => realNotifications
+    .filter(n => n.type === 'outbreak_alert' || n.type === 'broadcast')
+    .map(n => ({
+      id: n.id, title: n.title, msg: n.message,
+      type: n.type === 'outbreak_alert' ? 'Critical' : 'Info',
+      time: timeAgo(n.created_at),
+    })), [realNotifications]);
 
   const authFetch = useCallback((path, opts = {}) => fetch(`${API}${path}`, {
     ...opts,
@@ -2179,6 +2275,31 @@ function App() {
     setNameSaving(false);
   };
 
+  const handleKinSave = async () => {
+    if (!kinDraft.name.trim() || !kinDraft.phone.trim()) return;
+    setKinSaving(true);
+    try {
+      const res = await authFetch('/users/me/next-of-kin', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          next_of_kin_name: kinDraft.name, next_of_kin_phone: kinDraft.phone,
+          next_of_kin_relationship: kinDraft.relationship, next_of_kin_national_id: kinDraft.nationalId,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCurrentUser(prev => ({
+          ...prev, nextOfKinName: data.user.next_of_kin_name, nextOfKinPhone: data.user.next_of_kin_phone,
+          nextOfKinRelationship: data.user.next_of_kin_relationship, nextOfKinNationalId: data.user.next_of_kin_national_id,
+          nextOfKinVerificationStatus: data.user.next_of_kin_verification_status,
+        }));
+        setIsEditingKin(false);
+      }
+    } catch { /* offline — next of kin keeps its previous value */ }
+    setKinSaving(false);
+  };
+
   if (!sessionChecked) return null;
   if (!currentUser) return <AuthPortal onLogin={handleLoginSuccess} />;
   // Admin doesn't fit the client-facing Farmer/Vet/Supplier/Buyer/Police
@@ -2303,6 +2424,60 @@ function App() {
               <p className="text-[10px] text-yellow-400 font-black uppercase tracking-widest leading-none mt-0.5">{role}</p>
             </div>
           </div>
+
+          {/* Next of kin — account succession contact, editable any time */}
+          <div className="mb-3 px-2">
+            {isEditingKin ? (
+              <div className="bg-white/5 border border-white/10 rounded-xl p-3 space-y-2">
+                <input
+                  autoFocus placeholder="Next of kin full name" value={kinDraft.name}
+                  onChange={e => setKinDraft(p => ({ ...p, name: e.target.value }))}
+                  className="w-full bg-white/10 text-white text-[11px] font-bold rounded-lg px-2.5 py-1.5 outline-none placeholder:text-white/30 focus:ring-1 focus:ring-yellow-400"
+                />
+                <input
+                  placeholder="Phone number" value={kinDraft.phone}
+                  onChange={e => setKinDraft(p => ({ ...p, phone: e.target.value }))}
+                  className="w-full bg-white/10 text-white text-[11px] font-bold rounded-lg px-2.5 py-1.5 outline-none placeholder:text-white/30 focus:ring-1 focus:ring-yellow-400"
+                />
+                <input
+                  placeholder="Relationship (e.g. Spouse)" value={kinDraft.relationship}
+                  onChange={e => setKinDraft(p => ({ ...p, relationship: e.target.value }))}
+                  className="w-full bg-white/10 text-white text-[11px] font-bold rounded-lg px-2.5 py-1.5 outline-none placeholder:text-white/30 focus:ring-1 focus:ring-yellow-400"
+                />
+                <div className="flex items-center gap-2 pt-1">
+                  <button onClick={handleKinSave} disabled={kinSaving} className="flex-1 py-1.5 bg-pfuma-green text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition disabled:opacity-50">
+                    {kinSaving ? 'Saving…' : 'Save'}
+                  </button>
+                  <button onClick={() => setIsEditingKin(false)} disabled={kinSaving} className="px-3 py-1.5 border border-white/10 text-white/60 rounded-lg text-[10px] font-black uppercase hover:text-white transition disabled:opacity-50">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setKinDraft({
+                    name: currentUser.nextOfKinName || '', phone: currentUser.nextOfKinPhone || '',
+                    relationship: currentUser.nextOfKinRelationship || '', nationalId: currentUser.nextOfKinNationalId || '',
+                  });
+                  setIsEditingKin(true);
+                }}
+                className="w-full flex items-center gap-2 py-2 px-1 text-white/40 hover:text-white transition text-left"
+                title="Set who can take over this account if something happens to you"
+              >
+                <UserPlus size={12} className="shrink-0" />
+                <span className="text-[10px] font-bold uppercase tracking-wide flex-1 truncate">
+                  {currentUser.nextOfKinName ? `Next of kin: ${currentUser.nextOfKinName}` : 'Add next of kin'}
+                </span>
+                {currentUser.nextOfKinName && (
+                  <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase shrink-0 ${currentUser.nextOfKinVerificationStatus === 'verified' ? 'bg-pfuma-green/30 text-green-300' : 'bg-orange-400/20 text-orange-300'}`}>
+                    {currentUser.nextOfKinVerificationStatus === 'verified' ? 'Verified' : 'Pending'}
+                  </span>
+                )}
+              </button>
+            )}
+          </div>
+
           <button
             onClick={handleSignOut}
             className="w-full flex items-center justify-center gap-2 py-2.5 border border-white/10 rounded-xl text-white/40 hover:text-white hover:bg-red-600/20 transition text-[10px] font-black uppercase tracking-widest"
@@ -2406,6 +2581,7 @@ function App() {
           {activeTab === 'feed'        && <ErrorBoundary><FeedAnalyzer currentUser={currentUser} animals={animals} onUpdateAnimal={(id, patch) => setAnimals(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a))} /></ErrorBoundary>}
           {activeTab === 'compliance' && <ErrorBoundary><ComplianceCenter currentUser={currentUser} /></ErrorBoundary>}
           {activeTab === 'cooperative' && <ErrorBoundary><Cooperative currentUser={currentUser} /></ErrorBoundary>}
+          {activeTab === 'tradingJournal' && <ErrorBoundary><TradingJournal currentUser={currentUser} setActiveTab={setActiveTab} /></ErrorBoundary>}
           {activeTab === 'iot'         && <ErrorBoundary><HardwareSimulation animals={animals} currentUser={currentUser} /></ErrorBoundary>}
         </div>
 

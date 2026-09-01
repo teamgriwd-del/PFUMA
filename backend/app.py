@@ -1,5 +1,7 @@
 import os
 import re
+import csv
+import io
 import json
 import glob
 import math
@@ -218,6 +220,32 @@ def ensure_schema():
           FOREIGN KEY (vet_id)    REFERENCES users(id)   ON DELETE CASCADE
         )
     """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS valuation_certificates (
+          id                 INT AUTO_INCREMENT PRIMARY KEY,
+          animal_id          INT NOT NULL,
+          owner_id_at_issue  INT NOT NULL,
+          estimated_value    DECIMAL(10,2) NOT NULL,
+          issued_by          INT NOT NULL,
+          verification_code  VARCHAR(20) NOT NULL UNIQUE,
+          created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (animal_id)         REFERENCES animals(id) ON DELETE CASCADE,
+          FOREIGN KEY (owner_id_at_issue) REFERENCES users(id)   ON DELETE CASCADE,
+          FOREIGN KEY (issued_by)         REFERENCES users(id)   ON DELETE CASCADE
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS import_logs (
+          id             INT AUTO_INCREMENT PRIMARY KEY,
+          admin_id       INT NOT NULL,
+          source_label   VARCHAR(80) NOT NULL,
+          filename       VARCHAR(200),
+          row_count      INT NOT NULL DEFAULT 0,
+          matched_count  INT NOT NULL DEFAULT 0,
+          created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    """)
 
     # Column-level upgrades for tables that already existed on some deployed
     # database (CREATE TABLE IF NOT EXISTS is a no-op against those, so a
@@ -254,6 +282,11 @@ def ensure_schema():
     add_column_if_missing('users', 'suspension_reason', "suspension_reason VARCHAR(300)")
     add_column_if_missing('users', 'avatar_url', "avatar_url VARCHAR(300)")
     add_column_if_missing('users', 'requested_by', "requested_by INT NULL")
+    add_column_if_missing('users', 'next_of_kin_name', "next_of_kin_name VARCHAR(120)")
+    add_column_if_missing('users', 'next_of_kin_phone', "next_of_kin_phone VARCHAR(20)")
+    add_column_if_missing('users', 'next_of_kin_national_id', "next_of_kin_national_id VARCHAR(20)")
+    add_column_if_missing('users', 'next_of_kin_relationship', "next_of_kin_relationship VARCHAR(60)")
+    add_column_if_missing('users', 'next_of_kin_verification_status', "next_of_kin_verification_status ENUM('pending','verified') NOT NULL DEFAULT 'pending'")
 
     add_column_if_missing('marketplace_listings', 'photo_url', "photo_url VARCHAR(300)")
     add_column_if_missing('marketplace_listings', 'sold_at', "sold_at TIMESTAMP NULL")
@@ -402,6 +435,11 @@ def public_user_view(user, requester):
             'verification_status': user.get('verification_status'),
             'verification_notes': user.get('verification_notes'),
             'created_at': str(user.get('created_at')),
+            'next_of_kin_name': user.get('next_of_kin_name'),
+            'next_of_kin_phone': user.get('next_of_kin_phone'),
+            'next_of_kin_national_id': user.get('next_of_kin_national_id'),
+            'next_of_kin_relationship': user.get('next_of_kin_relationship'),
+            'next_of_kin_verification_status': user.get('next_of_kin_verification_status'),
         })
     return base
 
@@ -520,8 +558,9 @@ def register():
     c.execute("""
         INSERT INTO users (full_name, phone, national_id_number, email, role, org_name, province, district, address,
             farm_size_ha, species_farmed, license_number, speciality, business_reg, supply_categories,
-            trading_areas, password_hash, verification_status)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pending')
+            trading_areas, password_hash, verification_status,
+            next_of_kin_name, next_of_kin_phone, next_of_kin_national_id, next_of_kin_relationship)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pending',%s,%s,%s,%s)
     """, (
         full_name, phone, national_id, d.get('email', ''), role,
         d.get('org_name', ''), d.get('province', ''), d.get('district', ''), d.get('address', ''),
@@ -529,6 +568,8 @@ def register():
         d.get('license_number', ''), d.get('speciality', ''),
         d.get('business_reg', ''), d.get('supply_categories', ''), d.get('trading_areas', ''),
         password_hash,
+        d.get('next_of_kin_name', ''), d.get('next_of_kin_phone', ''),
+        d.get('next_of_kin_national_id', ''), d.get('next_of_kin_relationship', ''),
     ))
     user_id = c.lastrowid
 
@@ -869,6 +910,58 @@ def update_own_profile():
         "user": public_user_view(user, user),
         "message": "Name updated — your account needs to be re-verified before this change is trusted." if name_changed and current['verification_status'] == 'verified' else "Name updated ✅"
     })
+
+
+@app.route('/users/me/next-of-kin', methods=['PATCH'])
+@require_auth
+def update_next_of_kin():
+    """A next-of-kin change always resets its own verification flag — an
+    officer needs to re-check the new person before they can act on a
+    handover — but never touches the account's own verification_status,
+    which is a separate concept (see update_own_profile above)."""
+    d = request.json or {}
+    name = (d.get('next_of_kin_name') or '').strip()
+    phone = (d.get('next_of_kin_phone') or '').strip()
+    if not name or not phone:
+        return jsonify({"error": "next_of_kin_name and next_of_kin_phone are required"}), 400
+
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        UPDATE users SET next_of_kin_name=%s, next_of_kin_phone=%s,
+            next_of_kin_national_id=%s, next_of_kin_relationship=%s,
+            next_of_kin_verification_status='pending'
+        WHERE id=%s
+    """, (
+        name, phone, (d.get('next_of_kin_national_id') or '').strip(),
+        (d.get('next_of_kin_relationship') or '').strip(), g.current_user['id'],
+    ))
+    db.commit()
+    c.execute("SELECT * FROM users WHERE id=%s", (g.current_user['id'],))
+    user = c.fetchone()
+    db.close()
+    return jsonify({
+        "user": public_user_view(user, user),
+        "message": "Next of kin updated — pending verification by Police/Admin before an account handover can use it."
+    })
+
+
+@app.route('/admin/users/<int:user_id>/next-of-kin-verify', methods=['PATCH'])
+@require_auth
+@require_role('Admin', 'Police')
+def verify_next_of_kin(user_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT next_of_kin_name FROM users WHERE id=%s", (user_id,))
+    target = c.fetchone()
+    if not target:
+        db.close(); return jsonify({"error": "User not found"}), 404
+    if not target['next_of_kin_name']:
+        db.close(); return jsonify({"error": "This account has no next-of-kin details on file yet"}), 400
+    c.execute("UPDATE users SET next_of_kin_verification_status='verified' WHERE id=%s", (user_id,))
+    db.commit()
+    db.close()
+    return jsonify({"message": "Next of kin verified ✅"})
 
 
 # ── MESSENGER (real conversations, any verified user to any other) ──────
@@ -2767,7 +2860,7 @@ def accept_bid(listing_id, bid_id):
     becomes 'sold' — needed so the price-trend chart reflects real sales."""
     db = get_db()
     c = db.cursor()
-    c.execute("SELECT user_id, status, product_name FROM marketplace_listings WHERE id=%s", (listing_id,))
+    c.execute("SELECT user_id, status, product_name, animal_id FROM marketplace_listings WHERE id=%s", (listing_id,))
     listing = c.fetchone()
     if not listing:
         db.close(); return jsonify({"error": "Listing not found"}), 404
@@ -2786,6 +2879,13 @@ def accept_bid(listing_id, bid_id):
     c.execute("UPDATE bids SET status='accepted' WHERE id=%s", (bid_id,))
     c.execute("UPDATE bids SET status='declined' WHERE listing_id=%s AND id!=%s AND status='pending'", (listing_id, bid_id))
     c.execute("UPDATE marketplace_listings SET status='sold', price=%s, sold_at=NOW() WHERE id=%s", (bid['amount'], listing_id))
+
+    # Ownership transfer — the whole point of a livestock sale completing.
+    # health_events/weight_history/animal_photos are animal_id-keyed, not
+    # owner_id-keyed, so the animal's full history follows it to the new
+    # owner automatically; only the owner pointer itself needs to move.
+    if listing['animal_id']:
+        c.execute("UPDATE animals SET owner_id=%s WHERE id=%s", (bid['bidder_id'], listing['animal_id']))
 
     # Both sides of the sale get a real notification, each carrying the
     # other party's user id so the frontend can drop them straight into a
@@ -2845,6 +2945,244 @@ def mark_all_notifications_read():
     db.commit()
     db.close()
     return jsonify({"message": "All marked read"})
+
+
+# ── VET / POLICE BROADCASTS ──────────────────────────────────────
+@app.route('/broadcasts', methods=['POST'])
+@require_auth
+@require_role('Veterinarian', 'Police')
+def send_broadcast():
+    """One-to-many alert — a real notification row per matching farmer, using
+    the same create_notification() helper as every other notification. Not a
+    persisted broadcast entity: this is a write-only fan-out action, matching
+    outbreak alerts below rather than introducing a new messaging concept."""
+    d = request.json or {}
+    message = (d.get('message') or '').strip()
+    title = (d.get('title') or 'Message from your Veterinarian').strip()
+    province = (d.get('province') or g.current_user.get('province') or '').strip()
+    district = (d.get('district') or '').strip()
+    target_role = d.get('target_role') or 'Farmer'
+    if not message:
+        return jsonify({"error": "message is required"}), 400
+    if not province:
+        return jsonify({"error": "province is required"}), 400
+
+    db = get_db()
+    c = db.cursor()
+    sql = "SELECT id FROM users WHERE role=%s AND province=%s AND account_status='active'"
+    params = [target_role, province]
+    if district:
+        sql += " AND district=%s"; params.append(district)
+    c.execute(sql, params)
+    targets = c.fetchall()
+    for t in targets:
+        create_notification(c, t['id'], 'broadcast', title, message, related_user_id=g.current_user['id'])
+    db.commit()
+    db.close()
+    return jsonify({"message": f"Broadcast sent to {len(targets)} {target_role.lower()}(s)", "notified_count": len(targets)})
+
+
+# ── VALUATION CERTIFICATES (bank/insurer collateral evidence) ───────
+@app.route('/animals/<int:animal_id>/valuation-certificate', methods=['POST'])
+@require_auth
+def issue_valuation_certificate(animal_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT id, owner_id, species, current_weight FROM animals WHERE id=%s", (animal_id,))
+    animal = c.fetchone()
+    if not animal:
+        db.close(); return jsonify({"error": "Animal not found"}), 404
+    if animal['owner_id'] != g.current_user['id'] and g.current_user['role'] != 'Admin':
+        db.close(); return jsonify({"error": "Only the animal's owner can issue a valuation certificate"}), 403
+
+    # Same formula as the client-side estimate shown in the Health Passport
+    # (AnimalProfile.jsx calculateValue) — computed server-side here because
+    # a client-supplied number isn't trustworthy evidence for a bank/insurer.
+    c.execute("SELECT COUNT(*) AS n FROM health_events WHERE animal_id=%s", (animal_id,))
+    health_bonus = c.fetchone()['n'] * 10
+    base = 500 if animal['species'] == 'Cattle' else 100
+    value = round(base + float(animal['current_weight'] or 0) * 1.5 + health_bonus, 2)
+
+    code = secrets.token_hex(6)
+    c.execute("""
+        INSERT INTO valuation_certificates (animal_id, owner_id_at_issue, estimated_value, issued_by, verification_code)
+        VALUES (%s,%s,%s,%s,%s)
+    """, (animal_id, animal['owner_id'], value, g.current_user['id'], code))
+    db.commit()
+    db.close()
+    return jsonify({
+        "animal_id": animal_id, "estimated_value": value,
+        "verification_code": code, "issued_at": datetime.datetime.utcnow().isoformat(),
+    })
+
+
+@app.route('/verify/certificate/<code>', methods=['GET'])
+def verify_certificate(code):
+    """No-auth by design — a bank/insurer loan officer checks this without
+    needing a PFUMA account. Returns only what's needed to independently
+    confirm the certificate, not the owner's private account details."""
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT vc.estimated_value, vc.created_at, a.id AS animal_id, a.name, a.species, a.breed, a.tag_id,
+               u.full_name AS owner_name
+        FROM valuation_certificates vc
+        JOIN animals a ON vc.animal_id = a.id
+        JOIN users u ON a.owner_id = u.id
+        WHERE vc.verification_code = %s
+    """, (code,))
+    row = c.fetchone()
+    db.close()
+    if not row:
+        return jsonify({"valid": False, "error": "No certificate found for this code"}), 404
+    row['valid'] = True
+    return jsonify(row)
+
+
+# ── BUYER "MY PURCHASES" ─────────────────────────────────────────
+@app.route('/purchases/mine', methods=['GET'])
+@require_auth
+@require_role('Buyer')
+def get_my_purchases():
+    """Read-only — a Buyer-role account gets no animal-management UI (that's
+    a Farmer's Herd Registry); this just lists what they've bought so far.
+    A Farmer who buys livestock already sees it in their own owner-scoped
+    GET /animals, so this endpoint is Buyer-only."""
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT b.id AS bid_id, b.amount, b.created_at AS purchased_at,
+               l.product_name, a.id AS animal_id, a.name AS animal_name,
+               a.species, a.breed, a.current_weight, a.image_url
+        FROM bids b
+        JOIN marketplace_listings l ON b.listing_id = l.id
+        LEFT JOIN animals a ON l.animal_id = a.id
+        WHERE b.bidder_id = %s AND b.status = 'accepted'
+        ORDER BY b.created_at DESC
+    """, (g.current_user['id'],))
+    rows = c.fetchall()
+    db.close()
+    return jsonify(rows)
+
+
+# ── TRADING JOURNAL (Supplier & Buyer) ───────────────────────────
+@app.route('/trading-journal/mine', methods=['GET'])
+@require_auth
+@require_role('Supplier', 'Buyer')
+def get_trading_journal():
+    db = get_db()
+    c = db.cursor()
+    if g.current_user['role'] == 'Supplier':
+        c.execute("""
+            SELECT COUNT(*) AS total_trades, COALESCE(SUM(quantity),0) AS total_quantity
+            FROM orders WHERE supplier_id=%s
+        """, (g.current_user['id'],))
+        totals = c.fetchone()
+        c.execute("""
+            SELECT o.farmer_id AS counterparty_id, u.full_name AS counterparty_name,
+                   COUNT(*) AS trade_count, COALESCE(SUM(o.quantity),0) AS total_quantity
+            FROM orders o JOIN users u ON o.farmer_id = u.id
+            WHERE o.supplier_id=%s
+            GROUP BY o.farmer_id, u.full_name
+            ORDER BY trade_count DESC LIMIT 5
+        """, (g.current_user['id'],))
+    else:  # Buyer
+        c.execute("""
+            SELECT COUNT(*) AS total_trades, COALESCE(SUM(b.amount),0) AS total_value
+            FROM bids b JOIN marketplace_listings l ON b.listing_id = l.id
+            WHERE b.bidder_id=%s AND b.status='accepted'
+        """, (g.current_user['id'],))
+        totals = c.fetchone()
+        c.execute("""
+            SELECT l.user_id AS counterparty_id, u.full_name AS counterparty_name,
+                   COUNT(*) AS trade_count, COALESCE(SUM(b.amount),0) AS total_value
+            FROM bids b
+            JOIN marketplace_listings l ON b.listing_id = l.id
+            JOIN users u ON l.user_id = u.id
+            WHERE b.bidder_id=%s AND b.status='accepted'
+            GROUP BY l.user_id, u.full_name
+            ORDER BY total_value DESC LIMIT 5
+        """, (g.current_user['id'],))
+    top_counterparties = c.fetchall()
+    db.close()
+    return jsonify({"totals": totals, "top_counterparties": top_counterparties})
+
+
+# ── ADMIN: DATA IMPORT & FUSION ──────────────────────────────────
+@app.route('/admin/import', methods=['POST'])
+@require_auth
+@require_admin
+def admin_import():
+    """Bulk-fuses an external CSV (a DVS vet list, a ZRP roster, ...) into
+    existing accounts, matched by national_id_number — the one field every
+    role's signup already collects. commit=false (the default) returns a
+    dry-run preview with no writes; commit=true applies matched updates and
+    logs the import. Every write from a registry integration goes through
+    this single audited path — no raw SQL is ever exposed to the admin UI."""
+    source_label = (request.form.get('source_label') or '').strip()
+    commit_flag = (request.form.get('commit') or 'false').lower() == 'true'
+    file = request.files.get('csv_file')
+    if not source_label or not file:
+        return jsonify({"error": "source_label and csv_file are required"}), 400
+    try:
+        raw = file.read().decode('utf-8-sig', errors='replace')
+    except Exception:
+        return jsonify({"error": "Could not read the uploaded file as text/CSV"}), 400
+
+    reader = csv.DictReader(io.StringIO(raw))
+    if not reader.fieldnames or 'national_id_number' not in reader.fieldnames:
+        return jsonify({"error": "CSV must include a national_id_number column to match against existing accounts"}), 400
+    rows = list(reader)[:2000]  # sane cap on a single import
+
+    db = get_db()
+    c = db.cursor()
+    matched, unmatched = [], []
+    for row in rows:
+        nid = normalize_zw_national_id((row.get('national_id_number') or '').strip()) or (row.get('national_id_number') or '').strip()
+        if not nid:
+            continue
+        c.execute("SELECT id, full_name, role FROM users WHERE national_id_number=%s", (nid,))
+        user = c.fetchone()
+        if not user:
+            unmatched.append({"national_id_number": nid})
+            continue
+        matched.append({"id": user['id'], "full_name": user['full_name'], "role": user['role']})
+        if commit_flag:
+            updates, params = [], []
+            for field in ('license_number', 'badge_number', 'station'):
+                if row.get(field, '').strip():
+                    updates.append(f"{field}=%s"); params.append(row[field].strip())
+            if updates:
+                updates.append("verification_status='verified'")
+                params.append(user['id'])
+                c.execute(f"UPDATE users SET {', '.join(updates)} WHERE id=%s", params)
+
+    if commit_flag:
+        c.execute("""
+            INSERT INTO import_logs (admin_id, source_label, filename, row_count, matched_count)
+            VALUES (%s,%s,%s,%s,%s)
+        """, (g.current_user['id'], source_label, file.filename or '', len(rows), len(matched)))
+    db.commit()
+    db.close()
+    return jsonify({
+        "row_count": len(rows), "matched_count": len(matched), "unmatched_count": len(unmatched),
+        "preview": matched[:10], "committed": commit_flag,
+    })
+
+
+@app.route('/admin/import-logs', methods=['GET'])
+@require_auth
+@require_admin
+def get_import_logs():
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT il.*, u.full_name AS admin_name FROM import_logs il
+        JOIN users u ON il.admin_id = u.id ORDER BY il.created_at DESC LIMIT 50
+    """)
+    rows = c.fetchall()
+    db.close()
+    return jsonify(rows)
 
 
 @app.route('/listings/price-trend', methods=['GET'])
@@ -3148,9 +3486,21 @@ def report_outbreak():
         d.get('affected_farms', 0), d.get('animals_at_risk', ''), g.current_user['id']
     ))
     outbreak_id = c.lastrowid
+
+    # Fan out a real alert to every farmer in the affected province — an
+    # outbreak report that only sits in this table never reaches anyone in
+    # the field, which was the whole complaint this fixes.
+    district = d.get('district', '')
+    c.execute("SELECT id FROM users WHERE role='Farmer' AND province=%s AND account_status='active'", (province,))
+    farmers = c.fetchall()
+    alert_title = f"{d['disease_name']} outbreak — {province}"
+    alert_message = f"{d['disease_name']} reported in {district + ', ' if district else ''}{province}. {d.get('details', '')}".strip()
+    for f in farmers:
+        create_notification(c, f['id'], 'outbreak_alert', alert_title, alert_message)
+
     db.commit()
     db.close()
-    return jsonify({"id": outbreak_id, "message": "Outbreak reported ✅"})
+    return jsonify({"id": outbreak_id, "message": "Outbreak reported ✅", "notified_count": len(farmers)})
 
 
 @app.route('/outbreaks', methods=['GET'])
