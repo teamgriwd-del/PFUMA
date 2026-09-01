@@ -631,6 +631,27 @@ CREATE TABLE IF NOT EXISTS valuation_certificates (
   FOREIGN KEY (issued_by)         REFERENCES users(id)   ON DELETE CASCADE
 );
 
+-- ── ANIMAL TRANSFERS (off-platform sales) ────────────────────
+-- Covers a sale that happens outside the Marketplace bid/accept flow — a
+-- farmer selling to a neighbor for cash, say. The seller generates a short
+-- code and shares it off-platform (WhatsApp, in person); the buyer enters it
+-- to claim the animal, which moves owner_id + the animal's full history the
+-- same way a Marketplace sale does. One pending code per animal at a time.
+CREATE TABLE IF NOT EXISTS animal_transfers (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  animal_id       INT NOT NULL,
+  from_owner_id   INT NOT NULL,
+  transfer_code   VARCHAR(12) NOT NULL UNIQUE,
+  status          ENUM('pending','claimed','cancelled') NOT NULL DEFAULT 'pending',
+  claimed_by      INT NULL,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  expires_at      TIMESTAMP NOT NULL,
+  claimed_at      TIMESTAMP NULL,
+  FOREIGN KEY (animal_id)     REFERENCES animals(id) ON DELETE CASCADE,
+  FOREIGN KEY (from_owner_id) REFERENCES users(id)   ON DELETE CASCADE,
+  FOREIGN KEY (claimed_by)    REFERENCES users(id)   ON DELETE SET NULL
+);
+
 -- ── ADMIN DATA IMPORTS ───────────────────────────────────────
 -- Audit trail for every CSV bulk-import an Admin runs from the Data Import
 -- tab (fusing in a DVS/CVSZ vet list, a ZRP roster, etc.) — every write

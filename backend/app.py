@@ -235,6 +235,22 @@ def ensure_schema():
         )
     """)
     c.execute("""
+        CREATE TABLE IF NOT EXISTS animal_transfers (
+          id              INT AUTO_INCREMENT PRIMARY KEY,
+          animal_id       INT NOT NULL,
+          from_owner_id   INT NOT NULL,
+          transfer_code   VARCHAR(12) NOT NULL UNIQUE,
+          status          ENUM('pending','claimed','cancelled') NOT NULL DEFAULT 'pending',
+          claimed_by      INT NULL,
+          created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          expires_at      TIMESTAMP NOT NULL,
+          claimed_at      TIMESTAMP NULL,
+          FOREIGN KEY (animal_id)     REFERENCES animals(id) ON DELETE CASCADE,
+          FOREIGN KEY (from_owner_id) REFERENCES users(id)   ON DELETE CASCADE,
+          FOREIGN KEY (claimed_by)    REFERENCES users(id)   ON DELETE SET NULL
+        )
+    """)
+    c.execute("""
         CREATE TABLE IF NOT EXISTS import_logs (
           id             INT AUTO_INCREMENT PRIMARY KEY,
           admin_id       INT NOT NULL,
@@ -2517,6 +2533,132 @@ def get_my_listings():
     return jsonify(listings)
 
 
+# ── ANIMAL TRANSFERS (off-platform sales) ───────────────────────
+# A sale that happens outside the Marketplace bid/accept flow — cash sale to
+# a neighbor, say. Same ownership-transfer mechanics as accept_bid, just
+# triggered by a shared code instead of a listing.
+TRANSFER_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'  # no 0/O/1/I — read aloud/over WhatsApp
+TRANSFER_CODE_LENGTH = 6
+TRANSFER_EXPIRY_DAYS = 7
+
+
+def _active_marketplace_listing(c, animal_id):
+    c.execute("""SELECT id FROM marketplace_listings
+                  WHERE animal_id=%s AND status IN ('pending_clearance','available') LIMIT 1""", (animal_id,))
+    return c.fetchone()
+
+
+@app.route('/animals/<int:animal_id>/transfer', methods=['POST'])
+@require_auth
+def create_animal_transfer(animal_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT owner_id FROM animals WHERE id=%s", (animal_id,))
+    animal = c.fetchone()
+    if not animal:
+        db.close(); return jsonify({"error": "Animal not found"}), 404
+    if animal['owner_id'] != g.current_user['id']:
+        db.close(); return jsonify({"error": "You can only transfer your own animals"}), 403
+    block = animal_trade_block(c, animal_id)
+    if block:
+        db.close(); return jsonify({"error": block, "trade_locked": True}), 409
+    if _active_marketplace_listing(c, animal_id):
+        db.close(); return jsonify({"error": "This animal has an active Marketplace listing — withdraw it before transferring off-platform."}), 409
+
+    # Reuse an existing pending code instead of stacking duplicates.
+    c.execute("SELECT transfer_code, expires_at FROM animal_transfers WHERE animal_id=%s AND status='pending'", (animal_id,))
+    existing = c.fetchone()
+    if existing:
+        db.close(); return jsonify({"transfer_code": existing['transfer_code'], "expires_at": str(existing['expires_at'])})
+
+    code = ''.join(secrets.choice(TRANSFER_CODE_ALPHABET) for _ in range(TRANSFER_CODE_LENGTH))
+    c.execute("""
+        INSERT INTO animal_transfers (animal_id, from_owner_id, transfer_code, expires_at)
+        VALUES (%s,%s,%s, DATE_ADD(NOW(), INTERVAL %s DAY))
+    """, (animal_id, g.current_user['id'], code, TRANSFER_EXPIRY_DAYS))
+    db.commit()
+    c.execute("SELECT expires_at FROM animal_transfers WHERE transfer_code=%s", (code,))
+    expires_at = c.fetchone()['expires_at']
+    db.close()
+    return jsonify({"transfer_code": code, "expires_at": str(expires_at)}), 201
+
+
+@app.route('/animals/<int:animal_id>/transfer', methods=['GET'])
+@require_auth
+def get_animal_transfer(animal_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT owner_id FROM animals WHERE id=%s", (animal_id,))
+    animal = c.fetchone()
+    if not animal or animal['owner_id'] != g.current_user['id']:
+        db.close(); return jsonify({"error": "Not found"}), 404
+    c.execute("SELECT transfer_code, expires_at, created_at FROM animal_transfers WHERE animal_id=%s AND status='pending'", (animal_id,))
+    row = c.fetchone()
+    db.close()
+    return jsonify(row or None)
+
+
+@app.route('/animals/<int:animal_id>/transfer', methods=['DELETE'])
+@require_auth
+def cancel_animal_transfer(animal_id):
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT owner_id FROM animals WHERE id=%s", (animal_id,))
+    animal = c.fetchone()
+    if not animal or animal['owner_id'] != g.current_user['id']:
+        db.close(); return jsonify({"error": "Not found"}), 404
+    c.execute("UPDATE animal_transfers SET status='cancelled' WHERE animal_id=%s AND status='pending'", (animal_id,))
+    db.commit()
+    db.close()
+    return jsonify({"message": "Transfer code cancelled"})
+
+
+@app.route('/transfers/claim', methods=['POST'])
+@require_auth
+def claim_animal_transfer():
+    d = request.json or {}
+    code = (d.get('transfer_code') or '').strip().upper()
+    if not code:
+        return jsonify({"error": "transfer_code is required"}), 400
+
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT at.id, at.animal_id, at.from_owner_id, at.expires_at, a.name AS animal_name,
+               a.species, a.breed, u.full_name AS seller_name
+        FROM animal_transfers at
+        JOIN animals a ON at.animal_id = a.id
+        JOIN users u ON at.from_owner_id = u.id
+        WHERE at.transfer_code=%s AND at.status='pending'
+    """, (code,))
+    transfer = c.fetchone()
+    if not transfer:
+        db.close(); return jsonify({"error": "Invalid or already-used transfer code"}), 404
+    if transfer['expires_at'] < datetime.datetime.utcnow():
+        c.execute("UPDATE animal_transfers SET status='cancelled' WHERE id=%s", (transfer['id'],))
+        db.commit(); db.close()
+        return jsonify({"error": "This transfer code has expired — ask the seller for a new one"}), 410
+    if transfer['from_owner_id'] == g.current_user['id']:
+        db.close(); return jsonify({"error": "You can't claim your own animal"}), 400
+
+    c.execute("UPDATE animals SET owner_id=%s WHERE id=%s", (g.current_user['id'], transfer['animal_id']))
+    c.execute("UPDATE animal_transfers SET status='claimed', claimed_by=%s, claimed_at=NOW() WHERE id=%s",
+              (g.current_user['id'], transfer['id']))
+    create_notification(
+        c, transfer['from_owner_id'], 'transfer_claimed',
+        f"{transfer['animal_name']} transferred",
+        f"{g.current_user['full_name']} claimed {transfer['animal_name']} using your transfer code.",
+        related_user_id=g.current_user['id'], animal_id=transfer['animal_id'],
+    )
+    db.commit()
+    db.close()
+    return jsonify({
+        "message": f"{transfer['animal_name']} is now yours — its full health history transferred with it.",
+        "animal_id": transfer['animal_id'], "animal_name": transfer['animal_name'],
+        "species": transfer['species'], "breed": transfer['breed'], "seller_name": transfer['seller_name'],
+    })
+
+
 @app.route('/listings', methods=['POST'])
 @require_auth
 @require_verified
@@ -3061,6 +3203,18 @@ def get_my_purchases():
         ORDER BY b.created_at DESC
     """, (g.current_user['id'],))
     rows = c.fetchall()
+    # Plus animals claimed via an off-platform transfer code — no bid/listing
+    # involved, so it's a separate query, not part of the join above.
+    c.execute("""
+        SELECT at.id AS bid_id, NULL AS amount, at.claimed_at AS purchased_at,
+               a.name AS product_name, a.id AS animal_id, a.name AS animal_name,
+               a.species, a.breed, a.current_weight, a.image_url
+        FROM animal_transfers at
+        JOIN animals a ON at.animal_id = a.id
+        WHERE at.claimed_by = %s AND at.status = 'claimed'
+        ORDER BY at.claimed_at DESC
+    """, (g.current_user['id'],))
+    rows += c.fetchall()
     db.close()
     return jsonify(rows)
 

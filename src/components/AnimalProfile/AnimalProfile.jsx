@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { BREED_PROFILES } from '../HealthManagement/healthData';
 import {
   PlusCircle, ChevronRight, Users, ShieldCheck, X,
@@ -420,11 +420,138 @@ const RegistrationForm = ({ onSubmit, onCancel }) => {
   );
 };
 
+// ── CLAIM AN ANIMAL (off-platform transfer) ─────────────────────────────────
+// Brings an animal bought outside the Marketplace (cash sale, handshake deal)
+// into this farmer's herd, with its full existing history intact — the
+// counterpart to TransferCard below, which the seller uses to generate the code.
+const ClaimAnimalModal = ({ currentUser, onClose, onClaimed }) => {
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [result, setResult] = useState(null);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!code.trim()) return;
+    setBusy(true); setError('');
+    try {
+      const res = await fetch(`${API}/transfers/claim`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentUser?.token}` },
+        body: JSON.stringify({ transfer_code: code.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Could not claim this animal.'); setBusy(false); return; }
+      setResult(data);
+      onClaimed && onClaimed();
+    } catch { setError('Could not reach the PFUMA API.'); }
+    setBusy(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-gray-900/90 backdrop-blur-md">
+      <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8">
+        {result ? (
+          <div className="text-center">
+            <CheckCircle size={40} className="mx-auto text-pfuma-green mb-3" />
+            <h3 className="text-lg font-black text-gray-900 mb-1">{result.animal_name} is now yours</h3>
+            <p className="text-xs text-gray-500 font-medium mb-6">
+              Bought from {result.seller_name} — its full health and weight history came with it.
+            </p>
+            <button onClick={onClose} className="w-full py-3 bg-pfuma-green text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-green-700 transition">Done</button>
+          </div>
+        ) : (
+          <form onSubmit={submit}>
+            <h3 className="text-lg font-black text-gray-900 mb-1">Claim an Animal</h3>
+            <p className="text-xs text-gray-400 font-medium mb-5">
+              Bought an animal from another PFUMA farmer off-platform? Enter the transfer code they gave you.
+            </p>
+            <input
+              autoFocus value={code} onChange={e => setCode(e.target.value.toUpperCase())}
+              placeholder="e.g. 7K4PXR" maxLength={12}
+              className="w-full p-3.5 bg-gray-50 rounded-xl border-2 border-transparent focus:border-pfuma-green outline-none font-black text-lg text-center tracking-[0.3em] text-gray-800 placeholder:text-gray-300 placeholder:tracking-[0.3em] placeholder:font-black mb-4"
+            />
+            {error && <p className="text-[11px] text-red-500 font-bold mb-4">{error}</p>}
+            <div className="flex gap-3">
+              <button type="button" onClick={onClose} className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-gray-200 transition">Cancel</button>
+              <button type="submit" disabled={busy || !code.trim()} className="flex-1 py-3 bg-pfuma-green text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-green-700 transition disabled:opacity-50">{busy ? 'Claiming…' : 'Claim Animal'}</button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ── TRANSFER TO NEW OWNER (off-platform transfer, seller side) ─────────────
+const TransferCard = ({ animal, currentUser }) => {
+  const [transfer, setTransfer] = useState(undefined); // undefined = loading, null = none pending
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => {
+    try {
+      const res = await fetch(`${API}/animals/${animal.id}/transfer`, { headers: { Authorization: `Bearer ${currentUser?.token}` } });
+      if (res.ok) setTransfer(await res.json());
+    } catch { setTransfer(null); }
+  };
+
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [animal.id]);
+
+  const generate = async () => {
+    setBusy(true);
+    try {
+      const res = await fetch(`${API}/animals/${animal.id}/transfer`, { method: 'POST', headers: { Authorization: `Bearer ${currentUser?.token}` } });
+      const data = await res.json();
+      if (res.ok) setTransfer(data);
+      else window.alert(data.error || 'Could not generate a transfer code.');
+    } catch { window.alert('Could not reach the PFUMA API.'); }
+    setBusy(false);
+  };
+
+  const cancel = async () => {
+    setBusy(true);
+    try {
+      await fetch(`${API}/animals/${animal.id}/transfer`, { method: 'DELETE', headers: { Authorization: `Bearer ${currentUser?.token}` } });
+      setTransfer(null);
+    } catch { /* offline */ }
+    setBusy(false);
+  };
+
+  if (animal.marketplaceStatus === 'sold') return null; // already gone — nothing to transfer
+
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
+      <div className="flex items-center gap-2 mb-1">
+        <Users size={15} className="text-pfuma-green" />
+        <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest">Transfer to New Owner</h4>
+      </div>
+      <p className="text-[11px] text-gray-400 font-medium mb-3">
+        Selling off-platform (cash, in person)? Generate a code and share it with the buyer — they enter it on their own account to claim this animal, with its full history intact. Not needed for a Marketplace sale, which transfers automatically.
+      </p>
+      {transfer === undefined ? (
+        <p className="text-[11px] text-gray-400 italic">Checking…</p>
+      ) : transfer ? (
+        <div className="flex items-center justify-between bg-pfuma-green/5 border border-pfuma-green/20 rounded-xl p-4">
+          <div>
+            <p className="text-2xl font-black text-gray-900 tracking-[0.3em]">{transfer.transfer_code}</p>
+            <p className="text-[10px] text-gray-400 font-medium mt-1">Expires {new Date(transfer.expires_at).toLocaleDateString()}</p>
+          </div>
+          <button onClick={cancel} disabled={busy} className="px-4 py-2 bg-white border-2 border-gray-200 rounded-lg font-black text-[10px] uppercase hover:bg-gray-50 transition disabled:opacity-50">Cancel</button>
+        </div>
+      ) : (
+        <button onClick={generate} disabled={busy} className="px-5 py-2.5 bg-gray-800 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-900 transition disabled:opacity-50">
+          {busy ? 'Generating…' : 'Generate Transfer Code'}
+        </button>
+      )}
+    </div>
+  );
+};
+
 // ── MAIN COMPONENT ─────────────────────────────────────────────────────────
-const AnimalProfile = ({ animals, onAddAnimal, onAddAnimalPhotos, auditLog, onListAnimal, currentUser }) => {
+const AnimalProfile = ({ animals, onAddAnimal, onAddAnimalPhotos, auditLog, onListAnimal, currentUser, onAnimalsChanged }) => {
   const [selectedAnimalId, setSelectedAnimalId] = useState(null);
   const [isRegistering,    setIsRegistering]    = useState(false);
   const [isPassportOpen,   setIsPassportOpen]   = useState(false);
+  const [isClaiming,       setIsClaiming]       = useState(false);
   const [activeTab,        setActiveTab]        = useState('lifecycle');
   const [uploadingPhotos,  setUploadingPhotos]  = useState(false);
   const [lightboxIndex,    setLightboxIndex]    = useState(null); // null = closed
@@ -569,6 +696,8 @@ const AnimalProfile = ({ animals, onAddAnimal, onAddAnimalPhotos, auditLog, onLi
             alt={selectedAnimal.name}
           />
         )}
+
+        <TransferCard animal={selectedAnimal} currentUser={currentUser} />
 
         {/* Tabs */}
         <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
@@ -766,13 +895,29 @@ const AnimalProfile = ({ animals, onAddAnimal, onAddAnimalPhotos, auditLog, onLi
             <h3 className="text-sm font-black text-gray-700">
               {animals.length === 0 ? 'No animals registered yet' : `${activeAnimals.length} active animal${activeAnimals.length !== 1 ? 's' : ''}`}
             </h3>
-            <button
-              onClick={() => setIsRegistering(true)}
-              className="flex items-center gap-2 bg-pfuma-green text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-green-700 shadow-lg transition"
-            >
-              <PlusCircle size={16} /> Add Animal
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setIsClaiming(true)}
+                className="flex items-center gap-2 bg-white border-2 border-gray-200 text-gray-700 px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:border-pfuma-green transition"
+              >
+                <Users size={16} /> Claim Animal
+              </button>
+              <button
+                onClick={() => setIsRegistering(true)}
+                className="flex items-center gap-2 bg-pfuma-green text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-green-700 shadow-lg transition"
+              >
+                <PlusCircle size={16} /> Add Animal
+              </button>
+            </div>
           </div>
+
+          {isClaiming && (
+            <ClaimAnimalModal
+              currentUser={currentUser}
+              onClose={() => setIsClaiming(false)}
+              onClaimed={() => onAnimalsChanged && onAnimalsChanged()}
+            />
+          )}
 
           {animals.length === 0 ? (
             <div className="bg-white border-2 border-dashed border-gray-200 rounded-2xl p-16 flex flex-col items-center text-center">

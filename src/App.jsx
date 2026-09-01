@@ -1122,6 +1122,18 @@ const BuyerDashboard = ({ setActiveTab, currentUser }) => {
   const [priceTrend, setPriceTrend] = useState([]);
   const [myBids,     setMyBids]     = useState([]);
   const [purchases,  setPurchases]  = useState([]);
+  const [claimCode,  setClaimCode]  = useState('');
+  const [claimBusy,  setClaimBusy]  = useState(false);
+  const [claimError, setClaimError] = useState('');
+  const [claimSuccess, setClaimSuccess] = useState('');
+
+  const loadPurchases = useCallback(async () => {
+    if (!currentUser?.token) return;
+    try {
+      const res = await fetch(`${API}/purchases/mine`, { headers: { Authorization: `Bearer ${currentUser.token}` } });
+      if (res.ok) setPurchases(await res.json());
+    } catch { /* offline */ }
+  }, [currentUser?.token]);
 
   useEffect(() => {
     if (!currentUser?.token) return;
@@ -1139,12 +1151,30 @@ const BuyerDashboard = ({ setActiveTab, currentUser }) => {
         const res = await fetch(`${API}/bids/mine`, { headers });
         if (res.ok) setMyBids(await res.json());
       } catch { /* offline */ }
-      try {
-        const res = await fetch(`${API}/purchases/mine`, { headers });
-        if (res.ok) setPurchases(await res.json());
-      } catch { /* offline */ }
     })();
-  }, [currentUser?.token]);
+    loadPurchases();
+  }, [currentUser?.token, loadPurchases]);
+
+  // Bought an animal from a farmer off-platform (not through a Marketplace
+  // bid) — the seller shares a code, entering it here claims the animal the
+  // same way accepting a bid would, minus the listing in between.
+  const claimAnimal = async (e) => {
+    e.preventDefault();
+    if (!claimCode.trim()) return;
+    setClaimBusy(true); setClaimError(''); setClaimSuccess('');
+    try {
+      const res = await fetch(`${API}/transfers/claim`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentUser.token}` },
+        body: JSON.stringify({ transfer_code: claimCode.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setClaimError(data.error || 'Could not claim this animal.'); setClaimBusy(false); return; }
+      setClaimSuccess(`${data.animal_name} is now yours.`);
+      setClaimCode('');
+      await loadPurchases();
+    } catch { setClaimError('Could not reach the PFUMA API.'); }
+    setClaimBusy(false);
+  };
 
   const CATEGORY_DATA = useMemo(() => {
     const counts = {};
@@ -1305,6 +1335,25 @@ const BuyerDashboard = ({ setActiveTab, currentUser }) => {
 
         {/* Right: recent bids + tips */}
         <div className="col-span-1 space-y-5">
+          {/* Claim an animal bought off-platform — the counterpart to a
+              farmer generating a transfer code from their Herd Registry. */}
+          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+            <h3 className="text-sm font-black text-gray-800 mb-1">Claim an Animal</h3>
+            <p className="text-[11px] text-gray-400 font-medium mb-3">Bought an animal from a farmer off-platform? Enter the transfer code they gave you.</p>
+            <form onSubmit={claimAnimal} className="flex gap-2">
+              <input
+                value={claimCode} onChange={e => setClaimCode(e.target.value.toUpperCase())}
+                placeholder="Code" maxLength={12}
+                className="flex-1 min-w-0 px-3 py-2.5 bg-gray-50 rounded-xl border-2 border-transparent focus:border-pfuma-plum outline-none font-black text-sm text-center tracking-[0.2em] text-gray-800 placeholder:text-gray-300 placeholder:tracking-normal placeholder:font-medium"
+              />
+              <button type="submit" disabled={claimBusy || !claimCode.trim()} className="shrink-0 px-4 py-2.5 bg-pfuma-plum text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-violet-700 transition disabled:opacity-50">
+                {claimBusy ? '…' : 'Claim'}
+              </button>
+            </form>
+            {claimError && <p className="text-[10px] text-red-500 font-bold mt-2">{claimError}</p>}
+            {claimSuccess && <p className="text-[10px] text-green-600 font-bold mt-2">{claimSuccess}</p>}
+          </div>
+
           {/* My purchases — read-only: a Buyer account gets no animal-management
               UI (that's a Farmer's Herd Registry), just a record of what they own. */}
           {purchases.length > 0 && (
@@ -2573,7 +2622,7 @@ function App() {
               {role === 'Police'       && <PoliceDashboard       notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} />}
             </ErrorBoundary>
           )}
-          {activeTab === 'profile'     && <ErrorBoundary><AnimalProfile animals={animals} onAddAnimal={addAnimal} onAddAnimalPhotos={addAnimalPhotos} auditLog={auditLog} currentUser={currentUser} onListAnimal={handleListAnimal} /></ErrorBoundary>}
+          {activeTab === 'profile'     && <ErrorBoundary><AnimalProfile animals={animals} onAddAnimal={addAnimal} onAddAnimalPhotos={addAnimalPhotos} auditLog={auditLog} currentUser={currentUser} onListAnimal={handleListAnimal} onAnimalsChanged={() => loadUserData(currentUser)} /></ErrorBoundary>}
           {activeTab === 'health'      && <ErrorBoundary><HealthManagement animals={animals} completedTasks={completedTasks} setCompletedTasks={setCompletedTasks} auditLog={auditLog} onAddAuditLog={addAuditLog} inventory={inventory} onRefreshInventory={refreshInventory} currentUser={currentUser} /></ErrorBoundary>}
           {activeTab === 'disease'     && <ErrorBoundary><DiseaseDetection animals={animals} onAddAuditLog={addAuditLog} onCallVet={requestVetContact} /></ErrorBoundary>}
           {activeTab === 'vet'         && <ErrorBoundary><VetCommunication animals={animals} currentUser={currentUser} intent={vetIntent} onIntentConsumed={() => setVetIntent(null)} /></ErrorBoundary>}
