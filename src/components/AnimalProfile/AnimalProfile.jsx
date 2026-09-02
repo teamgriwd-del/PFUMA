@@ -549,7 +549,7 @@ const TransferCard = ({ animal, currentUser }) => {
 // ── MOVEMENT PERMIT REQUEST (DVS Form V27) ──────────────────────────────────
 const EMPTY_PERMIT_FORM = { bulls: '', calves: '', cows: '', oxen: '', steers: '', pigs: '', sheep: '', goats: '', other_count: '', other_description: '', from_district: '', to_district: '', period_days: '7', route_method: '', fee_amount: '', fee_words: '', special_instructions: '' };
 
-const MovementPermitCard = ({ animal, currentUser }) => {
+export const MovementPermitCard = ({ animal, currentUser }) => {
   const [permits, setPermits] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(EMPTY_PERMIT_FORM);

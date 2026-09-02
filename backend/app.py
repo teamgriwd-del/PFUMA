@@ -3203,7 +3203,7 @@ ANIMAL_COUNT_FIELDS = ('bulls', 'calves', 'cows', 'oxen', 'steers', 'pigs', 'she
 
 @app.route('/movement-permits', methods=['POST'])
 @require_auth
-@require_role('Farmer')
+@require_role('Farmer', 'Buyer')
 @require_verified
 def request_movement_permit():
     d = request.json or {}
@@ -3245,7 +3245,7 @@ def request_movement_permit():
 
 @app.route('/movement-permits/mine', methods=['GET'])
 @require_auth
-@require_role('Farmer')
+@require_role('Farmer', 'Buyer')
 def get_my_movement_permits():
     db = get_db()
     c = db.cursor()
@@ -3438,8 +3438,10 @@ def get_my_bids():
     db = get_db()
     c = db.cursor()
     c.execute("""
-        SELECT b.*, l.product_name, l.animal_id
-        FROM bids b JOIN marketplace_listings l ON b.listing_id = l.id
+        SELECT b.*, l.product_name, l.animal_id, l.user_id AS seller_id, su.full_name AS seller_name
+        FROM bids b
+        JOIN marketplace_listings l ON b.listing_id = l.id
+        JOIN users su ON l.user_id = su.id
         WHERE b.bidder_id = %s
         ORDER BY b.created_at DESC
         LIMIT 10
@@ -3648,25 +3650,36 @@ def get_my_purchases():
     GET /animals, so this endpoint is Buyer-only."""
     db = get_db()
     c = db.cursor()
+    # Seller contact + the sale's police-clearance status (ZRP Form 392) ride
+    # along so a buyer can see, from the dashboard, whether they're legally
+    # clear to move the animal yet — and message the seller if not.
     c.execute("""
         SELECT b.id AS bid_id, b.amount, b.created_at AS purchased_at,
-               l.product_name, a.id AS animal_id, a.name AS animal_name,
-               a.species, a.breed, a.current_weight, a.image_url
+               l.id AS listing_id, l.product_name, a.id AS animal_id, a.name AS animal_name,
+               a.species, a.breed, a.current_weight, a.image_url,
+               l.user_id AS seller_id, su.full_name AS seller_name, su.phone AS seller_phone,
+               sc.status AS clearance_status, sc.movement_permit_number
         FROM bids b
         JOIN marketplace_listings l ON b.listing_id = l.id
         LEFT JOIN animals a ON l.animal_id = a.id
+        JOIN users su ON l.user_id = su.id
+        LEFT JOIN sale_clearances sc ON sc.listing_id = l.id
         WHERE b.bidder_id = %s AND b.status = 'accepted'
         ORDER BY b.created_at DESC
     """, (g.current_user['id'],))
     rows = c.fetchall()
     # Plus animals claimed via an off-platform transfer code — no bid/listing
-    # involved, so it's a separate query, not part of the join above.
+    # or police clearance involved, so it's a separate query, not part of the
+    # join above.
     c.execute("""
         SELECT at.id AS bid_id, NULL AS amount, at.claimed_at AS purchased_at,
-               a.name AS product_name, a.id AS animal_id, a.name AS animal_name,
-               a.species, a.breed, a.current_weight, a.image_url
+               NULL AS listing_id, a.name AS product_name, a.id AS animal_id, a.name AS animal_name,
+               a.species, a.breed, a.current_weight, a.image_url,
+               at.from_owner_id AS seller_id, su.full_name AS seller_name, su.phone AS seller_phone,
+               NULL AS clearance_status, NULL AS movement_permit_number
         FROM animal_transfers at
         JOIN animals a ON at.animal_id = a.id
+        JOIN users su ON at.from_owner_id = su.id
         WHERE at.claimed_by = %s AND at.status = 'claimed'
         ORDER BY at.claimed_at DESC
     """, (g.current_user['id'],))

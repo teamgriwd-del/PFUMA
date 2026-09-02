@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import pfumaMark          from './assets/pfuma-mark.png';
 import DiseaseDetection  from './components/DiseaseDetection/DiseaseDetection';
-import AnimalProfile     from './components/AnimalProfile/AnimalProfile';
+import AnimalProfile, { MovementPermitCard } from './components/AnimalProfile/AnimalProfile';
 import HealthManagement  from './components/HealthManagement/HealthManagement';
 import VetCommunication  from './components/VetCommunication/VetCommunication';
 import Marketplace       from './components/Marketplace/Marketplace';
@@ -1422,7 +1422,7 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser }) => {
 };
 
 // ── BUYER DASHBOARD ─────────────────────────────────────────────────────
-const BuyerDashboard = ({ setActiveTab, currentUser }) => {
+const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
   const [listings,   setListings]   = useState([]);
   const [priceTrend, setPriceTrend] = useState([]);
   const [myBids,     setMyBids]     = useState([]);
@@ -1431,6 +1431,7 @@ const BuyerDashboard = ({ setActiveTab, currentUser }) => {
   const [claimBusy,  setClaimBusy]  = useState(false);
   const [claimError, setClaimError] = useState('');
   const [claimSuccess, setClaimSuccess] = useState('');
+  const [openPermitFor, setOpenPermitFor] = useState(null); // bid_id of the purchase whose permit tracker is expanded
 
   const loadPurchases = useCallback(async () => {
     if (!currentUser?.token) return;
@@ -1659,22 +1660,48 @@ const BuyerDashboard = ({ setActiveTab, currentUser }) => {
             {claimSuccess && <p className="text-[10px] text-green-600 font-bold mt-2">{claimSuccess}</p>}
           </div>
 
-          {/* My purchases — read-only: a Buyer account gets no animal-management
-              UI (that's a Farmer's Herd Registry), just a record of what they own. */}
+          {/* My purchases — read-only ownership record (that's a Farmer's Herd
+              Registry job), plus the two things a buyer actually needs right
+              after paying: a way to reach the seller, and whether they're
+              legally clear to move the animal yet. */}
           {purchases.length > 0 && (
             <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
               <h3 className="text-sm font-black text-gray-800 mb-4">My Purchases</h3>
               <div className="space-y-3">
                 {purchases.map(p => (
-                  <div key={p.bid_id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-200 shrink-0">
-                      <img src={resolveImageUrl(p.image_url) || IMAGE_BY_SPECIES[p.species] || IMAGE_BY_SPECIES.Cattle} className="w-full h-full object-cover" alt={p.animal_name || p.product_name} />
+                  <div key={p.bid_id} className="bg-gray-50 rounded-xl overflow-hidden">
+                    <div className="flex items-center gap-3 p-3">
+                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-200 shrink-0">
+                        <img src={resolveImageUrl(p.image_url) || IMAGE_BY_SPECIES[p.species] || IMAGE_BY_SPECIES.Cattle} className="w-full h-full object-cover" alt={p.animal_name || p.product_name} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-black text-gray-800 truncate">{p.animal_name || p.product_name}</p>
+                        <p className="text-[10px] text-gray-400 font-medium truncate">{p.breed || p.species}{p.seller_name ? ` · from ${p.seller_name}` : ''} · {new Date(p.purchased_at).toLocaleDateString()}</p>
+                      </div>
+                      {p.amount != null && <p className="text-xs font-black text-pfuma-plum shrink-0">${Number(p.amount).toLocaleString()}</p>}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-black text-gray-800 truncate">{p.animal_name || p.product_name}</p>
-                      <p className="text-[10px] text-gray-400 font-medium">{p.breed || p.species} · {new Date(p.purchased_at).toLocaleDateString()}</p>
+                    <div className="flex items-center gap-2 px-3 pb-3 flex-wrap">
+                      {p.clearance_status && (
+                        <span className={`text-[9px] font-black px-2 py-1 rounded-full uppercase ${p.clearance_status === 'cleared' ? 'bg-green-100 text-green-700' : p.clearance_status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                          {p.clearance_status === 'cleared' ? 'Police Cleared ✓' : p.clearance_status === 'rejected' ? 'Clearance Rejected' : 'Awaiting Police Clearance'}
+                        </span>
+                      )}
+                      {p.seller_id && (
+                        <button onClick={() => onMessageSeller?.({ startConversationWith: p.seller_id, subject: p.animal_name || p.product_name })} className="flex items-center gap-1 text-[9px] font-black text-pfuma-plum uppercase hover:underline">
+                          <MessageSquare size={11} /> Message Seller
+                        </button>
+                      )}
+                      {p.animal_id && (
+                        <button onClick={() => setOpenPermitFor(v => v === p.bid_id ? null : p.bid_id)} className="flex items-center gap-1 text-[9px] font-black text-gray-500 uppercase hover:underline ml-auto">
+                          {openPermitFor === p.bid_id ? 'Hide Movement Permit' : 'Movement Permit →'}
+                        </button>
+                      )}
                     </div>
-                    <p className="text-xs font-black text-pfuma-plum shrink-0">${Number(p.amount).toLocaleString()}</p>
+                    {openPermitFor === p.bid_id && p.animal_id && (
+                      <div className="p-3 pt-0">
+                        <MovementPermitCard animal={{ id: p.animal_id }} currentUser={currentUser} />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -1694,9 +1721,16 @@ const BuyerDashboard = ({ setActiveTab, currentUser }) => {
                       <p className="text-xs font-black text-gray-800">{b.product_name}</p>
                       <p className="text-sm font-black text-pfuma-plum">${Number(b.amount).toLocaleString()}</p>
                     </div>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">
-                      {b.status === 'accepted' ? 'Accepted ✓' : b.status === 'declined' ? 'Declined' : 'Pending'} · {new Date(b.created_at).toLocaleDateString()}
-                    </p>
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-[10px] text-gray-400 font-bold uppercase">
+                        {b.status === 'accepted' ? 'Accepted ✓' : b.status === 'declined' ? 'Declined' : 'Pending'} · {new Date(b.created_at).toLocaleDateString()}
+                      </p>
+                      {b.status === 'pending' && b.seller_id && (
+                        <button onClick={() => onMessageSeller?.({ startConversationWith: b.seller_id, subject: b.product_name })} className="flex items-center gap-1 text-[9px] font-black text-pfuma-plum uppercase hover:underline shrink-0">
+                          <MessageSquare size={10} /> Message
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -3041,7 +3075,7 @@ function App() {
               {role === 'Farmer'       && <FarmerDashboard      animals={animals} auditLog={auditLog} inventory={inventory} notifications={notifications} nearbyFarmers={nearbyFarmers} currentUser={currentUser} setActiveTab={setActiveTab} onListAnimal={handleListAnimal} />}
               {role === 'Veterinarian' && <VeterinarianDashboard animals={animals} notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} />}
               {role === 'Supplier'     && <SupplierDashboard     inventory={inventory} setActiveTab={setActiveTab} currentUser={currentUser} />}
-              {role === 'Buyer'     && <BuyerDashboard     setActiveTab={setActiveTab} currentUser={currentUser} />}
+              {role === 'Buyer'     && <BuyerDashboard     setActiveTab={setActiveTab} currentUser={currentUser} onMessageSeller={requestVetContact} />}
               {role === 'Police'       && <PoliceDashboard       notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} />}
             </ErrorBoundary>
           )}
