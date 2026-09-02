@@ -4030,7 +4030,7 @@ def list_vet_requests():
     c = db.cursor()
     sql = """
         SELECT vr.*, co.name AS cooperative_name, co.province, co.district, co.dip_tank_location,
-               u.full_name AS requested_by_name
+               u.full_name AS requested_by_name, u.phone AS requested_by_phone
         FROM cooperative_vet_requests vr
         JOIN cooperatives co ON vr.cooperative_id = co.id
         JOIN users u ON vr.requested_by = u.id

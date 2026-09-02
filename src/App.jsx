@@ -789,7 +789,7 @@ const VetSignAction = ({ label, onSubmit, extraFields, children }) => {
   );
 };
 
-const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUser }) => {
+const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUser, onMessageFarmer }) => {
   const [farms, setFarms] = useState([]);
   const [reportingHealth, setReportingHealth] = useState([]);
   const [certQueue, setCertQueue] = useState(0);
@@ -1106,6 +1106,18 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
                   <div key={w.id} className="p-3.5 bg-white/5 border border-white/10 rounded-xl">
                     <p className="text-xs font-black text-white">{w.animal_name} <span className="text-gray-500 font-medium">· {w.species}</span></p>
                     <p className="text-[10px] text-gray-400 font-medium mt-0.5">Seller: {w.seller_name} · {w.seller_phone}</p>
+                    <div className="flex items-center gap-3 mt-1.5">
+                      {w.seller_id && (
+                        <button onClick={() => onMessageFarmer?.({ startConversationWith: w.seller_id, subject: w.animal_name })} className="flex items-center gap-1 text-[9px] font-black text-pfuma-green uppercase hover:underline">
+                          <MessageSquare size={10} /> Message
+                        </button>
+                      )}
+                      {w.seller_phone && (
+                        <a href={`tel:${w.seller_phone}`} className="flex items-center gap-1 text-[9px] font-black text-gray-400 uppercase hover:text-white transition">
+                          <PhoneCall size={10} /> Call
+                        </a>
+                      )}
+                    </div>
                     <div className="mt-2">
                       <VetSignAction label="Witness & Sign" onSubmit={(blob) => witnessClearance(w.id, blob)} />
                     </div>
@@ -1131,6 +1143,18 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
                   <div key={p.id} className="p-3.5 bg-white/5 border border-white/10 rounded-xl">
                     <p className="text-xs font-black text-white">{p.animal_name} <span className="text-gray-500 font-medium">· {p.species}</span></p>
                     <p className="text-[10px] text-gray-400 font-medium mt-0.5">{p.owner_name} · {p.owner_phone}</p>
+                    <div className="flex items-center gap-3 mt-1">
+                      {p.owner_id && (
+                        <button onClick={() => onMessageFarmer?.({ startConversationWith: p.owner_id, subject: p.animal_name })} className="flex items-center gap-1 text-[9px] font-black text-pfuma-green uppercase hover:underline">
+                          <MessageSquare size={10} /> Message
+                        </button>
+                      )}
+                      {p.owner_phone && (
+                        <a href={`tel:${p.owner_phone}`} className="flex items-center gap-1 text-[9px] font-black text-gray-400 uppercase hover:text-white transition">
+                          <PhoneCall size={10} /> Call
+                        </a>
+                      )}
+                    </div>
                     <p className="text-[10px] text-gray-400 font-medium mt-1">
                       {p.from_district} → {p.to_district} · {p.period_days} day{p.period_days !== 1 ? 's' : ''}
                       {p.route_method ? ` · ${p.route_method}` : ''}
@@ -1171,7 +1195,7 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
               {farms.length === 0 ? (
                 <p className="text-[11px] text-gray-500 font-medium italic text-center py-6">No registered farmers in {currentUser?.province || 'your province'} yet.</p>
               ) : farms.map(farm => (
-                <button key={farm.id} onClick={() => setActiveTab('vet')} className="w-full flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-transparent hover:border-pfuma-green transition text-left">
+                <button key={farm.id} onClick={() => onMessageFarmer?.({ startConversationWith: farm.id, subject: 'Consultation' })} className="w-full flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-transparent hover:border-pfuma-green transition text-left">
                   <div className="w-10 h-10 bg-gray-800 rounded-xl flex items-center justify-center font-black text-pfuma-green text-sm shrink-0">{(farm.full_name || '?')[0]}</div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-black text-white mb-0.5">{farm.full_name}</p>
@@ -1204,13 +1228,25 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
                       {r.cooperative_name} · {r.district ? `${r.district}, ` : ''}{r.province}{r.dip_tank_location ? ` · ${r.dip_tank_location}` : ''}
                     </p>
                     <p className="text-[10px] text-gray-500 font-medium">Requested by {r.requested_by_name}{r.preferred_date ? ` · wants ${new Date(r.preferred_date).toDateString()}` : ''}</p>
-                    <button
-                      onClick={() => claimVetRequest(r.id)}
-                      disabled={claimBusyId === r.id}
-                      className="mt-2 px-3 py-1.5 bg-pfuma-green text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition disabled:opacity-50"
-                    >
-                      {claimBusyId === r.id ? 'Claiming…' : 'Claim'}
-                    </button>
+                    <div className="flex items-center gap-2 mt-2">
+                      <button
+                        onClick={() => claimVetRequest(r.id)}
+                        disabled={claimBusyId === r.id}
+                        className="px-3 py-1.5 bg-pfuma-green text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition disabled:opacity-50"
+                      >
+                        {claimBusyId === r.id ? 'Claiming…' : 'Claim'}
+                      </button>
+                      {r.requested_by && (
+                        <button onClick={() => onMessageFarmer?.({ startConversationWith: r.requested_by, subject: r.cooperative_name })} className="flex items-center gap-1 px-3 py-1.5 bg-white/10 text-gray-300 rounded-lg text-[10px] font-black uppercase hover:bg-white/20 transition">
+                          <MessageSquare size={10} /> Message
+                        </button>
+                      )}
+                      {r.requested_by_phone && (
+                        <a href={`tel:${r.requested_by_phone}`} className="flex items-center gap-1 text-[9px] font-black text-gray-400 uppercase hover:text-white transition">
+                          <PhoneCall size={10} /> Call
+                        </a>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -3083,7 +3119,7 @@ function App() {
           {activeTab === 'dashboard' && (
             <ErrorBoundary>
               {role === 'Farmer'       && <FarmerDashboard      animals={animals} auditLog={auditLog} inventory={inventory} notifications={notifications} nearbyFarmers={nearbyFarmers} currentUser={currentUser} setActiveTab={setActiveTab} onListAnimal={handleListAnimal} />}
-              {role === 'Veterinarian' && <VeterinarianDashboard animals={animals} notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} />}
+              {role === 'Veterinarian' && <VeterinarianDashboard animals={animals} notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} onMessageFarmer={requestVetContact} />}
               {role === 'Supplier'     && <SupplierDashboard     inventory={inventory} setActiveTab={setActiveTab} currentUser={currentUser} onMessageFarmer={requestVetContact} />}
               {role === 'Buyer'     && <BuyerDashboard     setActiveTab={setActiveTab} currentUser={currentUser} onMessageSeller={requestVetContact} />}
               {role === 'Police'       && <PoliceDashboard       notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} />}
