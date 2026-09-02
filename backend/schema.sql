@@ -827,6 +827,10 @@ VALUES (3, 'Chido Ncube', '0773000003', '63-1000003C08', 'Supplier', 'AgroChem Z
 INSERT IGNORE INTO users (id, full_name, phone, national_id_number, role, org_name, province, business_reg, trading_areas, password_hash, verification_status, verified_by)
 VALUES (4, 'ZimAgro Enterprise', '0774000004', '63-1000004D19', 'Buyer', 'ZimAgro Ltd', 'Harare', 'BP-67890/2023', 'Mashonaland West,Midlands,Harare', '$2b$12$ehzt67O363Q.ihnPFIXf5uNgjqwdMcLgcCoYe7RaGV7lCl1uVblHG', 'verified', 5);
 
+-- Demo user: Institution (Bank)
+INSERT IGNORE INTO users (id, full_name, phone, national_id_number, role, org_name, province, business_reg, institution_type, password_hash, verification_status, verified_by)
+VALUES (6, 'Zimbabwe Trust Bank', '0776000006', '63-1000006F00', 'Institution', 'Zimbabwe Trust Bank — Harare Branch', 'Harare', 'RBZ-BNK-2024-0007', 'Bank', '$2b$12$ehzt67O363Q.ihnPFIXf5uNgjqwdMcLgcCoYe7RaGV7lCl1uVblHG', 'verified', 5);
+
 -- Demo animals (owned by Arnold)
 INSERT IGNORE INTO animals (id, owner_id, name, species, breed, birth_date, tag_id, brand_id, birth_weight, current_weight, for_sale)
 VALUES

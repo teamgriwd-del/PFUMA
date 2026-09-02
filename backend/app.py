@@ -526,6 +526,7 @@ def public_user_view(user, requester):
             'phone': user['phone'], 'email': user['email'], 'address': user['address'],
             'farm_size_ha': user.get('farm_size_ha'), 'species_farmed': user.get('species_farmed'),
             'license_number': user.get('license_number'), 'business_reg': user.get('business_reg'),
+            'institution_type': user.get('institution_type'),
             'badge_number': user.get('badge_number'), 'station': user.get('station'),
             'jurisdiction_province': user.get('jurisdiction_province'),
             'verification_status': user.get('verification_status'),
