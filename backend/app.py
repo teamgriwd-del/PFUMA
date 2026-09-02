@@ -4717,6 +4717,67 @@ def admin_list_users():
     return jsonify(rows)
 
 
+@app.route('/admin/users/<int:user_id>', methods=['GET'])
+@require_auth
+@require_admin
+def admin_get_user(user_id):
+    """Single-user lookup for the Activity feed's click-through — a signup
+    entry there names a person but the list endpoint above only ever
+    returns a page of everyone, not one lookup by id."""
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT u.*, r.full_name AS requested_by_name, r.badge_number AS requested_by_badge
+        FROM users u LEFT JOIN users r ON u.requested_by = r.id
+        WHERE u.id=%s
+    """, (user_id,))
+    row = c.fetchone()
+    db.close()
+    if not row:
+        return jsonify({"error": "User not found"}), 404
+    row.pop('password_hash', None)
+    return jsonify(row)
+
+
+@app.route('/admin/listings/<int:listing_id>', methods=['GET'])
+@require_auth
+@require_admin
+def admin_get_listing(listing_id):
+    """Full picture of one listing for the admin panel's detail view —
+    the listing itself, the seller, the linked animal (if livestock), and
+    that animal's sale-clearance record (Form 392 status) if one exists."""
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT ml.*, u.full_name AS seller_name, u.phone AS seller_phone,
+               u.national_id_number AS seller_national_id, u.province AS seller_province,
+               u.district AS seller_district, u.verification_status AS seller_verification_status
+        FROM marketplace_listings ml JOIN users u ON ml.user_id = u.id
+        WHERE ml.id=%s
+    """, (listing_id,))
+    listing = c.fetchone()
+    if not listing:
+        db.close(); return jsonify({"error": "Listing not found"}), 404
+    _attach_listing_photos(c, [listing])
+
+    animal = None
+    clearance = None
+    if listing['animal_id']:
+        c.execute("SELECT * FROM animals WHERE id=%s", (listing['animal_id'],))
+        animal = c.fetchone()
+        c.execute("""
+            SELECT sc.*, vo.full_name AS vet_officer_name, officer.full_name AS police_officer_name
+            FROM sale_clearances sc
+            LEFT JOIN users vo ON sc.vet_officer_id = vo.id
+            LEFT JOIN users officer ON sc.officer_id = officer.id
+            WHERE sc.listing_id=%s ORDER BY sc.created_at DESC LIMIT 1
+        """, (listing_id,))
+        clearance = c.fetchone()
+
+    db.close()
+    return jsonify({"listing": listing, "animal": animal, "clearance": clearance})
+
+
 @app.route('/admin/users/<int:user_id>/status', methods=['PATCH'])
 @require_auth
 @require_admin
@@ -4851,28 +4912,28 @@ def admin_activity():
     c = db.cursor()
 
     c.execute("SELECT id, full_name, role, created_at FROM users WHERE role != 'Admin' ORDER BY created_at DESC LIMIT 20")
-    signups = [{"type": "signup", "at": r['created_at'], "text": f"{r['full_name']} joined as {r['role']}"} for r in c.fetchall()]
+    signups = [{"type": "signup", "id": r['id'], "at": r['created_at'], "text": f"{r['full_name']} joined as {r['role']}"} for r in c.fetchall()]
 
     c.execute("""
         SELECT l.id, l.product_name, l.category, u.full_name, l.created_at
         FROM marketplace_listings l JOIN users u ON l.user_id = u.id
         ORDER BY l.created_at DESC LIMIT 20
     """)
-    listings = [{"type": "listing", "at": r['created_at'], "text": f"{r['full_name']} listed \"{r['product_name']}\" ({r['category']})"} for r in c.fetchall()]
+    listings = [{"type": "listing", "id": r['id'], "at": r['created_at'], "text": f"{r['full_name']} listed \"{r['product_name']}\" ({r['category']})"} for r in c.fetchall()]
 
     c.execute("""
         SELECT o.id, o.disease_name, o.province, u.full_name, o.created_at
         FROM outbreaks o JOIN users u ON o.reported_by = u.id
         ORDER BY o.created_at DESC LIMIT 20
     """)
-    outbreak_reports = [{"type": "outbreak", "at": r['created_at'], "text": f"{r['full_name']} reported {r['disease_name']} in {r['province']}"} for r in c.fetchall()]
+    outbreak_reports = [{"type": "outbreak", "id": r['id'], "at": r['created_at'], "text": f"{r['full_name']} reported {r['disease_name']} in {r['province']}"} for r in c.fetchall()]
 
     c.execute("""
         SELECT co.id, co.name, co.province, u.full_name, co.created_at
         FROM cooperatives co JOIN users u ON co.created_by = u.id
         ORDER BY co.created_at DESC LIMIT 20
     """)
-    cooperatives = [{"type": "cooperative", "at": r['created_at'], "text": f"{r['full_name']} started \"{r['name']}\" in {r['province']}"} for r in c.fetchall()]
+    cooperatives = [{"type": "cooperative", "id": r['id'], "at": r['created_at'], "text": f"{r['full_name']} started \"{r['name']}\" in {r['province']}"} for r in c.fetchall()]
 
     db.close()
     feed = signups + listings + outbreak_reports + cooperatives

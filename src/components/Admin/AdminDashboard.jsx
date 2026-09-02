@@ -4,12 +4,12 @@ import {
   CheckCircle, XCircle, ShoppingCart, AlertTriangle, Handshake, Package,
   Ban, RotateCcw, Satellite, Navigation, Crosshair, Thermometer, Heart,
   BatteryMedium, Play, Pause, RadioTower, Target, Save, Trash2,
-  Upload, Database, FileSpreadsheet, UserPlus, Eye,
+  Upload, Database, FileSpreadsheet, UserPlus, Eye, X, MapPin, Calendar, Shield, DollarSign, Tag, RefreshCw,
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
 import { API } from '../../config';
-import UserDetailModal from '../UserDetailModal';
+import UserDetailModal, { DetailRow } from '../UserDetailModal';
 
 const StatCard = ({ label, value, icon: Icon, color }) => (
   <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
@@ -299,11 +299,121 @@ const TrendsTab = ({ currentUser }) => {
   );
 };
 
+// Full picture of one listing — the listing itself, the seller, and (for
+// livestock) the linked animal and its sale-clearance status — everything
+// admin_get_listing already assembles server-side in one call, matching the
+// "click for full detail" pattern the Users tab already has.
+const resolveImg = (url) => (url && url.startsWith('/uploads/')) ? `${API}${url}` : url;
+
+const ListingDetailModal = ({ listingId, currentUser, onClose }) => {
+  const [data, setData] = useState(undefined); // undefined = loading
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/admin/listings/${listingId}`, { headers: { Authorization: `Bearer ${currentUser.token}` } });
+        if (res.ok && !cancelled) setData(await res.json());
+      } catch { if (!cancelled) setData(null); }
+    })();
+    return () => { cancelled = true; };
+  }, [listingId, currentUser.token]);
+
+  return (
+    <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-gray-900/80 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white w-full max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden rounded-3xl shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-4 flex items-center justify-between gap-2 z-10">
+          <div className="min-w-0">
+            <h3 className="text-sm font-black text-gray-900 truncate">{data?.listing?.product_name || 'Listing'}</h3>
+            <p className="text-[10px] text-gray-400 font-bold uppercase truncate">Listing #{listingId}{data?.listing ? ` · ${data.listing.status}` : ''}</p>
+          </div>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-700 transition shrink-0"><X size={18} /></button>
+        </div>
+
+        <div className="p-4 sm:p-6 space-y-6 min-w-0">
+          {data === undefined ? (
+            <p className="text-xs text-gray-400 font-medium italic text-center py-10">Loading…</p>
+          ) : data === null || !data.listing ? (
+            <p className="text-xs text-red-500 font-bold text-center py-10">Could not load this listing.</p>
+          ) : (
+            <>
+              {data.listing.photos?.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {data.listing.photos.map((p, i) => (
+                    <a key={i} href={resolveImg(p)} target="_blank" rel="noreferrer" className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 shrink-0">
+                      <img src={resolveImg(p)} alt="" className="w-full h-full object-cover" />
+                    </a>
+                  ))}
+                </div>
+              )}
+
+              <section>
+                <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Listing</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 min-w-0">
+                  <DetailRow icon={Tag} label="Category" value={data.listing.category} />
+                  <DetailRow icon={DollarSign} label="Price" value={`$${Number(data.listing.price).toLocaleString()} / ${data.listing.unit}`} />
+                  <DetailRow label="Quantity" value={data.listing.quantity} />
+                  <DetailRow icon={MapPin} label="Location" value={data.listing.location} />
+                  <DetailRow label="Description" value={data.listing.description} />
+                  <DetailRow icon={Calendar} label="Posted" value={data.listing.created_at ? new Date(data.listing.created_at).toLocaleString() : null} />
+                  <DetailRow icon={Calendar} label="Sold" value={data.listing.sold_at ? new Date(data.listing.sold_at).toLocaleString() : null} />
+                </div>
+              </section>
+
+              <section>
+                <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Seller</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 min-w-0">
+                  <DetailRow label="Name" value={data.listing.seller_name} />
+                  <DetailRow label="Phone" value={data.listing.seller_phone} />
+                  <DetailRow label="National ID" value={data.listing.seller_national_id} />
+                  <DetailRow icon={MapPin} label="Province / District" value={[data.listing.seller_province, data.listing.seller_district].filter(Boolean).join(', ')} />
+                  <DetailRow icon={Shield} label="Seller Verification" value={data.listing.seller_verification_status} />
+                </div>
+              </section>
+
+              {data.animal && (
+                <section>
+                  <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Linked Animal</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 min-w-0">
+                    <DetailRow label="Name" value={data.animal.name} />
+                    <DetailRow label="Species / Breed" value={[data.animal.species, data.animal.breed].filter(Boolean).join(' — ')} />
+                    <DetailRow label="Ear Tag" value={data.animal.tag_id} />
+                    <DetailRow label="Brand" value={data.animal.brand_id} />
+                    <DetailRow label="Current Weight" value={data.animal.current_weight ? `${data.animal.current_weight} kg` : null} />
+                  </div>
+                </section>
+              )}
+
+              {data.clearance && (
+                <section>
+                  <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Sale Clearance (ZRP Form 392)</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 min-w-0">
+                    <DetailRow icon={Shield} label="Status" value={data.clearance.status} />
+                    <DetailRow label="Traditional Authority" value={data.clearance.leader_clearance === 'attested' ? `${data.clearance.leader_type} — ${data.clearance.leader_name}` : data.clearance.leader_clearance === 'not_applicable' ? `N/A — ${data.clearance.leader_na_reason}` : 'Not recorded'} />
+                    <DetailRow label="Buyer" value={data.clearance.buyer_name} />
+                    <DetailRow label="Vet Witness" value={data.clearance.vet_officer_name ? `${data.clearance.vet_officer_name} (signed)` : 'Not yet signed'} />
+                    <DetailRow label="Police Officer" value={data.clearance.police_officer_name} />
+                    <DetailRow label="Clearance Register No." value={data.clearance.clearance_register_no} />
+                    <DetailRow label="Movement Permit No." value={data.clearance.movement_permit_number} />
+                    <DetailRow icon={Shield} label="Not-Stolen Certified" value={data.clearance.not_stolen_certified ? 'Yes' : 'No'} />
+                    <DetailRow icon={Calendar} label="Resolved" value={data.clearance.resolved_at ? new Date(data.clearance.resolved_at).toLocaleString() : null} />
+                  </div>
+                </section>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ListingsTab = ({ currentUser }) => {
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [busyId, setBusyId] = useState(null);
+  const [viewingListingId, setViewingListingId] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -348,13 +458,16 @@ const ListingsTab = ({ currentUser }) => {
           <div className="divide-y divide-gray-50">
             {listings.map(l => (
               <div key={l.id} className="flex items-center gap-4 p-4">
-                <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                <button onClick={() => setViewingListingId(l.id)} className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0 hover:bg-gray-200 transition" aria-label={`View ${l.product_name}'s full details`}>
                   <Package size={14} className="text-gray-500" />
-                </div>
-                <div className="flex-1 min-w-0">
+                </button>
+                <button onClick={() => setViewingListingId(l.id)} className="flex-1 min-w-0 text-left">
                   <p className="text-xs font-black text-gray-900">{l.product_name} <span className="text-gray-400 font-medium capitalize">· {l.category}</span></p>
                   <p className="text-[10px] text-gray-500 font-medium">${l.price} · {l.seller_name} · {l.phone} · {l.seller_province || '—'}</p>
-                </div>
+                </button>
+                <button onClick={() => setViewingListingId(l.id)} className="p-1.5 bg-gray-50 hover:bg-gray-100 text-gray-500 rounded-lg transition shrink-0" aria-label={`View ${l.product_name}'s full details`} title="View full details">
+                  <Eye size={14} />
+                </button>
                 <button onClick={() => takeDown(l.id)} disabled={busyId === l.id} className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition disabled:opacity-50 shrink-0" aria-label={`Remove ${l.product_name}`} title="Take down (scam/abuse)">
                   <Ban size={14} />
                 </button>
@@ -363,15 +476,24 @@ const ListingsTab = ({ currentUser }) => {
           </div>
         )}
       </div>
+
+      {viewingListingId && <ListingDetailModal listingId={viewingListingId} currentUser={currentUser} onClose={() => setViewingListingId(null)} />}
     </div>
   );
 };
 
 const ACTIVITY_ICON = { signup: Users, listing: ShoppingCart, outbreak: AlertTriangle, cooperative: Handshake };
 
+// Only signup/listing entries link to a real detail view for now — outbreak
+// and cooperative records don't have an admin detail screen to open yet.
+const ACTIVITY_CLICKABLE = { signup: true, listing: true };
+
 const ActivityTab = ({ currentUser }) => {
   const [feed, setFeed] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [viewingUser, setViewingUser] = useState(null);
+  const [viewingListingId, setViewingListingId] = useState(null);
+  const [openingId, setOpeningId] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -383,10 +505,22 @@ const ActivityTab = ({ currentUser }) => {
     })();
   }, [currentUser.token]);
 
+  const openItem = async (item) => {
+    if (!item.id || !ACTIVITY_CLICKABLE[item.type]) return;
+    if (item.type === 'listing') { setViewingListingId(item.id); return; }
+    // signup — fetch the full user record, same one the Users tab shows
+    setOpeningId(item.id);
+    try {
+      const res = await fetch(`${API}/admin/users/${item.id}`, { headers: { Authorization: `Bearer ${currentUser.token}` } });
+      if (res.ok) setViewingUser(await res.json());
+    } catch { /* offline */ }
+    setOpeningId(null);
+  };
+
   return (
     <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
       <h3 className="text-sm font-black text-gray-800 mb-1">Recent Activity — Platform-Wide</h3>
-      <p className="text-[11px] text-gray-400 font-medium mb-4">Everything happening across every account, most recent first.</p>
+      <p className="text-[11px] text-gray-400 font-medium mb-4">Everything happening across every account, most recent first. Signups and listings open full details.</p>
       {loading ? (
         <p className="text-xs text-gray-400 font-medium italic text-center py-10">Loading…</p>
       ) : feed.length === 0 ? (
@@ -395,20 +529,27 @@ const ActivityTab = ({ currentUser }) => {
         <div className="space-y-2.5">
           {feed.map((item, i) => {
             const Icon = ACTIVITY_ICON[item.type] || Activity;
+            const clickable = item.id && ACTIVITY_CLICKABLE[item.type];
+            const Row = clickable ? 'button' : 'div';
             return (
-              <div key={i} className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-xl">
+              <Row key={i} onClick={clickable ? () => openItem(item) : undefined}
+                className={`w-full flex items-center gap-3 p-2.5 bg-gray-50 rounded-xl text-left ${clickable ? 'hover:bg-gray-100 transition cursor-pointer' : ''}`}>
                 <div className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center shrink-0">
-                  <Icon size={13} className="text-gray-500" />
+                  {openingId === item.id ? <RefreshCw size={13} className="text-gray-400 animate-spin" /> : <Icon size={13} className="text-gray-500" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] font-bold text-gray-800">{item.text}</p>
                   <p className="text-[10px] text-gray-400 font-medium">{new Date(item.at).toLocaleString()}</p>
                 </div>
-              </div>
+                {clickable && <Eye size={13} className="text-gray-300 shrink-0" />}
+              </Row>
             );
           })}
         </div>
       )}
+
+      {viewingUser && <UserDetailModal user={viewingUser} currentUser={currentUser} onClose={() => setViewingUser(null)} />}
+      {viewingListingId && <ListingDetailModal listingId={viewingListingId} currentUser={currentUser} onClose={() => setViewingListingId(null)} />}
     </div>
   );
 };

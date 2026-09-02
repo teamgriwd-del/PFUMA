@@ -10,7 +10,7 @@ import { API } from '../config';
 // the compact row only ever showed name/role/phone/org/province. This is
 // the full record, shared by Admin's Users tab and Police's verification
 // queue so both reviewers see the same thing before deciding.
-const DetailRow = ({ icon: Icon, label, value }) => value ? (
+export const DetailRow = ({ icon: Icon, label, value }) => value ? (
   <div className="flex items-start gap-2.5 py-2 min-w-0">
     {Icon && <Icon size={13} className="text-gray-400 shrink-0 mt-0.5" />}
     <div className="min-w-0">
