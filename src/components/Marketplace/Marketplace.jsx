@@ -98,7 +98,9 @@ const PostForm = ({ currentUser, onSubmit, onCancel, animals, initialAnimalId })
   const listableAnimals = animals.filter(a => !a.marketplaceStatus);
   const blockedCount = animals.length - listableAnimals.length;
   const initialAnimal = initialAnimalId ? listableAnimals.find(a => String(a.id) === String(initialAnimalId)) : null;
-  const [form, setForm] = useState({ product_name: initialAnimal ? `${initialAnimal.name} — ${initialAnimal.breed} ${initialAnimal.species}` : '', category: 'livestock', price: '', unit: 'head', quantity: '1', location: currentUser?.district ? `${currentUser.district}, ${currentUser.province}` : (currentUser?.province || ''), description: '', animal_id: initialAnimal ? String(initialAnimal.id) : '',
+  // Suppliers don't own livestock — default them straight to Medicine so
+  // "Post a Listing" doesn't open on a category they can't use.
+  const [form, setForm] = useState({ product_name: initialAnimal ? `${initialAnimal.name} — ${initialAnimal.breed} ${initialAnimal.species}` : '', category: currentUser?.role === 'Supplier' ? 'medicine' : 'livestock', price: '', unit: currentUser?.role === 'Supplier' ? 'unit' : 'head', quantity: '1', location: currentUser?.district ? `${currentUser.district}, ${currentUser.province}` : (currentUser?.province || ''), description: '', animal_id: initialAnimal ? String(initialAnimal.id) : '',
     leader_clearance: '', leader_type: 'Sabuku', leader_name: '', leader_village: '',
     leader_cleared_on: '', leader_reference: '', leader_na_reason: '',
     // ZRP Form 392 Part A/B/C — optional, filled now or amended later once a buyer is arranged
@@ -322,8 +324,13 @@ const PostForm = ({ currentUser, onSubmit, onCancel, animals, initialAnimalId })
             </select>
           </div>
           <div>
-            <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">Quantity</label>
+            <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5">
+              {form.category === 'livestock' ? 'Quantity' : 'Stock Quantity *'}
+            </label>
             <input className={inputCls} type="number" min="1" value={form.quantity} onChange={e => set('quantity', e.target.value)} />
+            {form.category !== 'livestock' && (
+              <p className="text-[10px] text-gray-400 font-medium mt-1">How many {form.unit} you have on hand — this is your stock. It drops as farmers order, and you can top it back up any time from Supply Chain.</p>
+            )}
           </div>
         </div>
         <div>
@@ -354,7 +361,7 @@ const PostForm = ({ currentUser, onSubmit, onCancel, animals, initialAnimalId })
   );
 };
 
-const Marketplace = ({ currentUser, animals = [], onListAnimal, presetAnimalId, onPresetConsumed }) => {
+const Marketplace = ({ currentUser, animals = [], onListAnimal, presetAnimalId, onPresetConsumed, openForm, onOpenFormConsumed }) => {
   const [listings, setListings]     = useState([]);
   const [loading, setLoading]       = useState(true);
   const [apiOnline, setApiOnline]   = useState(false);
@@ -363,11 +370,18 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal, presetAnimalId, 
   // Arriving here via "List for Sale" on an animal's own profile opens the
   // form pre-selected to that animal, instead of the old fake one-click
   // toggle that claimed to list an animal without ever really doing so.
-  const [showForm, setShowForm]     = useState(!!presetAnimalId);
+  // A Supplier's "+ Add Stock" does the same thing generically, with no
+  // animal involved — a listing is a Supplier's stock, so posting one is
+  // the entire "add stock" action.
+  const [showForm, setShowForm]     = useState(!!presetAnimalId || !!openForm);
   useEffect(() => {
     if (presetAnimalId) { setShowForm(true); onPresetConsumed && onPresetConsumed(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [presetAnimalId]);
+  useEffect(() => {
+    if (openForm) { setShowForm(true); onOpenFormConsumed && onOpenFormConsumed(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openForm]);
   const [feedback, setFeedback]     = useState(null);
   const [openBidsId, setOpenBidsId] = useState(null);
   const [bidsByListing, setBidsByListing] = useState({});

@@ -26,7 +26,7 @@ import {
   Zap, Clock, ArrowRight, Tag, Pill, MapPin, FileText,
   RefreshCw, DollarSign, Target, Box, PhoneCall, Star, Wheat, Store,
   Sprout, Check, Syringe, Shield, UserPlus, X, Menu, Eye, EyeOff, Handshake, Radio, FlaskConical, Camera,
-  ShieldAlert, Pencil, BookOpen,
+  ShieldAlert, Pencil, BookOpen, Plus,
 } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis } from 'recharts';
 import './App.css';
@@ -1285,11 +1285,14 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
 };
 
 // ── SUPPLIER DASHBOARD ─────────────────────────────────────────────────────
-const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarmer }) => {
+const SUPPLIER_STOCK_CATEGORIES = ['medicine', 'equipment', 'feed'];
+
+const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarmer, onAddStock }) => {
   const [orders, setOrders] = useState([]);
   const [demand, setDemand] = useState([]);
   const [fulfillmentRate, setFulfillmentRate] = useState(null);
   const [busyOrderId, setBusyOrderId] = useState(null);
+  const [myStock, setMyStock] = useState([]);
 
   const loadSupplierData = useCallback(async () => {
     if (!currentUser?.token) return;
@@ -1305,6 +1308,10 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
     try {
       const res = await fetch(`${API}/supplier/fulfillment-rate`, { headers });
       if (res.ok) setFulfillmentRate((await res.json()).rate);
+    } catch { /* offline */ }
+    try {
+      const res = await fetch(`${API}/listings/mine`, { headers });
+      if (res.ok) setMyStock((await res.json()).filter(l => SUPPLIER_STOCK_CATEGORIES.includes(l.category) && l.status !== 'sold'));
     } catch { /* offline */ }
   }, [currentUser?.token]);
 
@@ -1322,6 +1329,7 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
   const pending    = orders.filter(o => o.status === 'pending').length;
   const dispatched = orders.filter(o => o.status === 'dispatched').length;
   const delivered  = orders.filter(o => o.status === 'delivered').length;
+  const outOfStockCount = myStock.filter(l => l.status === 'withdrawn').length;
 
   return (
     <div className="p-6 bg-pfuma-cream space-y-6 text-left overflow-y-auto h-full">
@@ -1369,6 +1377,34 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
           </div>
         ))}
       </div>
+
+      {/* My Stock — a Supplier's stock IS their marketplace listings; there's
+          no separate warehouse/intake step. This is the first, unmissable
+          answer to "how do I get my products into PFUMA?" */}
+      {myStock.length === 0 ? (
+        <div className="bg-pfuma-gold/10 border-2 border-dashed border-pfuma-gold/40 rounded-2xl p-6 flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h3 className="text-sm font-black text-gray-800 mb-1">You haven't added any stock yet</h3>
+            <p className="text-[11px] text-gray-500 font-medium max-w-md">Posting a product on the Marketplace is how your stock gets into PFUMA — the quantity you enter is what farmers see and can order against.</p>
+          </div>
+          <button onClick={onAddStock} className="shrink-0 flex items-center gap-2 px-5 py-3 bg-pfuma-gold text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-amber-600 transition">
+            <Plus size={15} /> Add Your First Product
+          </button>
+        </div>
+      ) : (
+        <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <h3 className="text-sm font-black text-gray-800">My Stock — {myStock.length} product{myStock.length !== 1 ? 's' : ''} listed</h3>
+            <p className="text-[11px] text-gray-400 font-medium mt-0.5">
+              {outOfStockCount > 0 ? `${outOfStockCount} out of stock — restock in Supply Chain` : 'All products in stock'}
+            </p>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <button onClick={() => setActiveTab('health')} className="px-4 py-2.5 bg-gray-50 text-gray-600 rounded-xl font-black text-[10px] uppercase hover:bg-gray-100 transition">View Supply Chain</button>
+            <button onClick={onAddStock} className="flex items-center gap-1.5 px-4 py-2.5 bg-pfuma-gold text-white rounded-xl font-black text-[10px] uppercase hover:bg-amber-600 transition"><Plus size={13} /> Add Stock</button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -2586,6 +2622,12 @@ function App() {
   const [vetIntent,   setVetIntent]   = useState(null);
   const requestVetContact = (intent) => { setVetIntent(intent); setActiveTab('vet'); };
   const [marketplaceAnimalId, setMarketplaceAnimalId] = useState(null);
+  // A Supplier's "stock" IS a marketplace listing — there's no separate
+  // warehouse/intake step. "+ Add Stock" jumps straight to Marketplace with
+  // the post form already open, so that connection is obvious instead of
+  // requiring them to find "Post a Listing" on their own.
+  const [marketplaceOpenForm, setMarketplaceOpenForm] = useState(false);
+  const openMarketplacePostForm = () => { setMarketplaceOpenForm(true); setActiveTab('marketplace'); };
   const [completedTasks, setCompletedTasks] = useState([]);
   const [auditLog,    setAuditLog]    = useState([]);
   const [inventory,   setInventory]   = useState([]);
@@ -3144,7 +3186,7 @@ function App() {
             <ErrorBoundary>
               {role === 'Farmer'       && <FarmerDashboard      animals={animals} auditLog={auditLog} inventory={inventory} notifications={notifications} nearbyFarmers={nearbyFarmers} currentUser={currentUser} setActiveTab={setActiveTab} onListAnimal={handleListAnimal} />}
               {role === 'Veterinarian' && <VeterinarianDashboard animals={animals} notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} onMessageFarmer={requestVetContact} />}
-              {role === 'Supplier'     && <SupplierDashboard     inventory={inventory} setActiveTab={setActiveTab} currentUser={currentUser} onMessageFarmer={requestVetContact} />}
+              {role === 'Supplier'     && <SupplierDashboard     inventory={inventory} setActiveTab={setActiveTab} currentUser={currentUser} onMessageFarmer={requestVetContact} onAddStock={openMarketplacePostForm} />}
               {role === 'Buyer'     && <BuyerDashboard     setActiveTab={setActiveTab} currentUser={currentUser} onMessageSeller={requestVetContact} />}
               {role === 'Police'       && <PoliceDashboard       notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} onMessageFarmer={requestVetContact} />}
             </ErrorBoundary>
@@ -3154,7 +3196,7 @@ function App() {
           {activeTab === 'health' && role !== 'Supplier' && <ErrorBoundary><HealthManagement animals={animals} completedTasks={completedTasks} setCompletedTasks={setCompletedTasks} auditLog={auditLog} onAddAuditLog={addAuditLog} inventory={inventory} onRefreshInventory={refreshInventory} currentUser={currentUser} /></ErrorBoundary>}
           {activeTab === 'disease'     && <ErrorBoundary><DiseaseDetection animals={animals} onAddAuditLog={addAuditLog} onCallVet={requestVetContact} /></ErrorBoundary>}
           {activeTab === 'vet'         && <ErrorBoundary><VetCommunication animals={animals} currentUser={currentUser} intent={vetIntent} onIntentConsumed={() => setVetIntent(null)} /></ErrorBoundary>}
-          {activeTab === 'marketplace' && <ErrorBoundary><Marketplace currentUser={currentUser} animals={animals} onListAnimal={handleListAnimal} presetAnimalId={marketplaceAnimalId} onPresetConsumed={() => setMarketplaceAnimalId(null)} /></ErrorBoundary>}
+          {activeTab === 'marketplace' && <ErrorBoundary><Marketplace currentUser={currentUser} animals={animals} onListAnimal={handleListAnimal} presetAnimalId={marketplaceAnimalId} onPresetConsumed={() => setMarketplaceAnimalId(null)} openForm={marketplaceOpenForm} onOpenFormConsumed={() => setMarketplaceOpenForm(false)} /></ErrorBoundary>}
           {activeTab === 'feed'        && <ErrorBoundary><FeedAnalyzer currentUser={currentUser} animals={animals} onUpdateAnimal={(id, patch) => setAnimals(prev => prev.map(a => a.id === id ? { ...a, ...patch } : a))} /></ErrorBoundary>}
           {activeTab === 'compliance' && <ErrorBoundary><ComplianceCenter currentUser={currentUser} /></ErrorBoundary>}
           {activeTab === 'cooperative' && <ErrorBoundary><Cooperative currentUser={currentUser} /></ErrorBoundary>}
