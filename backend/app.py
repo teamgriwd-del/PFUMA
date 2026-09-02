@@ -4253,14 +4253,36 @@ def place_order():
     quantity = d.get('quantity')
     if not listing_id or not quantity or float(quantity) <= 0:
         return jsonify({"error": "listing_id and a positive quantity are required"}), 400
+    quantity = float(quantity)
     db = get_db()
     c = db.cursor()
-    c.execute("SELECT user_id, category FROM marketplace_listings WHERE id=%s", (listing_id,))
+    c.execute("SELECT user_id, category, status, quantity, unit FROM marketplace_listings WHERE id=%s", (listing_id,))
     listing = c.fetchone()
     if not listing:
         db.close(); return jsonify({"error": "Listing not found"}), 404
     if listing['category'] not in ('medicine', 'equipment'):
         db.close(); return jsonify({"error": "Orders are only for medicine/equipment listings — use a bid for livestock or feed"}), 400
+    if listing['status'] != 'available':
+        db.close(); return jsonify({"error": "This listing is no longer available"}), 409
+    if quantity > float(listing['quantity']):
+        db.close(); return jsonify({"error": f"Only {listing['quantity']} {listing['unit']} left in stock"}), 400
+
+    # Decrement stock atomically — the WHERE guard means a second request
+    # racing this one can't oversell what a first request already claimed;
+    # a 0-row update means someone else took the remaining stock first.
+    # MySQL evaluates a multi-column SET left to right, so by the time the
+    # `status` expression runs, `quantity` already holds the POST-decrement
+    # value — referencing it as `quantity - %s` again here would subtract
+    # twice and flip small orders to 'withdrawn' incorrectly.
+    c.execute("""
+        UPDATE marketplace_listings
+        SET quantity = quantity - %s,
+            status = IF(quantity <= 0, 'withdrawn', status)
+        WHERE id=%s AND quantity >= %s
+    """, (quantity, listing_id, quantity))
+    if c.rowcount == 0:
+        db.close(); return jsonify({"error": "Stock just ran out on this listing — try a smaller quantity"}), 409
+
     c.execute("""
         INSERT INTO orders (listing_id, farmer_id, supplier_id, quantity)
         VALUES (%s,%s,%s,%s)
@@ -4329,6 +4351,71 @@ def dispatch_order(order_id):
 @require_role('Supplier')
 def deliver_order(order_id):
     return _advance_order(order_id, 'dispatched', 'delivered', 'delivered_at')
+
+
+@app.route('/orders/<int:order_id>/cancel', methods=['PATCH'])
+@require_auth
+@require_role('Supplier')
+def cancel_order(order_id):
+    """A supplier who genuinely can't fulfill a pending order (stock turned
+    out to be wrong, damaged batch, ...) cancels it — the reserved quantity
+    goes back on the shelf so the listing isn't stuck showing stock that was
+    never actually going to ship."""
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT supplier_id, status, listing_id, quantity FROM orders WHERE id=%s", (order_id,))
+    order = c.fetchone()
+    if not order:
+        db.close(); return jsonify({"error": "Order not found"}), 404
+    if order['supplier_id'] != g.current_user['id']:
+        db.close(); return jsonify({"error": "Only the supplier can cancel this order"}), 403
+    if order['status'] != 'pending':
+        db.close(); return jsonify({"error": f"Order must be pending to cancel (currently {order['status']})"}), 409
+    c.execute("UPDATE orders SET status='cancelled' WHERE id=%s", (order_id,))
+    c.execute("""
+        UPDATE marketplace_listings
+        SET quantity = quantity + %s, status = IF(status='withdrawn', 'available', status)
+        WHERE id=%s
+    """, (order['quantity'], order['listing_id']))
+    db.commit()
+    db.close()
+    return jsonify({"message": "Order cancelled — stock returned to your listing"})
+
+
+@app.route('/listings/<int:listing_id>/restock', methods=['PATCH'])
+@require_auth
+def restock_listing(listing_id):
+    """Bumps up a listing's remaining quantity — the counterpart to the
+    stock that /orders quietly decrements. Restores 'available' status if
+    the listing had gone out of stock. Owner-only, and only for the
+    per-unit categories stock actually applies to."""
+    d = request.json or {}
+    try:
+        add_quantity = float(d.get('add_quantity') or 0)
+    except (TypeError, ValueError):
+        add_quantity = 0
+    if add_quantity <= 0:
+        return jsonify({"error": "add_quantity must be a positive number"}), 400
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT user_id, category, status FROM marketplace_listings WHERE id=%s", (listing_id,))
+    listing = c.fetchone()
+    if not listing:
+        db.close(); return jsonify({"error": "Listing not found"}), 404
+    if listing['user_id'] != g.current_user['id']:
+        db.close(); return jsonify({"error": "Only the listing owner can restock it"}), 403
+    if listing['category'] not in ('medicine', 'equipment', 'feed'):
+        db.close(); return jsonify({"error": "Restocking only applies to medicine, equipment or feed listings"}), 400
+    if listing['status'] == 'sold':
+        db.close(); return jsonify({"error": "This listing is already sold"}), 409
+    c.execute("""
+        UPDATE marketplace_listings
+        SET quantity = quantity + %s, status = IF(status='withdrawn', 'available', status)
+        WHERE id=%s
+    """, (add_quantity, listing_id))
+    db.commit()
+    db.close()
+    return jsonify({"message": "Restocked ✅"})
 
 
 @app.route('/supplier/demand', methods=['GET'])

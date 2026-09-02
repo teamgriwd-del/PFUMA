@@ -445,8 +445,9 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal, presetAnimalId, 
 
   const handleOrder = async (listing) => {
     if (!currentUser) return;
-    const qty = window.prompt(`How many ${listing.unit} of "${listing.product_name}" do you need?`, '1');
+    const qty = window.prompt(`How many ${listing.unit} of "${listing.product_name}" do you need? (${listing.quantity} available)`, '1');
     if (!qty || isNaN(Number(qty)) || Number(qty) <= 0) return;
+    if (Number(qty) > Number(listing.quantity)) { setFeedback(`Only ${listing.quantity} ${listing.unit} left in stock.`); return; }
     try {
       const res = await fetch(`${API}/orders`, {
         method: 'POST',

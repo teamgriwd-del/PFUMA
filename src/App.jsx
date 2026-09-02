@@ -8,6 +8,7 @@ import Marketplace       from './components/Marketplace/Marketplace';
 import FeedAnalyzer      from './components/FeedAnalyzer/FeedAnalyzer';
 import Cooperative       from './components/Cooperative/Cooperative';
 import TradingJournal    from './components/TradingJournal/TradingJournal';
+import SupplierStock     from './components/SupplierStock/SupplierStock';
 import HardwareSimulation from './components/HardwareSimulation/HardwareSimulation';
 import ComplianceCenter  from './components/Compliance/ComplianceCenter';
 import AdminDashboard    from './components/Admin/AdminDashboard';
@@ -1248,7 +1249,7 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
 };
 
 // ── SUPPLIER DASHBOARD ─────────────────────────────────────────────────────
-const SupplierDashboard = ({ inventory, setActiveTab, currentUser }) => {
+const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarmer }) => {
   const [orders, setOrders] = useState([]);
   const [demand, setDemand] = useState([]);
   const [fulfillmentRate, setFulfillmentRate] = useState(null);
@@ -1352,21 +1353,30 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser }) => {
                   <p className="text-[11px] text-gray-400 font-medium mt-1">Farmers can order from your medicine/equipment listings</p>
                 </div>
               ) : orders.map(o => (
-                <div key={o.id} className={`flex items-center gap-4 p-4 rounded-2xl border-2 ${o.status === 'pending' ? 'bg-pfuma-gold/10 border-pfuma-gold/30' : 'bg-gray-50 border-gray-100'}`}>
+                <div key={o.id} className={`flex items-center gap-4 p-4 rounded-2xl border-2 flex-wrap ${o.status === 'pending' ? 'bg-pfuma-gold/10 border-pfuma-gold/30' : 'bg-gray-50 border-gray-100'}`}>
                   <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
                     <Package size={18} className="text-pfuma-gold" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-black text-gray-800 mb-0.5">{o.farmer_name}</p>
                     <p className="text-[10px] text-gray-500 font-medium">{o.product_name} · {Number(o.quantity)} · Order #{o.id}</p>
+                    {o.farmer_id && (
+                      <button onClick={() => onMessageFarmer?.({ startConversationWith: o.farmer_id, subject: o.product_name })} className="flex items-center gap-1 text-[9px] font-black text-pfuma-gold uppercase hover:underline mt-1">
+                        <MessageSquare size={10} /> Message Farmer
+                      </button>
+                    )}
                   </div>
                   <span className={`text-[10px] font-black px-3 py-1.5 rounded-full uppercase shrink-0 ${
                     o.status === 'pending'    ? 'bg-pfuma-gold/15 text-amber-700' :
                     o.status === 'dispatched' ? 'bg-blue-100 text-blue-700' :
-                    o.status === 'delivered'  ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'
+                    o.status === 'delivered'  ? 'bg-green-100 text-green-700' :
+                    o.status === 'cancelled'  ? 'bg-red-100 text-red-700' : 'bg-gray-200 text-gray-600'
                   }`}>{o.status}</span>
                   {o.status === 'pending' && (
-                    <button onClick={() => advanceOrder(o, 'dispatch')} disabled={busyOrderId === o.id} className="shrink-0 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-black uppercase hover:bg-blue-700 transition disabled:opacity-50">Dispatch</button>
+                    <div className="flex gap-2 shrink-0">
+                      <button onClick={() => advanceOrder(o, 'cancel')} disabled={busyOrderId === o.id} className="px-3 py-1.5 bg-white border-2 border-gray-200 text-gray-500 rounded-lg text-[10px] font-black uppercase hover:bg-gray-50 transition disabled:opacity-50">Cancel</button>
+                      <button onClick={() => advanceOrder(o, 'dispatch')} disabled={busyOrderId === o.id} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-black uppercase hover:bg-blue-700 transition disabled:opacity-50">Dispatch</button>
+                    </div>
                   )}
                   {o.status === 'dispatched' && (
                     <button onClick={() => advanceOrder(o, 'deliver')} disabled={busyOrderId === o.id} className="shrink-0 px-3 py-1.5 bg-green-600 text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition disabled:opacity-50">Mark Delivered</button>
@@ -2382,7 +2392,7 @@ const NAV_SECTIONS = {
       items: [
         { tab: 'marketplace', icon: Store,           label: 'Marketplace',   desc: 'List medicines, feed & equipment' },
         { tab: 'feed',        icon: Wheat,           label: 'Feed Database', desc: 'Nutritional specs for your products' },
-        { tab: 'health',      icon: Package,         label: 'Supply Chain',  desc: 'Inventory & order management' },
+        { tab: 'health',      icon: Package,         label: 'Supply Chain',  desc: 'Stock levels & restocking' },
         { tab: 'tradingJournal', icon: BookOpen,      label: 'Trading Journal', desc: 'Trade history & top farmers' },
         { tab: 'vet',         icon: MessageSquare,   label: 'Messenger',     desc: 'Vets, suppliers, farmers & buyers' },
       ]
@@ -3074,13 +3084,14 @@ function App() {
             <ErrorBoundary>
               {role === 'Farmer'       && <FarmerDashboard      animals={animals} auditLog={auditLog} inventory={inventory} notifications={notifications} nearbyFarmers={nearbyFarmers} currentUser={currentUser} setActiveTab={setActiveTab} onListAnimal={handleListAnimal} />}
               {role === 'Veterinarian' && <VeterinarianDashboard animals={animals} notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} />}
-              {role === 'Supplier'     && <SupplierDashboard     inventory={inventory} setActiveTab={setActiveTab} currentUser={currentUser} />}
+              {role === 'Supplier'     && <SupplierDashboard     inventory={inventory} setActiveTab={setActiveTab} currentUser={currentUser} onMessageFarmer={requestVetContact} />}
               {role === 'Buyer'     && <BuyerDashboard     setActiveTab={setActiveTab} currentUser={currentUser} onMessageSeller={requestVetContact} />}
               {role === 'Police'       && <PoliceDashboard       notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} />}
             </ErrorBoundary>
           )}
           {activeTab === 'profile'     && <ErrorBoundary><AnimalProfile animals={animals} onAddAnimal={addAnimal} onAddAnimalPhotos={addAnimalPhotos} auditLog={auditLog} currentUser={currentUser} onListAnimal={handleListAnimal} onAnimalsChanged={() => loadUserData(currentUser)} /></ErrorBoundary>}
-          {activeTab === 'health'      && <ErrorBoundary><HealthManagement animals={animals} completedTasks={completedTasks} setCompletedTasks={setCompletedTasks} auditLog={auditLog} onAddAuditLog={addAuditLog} inventory={inventory} onRefreshInventory={refreshInventory} currentUser={currentUser} /></ErrorBoundary>}
+          {activeTab === 'health' && role === 'Supplier' && <ErrorBoundary><SupplierStock currentUser={currentUser} setActiveTab={setActiveTab} /></ErrorBoundary>}
+          {activeTab === 'health' && role !== 'Supplier' && <ErrorBoundary><HealthManagement animals={animals} completedTasks={completedTasks} setCompletedTasks={setCompletedTasks} auditLog={auditLog} onAddAuditLog={addAuditLog} inventory={inventory} onRefreshInventory={refreshInventory} currentUser={currentUser} /></ErrorBoundary>}
           {activeTab === 'disease'     && <ErrorBoundary><DiseaseDetection animals={animals} onAddAuditLog={addAuditLog} onCallVet={requestVetContact} /></ErrorBoundary>}
           {activeTab === 'vet'         && <ErrorBoundary><VetCommunication animals={animals} currentUser={currentUser} intent={vetIntent} onIntentConsumed={() => setVetIntent(null)} /></ErrorBoundary>}
           {activeTab === 'marketplace' && <ErrorBoundary><Marketplace currentUser={currentUser} animals={animals} onListAnimal={handleListAnimal} presetAnimalId={marketplaceAnimalId} onPresetConsumed={() => setMarketplaceAnimalId(null)} /></ErrorBoundary>}
