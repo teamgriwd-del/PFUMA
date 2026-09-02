@@ -1843,7 +1843,7 @@ const isValidZwNationalId = (raw) => ZW_ID_RE.test((raw || '').trim());
 
 const EMPTY_OFFICER_FORM = { full_name: '', phone: '', national_id_number: '', badge_number: '', station: '', jurisdiction_province: '', email: '', password: '' };
 
-const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
+const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFarmer }) => {
   const [verifications, setVerifications] = useState([]);
   const [clearances,    setClearances]    = useState([]);
   const [transfers,     setTransfers]     = useState([]);
@@ -2184,6 +2184,18 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
                       <div className="min-w-0">
                         <p className="text-xs font-black text-white">{c.product_name || c.animal_name}</p>
                         <p className="text-[10px] text-gray-400 font-medium">Seller: {c.seller_name} · {c.species || 'Livestock'}</p>
+                        <div className="flex items-center gap-3 mt-1">
+                          {c.seller_id && (
+                            <button onClick={() => onMessageFarmer?.({ startConversationWith: c.seller_id, subject: c.product_name || c.animal_name })} className="flex items-center gap-1 text-[9px] font-black text-pfuma-green uppercase hover:underline">
+                              <MessageSquare size={10} /> Message
+                            </button>
+                          )}
+                          {c.seller_phone && (
+                            <a href={`tel:${c.seller_phone}`} className="flex items-center gap-1 text-[9px] font-black text-gray-400 uppercase hover:text-white transition">
+                              <PhoneCall size={10} /> Call
+                            </a>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <span className="text-[9px] font-black text-orange-400 bg-orange-400/10 px-2 py-0.5 rounded-full uppercase shrink-0">Pending</span>
@@ -2324,6 +2336,18 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications }) => {
                   <p className="text-[10px] text-gray-400 font-medium">
                     {t.seller_name} ({t.seller_phone}){t.buyer_name ? ` → ${t.buyer_name} (${t.buyer_phone})` : ''}
                   </p>
+                  <div className="flex items-center gap-3 mt-1">
+                    {t.seller_id && (
+                      <button onClick={() => onMessageFarmer?.({ startConversationWith: t.seller_id, subject: t.animal_name })} className="flex items-center gap-1 text-[9px] font-black text-pfuma-green uppercase hover:underline">
+                        <MessageSquare size={10} /> Message Seller
+                      </button>
+                    )}
+                    {t.buyer_id && (
+                      <button onClick={() => onMessageFarmer?.({ startConversationWith: t.buyer_id, subject: t.animal_name })} className="flex items-center gap-1 text-[9px] font-black text-pfuma-green uppercase hover:underline">
+                        <MessageSquare size={10} /> Message Buyer
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase shrink-0 ${
                   t.status === 'claimed' ? 'bg-green-500/10 text-green-400' :
@@ -3122,7 +3146,7 @@ function App() {
               {role === 'Veterinarian' && <VeterinarianDashboard animals={animals} notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} onMessageFarmer={requestVetContact} />}
               {role === 'Supplier'     && <SupplierDashboard     inventory={inventory} setActiveTab={setActiveTab} currentUser={currentUser} onMessageFarmer={requestVetContact} />}
               {role === 'Buyer'     && <BuyerDashboard     setActiveTab={setActiveTab} currentUser={currentUser} onMessageSeller={requestVetContact} />}
-              {role === 'Police'       && <PoliceDashboard       notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} />}
+              {role === 'Police'       && <PoliceDashboard       notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} onMessageFarmer={requestVetContact} />}
             </ErrorBoundary>
           )}
           {activeTab === 'profile'     && <ErrorBoundary><AnimalProfile animals={animals} onAddAnimal={addAnimal} onAddAnimalPhotos={addAnimalPhotos} auditLog={auditLog} currentUser={currentUser} onListAnimal={handleListAnimal} onAnimalsChanged={() => loadUserData(currentUser)} /></ErrorBoundary>}

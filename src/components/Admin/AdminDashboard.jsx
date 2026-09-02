@@ -482,17 +482,147 @@ const ListingsTab = ({ currentUser }) => {
   );
 };
 
+const OutbreakDetailModal = ({ outbreakId, currentUser, onClose }) => {
+  const [data, setData] = useState(undefined); // undefined = loading
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/admin/outbreaks/${outbreakId}`, { headers: { Authorization: `Bearer ${currentUser.token}` } });
+        if (res.ok && !cancelled) setData(await res.json());
+        else if (!cancelled) setData(null);
+      } catch { if (!cancelled) setData(null); }
+    })();
+    return () => { cancelled = true; };
+  }, [outbreakId, currentUser.token]);
+
+  return (
+    <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-gray-900/80 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white w-full max-w-lg max-h-[85vh] overflow-y-auto overflow-x-hidden rounded-3xl shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-4 flex items-center justify-between gap-2 z-10">
+          <div className="min-w-0">
+            <h3 className="text-sm font-black text-gray-900 truncate">{data?.disease_name || 'Outbreak Report'}</h3>
+            <p className="text-[10px] text-gray-400 font-bold uppercase truncate">Outbreak #{outbreakId}{data ? ` · ${data.status}` : ''}</p>
+          </div>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-700 transition shrink-0"><X size={18} /></button>
+        </div>
+        <div className="p-4 sm:p-6 space-y-6 min-w-0">
+          {data === undefined ? (
+            <p className="text-xs text-gray-400 font-medium italic text-center py-10">Loading…</p>
+          ) : data === null ? (
+            <p className="text-xs text-red-500 font-bold text-center py-10">Could not load this outbreak report.</p>
+          ) : (
+            <>
+              <section>
+                <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Report</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 min-w-0">
+                  <DetailRow icon={Shield} label="Status" value={data.status} />
+                  <DetailRow icon={MapPin} label="Location" value={[data.district, data.province].filter(Boolean).join(', ')} />
+                  <DetailRow label="Affected Farms" value={data.affected_farms} />
+                  <DetailRow label="Animals at Risk" value={data.animals_at_risk} />
+                  <DetailRow label="Details" value={data.details} />
+                  <DetailRow icon={Calendar} label="Reported" value={data.created_at ? new Date(data.created_at).toLocaleString() : null} />
+                  <DetailRow icon={Calendar} label="Resolved" value={data.resolved_at ? new Date(data.resolved_at).toLocaleString() : null} />
+                </div>
+              </section>
+              <section>
+                <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Reported By</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 min-w-0">
+                  <DetailRow label="Name" value={data.reported_by_name} />
+                  <DetailRow label="Role" value={data.reported_by_role} />
+                  <DetailRow label="Phone" value={data.reported_by_phone} />
+                </div>
+              </section>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const CooperativeDetailModal = ({ coopId, currentUser, onClose }) => {
+  const [data, setData] = useState(undefined); // undefined = loading
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${API}/admin/cooperatives/${coopId}`, { headers: { Authorization: `Bearer ${currentUser.token}` } });
+        if (res.ok && !cancelled) setData(await res.json());
+        else if (!cancelled) setData(null);
+      } catch { if (!cancelled) setData(null); }
+    })();
+    return () => { cancelled = true; };
+  }, [coopId, currentUser.token]);
+
+  return (
+    <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-gray-900/80 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white w-full max-w-lg max-h-[85vh] overflow-y-auto overflow-x-hidden rounded-3xl shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-4 flex items-center justify-between gap-2 z-10">
+          <div className="min-w-0">
+            <h3 className="text-sm font-black text-gray-900 truncate">{data?.cooperative?.name || 'Cooperative'}</h3>
+            <p className="text-[10px] text-gray-400 font-bold uppercase truncate">Cooperative #{coopId}{data?.members ? ` · ${data.members.length} member${data.members.length !== 1 ? 's' : ''}` : ''}</p>
+          </div>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-700 transition shrink-0"><X size={18} /></button>
+        </div>
+        <div className="p-4 sm:p-6 space-y-6 min-w-0">
+          {data === undefined ? (
+            <p className="text-xs text-gray-400 font-medium italic text-center py-10">Loading…</p>
+          ) : data === null || !data.cooperative ? (
+            <p className="text-xs text-red-500 font-bold text-center py-10">Could not load this cooperative.</p>
+          ) : (
+            <>
+              <section>
+                <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Cooperative</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 min-w-0">
+                  <DetailRow icon={MapPin} label="Location" value={[data.cooperative.district, data.cooperative.province].filter(Boolean).join(', ')} />
+                  <DetailRow label="Dip Tank" value={data.cooperative.dip_tank_location} />
+                  <DetailRow label="Description" value={data.cooperative.description} />
+                  <DetailRow icon={Calendar} label="Founded" value={data.cooperative.created_at ? new Date(data.cooperative.created_at).toLocaleString() : null} />
+                  <DetailRow label="Founder" value={data.cooperative.created_by_name} />
+                  <DetailRow label="Founder Phone" value={data.cooperative.created_by_phone} />
+                </div>
+              </section>
+              <section>
+                <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Members ({data.members.length})</h4>
+                {data.members.length === 0 ? (
+                  <p className="text-[11px] text-gray-400 italic font-medium py-2">No members.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {data.members.map(m => (
+                      <div key={m.user_id} className="flex items-center justify-between gap-2 py-1.5 border-b border-gray-50 last:border-0">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-gray-800 truncate">{m.full_name}</p>
+                          <p className="text-[10px] text-gray-400 font-medium">{m.phone}</p>
+                        </div>
+                        <span className={`shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${m.role === 'admin' ? 'bg-pfuma-green/10 text-pfuma-green' : 'bg-gray-100 text-gray-500'}`}>{m.role}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ACTIVITY_ICON = { signup: Users, listing: ShoppingCart, outbreak: AlertTriangle, cooperative: Handshake };
 
-// Only signup/listing entries link to a real detail view for now — outbreak
-// and cooperative records don't have an admin detail screen to open yet.
-const ACTIVITY_CLICKABLE = { signup: true, listing: true };
+// Every activity type now opens a real detail view.
+const ACTIVITY_CLICKABLE = { signup: true, listing: true, outbreak: true, cooperative: true };
 
 const ActivityTab = ({ currentUser }) => {
   const [feed, setFeed] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewingUser, setViewingUser] = useState(null);
   const [viewingListingId, setViewingListingId] = useState(null);
+  const [viewingOutbreakId, setViewingOutbreakId] = useState(null);
+  const [viewingCoopId, setViewingCoopId] = useState(null);
   const [openingId, setOpeningId] = useState(null);
 
   useEffect(() => {
@@ -508,6 +638,8 @@ const ActivityTab = ({ currentUser }) => {
   const openItem = async (item) => {
     if (!item.id || !ACTIVITY_CLICKABLE[item.type]) return;
     if (item.type === 'listing') { setViewingListingId(item.id); return; }
+    if (item.type === 'outbreak') { setViewingOutbreakId(item.id); return; }
+    if (item.type === 'cooperative') { setViewingCoopId(item.id); return; }
     // signup — fetch the full user record, same one the Users tab shows
     setOpeningId(item.id);
     try {
@@ -520,7 +652,7 @@ const ActivityTab = ({ currentUser }) => {
   return (
     <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
       <h3 className="text-sm font-black text-gray-800 mb-1">Recent Activity — Platform-Wide</h3>
-      <p className="text-[11px] text-gray-400 font-medium mb-4">Everything happening across every account, most recent first. Signups and listings open full details.</p>
+      <p className="text-[11px] text-gray-400 font-medium mb-4">Everything happening across every account, most recent first. Click any entry to open its full details.</p>
       {loading ? (
         <p className="text-xs text-gray-400 font-medium italic text-center py-10">Loading…</p>
       ) : feed.length === 0 ? (
@@ -550,6 +682,8 @@ const ActivityTab = ({ currentUser }) => {
 
       {viewingUser && <UserDetailModal user={viewingUser} currentUser={currentUser} onClose={() => setViewingUser(null)} />}
       {viewingListingId && <ListingDetailModal listingId={viewingListingId} currentUser={currentUser} onClose={() => setViewingListingId(null)} />}
+      {viewingOutbreakId && <OutbreakDetailModal outbreakId={viewingOutbreakId} currentUser={currentUser} onClose={() => setViewingOutbreakId(null)} />}
+      {viewingCoopId && <CooperativeDetailModal coopId={viewingCoopId} currentUser={currentUser} onClose={() => setViewingCoopId(null)} />}
     </div>
   );
 };

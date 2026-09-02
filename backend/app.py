@@ -2757,8 +2757,8 @@ def list_animal_transfers():
     sql = """
         SELECT at.id, at.transfer_code, at.status, at.created_at, at.expires_at, at.claimed_at,
                a.id AS animal_id, a.name AS animal_name, a.species, a.tag_id, a.brand_id,
-               seller.full_name AS seller_name, seller.phone AS seller_phone, seller.province AS seller_province,
-               buyer.full_name AS buyer_name, buyer.phone AS buyer_phone
+               seller.id AS seller_id, seller.full_name AS seller_name, seller.phone AS seller_phone, seller.province AS seller_province,
+               buyer.id AS buyer_id, buyer.full_name AS buyer_name, buyer.phone AS buyer_phone
         FROM animal_transfers at
         JOIN animals a ON at.animal_id = a.id
         JOIN users seller ON at.from_owner_id = seller.id
@@ -4876,6 +4876,55 @@ def admin_get_listing(listing_id):
 
     db.close()
     return jsonify({"listing": listing, "animal": animal, "clearance": clearance})
+
+
+@app.route('/admin/outbreaks/<int:outbreak_id>', methods=['GET'])
+@require_auth
+@require_admin
+def admin_get_outbreak(outbreak_id):
+    """Full picture of one outbreak report for the Activity feed's
+    click-through — the report itself plus who filed it, so an admin can
+    follow up without hunting through the Vet dashboard."""
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT o.*, u.full_name AS reported_by_name, u.phone AS reported_by_phone,
+               u.role AS reported_by_role
+        FROM outbreaks o JOIN users u ON o.reported_by = u.id
+        WHERE o.id=%s
+    """, (outbreak_id,))
+    outbreak = c.fetchone()
+    db.close()
+    if not outbreak:
+        return jsonify({"error": "Outbreak not found"}), 404
+    return jsonify(outbreak)
+
+
+@app.route('/admin/cooperatives/<int:coop_id>', methods=['GET'])
+@require_auth
+@require_admin
+def admin_get_cooperative(coop_id):
+    """Full picture of one cooperative for the Activity feed's
+    click-through — the cooperative itself, who founded it, and its
+    member roster."""
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT co.*, u.full_name AS created_by_name, u.phone AS created_by_phone
+        FROM cooperatives co JOIN users u ON co.created_by = u.id
+        WHERE co.id=%s
+    """, (coop_id,))
+    coop = c.fetchone()
+    if not coop:
+        db.close(); return jsonify({"error": "Cooperative not found"}), 404
+    c.execute("""
+        SELECT cm.role, cm.joined_at, u.id AS user_id, u.full_name, u.phone
+        FROM cooperative_members cm JOIN users u ON cm.user_id = u.id
+        WHERE cm.cooperative_id=%s ORDER BY cm.role, u.full_name
+    """, (coop_id,))
+    members = c.fetchall()
+    db.close()
+    return jsonify({"cooperative": coop, "members": members})
 
 
 @app.route('/admin/users/<int:user_id>/status', methods=['PATCH'])
