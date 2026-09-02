@@ -161,7 +161,13 @@ const HealthPassport = ({ animal, auditLog, currentUser, onClose }) => {
               {certData ? (
                 <>
                   <p className="text-xs font-black text-gray-800">Certificate issued ✅</p>
-                  <p className="text-[10px] text-gray-400 font-medium mt-1 mb-3">Code: {certData.verification_code}</p>
+                  <p className="text-[10px] text-gray-400 font-medium mt-1">Code: {certData.verification_code}</p>
+                  <p className="text-[10px] text-gray-400 font-medium break-all mb-3">
+                    Share this link with your bank or insurer:{' '}
+                    <a href={`/verify/certificate/${certData.verification_code}`} target="_blank" rel="noreferrer" className="text-pfuma-green font-black hover:underline">
+                      {window.location.origin}/verify/certificate/{certData.verification_code}
+                    </a>
+                  </p>
                   <button onClick={handlePrintCertificate} className="w-full py-2 bg-pfuma-green text-white rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-green-700 transition">
                     Print Certificate
                   </button>
@@ -266,9 +272,12 @@ const HealthPassport = ({ animal, auditLog, currentUser, onClose }) => {
           <div className="border-t border-gray-100 pt-6">
             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Independent Verification</p>
             <p className="text-sm font-black text-gray-800">Code: {certData.verification_code}</p>
-            <p className="text-[11px] text-gray-500 font-medium mt-1">
+            <p className="text-[11px] text-gray-500 font-medium mt-1 mb-2">
               A bank, insurer, or any third party can verify this certificate at any time — no PFUMA account required — by
-              checking code <strong>{certData.verification_code}</strong> against PFUMA's public certificate lookup.
+              visiting the link below and entering the code above.
+            </p>
+            <p className="text-xs font-black text-pfuma-green break-all">
+              {window.location.origin}/verify/certificate/{certData.verification_code}
             </p>
           </div>
         </div>
