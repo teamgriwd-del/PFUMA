@@ -142,6 +142,16 @@ const UserDetailModal = ({ user, currentUser, onClose }) => {
             </section>
           )}
 
+          {user.institution_type && (
+            <section>
+              <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Institution Details</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 min-w-0">
+                <DetailRow label="Institution Type" value={user.institution_type} />
+                <DetailRow label="Registration / License No." value={user.business_reg} />
+              </div>
+            </section>
+          )}
+
           {(user.badge_number || user.station) && (
             <section>
               <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Police Details</h4>

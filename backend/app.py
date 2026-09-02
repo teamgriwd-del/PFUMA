@@ -80,7 +80,7 @@ ADMIN_PROVISIONED_ROLES = {'Police'}
 # above — or the hidden Admin oversight role) is rejected with the same
 # generic message, so probing the API with an unexpected role value never
 # confirms whether that role even exists.
-ALLOWED_SELF_SIGNUP_ROLES = {'Farmer', 'Veterinarian', 'Supplier', 'Buyer'}
+ALLOWED_SELF_SIGNUP_ROLES = {'Farmer', 'Veterinarian', 'Supplier', 'Buyer', 'Institution'}
 
 # Stock photo used only when a Farmer skips the photo-upload step — mirrors
 # src/App.jsx's IMAGE_BY_SPECIES so web/mobile show the same fallback.
@@ -354,6 +354,7 @@ def ensure_schema():
     add_column_if_missing('users', 'next_of_kin_national_id', "next_of_kin_national_id VARCHAR(20)")
     add_column_if_missing('users', 'next_of_kin_relationship', "next_of_kin_relationship VARCHAR(60)")
     add_column_if_missing('users', 'next_of_kin_verification_status', "next_of_kin_verification_status ENUM('pending','verified') NOT NULL DEFAULT 'pending'")
+    add_column_if_missing('users', 'institution_type', "institution_type ENUM('Bank','Insurer','Other') NULL")
 
     add_column_if_missing('marketplace_listings', 'photo_url', "photo_url VARCHAR(300)")
     add_column_if_missing('marketplace_listings', 'sold_at', "sold_at TIMESTAMP NULL")
@@ -383,6 +384,34 @@ def ensure_schema():
             c.execute("ALTER TABLE users MODIFY COLUMN role ENUM('Farmer','Veterinarian','Supplier','Buyer','Police','Admin') NOT NULL")
     except Exception as e:
         print(f"[WARNING] could not migrate role 'Retailer' -> 'Buyer': {e}")
+
+    # Widen the role ENUM to admit 'Institution' (banks/insurers verifying
+    # livestock valuation certificates as loan/policy collateral) — a pure
+    # addition, not a rename, so no data migration is needed, just the ALTER.
+    try:
+        c.execute("""
+            SELECT COLUMN_TYPE AS t FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'users' AND column_name = 'role'
+        """)
+        role_col = c.fetchone()
+        if role_col and 'Institution' not in role_col['t']:
+            c.execute("ALTER TABLE users MODIFY COLUMN role ENUM('Farmer','Veterinarian','Supplier','Buyer','Police','Admin','Institution') NOT NULL")
+    except Exception as e:
+        print(f"[WARNING] could not widen role ENUM to add 'Institution': {e}")
+
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS certificate_lookups (
+          id                   INT AUTO_INCREMENT PRIMARY KEY,
+          certificate_id       INT NOT NULL,
+          institution_id       INT NOT NULL,
+          flagged_as_collateral BOOLEAN NOT NULL DEFAULT FALSE,
+          notes                VARCHAR(300),
+          created_at           TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE KEY uniq_cert_institution (certificate_id, institution_id),
+          FOREIGN KEY (certificate_id) REFERENCES valuation_certificates(id) ON DELETE CASCADE,
+          FOREIGN KEY (institution_id) REFERENCES users(id)                 ON DELETE CASCADE
+        )
+    """)
 
     db.commit()
     db.close()
@@ -622,12 +651,17 @@ def register():
         return jsonify({"error": f"You already have a {role} account with this phone number. Log in, or sign up with a different role."}), 409
 
     password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    institution_type = d.get('institution_type') or None
+    if institution_type and institution_type not in ('Bank', 'Insurer', 'Other'):
+        db.close(); return jsonify({"error": "institution_type must be 'Bank', 'Insurer', or 'Other'"}), 400
+
     c.execute("""
         INSERT INTO users (full_name, phone, national_id_number, email, role, org_name, province, district, address,
             farm_size_ha, species_farmed, license_number, speciality, business_reg, supply_categories,
             trading_areas, password_hash, verification_status,
-            next_of_kin_name, next_of_kin_phone, next_of_kin_national_id, next_of_kin_relationship)
-        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pending',%s,%s,%s,%s)
+            next_of_kin_name, next_of_kin_phone, next_of_kin_national_id, next_of_kin_relationship,
+            institution_type)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pending',%s,%s,%s,%s,%s)
     """, (
         full_name, phone, national_id, d.get('email', ''), role,
         d.get('org_name', ''), d.get('province', ''), d.get('district', ''), d.get('address', ''),
@@ -637,6 +671,7 @@ def register():
         password_hash,
         d.get('next_of_kin_name', ''), d.get('next_of_kin_phone', ''),
         d.get('next_of_kin_national_id', ''), d.get('next_of_kin_relationship', ''),
+        institution_type,
     ))
     user_id = c.lastrowid
 
@@ -3624,7 +3659,8 @@ def verify_certificate(code):
     db = get_db()
     c = db.cursor()
     c.execute("""
-        SELECT vc.estimated_value, vc.created_at, a.id AS animal_id, a.name, a.species, a.breed, a.tag_id,
+        SELECT vc.id AS certificate_id, vc.estimated_value, vc.created_at,
+               a.id AS animal_id, a.name, a.species, a.breed, a.tag_id,
                u.full_name AS owner_name
         FROM valuation_certificates vc
         JOIN animals a ON vc.animal_id = a.id
@@ -3632,11 +3668,114 @@ def verify_certificate(code):
         WHERE vc.verification_code = %s
     """, (code,))
     row = c.fetchone()
-    db.close()
     if not row:
+        db.close()
         return jsonify({"valid": False, "error": "No certificate found for this code"}), 404
+    # Whether ANY institution has flagged this certificate as held collateral
+    # — surfaced as a plain boolean, never which institution, so one lender's
+    # book is never visible to another.
+    c.execute("SELECT COUNT(*) AS n FROM certificate_lookups WHERE certificate_id=%s AND flagged_as_collateral=TRUE", (row['certificate_id'],))
+    row['already_pledged'] = c.fetchone()['n'] > 0
+    db.close()
     row['valid'] = True
     return jsonify(row)
+
+
+# ── INSTITUTION (Bank/Insurer certificate ledger) ────────────────
+@app.route('/institution/certificates/<code>', methods=['GET'])
+@require_auth
+@require_role('Institution')
+@require_verified
+def institution_lookup_certificate(code):
+    """Same lookup as the public verify_certificate(), but tied to the
+    institution's own account: records a certificate_lookups row so it
+    shows up in their ledger (GET /institution/certificates/mine), and is
+    the prerequisite for flagging it as held collateral below."""
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT vc.id AS certificate_id, vc.estimated_value, vc.created_at,
+               a.id AS animal_id, a.name, a.species, a.breed, a.tag_id,
+               u.full_name AS owner_name
+        FROM valuation_certificates vc
+        JOIN animals a ON vc.animal_id = a.id
+        JOIN users u ON a.owner_id = u.id
+        WHERE vc.verification_code = %s
+    """, (code,))
+    row = c.fetchone()
+    if not row:
+        db.close()
+        return jsonify({"valid": False, "error": "No certificate found for this code"}), 404
+
+    c.execute("""
+        INSERT INTO certificate_lookups (certificate_id, institution_id)
+        VALUES (%s,%s)
+        ON DUPLICATE KEY UPDATE certificate_id = certificate_id
+    """, (row['certificate_id'], g.current_user['id']))
+
+    c.execute("SELECT COUNT(*) AS n FROM certificate_lookups WHERE certificate_id=%s AND flagged_as_collateral=TRUE", (row['certificate_id'],))
+    row['already_pledged'] = c.fetchone()['n'] > 0
+    c.execute("SELECT flagged_as_collateral FROM certificate_lookups WHERE certificate_id=%s AND institution_id=%s", (row['certificate_id'], g.current_user['id']))
+    row['flagged_by_me'] = bool(c.fetchone()['flagged_as_collateral'])
+    db.commit()
+    db.close()
+    row['valid'] = True
+    return jsonify(row)
+
+
+@app.route('/institution/certificates/<code>/flag', methods=['POST'])
+@require_auth
+@require_role('Institution')
+@require_verified
+def institution_flag_certificate(code):
+    """Marks a certificate as held collateral by this institution. Requires
+    having looked it up first (institution_lookup_certificate above) — same
+    order a real check-then-pledge workflow follows, and it means the
+    certificate_lookups row this updates is guaranteed to already exist."""
+    d = request.json or {}
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT id FROM valuation_certificates WHERE verification_code=%s", (code,))
+    cert = c.fetchone()
+    if not cert:
+        db.close(); return jsonify({"error": "No certificate found for this code"}), 404
+    c.execute("""
+        UPDATE certificate_lookups SET flagged_as_collateral=TRUE, notes=%s
+        WHERE certificate_id=%s AND institution_id=%s
+    """, ((d.get('notes') or '').strip() or None, cert['id'], g.current_user['id']))
+    if c.rowcount == 0:
+        db.close(); return jsonify({"error": "Look up this certificate before flagging it"}), 409
+    db.commit()
+    db.close()
+    return jsonify({"message": "Certificate flagged as held collateral ✅"})
+
+
+@app.route('/institution/certificates/mine', methods=['GET'])
+@require_auth
+@require_role('Institution')
+def institution_certificate_ledger():
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT cl.flagged_as_collateral, cl.notes, cl.created_at AS looked_up_at,
+               vc.estimated_value, vc.verification_code, vc.created_at AS issued_at,
+               a.id AS animal_id, a.name AS animal_name, a.species, a.breed,
+               u.full_name AS owner_name
+        FROM certificate_lookups cl
+        JOIN valuation_certificates vc ON cl.certificate_id = vc.id
+        JOIN animals a ON vc.animal_id = a.id
+        JOIN users u ON a.owner_id = u.id
+        WHERE cl.institution_id = %s
+        ORDER BY cl.created_at DESC
+    """, (g.current_user['id'],))
+    rows = c.fetchall()
+    db.close()
+    # MySQL returns a BOOLEAN column as 0/1, not a JSON boolean — cast so the
+    # frontend can use it directly in a `{cond && <Badge/>}` render without a
+    # `0 && ...` falling through and printing a literal "0".
+    for r in rows:
+        r['flagged_as_collateral'] = bool(r['flagged_as_collateral'])
+    return jsonify(rows)
 
 
 # ── BUYER "MY PURCHASES" ─────────────────────────────────────────

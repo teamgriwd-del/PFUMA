@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS users (
   phone         VARCHAR(20)  NOT NULL,
   national_id_number VARCHAR(20),   -- Zimbabwe national ID, e.g. 63-1234567A00 (format-checked, see backend/app.py)
   email         VARCHAR(120),
-  role          ENUM('Farmer','Veterinarian','Supplier','Buyer','Police','Admin') NOT NULL,
+  role          ENUM('Farmer','Veterinarian','Supplier','Buyer','Police','Admin','Institution') NOT NULL,
   org_name      VARCHAR(120),          -- farm/business/practice name
   province      VARCHAR(60),
   district      VARCHAR(60),
@@ -33,6 +33,8 @@ CREATE TABLE IF NOT EXISTS users (
   badge_number   VARCHAR(40),
   station        VARCHAR(120),
   jurisdiction_province VARCHAR(60),
+  -- Institution-specific (bank/insurer verifying valuation certificates)
+  institution_type ENUM('Bank','Insurer','Other') NULL,
   -- Auth & signup verification
   password_hash  VARCHAR(255),
   verification_status ENUM('pending','verified','rejected') DEFAULT 'pending',
@@ -57,7 +59,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- ensure_schema() runs the real widen → UPDATE → narrow migration for that
 -- automatically on every startup, so a fresh manual run of just this file is
 -- the only place this simple form is safe.
-ALTER TABLE users MODIFY COLUMN role ENUM('Farmer','Veterinarian','Supplier','Buyer','Police','Admin') NOT NULL;
+ALTER TABLE users MODIFY COLUMN role ENUM('Farmer','Veterinarian','Supplier','Buyer','Police','Admin','Institution') NOT NULL;
 
 -- ── ANIMALS ──────────────────────────────────────────────────
 -- Arnold's web app animal registry, available via API.
@@ -716,6 +718,23 @@ CREATE TABLE IF NOT EXISTS valuation_certificates (
   FOREIGN KEY (animal_id)         REFERENCES animals(id) ON DELETE CASCADE,
   FOREIGN KEY (owner_id_at_issue) REFERENCES users(id)   ON DELETE CASCADE,
   FOREIGN KEY (issued_by)         REFERENCES users(id)   ON DELETE CASCADE
+);
+
+-- ── CERTIFICATE LOOKUPS (Institution ledger + collateral flagging) ──
+-- One row per (certificate, institution) pair — an Institution's own record
+-- of what they've checked, plus whether they've flagged it as held collateral
+-- so a second lender/insurer sees it's already pledged without either side
+-- exposing who holds it.
+CREATE TABLE IF NOT EXISTS certificate_lookups (
+  id                    INT AUTO_INCREMENT PRIMARY KEY,
+  certificate_id        INT NOT NULL,
+  institution_id        INT NOT NULL,
+  flagged_as_collateral BOOLEAN NOT NULL DEFAULT FALSE,
+  notes                 VARCHAR(300),
+  created_at            TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_cert_institution (certificate_id, institution_id),
+  FOREIGN KEY (certificate_id) REFERENCES valuation_certificates(id) ON DELETE CASCADE,
+  FOREIGN KEY (institution_id) REFERENCES users(id)                 ON DELETE CASCADE
 );
 
 -- ── ANIMAL TRANSFERS (off-platform sales) ────────────────────

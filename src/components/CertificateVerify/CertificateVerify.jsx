@@ -51,6 +51,11 @@ const CertificateVerify = ({ code }) => {
                 </div>
               </div>
               <div className="p-6 space-y-4">
+                {result.already_pledged && (
+                  <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-xl px-3 py-2.5 text-[11px] font-black">
+                    <ShieldX size={14} className="shrink-0" /> Already flagged as held collateral by a PFUMA-verified institution — confirm with the farmer before relying on this certificate.
+                  </div>
+                )}
                 <div className="bg-gray-50 rounded-2xl p-5 text-center">
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Certified Estimated Value</p>
                   <p className="text-3xl font-black text-gray-900">USD {Number(result.estimated_value).toLocaleString()}</p>

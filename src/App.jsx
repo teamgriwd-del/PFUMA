@@ -26,7 +26,7 @@ import {
   Zap, Clock, ArrowRight, Tag, Pill, MapPin, FileText,
   RefreshCw, DollarSign, Target, Box, PhoneCall, Star, Wheat, Store,
   Sprout, Check, Syringe, Shield, UserPlus, X, Menu, Eye, EyeOff, Handshake, Radio, FlaskConical, Camera,
-  ShieldAlert, Pencil, BookOpen, Plus,
+  ShieldAlert, Pencil, BookOpen, Plus, Landmark, Search,
 } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis } from 'recharts';
 import './App.css';
@@ -2411,6 +2411,186 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
   );
 };
 
+// ── INSTITUTION DASHBOARD (Bank/Insurer) ────────────────────────────────────
+const InstitutionDashboard = ({ currentUser }) => {
+  const [code, setCode] = useState('');
+  const [result, setResult] = useState(null); // null = nothing looked up yet
+  const [lookupBusy, setLookupBusy] = useState(false);
+  const [lookupError, setLookupError] = useState('');
+  const [flagBusy, setFlagBusy] = useState(false);
+  const [ledger, setLedger] = useState([]);
+  const [ledgerLoading, setLedgerLoading] = useState(true);
+
+  const loadLedger = useCallback(async () => {
+    if (!currentUser?.token) return;
+    try {
+      const res = await fetch(`${API}/institution/certificates/mine`, { headers: { Authorization: `Bearer ${currentUser.token}` } });
+      if (res.ok) setLedger(await res.json());
+    } catch { /* offline — leave empty, no fake fallback */ }
+    setLedgerLoading(false);
+  }, [currentUser?.token]);
+
+  useEffect(() => { loadLedger(); }, [loadLedger]);
+
+  const lookup = async (e) => {
+    e.preventDefault();
+    if (!code.trim()) return;
+    setLookupBusy(true); setLookupError(''); setResult(null);
+    try {
+      const res = await fetch(`${API}/institution/certificates/${encodeURIComponent(code.trim())}`, { headers: { Authorization: `Bearer ${currentUser.token}` } });
+      const data = await res.json();
+      if (!res.ok) { setLookupError(data.error || 'Could not find this certificate.'); setLookupBusy(false); return; }
+      setResult(data);
+      await loadLedger();
+    } catch { setLookupError('Could not reach the PFUMA API.'); }
+    setLookupBusy(false);
+  };
+
+  const flagCollateral = async () => {
+    if (!result) return;
+    setFlagBusy(true);
+    try {
+      const res = await fetch(`${API}/institution/certificates/${encodeURIComponent(code.trim())}/flag`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentUser.token}` },
+        body: JSON.stringify({}),
+      });
+      if (res.ok) {
+        setResult(r => ({ ...r, flagged_by_me: true, already_pledged: true }));
+        await loadLedger();
+      }
+    } catch { /* offline */ }
+    setFlagBusy(false);
+  };
+
+  return (
+    <div className="p-6 bg-pfuma-cream space-y-6 text-left overflow-y-auto h-full">
+
+      {/* Role explanation */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-teal-800 rounded-3xl p-6 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 80% 50%, #fff 0%, transparent 60%)' }} aria-hidden="true" />
+          <div className="relative z-10">
+            <p className="text-teal-200 text-xs font-black uppercase tracking-[3px] mb-1">{greet()}, {currentUser?.institutionType || 'Institution'}</p>
+            <h2 className="text-xl font-black text-white leading-tight">Certificate Verification</h2>
+            <p className="text-teal-100/80 text-sm font-medium mt-1">
+              {ledger.length} certificate{ledger.length !== 1 ? 's' : ''} checked · {ledger.filter(l => l.flagged_as_collateral).length} flagged as collateral
+            </p>
+          </div>
+        </div>
+        <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
+          <p className="text-[10px] font-black text-teal-700 uppercase tracking-widest mb-2">Your Role on PFUMA</p>
+          <p className="text-sm font-black text-gray-800 mb-2">You verify livestock as loan/insurance collateral</p>
+          <p className="text-[11px] text-gray-500 font-medium leading-relaxed">
+            A farmer shares you a certificate code for an animal they're offering as collateral. Look it up here — the check is saved to your ledger, and flagging it as held collateral warns any other lender who checks the same certificate.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <div className="col-span-2 space-y-5">
+          {/* Lookup box */}
+          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+            <h3 className="text-sm font-black text-gray-800 mb-1">Look Up a Certificate</h3>
+            <p className="text-[11px] text-gray-400 font-medium mb-4">Enter the code from the certificate the farmer shared with you.</p>
+            <form onSubmit={lookup} className="flex gap-2">
+              <input
+                value={code} onChange={e => setCode(e.target.value)}
+                placeholder="e.g. 51a18e001813" maxLength={20}
+                className="flex-1 min-w-0 px-3 py-2.5 bg-gray-50 rounded-xl border-2 border-transparent focus:border-teal-700 outline-none font-black text-sm text-center tracking-[0.15em] text-gray-800 placeholder:text-gray-300 placeholder:tracking-normal placeholder:font-medium"
+              />
+              <button type="submit" disabled={lookupBusy || !code.trim()} className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-teal-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-teal-800 transition disabled:opacity-50">
+                <Search size={14} /> {lookupBusy ? '…' : 'Verify'}
+              </button>
+            </form>
+            {lookupError && <p className="text-[11px] text-red-500 font-bold mt-3">{lookupError}</p>}
+
+            {result && (
+              <div className="mt-4 rounded-2xl border-2 border-teal-100 bg-teal-50/50 p-5">
+                {result.already_pledged && (
+                  <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-xl px-3 py-2.5 mb-4 text-[11px] font-black">
+                    <ShieldAlert size={14} className="shrink-0" /> Already flagged as held collateral{result.flagged_by_me ? ' by you' : ' by another institution'} — verify with the farmer before relying on it.
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-4">
+                  {[
+                    ['Animal', result.name],
+                    ['Species / Breed', `${result.species}${result.breed ? ' — ' + result.breed : ''}`],
+                    ['Owner', result.owner_name],
+                    ['Certified Value', `USD ${Number(result.estimated_value).toLocaleString()}`],
+                  ].map(([label, value]) => (
+                    <div key={label}>
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">{label}</p>
+                      <p className="text-sm font-black text-gray-800">{value}</p>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={flagCollateral} disabled={flagBusy || result.flagged_by_me}
+                  className="w-full mt-4 py-2.5 bg-gray-800 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-900 transition disabled:opacity-50"
+                >
+                  {result.flagged_by_me ? 'Flagged as Held Collateral ✓' : flagBusy ? 'Flagging…' : 'Flag as Held Collateral'}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Ledger */}
+          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+            <h3 className="text-sm font-black text-gray-800 mb-1">My Lookups</h3>
+            <p className="text-[11px] text-gray-400 font-medium mb-4">Every certificate you've checked, most recent first.</p>
+            {ledgerLoading ? (
+              <p className="text-xs text-gray-400 font-medium italic text-center py-8">Loading…</p>
+            ) : ledger.length === 0 ? (
+              <div className="text-center py-10 border-2 border-dashed border-gray-200 rounded-2xl">
+                <Landmark size={28} className="mx-auto text-gray-300 mb-2" />
+                <p className="text-sm font-black text-gray-400">No certificates checked yet</p>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {ledger.map((l, i) => (
+                  <div key={`${l.verification_code}-${i}`} className="flex items-center gap-3 p-3.5 bg-gray-50 rounded-xl">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-black text-gray-800 truncate">{l.animal_name} <span className="text-gray-400 font-medium">· {l.species}</span></p>
+                      <p className="text-[10px] text-gray-400 font-medium">{l.owner_name} · checked {new Date(l.looked_up_at).toLocaleDateString()}</p>
+                    </div>
+                    <p className="text-xs font-black text-teal-700 shrink-0">${Number(l.estimated_value).toLocaleString()}</p>
+                    {!!l.flagged_as_collateral && (
+                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full uppercase shrink-0 bg-teal-100 text-teal-700">Flagged</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="col-span-1 space-y-5">
+          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+            <h3 className="text-sm font-black text-gray-800 mb-3">How It Works</h3>
+            <div className="space-y-3">
+              {[
+                { n: '1', t: 'Get the Code', d: 'A farmer shares the certificate code for an animal offered as collateral' },
+                { n: '2', t: 'Verify It', d: 'Look it up above — animal, owner, and certified value confirmed instantly' },
+                { n: '3', t: 'Check for Conflicts', d: 'A red warning means it’s already pledged elsewhere' },
+                { n: '4', t: 'Flag It', d: 'Mark it as held collateral so the next lender sees it’s taken' },
+              ].map(s => (
+                <div key={s.n} className="flex items-start gap-3">
+                  <div className="w-5 h-5 bg-teal-700 rounded-full flex items-center justify-center text-[9px] font-black text-white shrink-0 mt-0.5">{s.n}</div>
+                  <div>
+                    <p className="text-[11px] font-black text-gray-800">{s.t}</p>
+                    <p className="text-[10px] text-gray-400 font-medium">{s.d}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── NAV config ─────────────────────────────────────────────────────────────
 const NAV_SECTIONS = {
   Farmer: [
@@ -2535,6 +2715,20 @@ const NAV_SECTIONS = {
       section: 'Surveillance',
       items: [
         { tab: 'iot',         icon: Radio,           label: 'IoT Monitor',   desc: 'Theft & geofence alerts' },
+      ]
+    },
+  ],
+  Institution: [
+    {
+      section: 'Overview',
+      items: [
+        { tab: 'dashboard',   icon: LayoutDashboard, label: 'Dashboard',     desc: 'Certificate lookups & ledger' },
+      ]
+    },
+    {
+      section: 'Connect',
+      items: [
+        { tab: 'vet',         icon: MessageSquare,   label: 'Messenger',     desc: 'Vets, suppliers, farmers & buyers' },
       ]
     },
   ],
@@ -3189,6 +3383,7 @@ function App() {
               {role === 'Supplier'     && <SupplierDashboard     inventory={inventory} setActiveTab={setActiveTab} currentUser={currentUser} onMessageFarmer={requestVetContact} onAddStock={openMarketplacePostForm} />}
               {role === 'Buyer'     && <BuyerDashboard     setActiveTab={setActiveTab} currentUser={currentUser} onMessageSeller={requestVetContact} />}
               {role === 'Police'       && <PoliceDashboard       notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} onMessageFarmer={requestVetContact} />}
+              {role === 'Institution'  && <InstitutionDashboard  currentUser={currentUser} />}
             </ErrorBoundary>
           )}
           {activeTab === 'profile'     && <ErrorBoundary><AnimalProfile animals={animals} onAddAnimal={addAnimal} onAddAnimalPhotos={addAnimalPhotos} auditLog={auditLog} currentUser={currentUser} onListAnimal={handleListAnimal} onAnimalsChanged={() => loadUserData(currentUser)} /></ErrorBoundary>}

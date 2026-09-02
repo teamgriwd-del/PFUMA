@@ -3,7 +3,7 @@ import pfumaMark from '../../assets/pfuma-mark.png';
 import {
   Sprout, ShoppingBag, Truck, ArrowRight, ArrowLeft,
   Phone, Mail, MapPin, Building2, CheckCircle, Stethoscope,
-  Lock, Upload, AlertTriangle, CreditCard, Eye, EyeOff,
+  Lock, Upload, AlertTriangle, CreditCard, Eye, EyeOff, Landmark,
 } from 'lucide-react';
 
 import { API } from '../../config';
@@ -59,6 +59,13 @@ const ROLES = [
     color: 'bg-purple-600',
     border: 'border-purple-600',
     desc: 'Browse certified livestock listings and acquire trade certificates.',
+  },
+  {
+    name: 'Institution',
+    icon: Landmark,
+    color: 'bg-teal-700',
+    border: 'border-teal-700',
+    desc: 'Verify livestock valuation certificates presented as loan or insurance collateral.',
   },
   // Police is deliberately not a self-signup role — an officer account can
   // only come from an existing officer's nomination, approved by PFUMA
@@ -175,6 +182,8 @@ const AuthPortal = ({ onLogin }) => {
     businessReg: '', supplyCategories: [],
     // buyer
     buyerReg: '', tradingAreas: '',
+    // institution (bank/insurer)
+    institutionType: '',
     // verification documents (required for every role)
     idDocument: null, credentialDocument: null,
   });
@@ -208,6 +217,7 @@ const AuthPortal = ({ onLogin }) => {
     badgeNumber: apiUser.badge_number,
     station: apiUser.station,
     jurisdictionProvince: apiUser.jurisdiction_province,
+    institutionType: apiUser.institution_type,
     verificationStatus: apiUser.verification_status,
     nextOfKinName: apiUser.next_of_kin_name,
     nextOfKinPhone: apiUser.next_of_kin_phone,
@@ -265,6 +275,7 @@ const AuthPortal = ({ onLogin }) => {
       fd.append('business_reg', form.businessReg || form.buyerReg);
       fd.append('supply_categories', form.supplyCategories.join(','));
       fd.append('trading_areas', form.tradingAreas);
+      fd.append('institution_type', form.institutionType);
       if (form.idDocument) fd.append('id_document', form.idDocument);
       if (form.credentialDocument) fd.append('credential_document', form.credentialDocument);
 
@@ -523,6 +534,31 @@ const AuthPortal = ({ onLogin }) => {
       </div>
     );
 
+    if (form.role === 'Institution') return (
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-2xl font-black text-gray-900 mb-1">Institution Details</h3>
+          <p className="text-sm text-gray-400 font-medium">Farmers share you a certificate code; you verify and track it here.</p>
+        </div>
+        <Field label="Institution Type" required>
+          <div className="flex flex-wrap gap-2 mt-1">
+            {['Bank', 'Insurer', 'Other'].map(t => (
+              <button key={t} type="button" onClick={() => set('institutionType', t)}
+                className={`px-3.5 py-2 rounded-xl border-2 text-xs font-black uppercase tracking-wide transition ${form.institutionType === t ? 'bg-teal-700 text-white border-teal-700' : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-teal-600/40'}`}>
+                {t}
+              </button>
+            ))}
+          </div>
+        </Field>
+        <Field label="Registration / License Number">
+          <input className={inputCls} type="text" placeholder="e.g. RBZ-BNK-2024-0012" value={form.businessReg} onChange={e => set('businessReg', e.target.value)} />
+        </Field>
+        <div className="bg-teal-50 border border-teal-200 rounded-xl p-3 text-[11px] text-teal-700 font-medium">
+          Once verified, you can look up any PFUMA valuation certificate and flag it as held collateral — so a second lender sees it's already pledged.
+        </div>
+      </div>
+    );
+
     return null;
   };
 
@@ -573,6 +609,7 @@ const AuthPortal = ({ onLogin }) => {
               form.licenseNumber  && { label: 'DVS License', value: form.licenseNumber },
               form.speciality     && { label: 'Speciality', value: form.speciality },
               (form.businessReg || form.buyerReg) && { label: 'Business Reg', value: form.businessReg || form.buyerReg },
+              form.institutionType && { label: 'Institution Type', value: form.institutionType },
               form.supplyCategories.length && { label: 'Products', value: form.supplyCategories.join(', ') },
               form.tradingAreas   && { label: 'Trading Areas', value: form.tradingAreas },
               { label: 'ID Document',         value: form.idDocument ? form.idDocument.name : 'Not attached' },

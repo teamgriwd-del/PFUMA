@@ -114,7 +114,7 @@ const UsersTab = ({ currentUser }) => {
         </div>
         <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} className="px-3 py-2.5 bg-white rounded-xl border border-gray-200 text-xs font-bold">
           <option value="">All roles</option>
-          {['Farmer', 'Veterinarian', 'Supplier', 'Buyer', 'Police'].map(r => <option key={r} value={r}>{r}</option>)}
+          {['Farmer', 'Veterinarian', 'Supplier', 'Buyer', 'Police', 'Institution'].map(r => <option key={r} value={r}>{r}</option>)}
         </select>
         <select value={verFilter} onChange={e => setVerFilter(e.target.value)} className="px-3 py-2.5 bg-white rounded-xl border border-gray-200 text-xs font-bold">
           <option value="">All statuses</option>
