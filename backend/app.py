@@ -917,6 +917,12 @@ def get_users():
     # only through the clearance/verification workflow, not public search.
     if requester['role'] != 'Police':
         sql += " AND role != 'Police'"
+    # Institutions (banks/insurers) aren't part of the farmer-trading
+    # directory this endpoint serves, and shouldn't be casually browsable by
+    # any verified user — a farmer reaches a specific bank by sharing a
+    # certificate code directly, never by searching for one here.
+    if requester['role'] not in ('Police', 'Institution'):
+        sql += " AND role != 'Institution'"
     # Admin is never listed here for anyone, including other admins — the
     # hidden oversight role has its own dedicated /admin/* endpoints.
     sql += " AND role != 'Admin'"
@@ -1019,11 +1025,16 @@ def update_own_profile():
     their ID document to grant verification — changing it invalidates that
     check, so it forces the account back to 'pending' and re-locks anything
     gated by @require_verified (listing on the marketplace, etc.) until an
-    officer reviews it again under the new name."""
+    officer reviews it again under the new name. org_name (farm/business/
+    branch name) carries no such identity weight — a typo fix there doesn't
+    need re-verification, so it's updated independently of that logic."""
     d = request.json or {}
     new_name = (d.get('full_name') or '').strip()
     if not new_name:
         return jsonify({"error": "full_name is required"}), 400
+    new_org_name = d.get('org_name')
+    if new_org_name is not None:
+        new_org_name = new_org_name.strip()
 
     db = get_db()
     c = db.cursor()
@@ -1034,6 +1045,8 @@ def update_own_profile():
         c.execute("UPDATE users SET full_name=%s, verification_status='pending' WHERE id=%s", (new_name, g.current_user['id']))
     else:
         c.execute("UPDATE users SET full_name=%s WHERE id=%s", (new_name, g.current_user['id']))
+    if new_org_name:
+        c.execute("UPDATE users SET org_name=%s WHERE id=%s", (new_org_name, g.current_user['id']))
     db.commit()
     c.execute("SELECT * FROM users WHERE id=%s", (g.current_user['id'],))
     user = c.fetchone()
