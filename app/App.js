@@ -180,7 +180,7 @@ export default function App() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: '#fff',
+    backgroundColor: COLORS.cardDark,
     borderTopWidth: 1,
     height: 76,
     paddingBottom: 0,

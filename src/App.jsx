@@ -259,6 +259,170 @@ const MovementPermitsSummaryCard = ({ currentUser, setActiveTab }) => {
   );
 };
 
+// Dark, mobile-first dashboard shown below the lg breakpoint — a distinct
+// information architecture from the desktop grid below (metric strip, one
+// quick-action bar, a 2x3 action grid) rather than a reflow of the same
+// panels, matching how the reference design separates phone vs. desktop use.
+// Module-scope for stable identity across FarmerDashboard re-renders.
+const FarmerMobileDashboard = ({ animals, currentUser, setActiveTab, totalValue, forSale, overdueVaccines, critAlerts, inventory }) => {
+  const [tipOpen, setTipOpen] = useState(false);
+  const initials = (currentUser?.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  const lowStock = inventory.filter(i => i.stock <= i.min);
+  const recentAnimals = animals.slice(0, 3);
+
+  const actions = [
+    { icon: Users,         label: 'Herd Registry', color: 'bg-pfuma-green', tab: 'profile' },
+    { icon: ShieldCheck,   label: 'Follow-Ups',    color: 'bg-red-500',     tab: 'compliance', badge: overdueVaccines.length || null },
+    { icon: Package,       label: 'Medicine',      color: 'bg-orange-500',  tab: 'health',      badge: lowStock.length || null },
+    { icon: ShoppingCart,  label: 'Sell',          color: 'bg-pfuma-plum',  tab: 'profile',    badge: forSale || null },
+    { icon: HeartPulse,    label: 'Lifecycle',     color: 'bg-blue-500',    tab: 'health' },
+    { icon: MessageSquare, label: 'Messenger',     color: 'bg-pink-500',    tab: 'vet' },
+  ];
+
+  const quickPills = [
+    { icon: Plus,          label: 'Register',  tab: 'profile' },
+    { icon: ShoppingCart,  label: 'Sell',       tab: 'profile' },
+    { icon: Stethoscope,   label: 'Diagnose',   tab: 'disease' },
+    { icon: MessageSquare, label: 'Messenger',  tab: 'vet' },
+  ];
+
+  return (
+    <div className="bg-[#121212] h-full overflow-y-auto text-left">
+      <div className="p-4 pb-10 space-y-4">
+
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-11 h-11 rounded-2xl bg-pfuma-green flex items-center justify-center text-white font-black text-sm shrink-0">
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <p className="text-white/40 text-[10px] font-black uppercase tracking-[2px]">{greet()}</p>
+              <h2 className="text-white text-base font-black truncate">{currentUser?.name || 'Farmer'}</h2>
+            </div>
+          </div>
+          {critAlerts.length > 0 && (
+            <div className="flex items-center gap-1.5 bg-red-500/15 border border-red-500/30 rounded-full px-3 py-1.5 shrink-0">
+              <AlertTriangle size={12} className="text-red-400" />
+              <span className="text-[10px] font-black text-red-300">{critAlerts.length}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Metric bar */}
+        <div className="grid grid-cols-3 gap-2.5">
+          <div className="bg-blue-950 border border-blue-900/60 rounded-2xl p-3">
+            <Tag size={14} className="text-blue-400 mb-2" />
+            <p className="text-white text-lg font-black leading-none">{animals.length}</p>
+            <p className="text-blue-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">Animals</p>
+          </div>
+          <div className="bg-green-950 border border-green-900/60 rounded-2xl p-3">
+            <DollarSign size={14} className="text-green-400 mb-2" />
+            <p className="text-white text-lg font-black leading-none">${totalValue >= 1000 ? `${(totalValue / 1000).toFixed(1)}k` : totalValue.toLocaleString()}</p>
+            <p className="text-green-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">Herd Value</p>
+          </div>
+          <div className={`rounded-2xl p-3 border ${overdueVaccines.length ? 'bg-red-950 border-red-900/60' : 'bg-amber-950 border-amber-900/60'}`}>
+            <ShieldCheck size={14} className={`mb-2 ${overdueVaccines.length ? 'text-red-400' : 'text-amber-400'}`} />
+            <p className="text-white text-lg font-black leading-none">{overdueVaccines.length}</p>
+            <p className={`text-[9px] font-bold uppercase tracking-wide mt-1 ${overdueVaccines.length ? 'text-red-300/70' : 'text-amber-300/70'}`}>Overdue</p>
+          </div>
+        </div>
+
+        {/* Quick actions pill bar */}
+        <div className="bg-pfuma-green rounded-2xl p-1.5 flex items-center gap-1 overflow-x-auto">
+          {quickPills.map(q => (
+            <button key={q.label} onClick={() => setActiveTab(q.tab)} className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-white/90 hover:bg-white/10 transition shrink-0 whitespace-nowrap">
+              <q.icon size={13} />
+              <span className="text-[11px] font-black">{q.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Tip banner — expandable */}
+        <div className="bg-[#1E1E1E] border border-white/5 rounded-2xl p-4">
+          <button onClick={() => setTipOpen(o => !o)} className="w-full flex items-center gap-3 text-left">
+            <div className="w-8 h-8 rounded-xl bg-pfuma-gold/15 flex items-center justify-center shrink-0">
+              <Star size={14} className="text-pfuma-gold" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-xs font-black">Tip of the day</p>
+              <p className="text-white/40 text-[10px] font-medium truncate">List cleared animals early to reach more buyers</p>
+            </div>
+            {tipOpen ? <X size={14} className="text-white/40 shrink-0" /> : <Plus size={14} className="text-white/40 shrink-0" />}
+          </button>
+          {tipOpen && (
+            <p className="text-white/50 text-[11px] font-medium mt-3 pt-3 border-t border-white/5 leading-relaxed">
+              Buyers browse the Marketplace daily for freshly-cleared listings. Once Police clear a sale, list it immediately — animals seen in the first 48 hours get more bids on average.
+            </p>
+          )}
+        </div>
+
+        {/* Action grid */}
+        <div>
+          <p className="text-white/30 text-[10px] font-black uppercase tracking-[2px] mb-2.5 px-1">Quick Actions</p>
+          <div className="grid grid-cols-3 gap-2.5">
+            {actions.map(a => (
+              <button key={a.label} onClick={() => setActiveTab(a.tab)} className="relative bg-[#1E1E1E] border border-white/5 rounded-2xl p-3 flex flex-col items-center gap-2 hover:bg-[#252525] transition">
+                {a.badge ? (
+                  <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[8px] font-black rounded-full">{a.badge}</span>
+                ) : null}
+                <div className={`w-10 h-10 rounded-xl ${a.color} flex items-center justify-center`}>
+                  <a.icon size={17} className="text-white" />
+                </div>
+                <span className="text-white/70 text-[9px] font-bold text-center leading-tight">{a.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Your Animals */}
+        <div className="bg-[#1E1E1E] border border-white/5 rounded-2xl p-4">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-white text-xs font-black">Your Animals</p>
+            <button onClick={() => setActiveTab('profile')} className="text-[10px] font-black text-pfuma-sprout uppercase">View All</button>
+          </div>
+          {recentAnimals.length === 0 ? (
+            <p className="text-white/30 text-[11px] font-medium text-center py-4 italic">No animals registered yet</p>
+          ) : (
+            <div className="space-y-2">
+              {recentAnimals.map(a => (
+                <div key={a.id} className="flex items-center gap-3 p-2.5 bg-white/[0.03] rounded-xl">
+                  <div className="w-9 h-9 rounded-lg bg-white/5 overflow-hidden shrink-0">
+                    <img src={a.imageUrl} className="w-full h-full object-cover" alt={a.name} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white text-[11px] font-black truncate">{a.name}</p>
+                    <p className="text-white/30 text-[9px] font-medium">{a.species} · {a.currentWeight}kg</p>
+                  </div>
+                  <span className={`text-[8px] font-black px-2 py-1 rounded-full uppercase shrink-0 ${
+                    a.marketplaceStatus === 'sold' ? 'bg-red-500/15 text-red-400'
+                    : a.marketplaceStatus === 'pending_clearance' ? 'bg-amber-500/15 text-amber-400'
+                    : a.marketplaceStatus === 'available' ? 'bg-pfuma-sprout/15 text-pfuma-sprout'
+                    : 'bg-white/10 text-white/40'
+                  }`}>
+                    {a.marketplaceStatus === 'sold' ? 'Sold' : a.marketplaceStatus === 'pending_clearance' ? 'Pending' : a.marketplaceStatus === 'available' ? 'Live' : 'Unlisted'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Disease alert */}
+        {critAlerts.length > 0 && (
+          <div className="bg-red-950/60 border border-red-900/60 rounded-2xl p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle size={14} className="text-red-400" />
+              <p className="text-red-300 text-xs font-black">Disease Alert Nearby</p>
+            </div>
+            <p className="text-red-200/70 text-[11px] font-medium">{critAlerts[0].title} — {critAlerts[0].msg}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFarmers, currentUser, setActiveTab, onListAnimal }) => {
   const [outbreaks, setOutbreaks] = useState([]);
 
@@ -333,7 +497,15 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
   const recentLogs = auditLog.slice(0, 4);
 
   return (
-    <div className="p-6 bg-pfuma-cream space-y-6 text-left overflow-y-auto h-full">
+    <>
+      <div className="lg:hidden h-full">
+        <FarmerMobileDashboard
+          animals={animals} currentUser={currentUser} setActiveTab={setActiveTab}
+          totalValue={totalValue} forSale={forSale} overdueVaccines={overdueVaccines}
+          critAlerts={critAlerts} inventory={inventory}
+        />
+      </div>
+      <div className="hidden lg:block p-6 bg-pfuma-cream space-y-6 text-left overflow-y-auto h-full">
 
       {/* Greeting banner */}
       <div className="bg-pfuma-green rounded-3xl p-6 relative overflow-hidden">
@@ -670,7 +842,8 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
 
       {/* Stakeholder map — full width at bottom */}
       <StakeholderMap />
-    </div>
+      </div>
+    </>
   );
 };
 
@@ -942,9 +1115,126 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
   };
 
   const activeOutbreak = outbreaks[0];
+  const vetInitials = (currentUser?.name || 'V').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  const vetActions = [
+    { icon: MessageSquare, label: 'Messenger',      color: 'bg-pfuma-green', tab: 'vet' },
+    { icon: Stethoscope,   label: 'Diagnostics',    color: 'bg-purple-500',  tab: 'disease' },
+    { icon: ShieldCheck,   label: 'Witness Queue',  color: 'bg-red-500',     tab: 'vet', badge: witnessQueue.length || null },
+    { icon: FileText,      label: 'Movement Permits', color: 'bg-blue-500',  tab: 'vet', badge: permitQueue.length || null },
+    { icon: Handshake,     label: 'Group Requests', color: 'bg-pink-500',    tab: 'vet', badge: vetRequests.length || null },
+    { icon: Users,         label: 'Farmer Registry', color: 'bg-orange-500', tab: 'vet' },
+  ];
 
   return (
-    <div className="p-6 bg-pfuma-slate space-y-6 text-left overflow-y-auto h-full">
+    <>
+      <div className="lg:hidden bg-[#121212] h-full overflow-y-auto text-left">
+        <div className="p-4 pb-10 space-y-4">
+
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 rounded-2xl bg-pfuma-green flex items-center justify-center text-white font-black text-sm shrink-0">{vetInitials}</div>
+              <div className="min-w-0">
+                <p className="text-white/40 text-[10px] font-black uppercase tracking-[2px]">{greet()}</p>
+                <h2 className="text-white text-base font-black truncate">Dr. {currentUser?.name?.split(' ').pop() || 'Officer'}</h2>
+              </div>
+            </div>
+            {activeOutbreak && (
+              <div className="flex items-center gap-1.5 bg-red-500/15 border border-red-500/30 rounded-full px-3 py-1.5 shrink-0 animate-pulse">
+                <AlertTriangle size={12} className="text-red-400" />
+                <span className="text-[9px] font-black text-red-300 uppercase">Outbreak</span>
+              </div>
+            )}
+          </div>
+
+          {/* Metric bar */}
+          <div className="grid grid-cols-3 gap-2.5">
+            <div className={`rounded-2xl p-3 border ${outbreaks.length ? 'bg-red-950 border-red-900/60' : 'bg-white/5 border-white/10'}`}>
+              <AlertTriangle size={14} className={`mb-2 ${outbreaks.length ? 'text-red-400' : 'text-white/30'}`} />
+              <p className="text-white text-lg font-black leading-none">{outbreaks.length}</p>
+              <p className={`text-[9px] font-bold uppercase tracking-wide mt-1 ${outbreaks.length ? 'text-red-300/70' : 'text-white/30'}`}>Outbreaks</p>
+            </div>
+            <div className="bg-amber-950 border border-amber-900/60 rounded-2xl p-3">
+              <FileText size={14} className="text-amber-400 mb-2" />
+              <p className="text-white text-lg font-black leading-none">{certQueue}</p>
+              <p className="text-amber-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">Cert Queue</p>
+            </div>
+            <div className="bg-blue-950 border border-blue-900/60 rounded-2xl p-3">
+              <MapPin size={14} className="text-blue-400 mb-2" />
+              <p className="text-white text-lg font-black leading-none">{farms.length}</p>
+              <p className="text-blue-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">Farms</p>
+            </div>
+          </div>
+
+          {/* Quick actions pill bar */}
+          <div className="bg-pfuma-green rounded-2xl p-1.5 flex items-center gap-1 overflow-x-auto">
+            {[
+              { icon: MessageSquare, label: 'Messenger', tab: 'vet' },
+              { icon: Stethoscope,   label: 'Diagnose',  tab: 'disease' },
+              { icon: ShieldCheck,   label: 'Certify',   tab: 'vet' },
+              { icon: PhoneCall,     label: 'Report',    onClick: () => setShowReportForm(p => !p) },
+            ].map(q => (
+              <button key={q.label} onClick={() => q.onClick ? q.onClick() : setActiveTab(q.tab)} className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-white/90 hover:bg-white/10 transition shrink-0 whitespace-nowrap">
+                <q.icon size={13} /><span className="text-[11px] font-black">{q.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Active outbreak / tip banner */}
+          <div className={`border rounded-2xl p-4 ${activeOutbreak ? 'bg-red-950/60 border-red-900/60' : 'bg-[#1E1E1E] border-white/5'}`}>
+            <div className="flex items-center gap-3">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${activeOutbreak ? 'bg-red-500/20' : 'bg-pfuma-gold/15'}`}>
+                {activeOutbreak ? <AlertTriangle size={14} className="text-red-400" /> : <Star size={14} className="text-pfuma-gold" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-xs font-black">{activeOutbreak ? `${activeOutbreak.disease_name} Outbreak` : 'No active outbreaks'}</p>
+                <p className={`text-[10px] font-medium truncate ${activeOutbreak ? 'text-red-300/70' : 'text-white/40'}`}>
+                  {activeOutbreak ? `${activeOutbreak.district ? `${activeOutbreak.district}, ` : ''}${activeOutbreak.province}` : `Reported in ${currentUser?.province || 'your province'}`}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Action grid */}
+          <div>
+            <p className="text-white/30 text-[10px] font-black uppercase tracking-[2px] mb-2.5 px-1">Quick Actions</p>
+            <div className="grid grid-cols-3 gap-2.5">
+              {vetActions.map(a => (
+                <button key={a.label} onClick={() => setActiveTab(a.tab)} className="relative bg-[#1E1E1E] border border-white/5 rounded-2xl p-3 flex flex-col items-center gap-2 hover:bg-[#252525] transition">
+                  {a.badge ? <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[8px] font-black rounded-full">{a.badge}</span> : null}
+                  <div className={`w-10 h-10 rounded-xl ${a.color} flex items-center justify-center`}><a.icon size={17} className="text-white" /></div>
+                  <span className="text-white/70 text-[9px] font-bold text-center leading-tight">{a.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Farmer registry preview */}
+          <div className="bg-[#1E1E1E] border border-white/5 rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-white text-xs font-black">Farmer Registry</p>
+              <button onClick={() => setActiveTab('vet')} className="text-[10px] font-black text-pfuma-sprout uppercase">View All</button>
+            </div>
+            {farms.length === 0 ? (
+              <p className="text-white/30 text-[11px] font-medium text-center py-4 italic">No registered farmers yet</p>
+            ) : (
+              <div className="space-y-2">
+                {farms.slice(0, 3).map(farm => (
+                  <div key={farm.id} className="flex items-center gap-3 p-2.5 bg-white/[0.03] rounded-xl">
+                    <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center text-pfuma-green font-black text-xs shrink-0">{(farm.full_name || '?')[0]}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-[11px] font-black truncate">{farm.full_name}</p>
+                      <p className="text-white/30 text-[9px] font-medium">{farm.animal_count} animal{farm.animal_count !== 1 ? 's' : ''}</p>
+                    </div>
+                    <span className={`text-[8px] font-black px-2 py-1 rounded-full uppercase shrink-0 ${farm.verification_status === 'verified' ? 'bg-pfuma-sprout/15 text-pfuma-sprout' : 'bg-orange-500/15 text-orange-400'}`}>{farm.verification_status}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="hidden lg:block p-6 bg-pfuma-slate space-y-6 text-left overflow-y-auto h-full">
 
       {/* Greeting */}
       <div className="bg-pfuma-green/20 border border-pfuma-green/30 rounded-3xl p-6 relative overflow-hidden">
@@ -1285,7 +1575,8 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
           </div>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 
@@ -1335,9 +1626,128 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
   const dispatched = orders.filter(o => o.status === 'dispatched').length;
   const delivered  = orders.filter(o => o.status === 'delivered').length;
   const outOfStockCount = myStock.filter(l => l.status === 'withdrawn').length;
+  const supplierInitials = (currentUser?.name || currentUser?.org_name || 'S').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  const supplierActions = [
+    { icon: Store,      label: 'Marketplace',    color: 'bg-pfuma-gold',  tab: 'marketplace' },
+    { icon: Package,    label: 'Supply Chain',   color: 'bg-orange-500',  tab: 'health', badge: outOfStockCount || null },
+    { icon: Wheat,      label: 'Feed Database',  color: 'bg-green-600',   tab: 'feed' },
+    { icon: BookOpen,   label: 'Trading Journal', color: 'bg-purple-500', tab: 'tradingJournal' },
+    { icon: MessageSquare, label: 'Messenger',   color: 'bg-pink-500',    tab: 'vet' },
+    { icon: Plus,       label: 'Add Stock',      color: 'bg-blue-500',    onClick: onAddStock },
+  ];
 
   return (
-    <div className="p-6 bg-pfuma-cream space-y-6 text-left overflow-y-auto h-full">
+    <>
+      <div className="lg:hidden bg-[#121212] h-full overflow-y-auto text-left">
+        <div className="p-4 pb-10 space-y-4">
+
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 rounded-2xl bg-pfuma-gold flex items-center justify-center text-white font-black text-sm shrink-0">{supplierInitials}</div>
+              <div className="min-w-0">
+                <p className="text-white/40 text-[10px] font-black uppercase tracking-[2px]">{greet()}</p>
+                <h2 className="text-white text-base font-black truncate">{currentUser?.org_name || currentUser?.name || 'Supplier'}</h2>
+              </div>
+            </div>
+            {pending > 0 && (
+              <div className="flex items-center gap-1.5 bg-pfuma-gold/15 border border-pfuma-gold/30 rounded-full px-3 py-1.5 shrink-0">
+                <Clock size={12} className="text-pfuma-gold" />
+                <span className="text-[10px] font-black text-pfuma-gold">{pending}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Metric bar */}
+          <div className="grid grid-cols-3 gap-2.5">
+            <div className="bg-amber-950 border border-amber-900/60 rounded-2xl p-3">
+              <Clock size={14} className="text-amber-400 mb-2" />
+              <p className="text-white text-lg font-black leading-none">{pending}</p>
+              <p className="text-amber-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">Pending</p>
+            </div>
+            <div className="bg-blue-950 border border-blue-900/60 rounded-2xl p-3">
+              <Truck size={14} className="text-blue-400 mb-2" />
+              <p className="text-white text-lg font-black leading-none">{dispatched}</p>
+              <p className="text-blue-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">In Transit</p>
+            </div>
+            <div className="bg-green-950 border border-green-900/60 rounded-2xl p-3">
+              <CheckCircle size={14} className="text-green-400 mb-2" />
+              <p className="text-white text-lg font-black leading-none">{delivered}</p>
+              <p className="text-green-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">Delivered</p>
+            </div>
+          </div>
+
+          {/* Quick actions pill bar */}
+          <div className="bg-pfuma-gold rounded-2xl p-1.5 flex items-center gap-1 overflow-x-auto">
+            {[
+              { icon: Plus,          label: 'Add Stock', onClick: onAddStock },
+              { icon: Store,         label: 'Marketplace', tab: 'marketplace' },
+              { icon: Package,       label: 'Supply Chain', tab: 'health' },
+              { icon: MessageSquare, label: 'Messenger', tab: 'vet' },
+            ].map(q => (
+              <button key={q.label} onClick={() => q.onClick ? q.onClick() : setActiveTab(q.tab)} className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-white/90 hover:bg-white/10 transition shrink-0 whitespace-nowrap">
+                <q.icon size={13} /><span className="text-[11px] font-black">{q.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Stock status banner */}
+          <div className={`border rounded-2xl p-4 ${myStock.length === 0 ? 'bg-[#1E1E1E] border-white/5' : outOfStockCount > 0 ? 'bg-red-950/60 border-red-900/60' : 'bg-[#1E1E1E] border-white/5'}`}>
+            <div className="flex items-center gap-3">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${outOfStockCount > 0 ? 'bg-red-500/20' : 'bg-pfuma-gold/15'}`}>
+                <Package size={14} className={outOfStockCount > 0 ? 'text-red-400' : 'text-pfuma-gold'} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-xs font-black">{myStock.length === 0 ? 'No stock listed yet' : `${myStock.length} product${myStock.length !== 1 ? 's' : ''} listed`}</p>
+                <p className={`text-[10px] font-medium truncate ${outOfStockCount > 0 ? 'text-red-300/70' : 'text-white/40'}`}>
+                  {myStock.length === 0 ? 'List your first product to get orders' : outOfStockCount > 0 ? `${outOfStockCount} out of stock — restock now` : 'All products in stock'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Action grid */}
+          <div>
+            <p className="text-white/30 text-[10px] font-black uppercase tracking-[2px] mb-2.5 px-1">Quick Actions</p>
+            <div className="grid grid-cols-3 gap-2.5">
+              {supplierActions.map(a => (
+                <button key={a.label} onClick={() => a.onClick ? a.onClick() : setActiveTab(a.tab)} className="relative bg-[#1E1E1E] border border-white/5 rounded-2xl p-3 flex flex-col items-center gap-2 hover:bg-[#252525] transition">
+                  {a.badge ? <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[8px] font-black rounded-full">{a.badge}</span> : null}
+                  <div className={`w-10 h-10 rounded-xl ${a.color} flex items-center justify-center`}><a.icon size={17} className="text-white" /></div>
+                  <span className="text-white/70 text-[9px] font-bold text-center leading-tight">{a.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Active orders preview */}
+          <div className="bg-[#1E1E1E] border border-white/5 rounded-2xl p-4">
+            <p className="text-white text-xs font-black mb-3">Active Orders</p>
+            {orders.length === 0 ? (
+              <p className="text-white/30 text-[11px] font-medium text-center py-4 italic">No orders yet</p>
+            ) : (
+              <div className="space-y-2">
+                {orders.slice(0, 3).map(o => (
+                  <div key={o.id} className="flex items-center gap-3 p-2.5 bg-white/[0.03] rounded-xl">
+                    <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center shrink-0"><Package size={15} className="text-pfuma-gold" /></div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-[11px] font-black truncate">{o.farmer_name}</p>
+                      <p className="text-white/30 text-[9px] font-medium truncate">{o.product_name} · {Number(o.quantity)}</p>
+                    </div>
+                    <span className={`text-[8px] font-black px-2 py-1 rounded-full uppercase shrink-0 ${
+                      o.status === 'pending' ? 'bg-amber-500/15 text-amber-400'
+                      : o.status === 'dispatched' ? 'bg-blue-500/15 text-blue-400'
+                      : o.status === 'delivered' ? 'bg-pfuma-sprout/15 text-pfuma-sprout'
+                      : 'bg-white/10 text-white/40'
+                    }`}>{o.status}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="hidden lg:block p-6 bg-pfuma-cream space-y-6 text-left overflow-y-auto h-full">
 
       {/* Role explanation */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1506,7 +1916,8 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
       </div>
 
       <StakeholderMap />
-    </div>
+      </div>
+    </>
   );
 };
 
@@ -1577,8 +1988,128 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
     return Object.entries(counts).map(([category, count]) => ({ category, count }));
   }, [listings]);
 
+  const [mobileClaimOpen, setMobileClaimOpen] = useState(false);
+  const buyerInitials = (currentUser?.name || currentUser?.org_name || 'B').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  const pendingBids = myBids.filter(b => b.status === 'pending').length;
+  const buyerActions = [
+    { icon: Store,         label: 'Marketplace',    color: 'bg-pfuma-plum',  tab: 'marketplace' },
+    { icon: ShoppingCart,  label: 'Verified Stock', color: 'bg-green-600',   tab: 'profile' },
+    { icon: Wheat,         label: 'Feed Analyzer',  color: 'bg-orange-500',  tab: 'feed' },
+    { icon: BookOpen,      label: 'Trading Journal', color: 'bg-blue-500',   tab: 'tradingJournal' },
+    { icon: MessageSquare, label: 'Messenger',      color: 'bg-pink-500',    tab: 'vet' },
+    { icon: Tag,           label: 'Claim Animal',   color: 'bg-amber-500',   onClick: () => setMobileClaimOpen(v => !v) },
+  ];
+
   return (
-    <div className="p-6 bg-pfuma-cream space-y-6 text-left overflow-y-auto h-full">
+    <>
+      <div className="lg:hidden bg-[#121212] h-full overflow-y-auto text-left">
+        <div className="p-4 pb-10 space-y-4">
+
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 rounded-2xl bg-pfuma-plum flex items-center justify-center text-white font-black text-sm shrink-0">{buyerInitials}</div>
+              <div className="min-w-0">
+                <p className="text-white/40 text-[10px] font-black uppercase tracking-[2px]">{greet()}</p>
+                <h2 className="text-white text-base font-black truncate">{currentUser?.org_name || currentUser?.name || 'Buyer'}</h2>
+              </div>
+            </div>
+          </div>
+
+          {/* Metric bar */}
+          <div className="grid grid-cols-3 gap-2.5">
+            <div className="bg-violet-950 border border-violet-900/60 rounded-2xl p-3">
+              <Tag size={14} className="text-violet-400 mb-2" />
+              <p className="text-white text-lg font-black leading-none">{listings.length}</p>
+              <p className="text-violet-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">Listings</p>
+            </div>
+            <div className="bg-blue-950 border border-blue-900/60 rounded-2xl p-3">
+              <Clock size={14} className="text-blue-400 mb-2" />
+              <p className="text-white text-lg font-black leading-none">{pendingBids}</p>
+              <p className="text-blue-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">My Bids</p>
+            </div>
+            <div className="bg-green-950 border border-green-900/60 rounded-2xl p-3">
+              <CheckCircle size={14} className="text-green-400 mb-2" />
+              <p className="text-white text-lg font-black leading-none">{purchases.length}</p>
+              <p className="text-green-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">Purchases</p>
+            </div>
+          </div>
+
+          {/* Quick actions pill bar */}
+          <div className="bg-pfuma-plum rounded-2xl p-1.5 flex items-center gap-1 overflow-x-auto">
+            {[
+              { icon: Store,         label: 'Marketplace', tab: 'marketplace' },
+              { icon: Tag,           label: 'Claim',       onClick: () => setMobileClaimOpen(v => !v) },
+              { icon: BookOpen,      label: 'Journal',     tab: 'tradingJournal' },
+              { icon: MessageSquare, label: 'Messenger',   tab: 'vet' },
+            ].map(q => (
+              <button key={q.label} onClick={() => q.onClick ? q.onClick() : setActiveTab(q.tab)} className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-white/90 hover:bg-white/10 transition shrink-0 whitespace-nowrap">
+                <q.icon size={13} /><span className="text-[11px] font-black">{q.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Claim animal — collapsible form */}
+          {mobileClaimOpen && (
+            <div className="bg-[#1E1E1E] border border-white/5 rounded-2xl p-4">
+              <p className="text-white text-xs font-black mb-1">Claim an Animal</p>
+              <p className="text-white/40 text-[10px] font-medium mb-3">Bought off-platform? Enter the transfer code the farmer gave you.</p>
+              <form onSubmit={claimAnimal} className="flex gap-2">
+                <input
+                  value={claimCode} onChange={e => setClaimCode(e.target.value.toUpperCase())}
+                  placeholder="Code" maxLength={12}
+                  className="flex-1 min-w-0 px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl outline-none font-black text-sm text-center tracking-[0.2em] text-white placeholder:text-white/20 placeholder:tracking-normal placeholder:font-medium"
+                />
+                <button type="submit" disabled={claimBusy || !claimCode.trim()} className="shrink-0 px-4 py-2.5 bg-pfuma-plum text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-violet-700 transition disabled:opacity-50">
+                  {claimBusy ? '…' : 'Claim'}
+                </button>
+              </form>
+              {claimError && <p className="text-[10px] text-red-400 font-bold mt-2">{claimError}</p>}
+              {claimSuccess && <p className="text-[10px] text-green-400 font-bold mt-2">{claimSuccess}</p>}
+            </div>
+          )}
+
+          {/* Action grid */}
+          <div>
+            <p className="text-white/30 text-[10px] font-black uppercase tracking-[2px] mb-2.5 px-1">Quick Actions</p>
+            <div className="grid grid-cols-3 gap-2.5">
+              {buyerActions.map(a => (
+                <button key={a.label} onClick={() => a.onClick ? a.onClick() : setActiveTab(a.tab)} className="relative bg-[#1E1E1E] border border-white/5 rounded-2xl p-3 flex flex-col items-center gap-2 hover:bg-[#252525] transition">
+                  <div className={`w-10 h-10 rounded-xl ${a.color} flex items-center justify-center`}><a.icon size={17} className="text-white" /></div>
+                  <span className="text-white/70 text-[9px] font-bold text-center leading-tight">{a.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Listings preview */}
+          <div className="bg-[#1E1E1E] border border-white/5 rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-white text-xs font-black">Marketplace Listings</p>
+              <button onClick={() => setActiveTab('marketplace')} className="text-[10px] font-black text-violet-400 uppercase">View All</button>
+            </div>
+            {listings.length === 0 ? (
+              <p className="text-white/30 text-[11px] font-medium text-center py-4 italic">No listings yet</p>
+            ) : (
+              <div className="space-y-2">
+                {listings.slice(0, 3).map(l => (
+                  <div key={l.id} className="flex items-center gap-3 p-2.5 bg-white/[0.03] rounded-xl">
+                    <div className="w-9 h-9 rounded-lg overflow-hidden bg-white/10 shrink-0">
+                      <img src={l.photo_url ? `${API}${l.photo_url}` : IMAGE_BY_SPECIES.Cattle} className="w-full h-full object-cover" alt={l.product_name} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-[11px] font-black truncate">{l.product_name}</p>
+                      <p className="text-white/30 text-[9px] font-medium truncate">{l.seller_name}</p>
+                    </div>
+                    <p className="text-violet-400 text-[11px] font-black shrink-0">${Number(l.price).toLocaleString()}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="hidden lg:block p-6 bg-pfuma-cream space-y-6 text-left overflow-y-auto h-full">
 
       {/* Role explanation */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1859,7 +2390,8 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
       </div>
 
       <StakeholderMap />
-    </div>
+      </div>
+    </>
   );
 };
 
@@ -2031,9 +2563,82 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
   };
 
   const theftAlerts = (notifications || []).filter(n => /theft|breach|security/i.test(`${n.title} ${n.msg}`));
+  const policeInitials = (currentUser?.name || 'O').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  const scrollToId = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const policeActions = [
+    { icon: ShieldCheck,   label: 'Verifications', color: 'bg-amber-500', badge: verifications.length || null, onClick: () => scrollToId('police-verify-queue') },
+    { icon: Tag,           label: 'Clearances',    color: 'bg-blue-500',  badge: clearances.length || null,     onClick: () => scrollToId('police-clearance-queue') },
+    { icon: AlertTriangle, label: 'Theft Alerts',  color: 'bg-red-600',   badge: theftAlerts.length || null,    tab: 'iot' },
+    { icon: Store,         label: 'Marketplace',   color: 'bg-purple-500', tab: 'marketplace' },
+    { icon: MessageSquare, label: 'Messenger',     color: 'bg-pink-500',  tab: 'vet' },
+    { icon: UserPlus,      label: 'Add Officer',   color: 'bg-green-600', onClick: () => { setShowAddOfficer(true); setOfficerError(''); scrollToId('police-officer-form'); } },
+  ];
 
   return (
-    <div className="p-6 bg-gray-950 space-y-6 text-left overflow-y-auto h-full">
+    <div className="bg-[#121212] lg:bg-gray-950 h-full overflow-y-auto text-left">
+      <div className="lg:hidden p-4 pb-4 space-y-4">
+
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-11 h-11 rounded-2xl bg-red-700 flex items-center justify-center text-white font-black text-sm shrink-0">{policeInitials}</div>
+              <div className="min-w-0">
+                <p className="text-white/40 text-[10px] font-black uppercase tracking-[2px]">{greet()}</p>
+                <h2 className="text-white text-base font-black truncate">{currentUser?.name || 'Officer'}</h2>
+              </div>
+            </div>
+            {!apiOnline && (
+              <div className="flex items-center gap-1.5 bg-yellow-400/15 border border-yellow-400/30 rounded-full px-3 py-1.5 shrink-0">
+                <AlertTriangle size={12} className="text-yellow-400" />
+                <span className="text-[9px] font-black text-yellow-300 uppercase">Demo</span>
+              </div>
+            )}
+          </div>
+
+          {/* Quick actions pill bar */}
+          <div className="bg-red-700 rounded-2xl p-1.5 flex items-center gap-1 overflow-x-auto">
+            {[
+              { icon: UserPlus,      label: 'Add Officer', onClick: () => { setShowAddOfficer(true); setOfficerError(''); scrollToId('police-officer-form'); } },
+              { icon: Store,         label: 'Marketplace', tab: 'marketplace' },
+              { icon: Radio,         label: 'IoT Monitor', tab: 'iot' },
+              { icon: MessageSquare, label: 'Messenger',   tab: 'vet' },
+            ].map(q => (
+              <button key={q.label} onClick={() => q.onClick ? q.onClick() : setActiveTab(q.tab)} className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-white/90 hover:bg-white/10 transition shrink-0 whitespace-nowrap">
+                <q.icon size={13} /><span className="text-[11px] font-black">{q.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Status banner */}
+          <div className={`border rounded-2xl p-4 ${theftAlerts.length ? 'bg-red-950/60 border-red-900/60' : 'bg-[#1E1E1E] border-white/5'}`}>
+            <div className="flex items-center gap-3">
+              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${theftAlerts.length ? 'bg-red-500/20' : 'bg-pfuma-gold/15'}`}>
+                <AlertTriangle size={14} className={theftAlerts.length ? 'text-red-400' : 'text-pfuma-gold'} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-xs font-black">{theftAlerts.length ? `${theftAlerts.length} Theft Alert${theftAlerts.length !== 1 ? 's' : ''}` : 'No theft alerts'}</p>
+                <p className={`text-[10px] font-medium truncate ${theftAlerts.length ? 'text-red-300/70' : 'text-white/40'}`}>
+                  {verifications.length} signup{verifications.length !== 1 ? 's' : ''} and {clearances.length} clearance{clearances.length !== 1 ? 's' : ''} awaiting your review
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Action grid */}
+          <div>
+            <p className="text-white/30 text-[10px] font-black uppercase tracking-[2px] mb-2.5 px-1">Quick Actions</p>
+            <div className="grid grid-cols-3 gap-2.5">
+              {policeActions.map(a => (
+                <button key={a.label} onClick={() => a.onClick ? a.onClick() : setActiveTab(a.tab)} className="relative bg-[#1E1E1E] border border-white/5 rounded-2xl p-3 flex flex-col items-center gap-2 hover:bg-[#252525] transition">
+                  {a.badge ? <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[8px] font-black rounded-full">{a.badge}</span> : null}
+                  <div className={`w-10 h-10 rounded-xl ${a.color} flex items-center justify-center`}><a.icon size={17} className="text-white" /></div>
+                  <span className="text-white/70 text-[9px] font-bold text-center leading-tight">{a.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+      </div>
+      <div className="hidden lg:block p-6 pb-0">
 
       {/* Greeting */}
       <div className="bg-red-900/30 border border-red-700/40 rounded-3xl p-6 relative overflow-hidden">
@@ -2061,6 +2666,9 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
           </div>
         </div>
       </div>
+      </div>
+
+      <div className="p-4 pt-4 lg:p-6 lg:pt-6 space-y-6">
 
       {feedback && (
         <div className="flex items-center gap-2 bg-green-900/30 border border-green-700/40 text-green-300 text-xs font-black px-4 py-3 rounded-xl" role="status">
@@ -2074,7 +2682,7 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
           account minting others). This submits a pending request that only
           PFUMA Admin can approve, in the Admin Panel. */}
       {showAddOfficer && (
-        <form onSubmit={provisionOfficer} className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-4">
+        <form id="police-officer-form" onSubmit={provisionOfficer} className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-4">
           <div className="flex items-start justify-between">
             <div>
               <h3 className="text-sm font-black text-white mb-1">Nominate New Officer</h3>
@@ -2175,10 +2783,10 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* Verification queue */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+        <div id="police-verify-queue" className="bg-white/5 border border-white/10 rounded-2xl p-5">
           <h3 className="text-sm font-black text-white mb-1">Signup Verification Queue</h3>
           <p className="text-[11px] text-gray-500 font-medium mb-4">Confirm ID and credential documents before an applicant gets full access. Vet applicants are peer-reviewed by an existing verified vet, not shown here.</p>
           {verifications.length === 0 ? (
@@ -2211,7 +2819,7 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
         </div>
 
         {/* Clearance queue */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+        <div id="police-clearance-queue" className="bg-white/5 border border-white/10 rounded-2xl p-5">
           <h3 className="text-sm font-black text-white mb-1">Sale Clearance Queue</h3>
           <p className="text-[11px] text-gray-500 font-medium mb-4">Verify ownership/brand papers match the animal before a livestock listing is allowed on the Marketplace.</p>
           {clearances.length === 0 ? (
@@ -2418,12 +3026,13 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
       <StakeholderMap />
 
       {viewingUser && <UserDetailModal user={viewingUser} currentUser={currentUser} onClose={() => setViewingUser(null)} />}
+      </div>
     </div>
   );
 };
 
 // ── INSTITUTION DASHBOARD (Bank/Insurer) ────────────────────────────────────
-const InstitutionDashboard = ({ currentUser }) => {
+const InstitutionDashboard = ({ currentUser, setActiveTab }) => {
   const [code, setCode] = useState('');
   const [result, setResult] = useState(null); // null = nothing looked up yet
   const [lookupBusy, setLookupBusy] = useState(false);
@@ -2473,9 +3082,69 @@ const InstitutionDashboard = ({ currentUser }) => {
     setFlagBusy(false);
   };
 
-  return (
-    <div className="p-6 bg-pfuma-cream space-y-6 text-left overflow-y-auto h-full">
+  const institutionInitials = (currentUser?.org_name || currentUser?.name || 'I').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
+  const flaggedCount = ledger.filter(l => l.flagged_as_collateral).length;
+  const scrollToId = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+  return (
+    <div className="bg-[#121212] lg:bg-pfuma-cream h-full overflow-y-auto text-left">
+      <div className="lg:hidden p-4 pb-4 space-y-4">
+
+        {/* Header */}
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-teal-700 flex items-center justify-center text-white font-black text-sm shrink-0">{institutionInitials}</div>
+          <div className="min-w-0">
+            <p className="text-white/40 text-[10px] font-black uppercase tracking-[2px]">{greet()}, {currentUser?.institutionType || 'Institution'}</p>
+            <h2 className="text-white text-base font-black truncate">{currentUser?.org_name || currentUser?.name || 'Institution'}</h2>
+          </div>
+        </div>
+
+        {/* Metric bar */}
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="bg-teal-950 border border-teal-900/60 rounded-2xl p-3">
+            <Search size={14} className="text-teal-400 mb-2" />
+            <p className="text-white text-lg font-black leading-none">{ledger.length}</p>
+            <p className="text-teal-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">Checked</p>
+          </div>
+          <div className="bg-amber-950 border border-amber-900/60 rounded-2xl p-3">
+            <ShieldAlert size={14} className="text-amber-400 mb-2" />
+            <p className="text-white text-lg font-black leading-none">{flaggedCount}</p>
+            <p className="text-amber-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">Flagged</p>
+          </div>
+        </div>
+
+        {/* Quick actions pill bar */}
+        <div className="bg-teal-700 rounded-2xl p-1.5 flex items-center gap-1 overflow-x-auto">
+          {[
+            { icon: Search,        label: 'Look Up',    onClick: () => scrollToId('institution-lookup') },
+            { icon: Landmark,      label: 'My Lookups', onClick: () => scrollToId('institution-ledger') },
+          ].map(q => (
+            <button key={q.label} onClick={q.onClick} className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-white/90 hover:bg-white/10 transition shrink-0 whitespace-nowrap">
+              <q.icon size={13} /><span className="text-[11px] font-black">{q.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Action grid */}
+        <div>
+          <p className="text-white/30 text-[10px] font-black uppercase tracking-[2px] mb-2.5 px-1">Quick Actions</p>
+          <div className="grid grid-cols-3 gap-2.5">
+            {[
+              { icon: Search,        label: 'Look Up',    color: 'bg-teal-600', onClick: () => scrollToId('institution-lookup') },
+              { icon: Landmark,      label: 'My Lookups', color: 'bg-amber-500', badge: flaggedCount || null, onClick: () => scrollToId('institution-ledger') },
+              { icon: MessageSquare, label: 'Messenger',  color: 'bg-pink-500', tab: 'vet' },
+            ].map(a => (
+              <button key={a.label} onClick={() => a.onClick ? a.onClick() : setActiveTab(a.tab)} className="relative bg-[#1E1E1E] border border-white/5 rounded-2xl p-3 flex flex-col items-center gap-2 hover:bg-[#252525] transition">
+                {a.badge ? <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[8px] font-black rounded-full">{a.badge}</span> : null}
+                <div className={`w-10 h-10 rounded-xl ${a.color} flex items-center justify-center`}><a.icon size={17} className="text-white" /></div>
+                <span className="text-white/70 text-[9px] font-bold text-center leading-tight">{a.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="hidden lg:block p-6 pb-0">
       {/* Role explanation */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-teal-800 rounded-3xl p-6 relative overflow-hidden">
@@ -2498,30 +3167,32 @@ const InstitutionDashboard = ({ currentUser }) => {
           </p>
         </div>
       </div>
+      </div>
 
+      <div className="p-4 pt-4 lg:p-6 lg:pt-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         <div className="col-span-2 space-y-5">
           {/* Lookup box */}
-          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-            <h3 className="text-sm font-black text-gray-800 mb-1">Look Up a Certificate</h3>
-            <p className="text-[11px] text-gray-400 font-medium mb-4">Enter the code from the certificate the farmer shared with you.</p>
+          <div id="institution-lookup" className="bg-[#1E1E1E] lg:bg-white border border-white/5 lg:border-gray-100 rounded-2xl p-5 lg:shadow-sm">
+            <h3 className="text-sm font-black text-white lg:text-gray-800 mb-1">Look Up a Certificate</h3>
+            <p className="text-[11px] text-white/40 lg:text-gray-400 font-medium mb-4">Enter the code from the certificate the farmer shared with you.</p>
             <form onSubmit={lookup} className="flex gap-2">
               <input
                 value={code} onChange={e => setCode(e.target.value)}
                 placeholder="e.g. 51a18e001813" maxLength={20}
-                className="flex-1 min-w-0 px-3 py-2.5 bg-gray-50 rounded-xl border-2 border-transparent focus:border-teal-700 outline-none font-black text-sm text-center tracking-[0.15em] text-gray-800 placeholder:text-gray-300 placeholder:tracking-normal placeholder:font-medium"
+                className="flex-1 min-w-0 px-3 py-2.5 bg-white/5 lg:bg-gray-50 rounded-xl border-2 border-transparent focus:border-teal-700 outline-none font-black text-sm text-center tracking-[0.15em] text-white lg:text-gray-800 placeholder:text-white/20 lg:placeholder:text-gray-300 placeholder:tracking-normal placeholder:font-medium"
               />
               <button type="submit" disabled={lookupBusy || !code.trim()} className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-teal-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-teal-800 transition disabled:opacity-50">
                 <Search size={14} /> {lookupBusy ? '…' : 'Verify'}
               </button>
             </form>
-            {lookupError && <p className="text-[11px] text-red-500 font-bold mt-3">{lookupError}</p>}
+            {lookupError && <p className="text-[11px] text-red-400 lg:text-red-500 font-bold mt-3">{lookupError}</p>}
 
             {result && (
-              <div className="mt-4 rounded-2xl border-2 border-teal-100 bg-teal-50/50 p-5">
+              <div className="mt-4 rounded-2xl border-2 border-teal-900/60 lg:border-teal-100 bg-teal-950/40 lg:bg-teal-50/50 p-5">
                 {result.already_pledged && (
-                  <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-xl px-3 py-2.5 mb-4 text-[11px] font-black">
+                  <div className="flex items-center gap-2 bg-red-950/60 lg:bg-red-50 border border-red-900/60 lg:border-red-200 text-red-300 lg:text-red-700 rounded-xl px-3 py-2.5 mb-4 text-[11px] font-black">
                     <ShieldAlert size={14} className="shrink-0" /> Already flagged as held collateral{result.flagged_by_me ? ' by you' : ' by another institution'} — verify with the farmer before relying on it.
                   </div>
                 )}
@@ -2533,14 +3204,14 @@ const InstitutionDashboard = ({ currentUser }) => {
                     ['Certified Value', `USD ${Number(result.estimated_value).toLocaleString()}`],
                   ].map(([label, value]) => (
                     <div key={label}>
-                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">{label}</p>
-                      <p className="text-sm font-black text-gray-800">{value}</p>
+                      <p className="text-[9px] font-black text-white/40 lg:text-gray-400 uppercase tracking-widest mb-0.5">{label}</p>
+                      <p className="text-sm font-black text-white lg:text-gray-800">{value}</p>
                     </div>
                   ))}
                 </div>
                 <button
                   onClick={flagCollateral} disabled={flagBusy || result.flagged_by_me}
-                  className="w-full mt-4 py-2.5 bg-gray-800 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-900 transition disabled:opacity-50"
+                  className="w-full mt-4 py-2.5 bg-gray-700 lg:bg-gray-800 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-600 lg:hover:bg-gray-900 transition disabled:opacity-50"
                 >
                   {result.flagged_by_me ? 'Flagged as Held Collateral ✓' : flagBusy ? 'Flagging…' : 'Flag as Held Collateral'}
                 </button>
@@ -2549,27 +3220,27 @@ const InstitutionDashboard = ({ currentUser }) => {
           </div>
 
           {/* Ledger */}
-          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-            <h3 className="text-sm font-black text-gray-800 mb-1">My Lookups</h3>
-            <p className="text-[11px] text-gray-400 font-medium mb-4">Every certificate you've checked, most recent first.</p>
+          <div id="institution-ledger" className="bg-[#1E1E1E] lg:bg-white border border-white/5 lg:border-gray-100 rounded-2xl p-5 lg:shadow-sm">
+            <h3 className="text-sm font-black text-white lg:text-gray-800 mb-1">My Lookups</h3>
+            <p className="text-[11px] text-white/40 lg:text-gray-400 font-medium mb-4">Every certificate you've checked, most recent first.</p>
             {ledgerLoading ? (
-              <p className="text-xs text-gray-400 font-medium italic text-center py-8">Loading…</p>
+              <p className="text-xs text-white/30 lg:text-gray-400 font-medium italic text-center py-8">Loading…</p>
             ) : ledger.length === 0 ? (
-              <div className="text-center py-10 border-2 border-dashed border-gray-200 rounded-2xl">
-                <Landmark size={28} className="mx-auto text-gray-300 mb-2" />
-                <p className="text-sm font-black text-gray-400">No certificates checked yet</p>
+              <div className="text-center py-10 border-2 border-dashed border-white/10 lg:border-gray-200 rounded-2xl">
+                <Landmark size={28} className="mx-auto text-white/20 lg:text-gray-300 mb-2" />
+                <p className="text-sm font-black text-white/30 lg:text-gray-400">No certificates checked yet</p>
               </div>
             ) : (
               <div className="space-y-2.5">
                 {ledger.map((l, i) => (
-                  <div key={`${l.verification_code}-${i}`} className="flex items-center gap-3 p-3.5 bg-gray-50 rounded-xl">
+                  <div key={`${l.verification_code}-${i}`} className="flex items-center gap-3 p-3.5 bg-white/[0.03] lg:bg-gray-50 rounded-xl">
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-black text-gray-800 truncate">{l.animal_name} <span className="text-gray-400 font-medium">· {l.species}</span></p>
-                      <p className="text-[10px] text-gray-400 font-medium">{l.owner_name} · checked {new Date(l.looked_up_at).toLocaleDateString()}</p>
+                      <p className="text-xs font-black text-white lg:text-gray-800 truncate">{l.animal_name} <span className="text-white/40 lg:text-gray-400 font-medium">· {l.species}</span></p>
+                      <p className="text-[10px] text-white/30 lg:text-gray-400 font-medium">{l.owner_name} · checked {new Date(l.looked_up_at).toLocaleDateString()}</p>
                     </div>
-                    <p className="text-xs font-black text-teal-700 shrink-0">${Number(l.estimated_value).toLocaleString()}</p>
+                    <p className="text-xs font-black text-teal-400 lg:text-teal-700 shrink-0">${Number(l.estimated_value).toLocaleString()}</p>
                     {!!l.flagged_as_collateral && (
-                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full uppercase shrink-0 bg-teal-100 text-teal-700">Flagged</span>
+                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full uppercase shrink-0 bg-teal-500/15 lg:bg-teal-100 text-teal-300 lg:text-teal-700">Flagged</span>
                     )}
                   </div>
                 ))}
@@ -2579,8 +3250,8 @@ const InstitutionDashboard = ({ currentUser }) => {
         </div>
 
         <div className="col-span-1 space-y-5">
-          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-            <h3 className="text-sm font-black text-gray-800 mb-3">How It Works</h3>
+          <div className="bg-[#1E1E1E] lg:bg-white border border-white/5 lg:border-gray-100 rounded-2xl p-5 lg:shadow-sm">
+            <h3 className="text-sm font-black text-white lg:text-gray-800 mb-3">How It Works</h3>
             <div className="space-y-3">
               {[
                 { n: '1', t: 'Get the Code', d: 'A farmer shares the certificate code for an animal offered as collateral' },
@@ -2591,14 +3262,15 @@ const InstitutionDashboard = ({ currentUser }) => {
                 <div key={s.n} className="flex items-start gap-3">
                   <div className="w-5 h-5 bg-teal-700 rounded-full flex items-center justify-center text-[9px] font-black text-white shrink-0 mt-0.5">{s.n}</div>
                   <div>
-                    <p className="text-[11px] font-black text-gray-800">{s.t}</p>
-                    <p className="text-[10px] text-gray-400 font-medium">{s.d}</p>
+                    <p className="text-[11px] font-black text-white lg:text-gray-800">{s.t}</p>
+                    <p className="text-[10px] text-white/40 lg:text-gray-400 font-medium">{s.d}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
@@ -3405,7 +4077,7 @@ function App() {
               {role === 'Supplier'     && <SupplierDashboard     inventory={inventory} setActiveTab={setActiveTab} currentUser={currentUser} onMessageFarmer={requestVetContact} onAddStock={openMarketplacePostForm} />}
               {role === 'Buyer'     && <BuyerDashboard     setActiveTab={setActiveTab} currentUser={currentUser} onMessageSeller={requestVetContact} />}
               {role === 'Police'       && <PoliceDashboard       notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} onMessageFarmer={requestVetContact} />}
-              {role === 'Institution'  && <InstitutionDashboard  currentUser={currentUser} />}
+              {role === 'Institution'  && <InstitutionDashboard  currentUser={currentUser} setActiveTab={setActiveTab} />}
             </ErrorBoundary>
           )}
           {activeTab === 'profile'     && <ErrorBoundary><AnimalProfile animals={animals} onAddAnimal={addAnimal} onAddAnimalPhotos={addAnimalPhotos} auditLog={auditLog} currentUser={currentUser} onListAnimal={handleListAnimal} onAnimalsChanged={() => loadUserData(currentUser)} /></ErrorBoundary>}

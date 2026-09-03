@@ -38,4 +38,14 @@ export const COLORS = {
   text:      '#1a1a1a',
   muted:     '#666666',
   border:    '#e0e0e0',
+
+  // Dark-theme dashboard tokens (mobile-first redesign) — applied across
+  // all role dashboards in this app, matching the web app's mobile view.
+  bgDark:     '#121212',
+  cardDark:   '#1E1E1E',
+  cardDark2:  'rgba(255,255,255,0.03)',
+  borderDark: 'rgba(255,255,255,0.06)',
+  textDark:   '#ffffff',
+  mutedDark:  'rgba(255,255,255,0.4)',
+  mutedDark2: 'rgba(255,255,255,0.25)',
 };
