@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import pfumaMark          from './assets/pfuma-mark.png';
+import LandingPage        from './components/LandingPage/LandingPage';
 import DiseaseDetection  from './components/DiseaseDetection/DiseaseDetection';
 import AnimalProfile, { MovementPermitCard } from './components/AnimalProfile/AnimalProfile';
 import HealthManagement  from './components/HealthManagement/HealthManagement';
@@ -336,6 +337,8 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
 
       {/* Greeting banner */}
       <div className="bg-pfuma-green rounded-3xl p-6 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} aria-hidden="true" />
+        <div className="absolute -top-14 -left-10 w-48 h-48 rounded-full bg-pfuma-sprout/20 blur-3xl" aria-hidden="true" />
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 80% 50%, #fff 0%, transparent 60%)' }} aria-hidden="true" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-4">
           <div className="flex-1">
@@ -945,6 +948,8 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
 
       {/* Greeting */}
       <div className="bg-pfuma-green/20 border border-pfuma-green/30 rounded-3xl p-6 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-[0.08]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} aria-hidden="true" />
+        <div className="absolute -bottom-16 -right-12 w-56 h-56 rounded-full bg-pfuma-sprout/15 blur-3xl" aria-hidden="true" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-4">
           <div className="flex-1">
             <p className="text-green-400 text-xs font-black uppercase tracking-[3px] mb-1">Authority Dashboard · {currentUser?.province || 'Mashonaland West'}</p>
@@ -1337,6 +1342,8 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
       {/* Role explanation */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-pfuma-gold rounded-3xl p-6 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} aria-hidden="true" />
+          <div className="absolute -top-12 -right-8 w-44 h-44 rounded-full bg-white/15 blur-3xl" aria-hidden="true" />
           <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 80% 50%, #fff 0%, transparent 60%)' }} aria-hidden="true" />
           <div className="relative z-10">
             <p className="text-amber-100 text-xs font-black uppercase tracking-[3px] mb-1">{greet()}, Supplier</p>
@@ -1576,6 +1583,8 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
       {/* Role explanation */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-pfuma-plum rounded-3xl p-6 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} aria-hidden="true" />
+          <div className="absolute -bottom-14 -left-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" aria-hidden="true" />
           <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 80% 50%, #fff 0%, transparent 60%)' }} aria-hidden="true" />
           <div className="relative z-10">
             <p className="text-purple-300 text-xs font-black uppercase tracking-[3px] mb-1">{greet()}, Buyer</p>
@@ -2028,6 +2037,8 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
 
       {/* Greeting */}
       <div className="bg-red-900/30 border border-red-700/40 rounded-3xl p-6 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-[0.08]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} aria-hidden="true" />
+        <div className="absolute -top-16 -right-10 w-56 h-56 rounded-full bg-red-500/15 blur-3xl" aria-hidden="true" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-4">
           <div className="flex-1">
             <p className="text-red-300 text-xs font-black uppercase tracking-[3px] mb-1">Stock Theft &amp; Verification Unit · {currentUser?.jurisdictionProvince || currentUser?.province || 'Mashonaland West'}</p>
@@ -2468,6 +2479,8 @@ const InstitutionDashboard = ({ currentUser }) => {
       {/* Role explanation */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-teal-800 rounded-3xl p-6 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} aria-hidden="true" />
+          <div className="absolute -bottom-12 -right-8 w-44 h-44 rounded-full bg-white/10 blur-3xl" aria-hidden="true" />
           <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 80% 50%, #fff 0%, transparent 60%)' }} aria-hidden="true" />
           <div className="relative z-10">
             <p className="text-teal-200 text-xs font-black uppercase tracking-[3px] mb-1">{greet()}, {currentUser?.institutionType || 'Institution'}</p>
@@ -2806,6 +2819,12 @@ const auditLogFromApi = (e) => ({
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [sessionChecked, setSessionChecked] = useState(false);
+  // A logged-out visitor sees the marketing landing page first, not the
+  // login form directly — this is the actual public "front door" (pitch
+  // viewers, a first-time farmer, TelOne). A returning user with a saved
+  // session never sees this at all; they go straight past it to their
+  // dashboard, same as before this existed.
+  const [showAuthPortal, setShowAuthPortal] = useState(false);
   const [animals,     setAnimals]     = useState([]);
   const [activeTab,   setActiveTab]   = useState('dashboard');
   // Carries an intent into VetCommunication so navigating to Messenger does
@@ -3113,7 +3132,10 @@ function App() {
   };
 
   if (!sessionChecked) return null;
-  if (!currentUser) return <AuthPortal onLogin={handleLoginSuccess} />;
+  if (!currentUser) {
+    if (!showAuthPortal) return <LandingPage onEnter={() => setShowAuthPortal(true)} />;
+    return <AuthPortal onLogin={handleLoginSuccess} />;
+  }
   // Admin doesn't fit the client-facing Farmer/Vet/Supplier/Buyer/Police
   // shell at all — a separate full-page dashboard, bypassing the normal
   // sidebar/nav entirely.
