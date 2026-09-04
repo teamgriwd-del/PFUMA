@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import pfumaMark          from './assets/pfuma-mark.png';
-import LandingPage        from './components/LandingPage/LandingPage';
 import DiseaseDetection  from './components/DiseaseDetection/DiseaseDetection';
 import AnimalProfile, { MovementPermitCard } from './components/AnimalProfile/AnimalProfile';
 import HealthManagement  from './components/HealthManagement/HealthManagement';
@@ -3491,12 +3490,6 @@ const auditLogFromApi = (e) => ({
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [sessionChecked, setSessionChecked] = useState(false);
-  // A logged-out visitor sees the marketing landing page first, not the
-  // login form directly — this is the actual public "front door" (pitch
-  // viewers, a first-time farmer, TelOne). A returning user with a saved
-  // session never sees this at all; they go straight past it to their
-  // dashboard, same as before this existed.
-  const [showAuthPortal, setShowAuthPortal] = useState(false);
   const [animals,     setAnimals]     = useState([]);
   const [activeTab,   setActiveTab]   = useState('dashboard');
   // Carries an intent into VetCommunication so navigating to Messenger does
@@ -3804,10 +3797,7 @@ function App() {
   };
 
   if (!sessionChecked) return null;
-  if (!currentUser) {
-    if (!showAuthPortal) return <LandingPage onEnter={() => setShowAuthPortal(true)} />;
-    return <AuthPortal onLogin={handleLoginSuccess} />;
-  }
+  if (!currentUser) return <AuthPortal onLogin={handleLoginSuccess} />;
   // Admin doesn't fit the client-facing Farmer/Vet/Supplier/Buyer/Police
   // shell at all — a separate full-page dashboard, bypassing the normal
   // sidebar/nav entirely.
