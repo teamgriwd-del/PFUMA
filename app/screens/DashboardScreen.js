@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import {
   Globe, Sprout, Pill, Store, Stethoscope, AlertTriangle, CheckCircle, Check,
   MessageSquare, ShieldCheck, Wifi, Package, PhoneCall, HeartPulse, ShoppingCart,
-  ArrowRight, Users, Wheat, Wallet, Syringe, ListChecks, Compass, Tag, TrendingUp, Truck, Beef, Plus,
+  ArrowRight, Users, Wheat, Wallet, Syringe, ListChecks, Compass, Tag, TrendingUp, Truck, Beef, Plus, BookOpen,
 } from 'lucide-react-native';
 import { COLORS, FONTS, API } from '../config';
 import { authFetch } from '../api';
@@ -705,8 +705,9 @@ function SupplierDashboard({ currentUser, navigation }) {
       <SectionLabel icon={Compass}>QUICK ACTIONS</SectionLabel>
       <ActionGrid actions={[
         { icon: Store,         label: 'Marketplace',   color: COLORS.gold, onPress: () => navigation.navigate('Market') },
-        { icon: Package,       label: 'My Stock',      color: '#8E450E', badge: pending || null, onPress: () => navigation.navigate('Market') },
+        { icon: Package,       label: 'My Stock',      color: '#8E450E', badge: pending || null, onPress: () => navigation.navigate('Stock') },
         { icon: Wheat,         label: 'Feed Database', color: '#57633E', onPress: () => navigation.navigate('Feed') },
+        { icon: BookOpen,      label: 'Trade Journal', color: '#674A61', onPress: () => navigation.navigate('TradingJournal') },
         { icon: MessageSquare, label: 'Messenger',     color: '#9B5A4B', onPress: () => navigation.navigate('Vet') },
       ]} />
 
@@ -861,6 +862,7 @@ function BuyerDashboard({ currentUser, navigation }) {
         { icon: Store,         label: 'Marketplace',    color: COLORS.purple, onPress: () => navigation.navigate('Market') },
         { icon: ShoppingCart,  label: 'Verified Stock', color: '#57633E', onPress: () => navigation.navigate('Market') },
         { icon: Wheat,         label: 'Feed Analyzer',  color: '#8E450E', onPress: () => navigation.navigate('Feed') },
+        { icon: BookOpen,      label: 'Trade Journal',  color: '#523B4D', onPress: () => navigation.navigate('TradingJournal') },
         { icon: MessageSquare, label: 'Messenger',      color: '#9B5A4B', onPress: () => navigation.navigate('Vet') },
       ]} />
 
@@ -1027,18 +1029,19 @@ export default function DashboardScreen({ currentUser, onLogout, navigation }) {
       {role === 'Veterinarian' && <VeterinarianDashboard  currentUser={currentUser} navigation={navigation} />}
       {role === 'Supplier'     && <SupplierDashboard      currentUser={currentUser} navigation={navigation} />}
       {role === 'Buyer'     && <BuyerDashboard      currentUser={currentUser} navigation={navigation} />}
-      {(role === 'Admin' || role === 'Police' || role === 'Institution') && (
+      {/* Police and Institution now get real screens (PoliceScreen,
+          InstitutionScreen) registered directly in App.js's ROLE_TABS —
+          this placeholder is Admin-only now. Admin stays web-only
+          deliberately: data-dense moderation tables/charts, not a phone
+          task (see App.js's ROLE_TABS.Admin comment). */}
+      {role === 'Admin' && (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, backgroundColor: COLORS.bgDark }}>
           <ShieldCheck size={40} color={COLORS.mutedDark} />
           <Text style={{ fontSize: 15, fontWeight: '800', color: COLORS.textDark, marginTop: 14, textAlign: 'center' }}>
-            {role} tools are web-only
+            Admin tools are web-only
           </Text>
           <Text style={{ fontSize: 12, color: COLORS.mutedDark, marginTop: 6, textAlign: 'center', lineHeight: 18 }}>
-            {role === 'Admin'
-              ? 'Platform moderation (users, listings, trends) lives in the PFUMA web app, not this mobile app.'
-              : role === 'Institution'
-              ? 'Certificate verification and lookups live in the PFUMA web app, not this mobile app.'
-              : 'Sale clearance and oversight tools live in the PFUMA web app, not this mobile app.'}
+            Platform moderation (users, listings, trends) lives in the PFUMA web app, not this mobile app.
           </Text>
           <TouchableOpacity onPress={onLogout} activeOpacity={0.8}
             style={{ marginTop: 20, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 12, backgroundColor: COLORS.cardDark }}>

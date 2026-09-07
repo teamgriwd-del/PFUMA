@@ -13,7 +13,7 @@ import {
 } from '@expo-google-fonts/plus-jakarta-sans';
 import {
   Home, Users, ShoppingCart, Wheat, MessageSquare,
-  User, ClipboardList, Package, Store, Shield, Radio,
+  User, ClipboardList, Package, Store, Shield, Radio, Landmark,
 } from 'lucide-react-native';
 import { COLORS, FONTS } from './config';
 
@@ -31,6 +31,11 @@ import HealthManagementScreen  from './screens/HealthManagementScreen';
 import ComplianceScreen        from './screens/ComplianceScreen';
 import DiseaseDetectionScreen  from './screens/DiseaseDetectionScreen';
 import CooperativeScreen       from './screens/CooperativeScreen';
+import PoliceScreen            from './screens/PoliceScreen';
+import InstitutionScreen       from './screens/InstitutionScreen';
+import VetComplianceScreen     from './screens/VetComplianceScreen';
+import SupplierStockScreen     from './screens/SupplierStockScreen';
+import TradingJournalScreen    from './screens/TradingJournalScreen';
 import JindaFAB    from './components/JindaFAB';
 
 const Tab = createBottomTabNavigator();
@@ -68,8 +73,14 @@ const ROLE_TABS = {
     { name: 'Profile',   icon: User,          label: 'Profile', screen: ProfileScreen },
   ],
   Police: [
-    { name: 'Dashboard', icon: Shield,        label: 'Home',    screen: DashboardScreen },
+    { name: 'Dashboard', icon: Shield,        label: 'Home',    screen: PoliceScreen },
     { name: 'Market',    icon: ShoppingCart,  label: 'Market',  screen: MarketplaceScreen },
+    { name: 'IoT',       icon: Radio,         label: 'Alerts',  screen: IoTScreen },
+    { name: 'Vet',       icon: MessageSquare, label: 'Messages',screen: VetMessengerScreen },
+    { name: 'Profile',   icon: User,          label: 'Profile', screen: ProfileScreen },
+  ],
+  Institution: [
+    { name: 'Dashboard', icon: Landmark,      label: 'Home',    screen: InstitutionScreen },
     { name: 'Vet',       icon: MessageSquare, label: 'Messages',screen: VetMessengerScreen },
     { name: 'Profile',   icon: User,          label: 'Profile', screen: ProfileScreen },
   ],
@@ -95,12 +106,31 @@ const HIDDEN_TABS = {
     { name: 'Disease',     screen: DiseaseDetectionScreen },
     { name: 'Cooperative', screen: CooperativeScreen },
   ],
+  // HealthManagementScreen/DiseaseDetectionScreen are already role-agnostic
+  // (they just fetch /animals, which a Vet sees across every farm, not only
+  // their own — see GET /animals in backend/app.py) so they're reused as-is.
+  // Compliance is NOT reused — a vet needs the follow-up queue's claim/
+  // notice/lockout actions, not the farmer's "I can't vaccinate" flow, so
+  // that's its own screen (VetComplianceScreen).
+  Veterinarian: [
+    { name: 'Health',      screen: HealthManagementScreen },
+    { name: 'Compliance',  screen: VetComplianceScreen },
+    { name: 'Disease',     screen: DiseaseDetectionScreen },
+    { name: 'Feed',        screen: FeedAnalyzerScreen },
+  ],
+  Supplier: [
+    { name: 'Stock',         screen: SupplierStockScreen },
+    { name: 'TradingJournal', screen: TradingJournalScreen },
+  ],
+  Buyer: [
+    { name: 'TradingJournal', screen: TradingJournalScreen },
+  ],
 };
 
 const ROLE_COLORS = {
   Farmer: COLORS.primary, Veterinarian: COLORS.teal,
   Supplier: '#8E450E',    Buyer: COLORS.purple,
-  Police: COLORS.danger,
+  Police: COLORS.danger,  Institution: '#465032',
 };
 
 // ── Tab icon: pill highlight on active, clean spacing ──────────────────────

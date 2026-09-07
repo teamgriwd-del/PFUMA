@@ -4,6 +4,7 @@ import * as ImagePicker from 'expo-image-picker';
 import {
   Users, ShoppingCart, Wheat, Stethoscope, Pill, AlertTriangle,
   Store, Sprout, LogOut, ChevronRight, Camera, HeartPulse, ShieldAlert, Handshake,
+  Shield, Landmark, Package, BookOpen,
 } from 'lucide-react-native';
 import { COLORS, API } from '../config';
 import { authFetch, assetToFormFile } from '../api';
@@ -22,8 +23,8 @@ const MenuItem = ({ icon: Icon, label, desc, color, onPress }) => (
   </TouchableOpacity>
 );
 
-const ROLE_ICON  = { Farmer: Sprout, Veterinarian: Stethoscope, Supplier: Pill, Buyer: Store };
-const ROLE_COLOR = { Farmer: COLORS.primary, Veterinarian: '#3B342D', Supplier: '#8E450E', Buyer: '#523B4D' };
+const ROLE_ICON  = { Farmer: Sprout, Veterinarian: Stethoscope, Supplier: Pill, Buyer: Store, Police: Shield, Institution: Landmark };
+const ROLE_COLOR = { Farmer: COLORS.primary, Veterinarian: '#3B342D', Supplier: '#8E450E', Buyer: '#523B4D', Police: COLORS.danger, Institution: '#465032' };
 
 export default function ProfileScreen({ navigation, currentUser, onLogout, onUserUpdate }) {
   const role      = currentUser?.role || 'Farmer';
@@ -86,22 +87,43 @@ export default function ProfileScreen({ navigation, currentUser, onLogout, onUse
       </View>
 
       {/* My Tools */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>My Farm</Text>
-        <View style={styles.menuCard}>
-          <MenuItem icon={Users}        label="Herd Registry"   desc="View and manage your animals"     color={COLORS.primary} onPress={() => navigation.navigate('Herd')} />
-          <MenuItem icon={ShoppingCart} label="My Listings"     desc="Animals and products for sale"     color="#8E450E"       onPress={() => navigation.navigate('Market')} />
-          <MenuItem icon={Wheat}        label="Feed Analyzer"   desc="Check livestock nutrition"          color="#57633E"       onPress={() => navigation.navigate('Feed')} />
-          {role === 'Farmer' && (
-            <>
-              <MenuItem icon={HeartPulse}   label="Lifecycle"      desc="Vaccines, pregnancy & medication" color="#674A61"       onPress={() => navigation.navigate('Health')} />
-              <MenuItem icon={ShieldAlert}  label="Follow-Ups"     desc="Overdue vaccinations & what to do" color="#8C632A"       onPress={() => navigation.navigate('Compliance')} />
-              <MenuItem icon={Stethoscope}  label="Diagnostics"    desc="AI disease checker"                color="#B5342C"       onPress={() => navigation.navigate('Disease')} />
+      {(role === 'Farmer' || role === 'Veterinarian') && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{role === 'Veterinarian' ? 'Clinical Tools' : 'My Farm'}</Text>
+          <View style={styles.menuCard}>
+            <MenuItem icon={Users}        label="Herd Registry"   desc={role === 'Veterinarian' ? 'Animal identity & records' : 'View and manage your animals'} color={COLORS.primary} onPress={() => navigation.navigate('Herd')} />
+            {role === 'Farmer' && (
+              <MenuItem icon={ShoppingCart} label="My Listings"     desc="Animals and products for sale"     color="#8E450E"       onPress={() => navigation.navigate('Market')} />
+            )}
+            <MenuItem icon={Wheat}        label={role === 'Veterinarian' ? 'Feed Database' : 'Feed Analyzer'} desc="Check livestock nutrition" color="#57633E" onPress={() => navigation.navigate('Feed')} />
+            <MenuItem icon={HeartPulse}   label="Lifecycle"      desc="Vaccines, pregnancy & medication" color="#674A61"       onPress={() => navigation.navigate('Health')} />
+            <MenuItem icon={ShieldAlert}  label="Follow-Ups"     desc={role === 'Veterinarian' ? 'Provincial vaccination follow-up queue' : 'Overdue vaccinations & what to do'} color="#8C632A" onPress={() => navigation.navigate('Compliance')} />
+            <MenuItem icon={Stethoscope}  label="Diagnostics"    desc="AI disease checker"                color="#B5342C"       onPress={() => navigation.navigate('Disease')} />
+            {role === 'Farmer' && (
               <MenuItem icon={Handshake}    label="Cooperative"    desc="Shared dip tank & group vet requests" color="#C99A4A"    onPress={() => navigation.navigate('Cooperative')} />
-            </>
-          )}
+            )}
+          </View>
         </View>
-      </View>
+      )}
+
+      {role === 'Supplier' && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Operations</Text>
+          <View style={styles.menuCard}>
+            <MenuItem icon={Package}       label="Supply Chain"    desc="Stock levels & restocking"         color={COLORS.gold}   onPress={() => navigation.navigate('Stock')} />
+            <MenuItem icon={BookOpen}      label="Trading Journal" desc="Trade history & top farmers"       color="#674A61"       onPress={() => navigation.navigate('TradingJournal')} />
+          </View>
+        </View>
+      )}
+
+      {role === 'Buyer' && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Trade</Text>
+          <View style={styles.menuCard}>
+            <MenuItem icon={BookOpen}      label="Trading Journal" desc="Purchase history & top sellers"    color="#523B4D"       onPress={() => navigation.navigate('TradingJournal')} />
+          </View>
+        </View>
+      )}
 
       {/* Connect */}
       <View style={styles.section}>
