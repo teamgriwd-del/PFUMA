@@ -566,6 +566,7 @@ CREATE TABLE IF NOT EXISTS iot_devices (
   device_type   ENUM('collar','base_station') NOT NULL DEFAULT 'collar',
   animal_id     INT,                   -- FK → animals.id (collars only — NULL for base stations, and NULL until attached for an unattached collar)
   owner_id      INT NOT NULL,          -- FK → users.id (farmer who paired it)
+  device_secret VARCHAR(64),           -- shared secret for telemetry auth; issued once at pairing time, never re-shown
   paired_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (animal_id) REFERENCES animals(id) ON DELETE SET NULL,
   FOREIGN KEY (owner_id)  REFERENCES users(id)   ON DELETE CASCADE

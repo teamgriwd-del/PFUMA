@@ -293,6 +293,7 @@ void forwardToAPI(const CollarPacket& pkt, const char* id, int rssi, bool isAler
   http.begin(tls, endpoint);
   http.addHeader("Content-Type", "application/json");
   http.addHeader("X-Station-ID", STATION_ID);
+  http.addHeader("X-Station-Secret", STATION_SECRET);
   http.setTimeout(5000);   // TLS handshake needs longer than plain HTTP
 
   int code = http.POST(body);

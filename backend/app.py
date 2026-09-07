@@ -364,6 +364,17 @@ def ensure_schema():
     add_column_if_missing('conversation_messages', 'attachment_url', "attachment_url VARCHAR(300)")
     add_column_if_missing('conversation_messages', 'attachment_name', "attachment_name VARCHAR(150)")
 
+    # Per-device shared secret for telemetry auth (see _store_iot_reading).
+    # Nullable at the column level because existing production rows predate
+    # it — backfilled with a fresh secret below so every already-paired
+    # device gets one too, not just newly-paired ones. A device that gets
+    # backfilled here will need its owner to re-pair it (or be told the new
+    # secret some other way) since the old value was never exposed to anyone.
+    add_column_if_missing('iot_devices', 'device_secret', "device_secret VARCHAR(64) NULL")
+    c.execute("SELECT id FROM iot_devices WHERE device_secret IS NULL")
+    for row in c.fetchall():
+        c.execute("UPDATE iot_devices SET device_secret=%s WHERE id=%s", (secrets.token_hex(20), row['id']))
+
     # The 'Retailer' role was renamed to 'Buyer' — an ENUM value rename, not a
     # new column, so add_column_if_missing above doesn't cover it. Changing a
     # MySQL ENUM's allowed values directly would silently blank out any row
@@ -849,11 +860,36 @@ def get_document(user_id, doctype):
     return send_from_directory(os.path.join(UPLOAD_DIR, directory), filename)
 
 
-# Animal/listing photos — publicly viewable (unlike the private id/credential
-# documents above), same as a stock product photo would be on any marketplace.
+# Animal/listing photos — publicly viewable, same as a stock product photo
+# would be on any marketplace. 'clearances' (officer's inspection photo) and
+# 'signatures' (seller/buyer/vet/officer signatures) are NOT public — those
+# are evidentiary documents tied to a specific sale/permit, so this checks
+# for a valid session and restricts them to the roles that actually review
+# clearances in the app today (Police, Admin).
+PUBLIC_PHOTO_CATEGORIES = ('animals', 'listings', 'avatars')
+PRIVATE_PHOTO_CATEGORIES = ('clearances', 'signatures')
+
+
 @app.route('/uploads/<category>/<path:filename>', methods=['GET'])
 def get_photo(category, filename):
-    if category not in ('animals', 'listings', 'avatars', 'clearances', 'signatures'):
+    if category in PRIVATE_PHOTO_CATEGORIES:
+        auth_header = request.headers.get('Authorization', '')
+        if not auth_header.startswith('Bearer '):
+            return jsonify({"error": "Missing or malformed Authorization header"}), 401
+        try:
+            payload = jwt.decode(auth_header[len('Bearer '):], SECRET_KEY, algorithms=['HS256'])
+        except jwt.InvalidTokenError:
+            return jsonify({"error": "Invalid or expired session token"}), 401
+        db = get_db()
+        c = db.cursor()
+        c.execute("SELECT role, account_status FROM users WHERE id=%s", (payload['user_id'],))
+        user = c.fetchone()
+        db.close()
+        if not user or user['account_status'] == 'suspended':
+            return jsonify({"error": "Not authorized"}), 401
+        if user['role'] not in ('Police', 'Admin'):
+            return jsonify({"error": "Not authorized to view this document"}), 403
+    elif category not in PUBLIC_PHOTO_CATEGORIES:
         return jsonify({"error": "Not found"}), 404
     return send_from_directory(os.path.join(UPLOAD_DIR, category), filename)
 
@@ -1496,8 +1532,11 @@ def delete_animal_photo_route(animal_id, photo_id):
 def get_iot_devices():
     db = get_db()
     c = db.cursor()
+    # device_secret is intentionally excluded — it's only ever shown once, at
+    # pairing time, never again (this listing endpoint included).
     c.execute("""
-        SELECT d.*, a.name AS animal_name, a.species
+        SELECT d.id, d.device_serial, d.device_type, d.animal_id, d.owner_id, d.paired_at,
+               a.name AS animal_name, a.species
         FROM iot_devices d LEFT JOIN animals a ON d.animal_id = a.id
         WHERE d.owner_id = %s ORDER BY d.paired_at DESC
     """, (g.current_user['id'],))
@@ -1537,12 +1576,21 @@ def pair_iot_device():
             return jsonify({"error": "You've already paired this device"}), 409
         return jsonify({"error": "This device serial is already claimed by another account"}), 409
 
-    c.execute("INSERT INTO iot_devices (device_serial, device_type, animal_id, owner_id) VALUES (%s,%s,%s,%s)",
-              (serial, device_type, animal_id, g.current_user['id']))
+    # Telemetry from this device is only trusted once it's presented alongside
+    # this secret (X-Station-Secret header) — otherwise anyone who learns/
+    # guesses a paired serial could inject fake readings. Shown to the farmer
+    # exactly once, in this response, so it can be flashed into the device's
+    # secrets.h / app config; never returned by any GET.
+    device_secret = secrets.token_hex(20)
+    c.execute("INSERT INTO iot_devices (device_serial, device_type, animal_id, owner_id, device_secret) VALUES (%s,%s,%s,%s,%s)",
+              (serial, device_type, animal_id, g.current_user['id'], device_secret))
     device_id = c.lastrowid
     db.commit()
     db.close()
-    return jsonify({"id": device_id, "device_type": device_type, "message": "Device paired ✅"})
+    return jsonify({
+        "id": device_id, "device_type": device_type, "message": "Device paired ✅",
+        "device_secret": device_secret,
+    })
 
 
 @app.route('/iot-devices/<int:device_id>', methods=['PATCH'])
@@ -1574,30 +1622,43 @@ def update_iot_device(device_id):
 
 
 # Telemetry intake for real base-station hardware (see base_station.ino).
-# Authenticated by device serial rather than a user JWT, since firmware can't
-# hold a farmer's login session. The base station's own serial (X-Station-ID
-# header) must be paired, AND the collar's serial (JSON "id" field) must
-# separately be paired — each device is claimed independently in the app.
+# Authenticated by device serial + secret rather than a user JWT, since
+# firmware can't hold a farmer's login session. The base station's own serial
+# (X-Station-ID header) must be paired AND present its device_secret
+# (X-Station-Secret header, issued once at pairing time) — without that,
+# anyone who learns/guesses a serial could forge location/fever/theft
+# readings. The collar's serial (JSON "id" field) must separately be paired,
+# and must belong to the *same* farmer account as the station, so a valid
+# station can't be used to inject readings onto a collar it doesn't own.
 def _store_iot_reading():
     d = request.json or {}
     station_id = request.headers.get('X-Station-ID') or d.get('station_id')
+    station_secret = request.headers.get('X-Station-Secret') or d.get('station_secret')
     collar_id = d.get('id')
     if not collar_id:
         return jsonify({"error": "Missing collar id"}), 400
+    if not station_secret:
+        return jsonify({"error": "Missing station secret"}), 401
 
     db = get_db()
     c = db.cursor()
-    c.execute("SELECT id FROM iot_devices WHERE device_serial=%s", (station_id,))
+    c.execute("SELECT id, owner_id, device_secret FROM iot_devices WHERE device_serial=%s", (station_id,))
     station = c.fetchone()
     if not station:
         db.close()
         return jsonify({"error": "Unrecognized base station — pair this device serial in the app first"}), 404
+    if not station['device_secret'] or not secrets.compare_digest(station['device_secret'], station_secret):
+        db.close()
+        return jsonify({"error": "Invalid station secret"}), 401
 
-    c.execute("SELECT id FROM iot_devices WHERE device_serial=%s", (collar_id,))
+    c.execute("SELECT id, owner_id FROM iot_devices WHERE device_serial=%s", (collar_id,))
     collar = c.fetchone()
     if not collar:
         db.close()
         return jsonify({"error": "Unrecognized collar — pair this device serial in the app first"}), 404
+    if collar['owner_id'] != station['owner_id']:
+        db.close()
+        return jsonify({"error": "This collar isn't paired to the same account as this base station"}), 403
 
     c.execute("""
         INSERT INTO iot_readings
@@ -2442,26 +2503,6 @@ def get_inventory(owner_id):
     return jsonify(items)
 
 
-@app.route('/inventory/<int:item_id>/deduct', methods=['PATCH'])
-@require_auth
-def deduct_inventory(item_id):
-    d = request.json
-    dose = float(d.get('dose', 0))
-    db = get_db()
-    c = db.cursor()
-    c.execute("SELECT stock, owner_id FROM medicine_inventory WHERE id = %s", (item_id,))
-    row = c.fetchone()
-    if not row:
-        db.close(); return jsonify({"error": "Item not found"}), 404
-    if row['owner_id'] != g.current_user['id'] and g.current_user['role'] != 'Veterinarian':
-        db.close(); return jsonify({"error": "Not authorized to update this medicine cabinet"}), 403
-    new_stock = max(0, float(row['stock']) - dose)
-    c.execute("UPDATE medicine_inventory SET stock = %s WHERE id = %s", (new_stock, item_id))
-    db.commit()
-    db.close()
-    return jsonify({"new_stock": new_stock, "message": f"{dose}ml deducted ✅"})
-
-
 # ── MEDICATION RECOMMENDATIONS ──────────────────────────────────
 # The clinical direction runs vet → farmer: a Veterinarian recommends a
 # medicine/dose for a specific animal, and the farmer administers it from
@@ -2623,8 +2664,14 @@ def get_listings():
     c = db.cursor()
     category = request.args.get('category')
     q = request.args.get('q', '')
+    # No seller phone here — this is the public browse feed, open to every
+    # authenticated account regardless of verification status. A direct
+    # number only becomes visible once there's a real relationship: to the
+    # seller themself (get_my_listings), to a bidder (get_bids), or after a
+    # sale (accept_bid's notification / get_my_purchases). Contact before
+    # that goes through the in-app Messenger.
     sql = """
-        SELECT ml.*, u.full_name as seller_name, u.phone, u.province as seller_province
+        SELECT ml.*, u.full_name as seller_name, u.province as seller_province
         FROM marketplace_listings ml JOIN users u ON ml.user_id = u.id
         WHERE ml.status = 'available'
     """
@@ -3423,27 +3470,38 @@ def reject_movement_permit(permit_id):
 @require_auth
 @require_verified
 def place_bid(listing_id):
-    d = request.json
+    d = request.json or {}
+    try:
+        amount = float(d.get('amount'))
+    except (TypeError, ValueError):
+        return jsonify({"error": "amount must be a number"}), 400
+    if not (amount > 0):
+        return jsonify({"error": "amount must be a positive number"}), 400
+
     db = get_db()
     c = db.cursor()
     c.execute("SELECT status, category, product_name, user_id FROM marketplace_listings WHERE id=%s", (listing_id,))
     listing = c.fetchone()
     if not listing:
         db.close(); return jsonify({"error": "Listing not found"}), 404
-    if listing['category'] == 'livestock' and listing['status'] != 'available':
+    if listing['user_id'] == g.current_user['id']:
         db.close()
-        return jsonify({"error": "This listing has not been cleared by police yet — bidding is disabled until clearance is granted."}), 409
+        return jsonify({"error": "You can't bid on your own listing"}), 403
+    if listing['status'] != 'available':
+        db.close()
+        reason = "has not been cleared by police yet — bidding is disabled until clearance is granted" if listing['category'] == 'livestock' else "is no longer available"
+        return jsonify({"error": f"This listing {reason}."}), 409
 
     c.execute("""
         INSERT INTO bids (listing_id, bidder_id, amount, message)
         VALUES (%s,%s,%s,%s)
-    """, (listing_id, g.current_user['id'], d['amount'], d.get('message', '')))
+    """, (listing_id, g.current_user['id'], amount, d.get('message', '')))
     bid_id = c.lastrowid
 
     create_notification(
         c, listing['user_id'], 'bid_placed',
         f"New offer on {listing['product_name']}",
-        f"{g.current_user['full_name']} offered USD {float(d['amount']):,.2f}.",
+        f"{g.current_user['full_name']} offered USD {amount:,.2f}.",
         related_user_id=g.current_user['id'], listing_id=listing_id,
     )
 
@@ -3502,6 +3560,7 @@ def get_my_bids():
 
 @app.route('/listings/<int:listing_id>/bids/<int:bid_id>/accept', methods=['PATCH'])
 @require_auth
+@require_verified
 def accept_bid(listing_id, bid_id):
     """Seller accepts a bid: that bid is marked accepted, every other
     pending bid on the listing is declined, and the listing is closed out
@@ -3987,6 +4046,7 @@ def listings_price_trend():
 @app.route('/cooperatives', methods=['POST'])
 @require_auth
 @require_role('Farmer')
+@require_verified
 def create_cooperative():
     d = request.json or {}
     if not (d.get('name') or '').strip():
@@ -4037,6 +4097,7 @@ def list_cooperatives():
 @app.route('/cooperatives/<int:coop_id>/join', methods=['POST'])
 @require_auth
 @require_role('Farmer')
+@require_verified
 def join_cooperative(coop_id):
     db = get_db()
     c = db.cursor()

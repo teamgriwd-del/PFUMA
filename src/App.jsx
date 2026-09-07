@@ -2924,7 +2924,7 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
                       inspection, separate from the seller's listing photos. */}
                   <div className="flex items-center gap-2 mt-2">
                     {c.officer_photo_path ? (
-                      <img src={resolveImageUrl(c.officer_photo_path)} alt="Animal at clearance" className="w-12 h-12 rounded-lg object-cover border border-white/10" />
+                      <AuthedImage path={c.officer_photo_path} token={currentUser.token} alt="Animal at clearance" className="w-12 h-12 rounded-lg object-cover border border-white/10" />
                     ) : (
                       <div className="w-12 h-12 rounded-lg bg-white/5 border border-dashed border-white/20 flex items-center justify-center shrink-0">
                         <Camera size={14} className="text-gray-500" />
@@ -3498,6 +3498,28 @@ const IMAGE_BY_SPECIES = {
 // A real uploaded photo is stored as a relative /uploads/... path (needs the
 // API origin prefixed); the species stock fallback is already a full URL.
 const resolveImageUrl = (url) => (url && url.startsWith('/uploads/')) ? `${API}${url}` : url;
+
+// For 'clearances'/'signatures' uploads, the backend requires a Bearer token
+// (see get_photo in backend/app.py) — a plain <img src> can't attach one, so
+// this fetches the bytes with auth and renders them as a blob URL instead.
+const AuthedImage = ({ path, token, className, alt }) => {
+  const [blobUrl, setBlobUrl] = useState(null);
+  useEffect(() => {
+    let revoke = null;
+    let cancelled = false;
+    if (path && token) {
+      fetch(resolveImageUrl(path), { headers: { Authorization: `Bearer ${token}` } })
+        .then(res => (res.ok ? res.blob() : null))
+        .then(blob => {
+          if (blob && !cancelled) { const u = URL.createObjectURL(blob); revoke = u; setBlobUrl(u); }
+        })
+        .catch(() => {});
+    }
+    return () => { if (revoke) URL.revokeObjectURL(revoke); };
+  }, [path, token]);
+  if (!blobUrl) return null;
+  return <img src={blobUrl} alt={alt} className={className} />;
+};
 
 // Maps a scoped /animals row from the backend into the shape the rest of the
 // app's components already expect (camelCase, weightHistory, etc).

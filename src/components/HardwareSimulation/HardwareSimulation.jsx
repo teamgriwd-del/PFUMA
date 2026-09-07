@@ -6,7 +6,7 @@ import {
   Activity, Thermometer, Heart, MapPin, AlertTriangle, CheckCircle,
   ShieldCheck, Zap, Signal, Gauge, Eye, RefreshCw, Info, Tag,
   Wifi, WifiOff, ChevronDown, TrendingUp, TrendingDown, Minus, Link2, Plus,
-  RadioTower,
+  RadioTower, Copy, X,
 } from 'lucide-react';
 import { Hero, Button } from '../ui';
 import { photo } from '../../theme/imagery';
@@ -123,6 +123,7 @@ const DevicePairingPanel = ({ animals, currentUser }) => {
   const [animalId, setAnimalId] = useState('');
   const [busy, setBusy]         = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [newSecret, setNewSecret] = useState(null); // { serial, secret } — shown once, right after pairing a base station
 
   const authHeaders = { Authorization: `Bearer ${currentUser?.token}` };
 
@@ -152,7 +153,13 @@ const DevicePairingPanel = ({ animals, currentUser }) => {
       });
       const data = await res.json();
       if (!res.ok) { setFeedback(data.error || 'Could not pair — try again.'); }
-      else { setFeedback(`${DEVICE_TYPES.find(t => t.id === deviceType).label} paired.`); setSerial(''); setAnimalId(''); loadDevices(); }
+      else {
+        setFeedback(`${DEVICE_TYPES.find(t => t.id === deviceType).label} paired.`);
+        if (data.device_type === 'base_station' && data.device_secret) {
+          setNewSecret({ serial: serial.trim(), secret: data.device_secret });
+        }
+        setSerial(''); setAnimalId(''); loadDevices();
+      }
     } catch {
       setFeedback('Offline — could not reach the PFUMA API to pair this device.');
     } finally {
@@ -172,6 +179,32 @@ const DevicePairingPanel = ({ animals, currentUser }) => {
         <h4 className="text-sm font-bold text-gray-800">Paired Devices</h4>
       </div>
       <p className="text-xs text-gray-400 font-medium mb-4">Claim a physical collar or base station by the serial number printed on it — see the "Connecting Your Physical Hardware" section of the IoT guide.</p>
+
+      {newSecret && (
+        <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200">
+          <div className="flex items-start justify-between gap-2 mb-1.5">
+            <p className="text-xs font-bold text-amber-800">
+              Save this device secret now — it won't be shown again
+            </p>
+            <button onClick={() => setNewSecret(null)} className="shrink-0 text-amber-500 hover:text-amber-700">
+              <X size={14} />
+            </button>
+          </div>
+          <p className="text-xs text-amber-700 font-medium mb-2">
+            Paste it as <code>STATION_SECRET</code> in {newSecret.serial}'s <code>secrets.h</code> before flashing — telemetry from this base station is rejected without it.
+          </p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 min-w-0 truncate text-xs bg-white border border-amber-200 rounded-lg px-2 py-1.5 text-gray-800">{newSecret.secret}</code>
+            <button
+              onClick={() => { navigator.clipboard?.writeText(newSecret.secret); }}
+              className="shrink-0 p-1.5 rounded-lg bg-white border border-amber-200 text-amber-700 hover:bg-amber-100"
+              title="Copy to clipboard"
+            >
+              <Copy size={13} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {devices.length === 0 ? (
         <p className="text-xs text-gray-400 font-medium italic mb-4">No devices paired yet.</p>

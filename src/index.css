@@ -5,12 +5,8 @@
    not Inter — Inter is the de-facto "this was AI-generated" signal now that
    every template/generator defaults to it. Its 800 weight at tight tracking
    carries the editorial display role too, so the whole product ships on one
-   self-hosted family rather than pulling a second face over the wire. */
-@import "@fontsource/plus-jakarta-sans/400.css";
-@import "@fontsource/plus-jakarta-sans/500.css";
-@import "@fontsource/plus-jakarta-sans/600.css";
-@import "@fontsource/plus-jakarta-sans/700.css";
-@import "@fontsource/plus-jakarta-sans/800.css";
+   self-hosted family rather than pulling a second face over the wire.
+   Imported as JS in main.jsx, not here — see the comment there. */
 
 /* ══════════════════════════════════════════════════════════════════════════
    PFUMA DESIGN SYSTEM — warm agricultural

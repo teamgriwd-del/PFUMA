@@ -50,6 +50,7 @@ Both files have a clearly marked `CONFIGURATION` section near the top with place
 2. In the **Paired Devices** panel, enter the device serial exactly as you set `STATION_ID` or `COLLAR_ID` in the firmware.
 3. Optionally select which animal the device is attached to (you can also do this later).
 4. Click **Pair Device** — this claims the device under your account so only you can see and manage it. Pairing is enforced server-side (`POST /iot-devices/pair` in `backend/app.py`); a device serial can only ever belong to one account.
+5. **Base stations only:** pairing shows a one-time device secret. Copy it into `STATION_SECRET` in the base station's `secrets.h` before flashing — the API rejects telemetry from a station that doesn't present it, so hardware won't send real readings until this step is done.
 
 Once paired, the backend will accept telemetry sent from that device (`POST /api/iot/telemetry`, `POST /api/iot/alert` — both check the `X-Station-ID` header against your paired devices before accepting data).
 

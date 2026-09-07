@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Search, Plus, MapPin, Phone, ShieldCheck, Package,
+  Search, Plus, MapPin, ShieldCheck, Package,
   Tag, Filter, X, CheckCircle, AlertTriangle, ArrowRight,
   ShoppingCart, Leaf, Pill, Wrench, Wheat, RefreshCw, Camera,
   ChevronLeft, ChevronRight
@@ -709,14 +709,6 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal, presetAnimalId, 
                   </p>
                 </div>
                 <div className="flex gap-2 shrink-0">
-                  {listing.phone && (
-                    <a
-                      href={`tel:${listing.phone}`}
-                      className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 text-gray-700 rounded-xl text-xs font-bold uppercase hover:bg-gray-200 transition"
-                    >
-                      <Phone size={11} /> Call
-                    </a>
-                  )}
                   {listing.user_id === currentUser?.id ? (
                     <button onClick={() => toggleBids(listing)} className="flex items-center gap-1.5 px-4 py-2 bg-gray-800 text-white rounded-xl text-xs font-bold uppercase hover:bg-gray-900 transition shadow-sm">
                       <Tag size={12} /> {openBidsId === listing.id ? 'Hide Bids' : 'View Bids'}
