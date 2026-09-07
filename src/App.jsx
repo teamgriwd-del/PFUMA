@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import pfumaMark          from './assets/pfuma-mark.png';
+import pfumaMark          from './assets/pfuma-mark.svg';
 import DiseaseDetection  from './components/DiseaseDetection/DiseaseDetection';
-import AnimalProfile, { MovementPermitCard } from './components/AnimalProfile/AnimalProfile';
+import AnimalProfile, { MovementPermitCard, calculateAge } from './components/AnimalProfile/AnimalProfile';
 import HealthManagement  from './components/HealthManagement/HealthManagement';
 import VetCommunication  from './components/VetCommunication/VetCommunication';
 import Marketplace       from './components/Marketplace/Marketplace';
@@ -29,7 +29,8 @@ import {
   ShieldAlert, Pencil, BookOpen, Plus, Landmark, Search,
 } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis } from 'recharts';
-import './App.css';
+import { Hero, StatCard, StatRow, Button, SectionHeading, StatusBadge, EmptyState } from './components/ui';
+import { roleHero, speciesPhoto } from './theme/imagery';
 
 import { API } from './config';
 
@@ -48,14 +49,53 @@ const greet = () => {
   return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
 };
 
+// ── Dashboard hero ─────────────────────────────────────────────────────────
+// Every role's dashboard opens on the same editorial band: full-bleed
+// photography chosen for that role, a warm scrim, the greeting, and a single
+// line of the numbers that actually matter. It replaces six separate flat
+// coloured banners that each invented their own layout and type scale.
+//
+// Deliberately full-bleed — it sits outside the page's padded container, so
+// the photograph runs edge to edge and stays the dominant element instead of
+// being boxed into a card.
+const DashboardHero = ({ role, eyebrow, title, stats, actions, alert }) => (
+  <Hero
+    size="md"
+    image={roleHero(role, { w: 1800, q: 74 })}
+    eyebrow={eyebrow || `${greet()} · ${role}`}
+    title={title}
+    sub={stats}
+    actions={actions}
+    aside={alert}
+  />
+);
+
+// The one-line "attention" flag that sits on the right of a hero when
+// something genuinely needs the user today. Absent when nothing is wrong —
+// a permanently visible alert slot teaches people to ignore it.
+const HeroAlert = ({ count, label, onClick }) => {
+  if (!count) return null;
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-2.5 rounded-xl border border-red-300/40 bg-red-950/35 px-5 py-3 backdrop-blur-sm transition hover:bg-red-900/50"
+    >
+      <AlertTriangle size={16} className="text-red-300 shrink-0" aria-hidden="true" />
+      <span className="text-sm font-bold text-red-50">
+        {count} {label}{count !== 1 ? 's' : ''}
+      </span>
+    </button>
+  );
+};
+
 // ── Stakeholder Map — shown on all dashboards ──────────────────────────────
 const StakeholderMap = () => (
   <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
     <div className="flex items-center gap-2 mb-1">
       <Globe size={15} className="text-pfuma-green" />
-      <h3 className="text-sm font-black text-gray-800">How PFUMA Connects Everyone</h3>
+      <h3 className="text-sm font-bold text-gray-800">How PFUMA Connects Everyone</h3>
     </div>
-    <p className="text-[11px] text-gray-400 font-medium mb-5">
+    <p className="text-xs text-gray-400 font-medium mb-5">
       PFUMA is a four-stakeholder ecosystem. Every role plays a specific part — here's how they all connect.
     </p>
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
@@ -67,14 +107,14 @@ const StakeholderMap = () => (
       ].map(r => (
         <div key={r.role} className={`${r.color} border rounded-xl p-3`}>
           <r.icon size={20} className={`${r.text} mb-1.5`} />
-          <p className={`text-xs font-black ${r.text} uppercase mb-1`}>{r.role}</p>
-          <p className="text-[10px] text-gray-500 font-medium leading-snug">{r.desc}</p>
+          <p className={`text-xs font-bold ${r.text} uppercase mb-1`}>{r.role}</p>
+          <p className="text-xs text-gray-500 font-medium leading-snug">{r.desc}</p>
         </div>
       ))}
     </div>
     {/* Flow arrows */}
     <div className="bg-gray-50 rounded-xl p-3 space-y-1.5">
-      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">How it flows</p>
+      <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">How it flows</p>
       {[
         { fromIcon: Sprout,      from: 'Farmer',   toIcon: Pill,        to: 'Supplier', desc: 'orders medicines & vaccines' },
         { fromIcon: Sprout,      from: 'Farmer',   toIcon: Stethoscope, to: 'Vet',      desc: 'requests health checks & movement certificates' },
@@ -82,12 +122,12 @@ const StakeholderMap = () => (
         { fromIcon: Store,       from: 'Buyer', toIcon: Sprout,      to: 'Farmer',   desc: 'places a bid / makes an offer to buy' },
         { fromIcon: Stethoscope, from: 'Vet',      toIcon: Store,       to: 'Buyer', desc: 'issues official DVS movement certificate for the sale' },
       ].map((f, i) => (
-        <div key={i} className="flex items-center gap-1.5 text-[10px] font-medium text-gray-600 flex-wrap">
+        <div key={i} className="flex items-center gap-1.5 text-xs font-medium text-gray-600 flex-wrap">
           <f.fromIcon size={12} className="text-gray-700 shrink-0" />
-          <span className="font-black text-gray-800 shrink-0">{f.from}</span>
+          <span className="font-bold text-gray-800 shrink-0">{f.from}</span>
           <ArrowRight size={11} className="text-gray-400 shrink-0" />
           <f.toIcon size={12} className="text-gray-700 shrink-0" />
-          <span className="font-black text-gray-800 shrink-0">{f.to}</span>
+          <span className="font-bold text-gray-800 shrink-0">{f.to}</span>
           <span className="text-gray-400 shrink-0">—</span>
           <span>{f.desc}</span>
         </div>
@@ -102,11 +142,11 @@ const KpiCard = ({ label, value, sub, accent = 'bg-white border-gray-100', textC
     className={`${accent} border rounded-2xl p-5 flex flex-col gap-2 ${onClick ? 'cursor-pointer hover:shadow-md transition' : ''}`}
   >
     <div className="flex justify-between items-start">
-      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{label}</p>
+      <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">{label}</p>
       {Icon && <Icon size={16} className={iconColor} />}
     </div>
-    <p className={`text-3xl font-black leading-none ${textColor}`}>{value}</p>
-    {sub && <p className="text-[11px] text-gray-400 font-medium leading-snug">{sub}</p>}
+    <p className={`text-3xl font-bold leading-none ${textColor}`}>{value}</p>
+    {sub && <p className="text-xs text-gray-400 font-medium leading-snug">{sub}</p>}
   </div>
 );
 
@@ -119,15 +159,15 @@ const QuickAction = ({ icon: Icon, label, desc, color, onClick }) => (
       <Icon size={18} className="text-white" />
     </div>
     <div className="flex-1 min-w-0">
-      <p className="text-xs font-black text-gray-800">{label}</p>
-      <p className="text-[10px] text-gray-400 font-medium truncate">{desc}</p>
+      <p className="text-xs font-bold text-gray-800">{label}</p>
+      <p className="text-xs text-gray-400 font-medium truncate">{desc}</p>
     </div>
     <ArrowRight size={14} className="text-gray-300 group-hover:text-pfuma-green transition shrink-0" />
   </button>
 );
 
 const SectionLabel = ({ children }) => (
-  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 mt-1">{children}</p>
+  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2 mt-1">{children}</p>
 );
 
 // ── FARMER DASHBOARD ───────────────────────────────────────────────────────
@@ -184,25 +224,25 @@ const SellDirectlyCard = ({ animals, currentUser }) => {
     <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
       <div className="flex items-center gap-2 mb-1">
         <Users size={15} className="text-pfuma-green" />
-        <h3 className="text-sm font-black text-gray-800">Sold to Someone Directly?</h3>
+        <h3 className="text-sm font-bold text-gray-800">Sold to Someone Directly?</h3>
       </div>
-      <p className="text-[11px] text-gray-400 font-medium mb-4 leading-snug">
+      <p className="text-xs text-gray-400 font-medium mb-4 leading-snug">
         Sold an animal for cash, off-platform? Generate a code and share it with the buyer — they enter it on their own account to claim it, with its full health history intact. Not needed for a Marketplace sale, which transfers automatically.
       </p>
       <select value={animalId} onChange={e => setAnimalId(Number(e.target.value))} className="w-full mb-3 px-3.5 py-2.5 bg-gray-50 rounded-xl border-2 border-transparent focus:border-pfuma-green outline-none font-bold text-sm text-gray-800">
         {sellable.map(a => <option key={a.id} value={a.id}>{a.name} — {a.species}</option>)}
       </select>
-      {error && <p className="text-[11px] text-red-500 font-bold mb-3">{error}</p>}
+      {error && <p className="text-xs text-red-500 font-bold mb-3">{error}</p>}
       {transfer ? (
         <div className="flex items-center justify-between bg-pfuma-green/5 border border-pfuma-green/20 rounded-xl p-4">
           <div>
-            <p className="text-xl font-black text-gray-900 tracking-[0.25em]">{transfer.transfer_code}</p>
-            <p className="text-[10px] text-gray-400 font-medium mt-1">Expires {new Date(transfer.expires_at).toLocaleDateString()}</p>
+            <p className="text-xl font-bold text-gray-900 tracking-[0.25em]">{transfer.transfer_code}</p>
+            <p className="text-xs text-gray-400 font-medium mt-1">Expires {new Date(transfer.expires_at).toLocaleDateString()}</p>
           </div>
-          <button onClick={cancel} disabled={busy} className="px-4 py-2 bg-white border-2 border-gray-200 rounded-lg font-black text-[10px] uppercase hover:bg-gray-50 transition disabled:opacity-50">Cancel</button>
+          <button onClick={cancel} disabled={busy} className="px-4 py-2 bg-white border-2 border-gray-200 rounded-lg font-bold text-xs uppercase hover:bg-gray-50 transition disabled:opacity-50">Cancel</button>
         </div>
       ) : (
-        <button onClick={generate} disabled={busy || !animalId} className="w-full py-2.5 bg-gray-800 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-900 transition disabled:opacity-50">
+        <button onClick={generate} disabled={busy || !animalId} className="w-full py-2.5 bg-gray-800 text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-gray-900 transition disabled:opacity-50">
           {busy ? 'Generating…' : 'Generate Transfer Code'}
         </button>
       )}
@@ -236,21 +276,21 @@ const MovementPermitsSummaryCard = ({ currentUser, setActiveTab }) => {
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
           <FileText size={15} className="text-pfuma-green" />
-          <h3 className="text-sm font-black text-gray-800">Movement Permits (DVS Form V27)</h3>
+          <h3 className="text-sm font-bold text-gray-800">Movement Permits (DVS Form V27)</h3>
         </div>
-        <button onClick={() => setActiveTab('profile')} className="text-[10px] font-black text-pfuma-green hover:underline uppercase">Request Another →</button>
+        <button onClick={() => setActiveTab('profile')} className="text-xs font-bold text-pfuma-green hover:underline uppercase">Request Another →</button>
       </div>
-      <p className="text-[11px] text-gray-400 font-medium mb-3">Status of your requests — nothing is authorized to move until a vet signs it.</p>
+      <p className="text-xs text-gray-400 font-medium mb-3">Status of your requests — nothing is authorized to move until a vet signs it.</p>
       <div className="space-y-2.5">
         {permits.slice(0, 5).map(p => (
           <div key={p.id} className="flex items-center justify-between bg-gray-50 rounded-xl p-3">
             <div>
-              <p className="text-xs font-black text-gray-800">{p.animal_name} <span className="text-gray-400 font-medium">· {p.from_district} → {p.to_district}</span></p>
-              {p.status === 'issued' && <p className="text-[10px] text-green-600 font-bold mt-0.5">Permit {p.permit_number} · signed by {p.vet_name_block} ({p.vet_rank}) · expires {new Date(p.expires_at).toLocaleDateString()}</p>}
-              {p.status === 'pending' && <p className="text-[10px] text-amber-600 font-bold mt-0.5">Awaiting a vet's signature</p>}
-              {p.status === 'rejected' && <p className="text-[10px] text-red-500 font-bold mt-0.5">Rejected{p.rejection_reason ? `: ${p.rejection_reason}` : ''}</p>}
+              <p className="text-xs font-bold text-gray-800">{p.animal_name} <span className="text-gray-400 font-medium">· {p.from_district} → {p.to_district}</span></p>
+              {p.status === 'issued' && <p className="text-xs text-green-600 font-bold mt-0.5">Permit {p.permit_number} · signed by {p.vet_name_block} ({p.vet_rank}) · expires {new Date(p.expires_at).toLocaleDateString()}</p>}
+              {p.status === 'pending' && <p className="text-xs text-amber-600 font-bold mt-0.5">Awaiting a vet's signature</p>}
+              {p.status === 'rejected' && <p className="text-xs text-red-500 font-bold mt-0.5">Rejected{p.rejection_reason ? `: ${p.rejection_reason}` : ''}</p>}
             </div>
-            <span className={`text-[9px] font-black px-2 py-1 rounded-full uppercase shrink-0 ${p.status === 'issued' ? 'bg-green-100 text-green-700' : p.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{p.status}</span>
+            <span className={`text-xs font-bold px-2 py-1 rounded-full uppercase shrink-0 ${p.status === 'issued' ? 'bg-green-100 text-green-700' : p.status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{p.status}</span>
           </div>
         ))}
       </div>
@@ -270,12 +310,12 @@ const FarmerMobileDashboard = ({ animals, currentUser, setActiveTab, totalValue,
   const recentAnimals = animals.slice(0, 3);
 
   const actions = [
-    { icon: Users,         label: 'Herd Registry', color: 'bg-pfuma-green', tab: 'profile' },
-    { icon: ShieldCheck,   label: 'Follow-Ups',    color: 'bg-red-500',     tab: 'compliance', badge: overdueVaccines.length || null },
-    { icon: Package,       label: 'Medicine',      color: 'bg-orange-500',  tab: 'health',      badge: lowStock.length || null },
-    { icon: ShoppingCart,  label: 'Sell',          color: 'bg-pfuma-plum',  tab: 'profile',    badge: forSale || null },
-    { icon: HeartPulse,    label: 'Lifecycle',     color: 'bg-blue-500',    tab: 'health' },
-    { icon: MessageSquare, label: 'Messenger',     color: 'bg-pink-500',    tab: 'vet' },
+    { icon: Users,         label: 'Herd Registry', color: 'bg-white/10', tab: 'profile' },
+    { icon: ShieldCheck,   label: 'Follow-Ups',    color: 'bg-white/10',     tab: 'compliance', badge: overdueVaccines.length || null },
+    { icon: Package,       label: 'Medicine',      color: 'bg-white/10',  tab: 'health',      badge: lowStock.length || null },
+    { icon: ShoppingCart,  label: 'Sell',          color: 'bg-white/10',  tab: 'profile',    badge: forSale || null },
+    { icon: HeartPulse,    label: 'Lifecycle',     color: 'bg-white/10',    tab: 'health' },
+    { icon: MessageSquare, label: 'Messenger',     color: 'bg-white/10',    tab: 'vet' },
   ];
 
   const quickPills = [
@@ -286,71 +326,82 @@ const FarmerMobileDashboard = ({ animals, currentUser, setActiveTab, totalValue,
   ];
 
   return (
-    <div className="bg-[#121212] h-full overflow-y-auto text-left">
+    <div className="bg-bark-950 h-full overflow-y-auto text-left">
       <div className="p-4 pb-10 space-y-4">
 
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-11 h-11 rounded-2xl bg-pfuma-green flex items-center justify-center text-white font-black text-sm shrink-0">
+            <div className="w-11 h-11 rounded-2xl bg-pfuma-green flex items-center justify-center text-white font-bold text-sm shrink-0">
               {initials}
             </div>
             <div className="min-w-0">
-              <p className="text-white/40 text-[10px] font-black uppercase tracking-[2px]">{greet()}</p>
-              <h2 className="text-white text-base font-black truncate">{currentUser?.name || 'Farmer'}</h2>
+              <p className="text-white/40 text-xs font-bold uppercase tracking-[2px]">{greet()}</p>
+              <h2 className="text-white text-base font-bold truncate">{currentUser?.name || 'Farmer'}</h2>
             </div>
           </div>
           {critAlerts.length > 0 && (
             <div className="flex items-center gap-1.5 bg-red-500/15 border border-red-500/30 rounded-full px-3 py-1.5 shrink-0">
               <AlertTriangle size={12} className="text-red-400" />
-              <span className="text-[10px] font-black text-red-300">{critAlerts.length}</span>
+              <span className="text-xs font-bold text-red-300">{critAlerts.length}</span>
             </div>
           )}
         </div>
 
-        {/* Metric bar */}
+        {/* Metric bar — one surface treatment across all three tiles. They
+            were a navy / green / red set, which read as three unrelated
+            widgets; only the tile that needs attention is allowed to differ. */}
         <div className="grid grid-cols-3 gap-2.5">
-          <div className="bg-blue-950 border border-blue-900/60 rounded-2xl p-3">
-            <Tag size={14} className="text-blue-400 mb-2" />
-            <p className="text-white text-lg font-black leading-none">{animals.length}</p>
-            <p className="text-blue-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">Animals</p>
+          <div className="bg-bark-900 border border-white/8 rounded-2xl p-3.5">
+            <Tag size={14} className="text-white/40 mb-2.5" aria-hidden="true" />
+            <p data-tabular className="text-white text-xl font-bold leading-none">{animals.length}</p>
+            <p className="text-white/45 text-xs font-semibold mt-1.5">Animals</p>
           </div>
-          <div className="bg-green-950 border border-green-900/60 rounded-2xl p-3">
-            <DollarSign size={14} className="text-green-400 mb-2" />
-            <p className="text-white text-lg font-black leading-none">${totalValue >= 1000 ? `${(totalValue / 1000).toFixed(1)}k` : totalValue.toLocaleString()}</p>
-            <p className="text-green-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">Herd Value</p>
+          <div className="bg-bark-900 border border-white/8 rounded-2xl p-3.5">
+            <DollarSign size={14} className="text-white/40 mb-2.5" aria-hidden="true" />
+            <p data-tabular className="text-white text-xl font-bold leading-none">
+              ${totalValue >= 1000 ? `${(totalValue / 1000).toFixed(1)}k` : totalValue.toLocaleString()}
+            </p>
+            <p className="text-white/45 text-xs font-semibold mt-1.5">Herd value</p>
           </div>
-          <div className={`rounded-2xl p-3 border ${overdueVaccines.length ? 'bg-red-950 border-red-900/60' : 'bg-amber-950 border-amber-900/60'}`}>
-            <ShieldCheck size={14} className={`mb-2 ${overdueVaccines.length ? 'text-red-400' : 'text-amber-400'}`} />
-            <p className="text-white text-lg font-black leading-none">{overdueVaccines.length}</p>
-            <p className={`text-[9px] font-bold uppercase tracking-wide mt-1 ${overdueVaccines.length ? 'text-red-300/70' : 'text-amber-300/70'}`}>Overdue</p>
+          <div className={`rounded-2xl p-3.5 border ${overdueVaccines.length ? 'bg-red-950 border-red-800/50' : 'bg-bark-900 border-white/8'}`}>
+            <ShieldCheck size={14} className={`mb-2.5 ${overdueVaccines.length ? 'text-red-400' : 'text-white/40'}`} aria-hidden="true" />
+            <p data-tabular className="text-white text-xl font-bold leading-none">{overdueVaccines.length}</p>
+            <p className={`text-xs font-semibold mt-1.5 ${overdueVaccines.length ? 'text-red-300' : 'text-white/45'}`}>Overdue</p>
           </div>
         </div>
 
-        {/* Quick actions pill bar */}
-        <div className="bg-pfuma-green rounded-2xl p-1.5 flex items-center gap-1 overflow-x-auto">
+        {/* Quick actions pill bar — a four-up grid rather than a sideways
+            scroller. At 375px the scroller always cut the last label in
+            half, which reads as a broken layout rather than an invitation
+            to scroll. */}
+        <div className="bg-bark-500 rounded-2xl p-1.5 grid grid-cols-4 gap-1">
           {quickPills.map(q => (
-            <button key={q.label} onClick={() => setActiveTab(q.tab)} className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-white/90 hover:bg-white/10 transition shrink-0 whitespace-nowrap">
-              <q.icon size={13} />
-              <span className="text-[11px] font-black">{q.label}</span>
+            <button
+              key={q.label}
+              onClick={() => setActiveTab(q.tab)}
+              className="flex flex-col items-center justify-center gap-1.5 px-1 py-2.5 rounded-xl text-white/90 hover:bg-white/10 active:bg-white/15 transition min-h-[3.25rem]"
+            >
+              <q.icon size={15} aria-hidden="true" />
+              <span className="text-[0.6875rem] font-semibold leading-none">{q.label}</span>
             </button>
           ))}
         </div>
 
         {/* Tip banner — expandable */}
-        <div className="bg-[#1E1E1E] border border-white/5 rounded-2xl p-4">
+        <div className="bg-bark-900 border border-white/5 rounded-2xl p-4">
           <button onClick={() => setTipOpen(o => !o)} className="w-full flex items-center gap-3 text-left">
             <div className="w-8 h-8 rounded-xl bg-pfuma-gold/15 flex items-center justify-center shrink-0">
               <Star size={14} className="text-pfuma-gold" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white text-xs font-black">Tip of the day</p>
-              <p className="text-white/40 text-[10px] font-medium truncate">List cleared animals early to reach more buyers</p>
+              <p className="text-white text-xs font-bold">Tip of the day</p>
+              <p className="text-white/40 text-xs font-medium truncate">List cleared animals early to reach more buyers</p>
             </div>
             {tipOpen ? <X size={14} className="text-white/40 shrink-0" /> : <Plus size={14} className="text-white/40 shrink-0" />}
           </button>
           {tipOpen && (
-            <p className="text-white/50 text-[11px] font-medium mt-3 pt-3 border-t border-white/5 leading-relaxed">
+            <p className="text-white/50 text-xs font-medium mt-3 pt-3 border-t border-white/5 leading-relaxed">
               Buyers browse the Marketplace daily for freshly-cleared listings. Once Police clear a sale, list it immediately — animals seen in the first 48 hours get more bids on average.
             </p>
           )}
@@ -358,30 +409,30 @@ const FarmerMobileDashboard = ({ animals, currentUser, setActiveTab, totalValue,
 
         {/* Action grid */}
         <div>
-          <p className="text-white/30 text-[10px] font-black uppercase tracking-[2px] mb-2.5 px-1">Quick Actions</p>
+          <p className="text-white/30 text-xs font-bold uppercase tracking-[2px] mb-2.5 px-1">Quick Actions</p>
           <div className="grid grid-cols-3 gap-2.5">
             {actions.map(a => (
-              <button key={a.label} onClick={() => setActiveTab(a.tab)} className="relative bg-[#1E1E1E] border border-white/5 rounded-2xl p-3 flex flex-col items-center gap-2 hover:bg-[#252525] transition">
+              <button key={a.label} onClick={() => setActiveTab(a.tab)} className="relative bg-bark-900 border border-white/5 rounded-2xl p-3 flex flex-col items-center gap-2 hover:bg-bark-800 transition">
                 {a.badge ? (
-                  <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[8px] font-black rounded-full">{a.badge}</span>
+                  <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full">{a.badge}</span>
                 ) : null}
                 <div className={`w-10 h-10 rounded-xl ${a.color} flex items-center justify-center`}>
                   <a.icon size={17} className="text-white" />
                 </div>
-                <span className="text-white/70 text-[9px] font-bold text-center leading-tight">{a.label}</span>
+                <span className="text-white/70 text-xs font-bold text-center leading-tight">{a.label}</span>
               </button>
             ))}
           </div>
         </div>
 
         {/* Your Animals */}
-        <div className="bg-[#1E1E1E] border border-white/5 rounded-2xl p-4">
+        <div className="bg-bark-900 border border-white/5 rounded-2xl p-4">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-white text-xs font-black">Your Animals</p>
-            <button onClick={() => setActiveTab('profile')} className="text-[10px] font-black text-pfuma-sprout uppercase">View All</button>
+            <p className="text-white text-xs font-bold">Your Animals</p>
+            <button onClick={() => setActiveTab('profile')} className="text-xs font-bold text-pfuma-sprout uppercase">View All</button>
           </div>
           {recentAnimals.length === 0 ? (
-            <p className="text-white/30 text-[11px] font-medium text-center py-4 italic">No animals registered yet</p>
+            <p className="text-white/30 text-xs font-medium text-center py-4 italic">No animals registered yet</p>
           ) : (
             <div className="space-y-2">
               {recentAnimals.map(a => (
@@ -390,10 +441,10 @@ const FarmerMobileDashboard = ({ animals, currentUser, setActiveTab, totalValue,
                     <img src={a.imageUrl} className="w-full h-full object-cover" alt={a.name} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-white text-[11px] font-black truncate">{a.name}</p>
-                    <p className="text-white/30 text-[9px] font-medium">{a.species} · {a.currentWeight}kg</p>
+                    <p className="text-white text-xs font-bold truncate">{a.name}</p>
+                    <p className="text-white/30 text-xs font-medium">{a.species} · {a.currentWeight}kg</p>
                   </div>
-                  <span className={`text-[8px] font-black px-2 py-1 rounded-full uppercase shrink-0 ${
+                  <span className={`text-xs font-bold px-2 py-1 rounded-full uppercase shrink-0 ${
                     a.marketplaceStatus === 'sold' ? 'bg-red-500/15 text-red-400'
                     : a.marketplaceStatus === 'pending_clearance' ? 'bg-amber-500/15 text-amber-400'
                     : a.marketplaceStatus === 'available' ? 'bg-pfuma-sprout/15 text-pfuma-sprout'
@@ -412,9 +463,9 @@ const FarmerMobileDashboard = ({ animals, currentUser, setActiveTab, totalValue,
           <div className="bg-red-950/60 border border-red-900/60 rounded-2xl p-4">
             <div className="flex items-center gap-2 mb-2">
               <AlertTriangle size={14} className="text-red-400" />
-              <p className="text-red-300 text-xs font-black">Disease Alert Nearby</p>
+              <p className="text-red-300 text-xs font-bold">Disease Alert Nearby</p>
             </div>
-            <p className="text-red-200/70 text-[11px] font-medium">{critAlerts[0].title} — {critAlerts[0].msg}</p>
+            <p className="text-red-200/70 text-xs font-medium">{critAlerts[0].title} — {critAlerts[0].msg}</p>
           </div>
         )}
       </div>
@@ -504,38 +555,31 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
           critAlerts={critAlerts} inventory={inventory}
         />
       </div>
-      <div className="hidden lg:block p-6 bg-pfuma-cream space-y-6 text-left overflow-y-auto h-full">
+      <div className="hidden lg:block bg-ivory text-left overflow-y-auto h-full">
 
-      {/* Greeting banner */}
-      <div className="bg-pfuma-green rounded-3xl p-6 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} aria-hidden="true" />
-        <div className="absolute -top-14 -left-10 w-48 h-48 rounded-full bg-pfuma-sprout/20 blur-3xl" aria-hidden="true" />
-        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 80% 50%, #fff 0%, transparent 60%)' }} aria-hidden="true" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-4">
-          <div className="flex-1">
-            <p className="text-green-200 text-xs font-black uppercase tracking-[3px] mb-1">{greet()}, Farmer</p>
-            <h2 className="text-2xl font-black text-white leading-tight">Here's your farm today</h2>
-            <p className="text-green-200/80 text-sm font-medium mt-1">
-              {animals.length} animal{animals.length !== 1 ? 's' : ''} registered · {critAlerts.length} critical alert{critAlerts.length !== 1 ? 's' : ''} · {overdueVaccines.length} overdue vaccine{overdueVaccines.length !== 1 ? 's' : ''}
-            </p>
-          </div>
-          {critAlerts.length > 0 && (
-            <div className="bg-red-500/20 border border-red-400/30 rounded-2xl px-5 py-3 flex items-center gap-2 shrink-0">
-              <AlertTriangle size={16} className="text-red-300 animate-pulse" />
-              <span className="text-sm font-black text-red-200">{critAlerts.length} Critical Alert{critAlerts.length !== 1 ? 's' : ''}</span>
-            </div>
-          )}
-        </div>
-      </div>
+      <DashboardHero
+        role="Farmer"
+        title="Here's your farm today"
+        stats={`${animals.length} animal${animals.length !== 1 ? 's' : ''} registered · ${critAlerts.length} critical alert${critAlerts.length !== 1 ? 's' : ''} · ${overdueVaccines.length} overdue vaccine${overdueVaccines.length !== 1 ? 's' : ''}`}
+        actions={
+          <>
+            <Button variant="onImage" onClick={() => setActiveTab('profile')} iconRight>View herd registry</Button>
+            <Button variant="onImage" onClick={() => setActiveTab('marketplace')}>Marketplace</Button>
+          </>
+        }
+        alert={<HeroAlert count={critAlerts.length} label="critical alert" onClick={() => setActiveTab('disease')} />}
+      />
+
+      <div className="p-6 xl:p-8 space-y-6">
 
       {/* Your Role on PFUMA */}
       <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-        <p className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1.5">Your Role on PFUMA</p>
-        <h3 className="text-sm font-black text-gray-900 mb-2">You are the heart of the herd</h3>
-        <p className="text-[11px] text-gray-500 font-medium leading-relaxed mb-4">
+        <p className="text-xs font-bold text-pfuma-green uppercase tracking-wide mb-1.5">Your Role on PFUMA</p>
+        <h3 className="text-sm font-bold text-gray-900 mb-2">You are the heart of the herd</h3>
+        <p className="text-xs text-gray-500 font-medium leading-relaxed mb-4">
           Register your animals, track their health, and reorder medicine before stocks run low. When ready, list animals on the Marketplace — a DVS vet certifies them so buyers across Zimbabwe can bid with confidence.
         </p>
-        <div className="flex items-center gap-2 flex-wrap bg-green-50 rounded-xl px-3 py-2.5 text-[11px] font-bold text-pfuma-green">
+        <div className="flex items-center gap-2 flex-wrap bg-green-50 rounded-xl px-3 py-2.5 text-xs font-bold text-pfuma-green">
           <Sprout size={15} />
           <span>You raise & register</span>
           <ArrowRight size={12} className="text-pfuma-green/50" />
@@ -547,12 +591,14 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
         </div>
       </div>
 
-      {/* KPI row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KpiCard label="Total Animals"    value={animals.length}            sub="In your herd registry"                icon={Tag}         iconColor="text-pfuma-green"  onClick={() => setActiveTab('profile')} />
-        <KpiCard label="Herd Value"       value={`$${totalValue.toLocaleString()}`} sub="Estimated market value"       icon={DollarSign}  iconColor="text-pfuma-gold"   accent="bg-pfuma-gold/5 border-pfuma-gold/20" />
-        <KpiCard label="Overdue Vaccines" value={overdueVaccines.length}    sub={overdueVaccines.length ? 'Open the follow-up list' : 'All vaccinations current'} icon={ShieldCheck} iconColor={overdueVaccines.length ? 'text-red-500' : 'text-green-500'} accent={overdueVaccines.length ? 'bg-red-50 border-red-200' : 'bg-white border-gray-100'} textColor={overdueVaccines.length ? 'text-red-600' : 'text-gray-900'} onClick={() => setActiveTab('compliance')} />
-        <KpiCard label="Listed for Sale"  value={forSale}                   sub={forSale ? 'Pending clearance or live' : 'None listed yet'} icon={ShoppingCart} iconColor="text-purple-500" onClick={() => setActiveTab('profile')} />
+      {/* Stat row — the numbers carry the hierarchy on their own. No icon
+          chips, no coloured tiles: four of those in a row was the single
+          most "generic dashboard" element on this screen. */}
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        <StatCard label="Total animals"    value={animals.length}                    sub="In your herd registry"      onClick={() => setActiveTab('profile')} />
+        <StatCard label="Herd value"       value={`$${totalValue.toLocaleString()}`} sub="Estimated market value" />
+        <StatCard label="Overdue vaccines" value={overdueVaccines.length}            sub={overdueVaccines.length ? 'Open the follow-up list' : 'All vaccinations current'} tone={overdueVaccines.length ? 'alert' : 'neutral'} onClick={() => setActiveTab('compliance')} />
+        <StatCard label="Listed for sale"  value={forSale}                           sub={forSale ? 'Pending clearance or live' : 'None listed yet'} onClick={() => setActiveTab('profile')} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -563,17 +609,17 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
                 <Zap size={15} className="text-yellow-500" />
-                <h3 className="text-sm font-black text-gray-800">Priority Actions</h3>
+                <h3 className="text-sm font-bold text-gray-800">Priority Actions</h3>
               </div>
               {priorityRows.length > 0 && (
-                <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-red-500 text-white text-[10px] font-black rounded-full">{priorityRows.length}</span>
+                <span className="min-w-[20px] h-5 px-1.5 flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full">{priorityRows.length}</span>
               )}
             </div>
             {priorityRows.length === 0 ? (
               <div className="flex flex-col items-center py-6 text-center">
                 <CheckCircle size={28} className="text-pfuma-green mb-2" />
-                <p className="text-xs font-black text-gray-500">All good — no urgent actions</p>
-                <p className="text-[10px] text-gray-400 font-medium mt-1">Your farm is running smoothly</p>
+                <p className="text-xs font-bold text-gray-500">All good — no urgent actions</p>
+                <p className="text-xs text-gray-400 font-medium mt-1">Your farm is running smoothly</p>
               </div>
             ) : (
               <div className="divide-y divide-gray-50 mt-3">
@@ -585,10 +631,10 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
                         <p.icon size={16} className={p.iconColor} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-[11px] font-black text-gray-800 truncate">{p.title}</p>
-                        <p className="text-[10px] text-gray-400 font-medium truncate">{p.sub}</p>
+                        <p className="text-xs font-bold text-gray-800 truncate">{p.title}</p>
+                        <p className="text-xs text-gray-400 font-medium truncate">{p.sub}</p>
                       </div>
-                      <span className={`text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wide shrink-0 ${p.tagBg} ${p.tagColor}`}>{p.tag}</span>
+                      <span className={`text-xs font-bold px-2 py-1 rounded-full uppercase tracking-wide shrink-0 ${p.tagBg} ${p.tagColor}`}>{p.tag}</span>
                     </Row>
                   );
                 })}
@@ -598,7 +644,7 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
 
           {/* Quick navigation */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-            <h3 className="text-sm font-black text-gray-800 mb-3">Quick Navigation</h3>
+            <h3 className="text-sm font-bold text-gray-800 mb-3">Quick Navigation</h3>
             <div className="space-y-2">
               <QuickAction icon={Users}       label="Herd Registry"  desc="View & manage your animals"    color="bg-pfuma-green"  onClick={() => setActiveTab('profile')} />
               <QuickAction icon={HeartPulse}  label="Lifecycle"      desc="Vaccines & health protocols"   color="bg-blue-500"    onClick={() => setActiveTab('health')} />
@@ -614,17 +660,17 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-1">
               <ShoppingCart size={15} className="text-purple-600" />
-              <h3 className="text-sm font-black text-gray-800">Sell Your Animals</h3>
+              <h3 className="text-sm font-bold text-gray-800">Sell Your Animals</h3>
             </div>
-            <p className="text-[11px] text-gray-400 font-medium mb-4 leading-snug">
+            <p className="text-xs text-gray-400 font-medium mb-4 leading-snug">
               List any animal below on the PFUMA Marketplace. Every livestock listing waits for Police sale-clearance before buyers can see it or bid — a sold animal can never be listed again.
             </p>
 
             {animals.length === 0 ? (
               <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-xl">
-                <span className="text-4xl">🐄</span>
+                <span className="text-4xl"></span>
                 <p className="text-xs text-gray-400 font-medium mt-2">No animals registered yet</p>
-                <button onClick={() => setActiveTab('profile')} className="mt-3 px-4 py-2 bg-pfuma-green text-white rounded-xl text-xs font-black uppercase hover:bg-green-700 transition">Register an Animal</button>
+                <button onClick={() => setActiveTab('profile')} className="mt-3 px-4 py-2 bg-pfuma-green text-white rounded-xl text-xs font-bold uppercase hover:bg-green-700 transition">Register an Animal</button>
               </div>
             ) : (() => {
               // Sold animals are split into their own section below — they
@@ -644,26 +690,26 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
                       <img src={a.imageUrl} className="w-full h-full object-cover" alt={a.name} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-black text-gray-800">{a.name}</p>
-                      <p className="text-[10px] text-gray-400 font-medium">{a.species} · {a.currentWeight}kg</p>
+                      <p className="text-xs font-bold text-gray-800">{a.name}</p>
+                      <p className="text-xs text-gray-400 font-medium">{a.species} · {a.currentWeight}kg</p>
                       {status === 'sold' && (
-                        <p className="text-[9px] font-black text-red-700 mt-0.5 flex items-center gap-1">🔴 Sold</p>
+                        <p className="text-xs font-bold text-red-700 mt-0.5 flex items-center gap-1">Sold</p>
                       )}
                       {status === 'pending_clearance' && (
-                        <p className="text-[9px] font-black text-amber-700 mt-0.5 flex items-center gap-1">⏳ Awaiting Police clearance</p>
+                        <p className="text-xs font-bold text-amber-700 mt-0.5 flex items-center gap-1">Awaiting Police clearance</p>
                       )}
                       {status === 'available' && (
-                        <p className="text-[9px] font-black text-yellow-700 mt-0.5 flex items-center gap-1"><Check size={10} /> Cleared — live on Marketplace</p>
+                        <p className="text-xs font-bold text-yellow-700 mt-0.5 flex items-center gap-1"><Check size={10} /> Cleared — live on Marketplace</p>
                       )}
                     </div>
                     {status ? (
-                      <span className="shrink-0 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wide bg-gray-100 text-gray-400 cursor-not-allowed">
+                      <span className="shrink-0 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wide bg-gray-100 text-gray-400 cursor-not-allowed">
                         {status === 'sold' ? 'Sold' : status === 'pending_clearance' ? 'Pending' : 'Listed'}
                       </span>
                     ) : (
                       <button
                         onClick={() => onListAnimal(a.id)}
-                        className="shrink-0 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wide transition bg-pfuma-green text-white hover:bg-green-700"
+                        className="shrink-0 px-3 py-2 rounded-xl text-xs font-bold uppercase tracking-wide transition bg-pfuma-green text-white hover:bg-green-700"
                       >
                         List for Sale
                       </button>
@@ -676,7 +722,7 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
                   <div className="space-y-3">{unsoldAnimals.map(renderRow)}</div>
                   {soldAnimals.length > 0 && (
                     <div className="mt-4 pt-4 border-t border-gray-100">
-                      <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-2">Sold — {soldAnimals.length}</p>
+                      <p className="text-xs font-bold text-red-600 uppercase tracking-wide mb-2">Sold — {soldAnimals.length}</p>
                       <div className="space-y-3">{soldAnimals.map(renderRow)}</div>
                     </div>
                   )}
@@ -687,11 +733,11 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
             {/* What happens next */}
             {animals.some(a => a.marketplaceStatus === 'pending_clearance' || a.marketplaceStatus === 'available') && (
               <div className="mt-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
-                <p className="text-[10px] font-black text-purple-700 uppercase mb-1">What happens next</p>
+                <p className="text-xs font-bold text-purple-700 uppercase mb-1">What happens next</p>
                 <div className="space-y-1">
                   {['Police review and clear the sale (papers, brand, movement permit)', 'Once cleared, buyers browse your listing on the Marketplace', 'A buyer places a bid — you receive it via PFUMA Messenger', 'Vet issues a DVS movement certificate for the sale'].map((s, i) => (
-                    <div key={i} className="flex items-start gap-2 text-[10px] text-purple-600 font-medium">
-                      <span className="w-4 h-4 bg-purple-200 text-purple-700 rounded-full flex items-center justify-center text-[8px] font-black shrink-0 mt-0.5">{i + 1}</span>
+                    <div key={i} className="flex items-start gap-2 text-xs text-purple-600 font-medium">
+                      <span className="w-4 h-4 bg-purple-200 text-purple-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">{i + 1}</span>
                       {s}
                     </div>
                   ))}
@@ -707,10 +753,10 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
           {/* Medicine cabinet */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
             <div className="flex justify-between items-center mb-1">
-              <h3 className="text-sm font-black text-gray-800">Medicine Cabinet</h3>
-              <button onClick={() => setActiveTab('health')} className="text-[10px] font-black text-pfuma-green hover:underline uppercase">Manage →</button>
+              <h3 className="text-sm font-bold text-gray-800">Medicine Cabinet</h3>
+              <button onClick={() => setActiveTab('health')} className="text-xs font-bold text-pfuma-green hover:underline uppercase">Manage →</button>
             </div>
-            <p className="text-[11px] text-gray-400 font-medium mb-4">Your current medicine stock. Medicines are supplied by registered PFUMA Suppliers — contact them via PFUMA Messenger.</p>
+            <p className="text-xs text-gray-400 font-medium mb-4">Your current medicine stock. Medicines are supplied by registered PFUMA Suppliers — contact them via PFUMA Messenger.</p>
             <div className="space-y-3">
               {inventory.map(item => {
                 const isLow = item.stock <= item.min;
@@ -718,10 +764,10 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
                 return (
                   <div key={item.id} className={`p-3 rounded-xl ${isLow ? 'bg-red-50 border border-red-200' : 'bg-gray-50'}`}>
                     <div className="flex justify-between items-center mb-1.5">
-                      <p className="text-[11px] font-black text-gray-700 truncate">{item.name}</p>
-                      {isLow && <span className="text-[9px] font-black text-red-600 animate-pulse">Low — reorder</span>}
+                      <p className="text-xs font-bold text-gray-700 truncate">{item.name}</p>
+                      {isLow && <span className="text-xs font-bold text-red-600 animate-pulse">Low — reorder</span>}
                     </div>
-                    <div className="flex justify-between items-center text-[10px] text-gray-400 font-medium mb-1">
+                    <div className="flex justify-between items-center text-xs text-gray-400 font-medium mb-1">
                       <span>{item.stock} {item.unit}</span>
                       <span className="text-gray-300">from {item.supplier}</span>
                     </div>
@@ -732,7 +778,7 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
                 );
               })}
             </div>
-            <button onClick={() => setActiveTab('vet')} className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 bg-orange-50 border border-orange-200 rounded-xl text-[10px] font-black text-orange-700 uppercase hover:bg-orange-100 transition">
+            <button onClick={() => setActiveTab('vet')} className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 bg-orange-50 border border-orange-200 rounded-xl text-xs font-bold text-orange-700 uppercase hover:bg-orange-100 transition">
               <MessageSquare size={12} /> Order from a Supplier
             </button>
           </div>
@@ -742,23 +788,23 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
         <div className="col-span-1 space-y-5">
           {/* Alerts */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-            <h3 className="text-sm font-black text-gray-800 mb-4">Disease Alerts Near You</h3>
+            <h3 className="text-sm font-bold text-gray-800 mb-4">Disease Alerts Near You</h3>
             <div className="space-y-3">
               {critAlerts.length === 0 ? (
-                <p className="text-[11px] text-gray-400 font-medium italic text-center py-3">No active outbreaks reported in {currentUser?.province || 'your province'}.</p>
+                <p className="text-xs text-gray-400 font-medium italic text-center py-3">No active outbreaks reported in {currentUser?.province || 'your province'}.</p>
               ) : critAlerts.map(n => (
                 <div key={n.id} className="p-3.5 rounded-xl border-l-4 bg-red-50 border-red-500">
                   <div className="flex items-start gap-2">
                     <AlertTriangle size={13} className="shrink-0 mt-0.5 text-red-500" />
                     <div>
-                      <p className="text-[11px] font-black text-gray-800">{n.title}</p>
-                      <p className="text-[10px] text-gray-500 font-medium mt-0.5">{n.msg}</p>
-                      <p className="text-[10px] text-gray-400 font-bold mt-1 uppercase">{n.time}</p>
+                      <p className="text-xs font-bold text-gray-800">{n.title}</p>
+                      <p className="text-xs text-gray-500 font-medium mt-0.5">{n.msg}</p>
+                      <p className="text-xs text-gray-400 font-bold mt-1 uppercase">{n.time}</p>
                     </div>
                   </div>
                 </div>
               ))}
-              <button onClick={() => setActiveTab('disease')} className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-gray-50 rounded-xl text-[11px] font-black text-gray-500 uppercase hover:bg-gray-100 hover:text-pfuma-green transition">
+              <button onClick={() => setActiveTab('disease')} className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-gray-50 rounded-xl text-xs font-bold text-gray-500 uppercase hover:bg-gray-100 hover:text-pfuma-green transition">
                 <Stethoscope size={12} /> Run Diagnostics
               </button>
             </div>
@@ -766,7 +812,7 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
 
           {/* Recent activity */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-            <h3 className="text-sm font-black text-gray-800 mb-4">Recent Health Events</h3>
+            <h3 className="text-sm font-bold text-gray-800 mb-4">Recent Health Events</h3>
             {recentLogs.length === 0 ? (
               <p className="text-xs text-gray-400 font-medium text-center py-4 italic">No events recorded yet</p>
             ) : (
@@ -775,8 +821,8 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
                   <div key={log.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
                     <div className="w-1.5 h-1.5 rounded-full bg-pfuma-green mt-1.5 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-black text-gray-800 truncate">{log.action}</p>
-                      <p className="text-[10px] text-gray-400 font-medium">{log.animal} · {log.date}</p>
+                      <p className="text-xs font-bold text-gray-800 truncate">{log.action}</p>
+                      <p className="text-xs text-gray-400 font-medium">{log.animal} · {log.date}</p>
                     </div>
                   </div>
                 ))}
@@ -787,21 +833,21 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
           {/* Weight trend for first animal */}
           {animals[0]?.weightHistory?.length > 1 && (
             <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-              <h3 className="text-sm font-black text-gray-800 mb-1">{animals[0].name}'s Weight Trend</h3>
-              <p className="text-[10px] text-gray-400 font-medium mb-4">Growth in kg from birth</p>
+              <h3 className="text-sm font-bold text-gray-800 mb-1">{animals[0].name}'s Weight Trend</h3>
+              <p className="text-xs text-gray-400 font-medium mb-4">Growth in kg from birth</p>
               <div className="h-28">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={animals[0].weightHistory} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
                     <defs>
                       <linearGradient id="wt" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor="#1b5e20" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#1b5e20" stopOpacity={0} />
+                        <stop offset="5%"  stopColor="#7A3F0B" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#7A3F0B" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <XAxis dataKey="month" fontSize={9} tick={{ fill: '#bbb' }} tickLine={false} axisLine={false} />
-                    <YAxis fontSize={9} tick={{ fill: '#bbb' }} tickLine={false} axisLine={false} />
+                    <XAxis dataKey="month" fontSize={9} tick={{ fill: '#B0A496' }} tickLine={false} axisLine={false} />
+                    <YAxis fontSize={9} tick={{ fill: '#B0A496' }} tickLine={false} axisLine={false} />
                     <Tooltip contentStyle={{ borderRadius: 10, border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', fontSize: 11 }} formatter={v => [`${v}kg`, 'Weight']} />
-                    <Area type="monotone" dataKey="weight" stroke="#1b5e20" fill="url(#wt)" strokeWidth={2.5} dot={false} />
+                    <Area type="monotone" dataKey="weight" stroke="#7A3F0B" fill="url(#wt)" strokeWidth={2.5} dot={false} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -812,21 +858,21 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-1">
               <Users size={15} className="text-pfuma-green" />
-              <h3 className="text-sm font-black text-gray-800">Farmers Near You</h3>
+              <h3 className="text-sm font-bold text-gray-800">Farmers Near You</h3>
             </div>
-            <p className="text-[11px] text-gray-400 font-medium mb-4">Connect with other PFUMA farmers to swap tips, feed, or breeding stock.</p>
+            <p className="text-xs text-gray-400 font-medium mb-4">Connect with other PFUMA farmers to swap tips, feed, or breeding stock.</p>
             {nearbyFarmers.length === 0 ? (
               <p className="text-xs text-gray-400 italic font-medium text-center py-4">No other registered farmers nearby yet</p>
             ) : (
               <div className="space-y-2">
                 {nearbyFarmers.map(f => (
                   <div key={f.id} className="flex items-center gap-3 p-2.5 bg-gray-50 rounded-xl">
-                    <div className="relative w-10 h-10 rounded-full flex items-center justify-center text-white font-black text-xs shrink-0 bg-pfuma-green">
+                    <div className="relative w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-xs shrink-0 bg-pfuma-green">
                       {(f.name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-black text-gray-800 truncate">{f.name}</p>
-                      <p className="text-[10px] text-gray-400 font-medium truncate">{f.org || 'Farmer'} · {f.province}</p>
+                      <p className="text-xs font-bold text-gray-800 truncate">{f.name}</p>
+                      <p className="text-xs text-gray-400 font-medium truncate">{f.org || 'Farmer'} · {f.province}</p>
                     </div>
                     <button onClick={() => setActiveTab('vet')} className="w-8 h-8 bg-white border border-gray-200 rounded-full flex items-center justify-center text-pfuma-green hover:bg-green-50 transition shrink-0" aria-label={`Message ${f.name}`}>
                       <MessageSquare size={13} />
@@ -841,6 +887,7 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
 
       {/* Stakeholder map — full width at bottom */}
       <StakeholderMap />
+      </div>
       </div>
     </>
   );
@@ -889,8 +936,8 @@ const VetMedicationRecommender = ({ animals, currentUser }) => {
 
   return (
     <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-      <h3 className="text-sm font-black text-white mb-1 flex items-center gap-2"><FlaskConical size={15} className="text-blue-400" /> Recommend Medication</h3>
-      <p className="text-[11px] text-gray-500 font-medium mb-4">Prescribe a dose for a specific animal — the farmer administers it from their own cabinet against your recommendation.</p>
+      <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2"><FlaskConical size={15} className="text-blue-400" /> Recommend Medication</h3>
+      <p className="text-xs text-gray-500 font-medium mb-4">Prescribe a dose for a specific animal — the farmer administers it from their own cabinet against your recommendation.</p>
       <form onSubmit={submit} className="space-y-3">
         <select required value={animalId} onChange={e => setAnimalId(e.target.value)}
           className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-xs text-white focus:outline-none focus:border-blue-400/50">
@@ -907,8 +954,8 @@ const VetMedicationRecommender = ({ animals, currentUser }) => {
         </select>
         {animal && med && (
           <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-3 py-2.5 flex items-center justify-between">
-            <span className="text-[10px] text-blue-300 font-black uppercase">Dose for {animal.name}</span>
-            <span className="text-sm font-black text-white">{dose.toFixed(1)} ml</span>
+            <span className="text-xs text-blue-300 font-bold uppercase">Dose for {animal.name}</span>
+            <span className="text-sm font-bold text-white">{dose.toFixed(1)} ml</span>
           </div>
         )}
         <input placeholder={med?.frequency || 'Frequency (optional override)'} value={frequency} onChange={e => setFrequency(e.target.value)}
@@ -916,9 +963,9 @@ const VetMedicationRecommender = ({ animals, currentUser }) => {
         <textarea placeholder="Clinical notes for the farmer (optional)" rows={2} value={notes} onChange={e => setNotes(e.target.value)}
           className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-400/50 resize-none" />
         {feedback && (
-          <p className={`text-[11px] font-bold ${feedback.ok ? 'text-green-400' : 'text-red-400'}`}>{feedback.msg}</p>
+          <p className={`text-xs font-bold ${feedback.ok ? 'text-green-400' : 'text-red-400'}`}>{feedback.msg}</p>
         )}
-        <button type="submit" disabled={busy || !animalId} className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-[11px] font-black uppercase hover:bg-blue-700 transition disabled:opacity-50">
+        <button type="submit" disabled={busy || !animalId} className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-xs font-bold uppercase hover:bg-blue-700 transition disabled:opacity-50">
           {busy ? 'Sending…' : 'Send Recommendation'}
         </button>
       </form>
@@ -946,7 +993,7 @@ const VetSignAction = ({ label, onSubmit, extraFields, children }) => {
 
   if (!open) {
     return (
-      <button onClick={() => setOpen(true)} className="px-3 py-2 bg-pfuma-green text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition">
+      <button onClick={() => setOpen(true)} className="px-3 py-2 bg-pfuma-green text-white rounded-lg text-xs font-bold uppercase hover:bg-green-700 transition">
         {label}
       </button>
     );
@@ -955,10 +1002,10 @@ const VetSignAction = ({ label, onSubmit, extraFields, children }) => {
     <div className="w-full mt-2 p-3 bg-white/5 border border-white/10 rounded-xl space-y-2">
       {children}
       <SignaturePad onChange={setBlob} height={110} />
-      {error && <p className="text-[10px] text-red-400 font-bold">{error}</p>}
+      {error && <p className="text-xs text-red-400 font-bold">{error}</p>}
       <div className="flex gap-2">
-        <button onClick={() => setOpen(false)} disabled={busy} className="flex-1 py-2 bg-white/10 text-gray-300 rounded-lg text-[10px] font-black uppercase hover:bg-white/20 transition disabled:opacity-40">Cancel</button>
-        <button onClick={submit} disabled={busy} className="flex-1 py-2 bg-pfuma-green text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition disabled:opacity-40">{busy ? 'Signing…' : 'Sign & Submit'}</button>
+        <button onClick={() => setOpen(false)} disabled={busy} className="flex-1 py-2 bg-white/10 text-gray-300 rounded-lg text-xs font-bold uppercase hover:bg-white/20 transition disabled:opacity-40">Cancel</button>
+        <button onClick={submit} disabled={busy} className="flex-1 py-2 bg-pfuma-green text-white rounded-lg text-xs font-bold uppercase hover:bg-green-700 transition disabled:opacity-40">{busy ? 'Signing…' : 'Sign & Submit'}</button>
       </div>
     </div>
   );
@@ -1116,32 +1163,32 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
   const activeOutbreak = outbreaks[0];
   const vetInitials = (currentUser?.name || 'V').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
   const vetActions = [
-    { icon: MessageSquare, label: 'Messenger',      color: 'bg-pfuma-green', tab: 'vet' },
-    { icon: Stethoscope,   label: 'Diagnostics',    color: 'bg-purple-500',  tab: 'disease' },
-    { icon: ShieldCheck,   label: 'Witness Queue',  color: 'bg-red-500',     tab: 'vet', badge: witnessQueue.length || null },
-    { icon: FileText,      label: 'Movement Permits', color: 'bg-blue-500',  tab: 'vet', badge: permitQueue.length || null },
-    { icon: Handshake,     label: 'Group Requests', color: 'bg-pink-500',    tab: 'vet', badge: vetRequests.length || null },
-    { icon: Users,         label: 'Farmer Registry', color: 'bg-orange-500', tab: 'vet' },
+    { icon: MessageSquare, label: 'Messenger',      color: 'bg-white/10', tab: 'vet' },
+    { icon: Stethoscope,   label: 'Diagnostics',    color: 'bg-white/10',  tab: 'disease' },
+    { icon: ShieldCheck,   label: 'Witness Queue',  color: 'bg-white/10',     tab: 'vet', badge: witnessQueue.length || null },
+    { icon: FileText,      label: 'Movement Permits', color: 'bg-white/10',  tab: 'vet', badge: permitQueue.length || null },
+    { icon: Handshake,     label: 'Group Requests', color: 'bg-white/10',    tab: 'vet', badge: vetRequests.length || null },
+    { icon: Users,         label: 'Farmer Registry', color: 'bg-white/10', tab: 'vet' },
   ];
 
   return (
     <>
-      <div className="lg:hidden bg-[#121212] h-full overflow-y-auto text-left">
+      <div className="lg:hidden bg-bark-950 h-full overflow-y-auto text-left">
         <div className="p-4 pb-10 space-y-4">
 
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-2xl bg-pfuma-green flex items-center justify-center text-white font-black text-sm shrink-0">{vetInitials}</div>
+              <div className="w-11 h-11 rounded-2xl bg-pfuma-green flex items-center justify-center text-white font-bold text-sm shrink-0">{vetInitials}</div>
               <div className="min-w-0">
-                <p className="text-white/40 text-[10px] font-black uppercase tracking-[2px]">{greet()}</p>
-                <h2 className="text-white text-base font-black truncate">Dr. {currentUser?.name?.split(' ').pop() || 'Officer'}</h2>
+                <p className="text-white/40 text-xs font-bold uppercase tracking-[2px]">{greet()}</p>
+                <h2 className="text-white text-base font-bold truncate">Dr. {currentUser?.name?.split(' ').pop() || 'Officer'}</h2>
               </div>
             </div>
             {activeOutbreak && (
               <div className="flex items-center gap-1.5 bg-red-500/15 border border-red-500/30 rounded-full px-3 py-1.5 shrink-0 animate-pulse">
                 <AlertTriangle size={12} className="text-red-400" />
-                <span className="text-[9px] font-black text-red-300 uppercase">Outbreak</span>
+                <span className="text-xs font-bold text-red-300 uppercase">Outbreak</span>
               </div>
             )}
           </div>
@@ -1150,18 +1197,18 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
           <div className="grid grid-cols-3 gap-2.5">
             <div className={`rounded-2xl p-3 border ${outbreaks.length ? 'bg-red-950 border-red-900/60' : 'bg-white/5 border-white/10'}`}>
               <AlertTriangle size={14} className={`mb-2 ${outbreaks.length ? 'text-red-400' : 'text-white/30'}`} />
-              <p className="text-white text-lg font-black leading-none">{outbreaks.length}</p>
-              <p className={`text-[9px] font-bold uppercase tracking-wide mt-1 ${outbreaks.length ? 'text-red-300/70' : 'text-white/30'}`}>Outbreaks</p>
+              <p className="text-white text-lg font-bold leading-none">{outbreaks.length}</p>
+              <p className={`text-xs font-bold uppercase tracking-wide mt-1 ${outbreaks.length ? 'text-red-300/70' : 'text-white/30'}`}>Outbreaks</p>
             </div>
             <div className="bg-amber-950 border border-amber-900/60 rounded-2xl p-3">
               <FileText size={14} className="text-amber-400 mb-2" />
-              <p className="text-white text-lg font-black leading-none">{certQueue}</p>
-              <p className="text-amber-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">Cert Queue</p>
+              <p className="text-white text-lg font-bold leading-none">{certQueue}</p>
+              <p className="text-amber-300/70 text-xs font-bold uppercase tracking-wide mt-1">Cert Queue</p>
             </div>
             <div className="bg-blue-950 border border-blue-900/60 rounded-2xl p-3">
               <MapPin size={14} className="text-blue-400 mb-2" />
-              <p className="text-white text-lg font-black leading-none">{farms.length}</p>
-              <p className="text-blue-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">Farms</p>
+              <p className="text-white text-lg font-bold leading-none">{farms.length}</p>
+              <p className="text-blue-300/70 text-xs font-bold uppercase tracking-wide mt-1">Farms</p>
             </div>
           </div>
 
@@ -1174,20 +1221,20 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
               { icon: PhoneCall,     label: 'Report',    onClick: () => setShowReportForm(p => !p) },
             ].map(q => (
               <button key={q.label} onClick={() => q.onClick ? q.onClick() : setActiveTab(q.tab)} className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-white/90 hover:bg-white/10 transition shrink-0 whitespace-nowrap">
-                <q.icon size={13} /><span className="text-[11px] font-black">{q.label}</span>
+                <q.icon size={13} /><span className="text-xs font-bold">{q.label}</span>
               </button>
             ))}
           </div>
 
           {/* Active outbreak / tip banner */}
-          <div className={`border rounded-2xl p-4 ${activeOutbreak ? 'bg-red-950/60 border-red-900/60' : 'bg-[#1E1E1E] border-white/5'}`}>
+          <div className={`border rounded-2xl p-4 ${activeOutbreak ? 'bg-red-950/60 border-red-900/60' : 'bg-bark-900 border-white/5'}`}>
             <div className="flex items-center gap-3">
               <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${activeOutbreak ? 'bg-red-500/20' : 'bg-pfuma-gold/15'}`}>
                 {activeOutbreak ? <AlertTriangle size={14} className="text-red-400" /> : <Star size={14} className="text-pfuma-gold" />}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-white text-xs font-black">{activeOutbreak ? `${activeOutbreak.disease_name} Outbreak` : 'No active outbreaks'}</p>
-                <p className={`text-[10px] font-medium truncate ${activeOutbreak ? 'text-red-300/70' : 'text-white/40'}`}>
+                <p className="text-white text-xs font-bold">{activeOutbreak ? `${activeOutbreak.disease_name} Outbreak` : 'No active outbreaks'}</p>
+                <p className={`text-xs font-medium truncate ${activeOutbreak ? 'text-red-300/70' : 'text-white/40'}`}>
                   {activeOutbreak ? `${activeOutbreak.district ? `${activeOutbreak.district}, ` : ''}${activeOutbreak.province}` : `Reported in ${currentUser?.province || 'your province'}`}
                 </p>
               </div>
@@ -1196,36 +1243,36 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
 
           {/* Action grid */}
           <div>
-            <p className="text-white/30 text-[10px] font-black uppercase tracking-[2px] mb-2.5 px-1">Quick Actions</p>
+            <p className="text-white/30 text-xs font-bold uppercase tracking-[2px] mb-2.5 px-1">Quick Actions</p>
             <div className="grid grid-cols-3 gap-2.5">
               {vetActions.map(a => (
-                <button key={a.label} onClick={() => setActiveTab(a.tab)} className="relative bg-[#1E1E1E] border border-white/5 rounded-2xl p-3 flex flex-col items-center gap-2 hover:bg-[#252525] transition">
-                  {a.badge ? <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[8px] font-black rounded-full">{a.badge}</span> : null}
+                <button key={a.label} onClick={() => setActiveTab(a.tab)} className="relative bg-bark-900 border border-white/5 rounded-2xl p-3 flex flex-col items-center gap-2 hover:bg-bark-800 transition">
+                  {a.badge ? <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full">{a.badge}</span> : null}
                   <div className={`w-10 h-10 rounded-xl ${a.color} flex items-center justify-center`}><a.icon size={17} className="text-white" /></div>
-                  <span className="text-white/70 text-[9px] font-bold text-center leading-tight">{a.label}</span>
+                  <span className="text-white/70 text-xs font-bold text-center leading-tight">{a.label}</span>
                 </button>
               ))}
             </div>
           </div>
 
           {/* Farmer registry preview */}
-          <div className="bg-[#1E1E1E] border border-white/5 rounded-2xl p-4">
+          <div className="bg-bark-900 border border-white/5 rounded-2xl p-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-white text-xs font-black">Farmer Registry</p>
-              <button onClick={() => setActiveTab('vet')} className="text-[10px] font-black text-pfuma-sprout uppercase">View All</button>
+              <p className="text-white text-xs font-bold">Farmer Registry</p>
+              <button onClick={() => setActiveTab('vet')} className="text-xs font-bold text-pfuma-sprout uppercase">View All</button>
             </div>
             {farms.length === 0 ? (
-              <p className="text-white/30 text-[11px] font-medium text-center py-4 italic">No registered farmers yet</p>
+              <p className="text-white/30 text-xs font-medium text-center py-4 italic">No registered farmers yet</p>
             ) : (
               <div className="space-y-2">
                 {farms.slice(0, 3).map(farm => (
                   <div key={farm.id} className="flex items-center gap-3 p-2.5 bg-white/[0.03] rounded-xl">
-                    <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center text-pfuma-green font-black text-xs shrink-0">{(farm.full_name || '?')[0]}</div>
+                    <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center text-pfuma-green font-bold text-xs shrink-0">{(farm.full_name || '?')[0]}</div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-white text-[11px] font-black truncate">{farm.full_name}</p>
-                      <p className="text-white/30 text-[9px] font-medium">{farm.animal_count} animal{farm.animal_count !== 1 ? 's' : ''}</p>
+                      <p className="text-white text-xs font-bold truncate">{farm.full_name}</p>
+                      <p className="text-white/30 text-xs font-medium">{farm.animal_count} animal{farm.animal_count !== 1 ? 's' : ''}</p>
                     </div>
-                    <span className={`text-[8px] font-black px-2 py-1 rounded-full uppercase shrink-0 ${farm.verification_status === 'verified' ? 'bg-pfuma-sprout/15 text-pfuma-sprout' : 'bg-orange-500/15 text-orange-400'}`}>{farm.verification_status}</span>
+                    <span className={`text-xs font-bold px-2 py-1 rounded-full uppercase shrink-0 ${farm.verification_status === 'verified' ? 'bg-pfuma-sprout/15 text-pfuma-sprout' : 'bg-orange-500/15 text-orange-400'}`}>{farm.verification_status}</span>
                   </div>
                 ))}
               </div>
@@ -1233,26 +1280,22 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
           </div>
         </div>
       </div>
-      <div className="hidden lg:block p-6 bg-pfuma-slate space-y-6 text-left overflow-y-auto h-full">
+      <div className="hidden lg:block bg-bark-900 text-left overflow-y-auto h-full">
 
-      {/* Greeting */}
-      <div className="bg-pfuma-green/20 border border-pfuma-green/30 rounded-3xl p-6 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.08]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} aria-hidden="true" />
-        <div className="absolute -bottom-16 -right-12 w-56 h-56 rounded-full bg-pfuma-sprout/15 blur-3xl" aria-hidden="true" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-4">
-          <div className="flex-1">
-            <p className="text-green-400 text-xs font-black uppercase tracking-[3px] mb-1">Authority Dashboard · {currentUser?.province || 'Mashonaland West'}</p>
-            <h2 className="text-2xl font-black text-white leading-tight">{greet()}, Dr. {currentUser?.name?.split(' ').pop() || 'Officer'}</h2>
-            <p className="text-gray-400 text-sm font-medium mt-1">Provincial veterinary oversight — outbreaks, certifications, and farmer case management</p>
+      <DashboardHero
+        role="Veterinarian"
+        eyebrow={`Authority dashboard · ${currentUser?.province || 'Mashonaland West'}`}
+        title={`${greet()}, Dr. ${currentUser?.name?.split(' ').pop() || 'Officer'}`}
+        stats="Provincial veterinary oversight — outbreaks, certifications, and farmer case management"
+        alert={activeOutbreak && (
+          <div className="flex items-center gap-2.5 rounded-xl border border-red-300/40 bg-red-950/40 px-5 py-3 backdrop-blur-sm">
+            <Globe size={16} className="text-red-300 shrink-0" aria-hidden="true" />
+            <span className="text-sm font-bold text-red-50">{activeOutbreak.disease_name} outbreak active</span>
           </div>
-          {activeOutbreak && (
-            <div className="flex items-center gap-2 bg-red-600 text-white px-5 py-3 rounded-2xl shrink-0 animate-pulse">
-              <Globe size={16} />
-              <span className="text-xs font-black uppercase tracking-widest">{activeOutbreak.disease_name} Outbreak Active</span>
-            </div>
-          )}
-        </div>
-      </div>
+        )}
+      />
+
+      <div className="p-6 xl:p-8 space-y-6">
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1265,11 +1308,11 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
         ].map(k => (
           <div key={k.label} className={`${k.accent} border rounded-2xl p-5`}>
             <div className="flex justify-between items-start mb-2">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{k.label}</p>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">{k.label}</p>
               <k.icon size={16} className={k.iconColor} />
             </div>
-            <p className={`text-3xl font-black ${k.textColor}`}>{k.value}</p>
-            <p className="text-[11px] text-gray-500 font-medium mt-1">{k.sub}</p>
+            <p className={`text-3xl font-bold ${k.textColor}`}>{k.value}</p>
+            <p className="text-xs text-gray-500 font-medium mt-1">{k.sub}</p>
           </div>
         ))}
       </div>
@@ -1282,17 +1325,17 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <AlertTriangle size={16} className={activeOutbreak ? 'text-red-400 animate-pulse' : 'text-gray-500'} />
-                <h3 className={`text-sm font-black ${activeOutbreak ? 'text-red-300' : 'text-white'}`}>Active Outbreak</h3>
+                <h3 className={`text-sm font-bold ${activeOutbreak ? 'text-red-300' : 'text-white'}`}>Active Outbreak</h3>
               </div>
-              <button onClick={() => setShowReportForm(p => !p)} className="text-[10px] font-black text-pfuma-green hover:underline uppercase">Report →</button>
+              <button onClick={() => setShowReportForm(p => !p)} className="text-xs font-bold text-pfuma-green hover:underline uppercase">Report →</button>
             </div>
             {activeOutbreak ? (
               <>
-                <h4 className="text-lg font-black text-white mb-1">{activeOutbreak.disease_name}</h4>
-                <p className="text-[11px] text-gray-400 font-medium mb-4">
+                <h4 className="text-lg font-bold text-white mb-1">{activeOutbreak.disease_name}</h4>
+                <p className="text-xs text-gray-400 font-medium mb-4">
                   Confirmed in {activeOutbreak.district ? `${activeOutbreak.district}, ` : ''}{activeOutbreak.province}. {activeOutbreak.details}
                 </p>
-                <div className="space-y-2 text-[11px]">
+                <div className="space-y-2 text-xs">
                   {[
                     { k: 'Status',          v: activeOutbreak.status.toUpperCase() },
                     { k: 'Affected farms',  v: activeOutbreak.affected_farms || '—' },
@@ -1301,16 +1344,16 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
                   ].map(r => (
                     <div key={r.k} className="flex justify-between items-center border-b border-white/5 pb-1.5">
                       <span className="text-gray-500 font-bold">{r.k}</span>
-                      <span className="text-gray-300 font-black">{r.v}</span>
+                      <span className="text-gray-300 font-bold">{r.v}</span>
                     </div>
                   ))}
                 </div>
-                <button onClick={() => setActiveTab('vet')} className="mt-4 w-full py-3 bg-red-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-700 transition flex items-center justify-center gap-2">
+                <button onClick={() => setActiveTab('vet')} className="mt-4 w-full py-3 bg-red-600 text-white rounded-xl text-xs font-bold uppercase tracking-wide hover:bg-red-700 transition flex items-center justify-center gap-2">
                   <PhoneCall size={13} /> Issue Emergency Advisory
                 </button>
               </>
             ) : (
-              <p className="text-[11px] text-gray-500 font-medium">No active outbreaks reported in {currentUser?.province || 'your province'}.</p>
+              <p className="text-xs text-gray-500 font-medium">No active outbreaks reported in {currentUser?.province || 'your province'}.</p>
             )}
             {showReportForm && (
               <form onSubmit={submitOutbreak} className="mt-4 space-y-2 border-t border-white/10 pt-4">
@@ -1324,12 +1367,12 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50" />
                 <textarea placeholder="Restriction / notes" rows={2} value={reportForm.details} onChange={e => setReportForm(p => ({ ...p, details: e.target.value }))}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50 resize-none" />
-                <button type="submit" disabled={reportBusy} className="w-full py-2.5 bg-red-600 text-white rounded-lg text-[11px] font-black uppercase hover:bg-red-700 transition disabled:opacity-50">
+                <button type="submit" disabled={reportBusy} className="w-full py-2.5 bg-red-600 text-white rounded-lg text-xs font-bold uppercase hover:bg-red-700 transition disabled:opacity-50">
                   {reportBusy ? 'Reporting…' : 'File Outbreak Report'}
                 </button>
               </form>
             )}
-            {reportFeedback && <p className="mt-3 text-[11px] text-green-400 font-bold">{reportFeedback}</p>}
+            {reportFeedback && <p className="mt-3 text-xs text-green-400 font-bold">{reportFeedback}</p>}
           </div>
 
           {/* Broadcast to farmers — a general alert, not tied to a specific
@@ -1338,11 +1381,11 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <MessageSquare size={16} className="text-pfuma-green" />
-                <h3 className="text-sm font-black text-white">Broadcast to Farmers</h3>
+                <h3 className="text-sm font-bold text-white">Broadcast to Farmers</h3>
               </div>
-              <button onClick={() => setShowBroadcastForm(p => !p)} className="text-[10px] font-black text-pfuma-green hover:underline uppercase">Compose →</button>
+              <button onClick={() => setShowBroadcastForm(p => !p)} className="text-xs font-bold text-pfuma-green hover:underline uppercase">Compose →</button>
             </div>
-            <p className="text-[11px] text-gray-500 font-medium">Send a message to every farmer in {currentUser?.province || 'your province'} at once — not just one at a time.</p>
+            <p className="text-xs text-gray-500 font-medium">Send a message to every farmer in {currentUser?.province || 'your province'} at once — not just one at a time.</p>
             {showBroadcastForm && (
               <form onSubmit={submitBroadcast} className="mt-4 space-y-2 border-t border-white/10 pt-4">
                 <input placeholder="Title (optional)" value={broadcastForm.title} onChange={e => setBroadcastForm(p => ({ ...p, title: e.target.value }))}
@@ -1351,17 +1394,17 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-pfuma-green/50 resize-none" />
                 <input placeholder="District (optional — leave blank for whole province)" value={broadcastForm.district} onChange={e => setBroadcastForm(p => ({ ...p, district: e.target.value }))}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-pfuma-green/50" />
-                <button type="submit" disabled={broadcastBusy} className="w-full py-2.5 bg-pfuma-green text-white rounded-lg text-[11px] font-black uppercase hover:bg-green-700 transition disabled:opacity-50">
+                <button type="submit" disabled={broadcastBusy} className="w-full py-2.5 bg-pfuma-green text-white rounded-lg text-xs font-bold uppercase hover:bg-green-700 transition disabled:opacity-50">
                   {broadcastBusy ? 'Sending…' : 'Send Broadcast'}
                 </button>
               </form>
             )}
-            {broadcastFeedback && <p className="mt-3 text-[11px] text-green-400 font-bold">{broadcastFeedback}</p>}
+            {broadcastFeedback && <p className="mt-3 text-xs text-green-400 font-bold">{broadcastFeedback}</p>}
           </div>
 
           {/* Quick actions */}
           <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-            <h3 className="text-sm font-black text-white mb-3">Quick Actions</h3>
+            <h3 className="text-sm font-bold text-white mb-3">Quick Actions</h3>
             <div className="space-y-2">
               {[
                 { icon: MessageSquare, label: 'Open Vet Messenger', desc: 'Chat with farmers', tab: 'vet',     color: 'bg-pfuma-green'  },
@@ -1370,7 +1413,7 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
               ].map(a => (
                 <button key={a.label} onClick={() => setActiveTab(a.tab)} className="w-full flex items-center gap-3 p-3 rounded-xl border border-white/10 hover:border-pfuma-green hover:bg-white/5 transition text-left">
                   <div className={`w-8 h-8 ${a.color} rounded-lg flex items-center justify-center shrink-0`}><a.icon size={14} className="text-white" /></div>
-                  <div><p className="text-[11px] font-black text-white">{a.label}</p><p className="text-[10px] text-gray-500 font-medium">{a.desc}</p></div>
+                  <div><p className="text-xs font-bold text-white">{a.label}</p><p className="text-xs text-gray-500 font-medium">{a.desc}</p></div>
                   <ArrowRight size={12} className="text-gray-600 ml-auto" />
                 </button>
               ))}
@@ -1389,25 +1432,25 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
           <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-1">
               <ShieldCheck size={15} className="text-pfuma-green" />
-              <h3 className="text-sm font-black text-white">Clearance Witness Queue</h3>
+              <h3 className="text-sm font-bold text-white">Clearance Witness Queue</h3>
             </div>
-            <p className="text-[11px] text-gray-500 font-medium mb-4">Pending livestock sale clearances waiting on your witness signature (ZRP Form 392, Part D).</p>
+            <p className="text-xs text-gray-500 font-medium mb-4">Pending livestock sale clearances waiting on your witness signature (ZRP Form 392, Part D).</p>
             {witnessQueue.length === 0 ? (
-              <p className="text-[11px] text-gray-500 font-medium italic text-center py-4">Nothing waiting on you right now.</p>
+              <p className="text-xs text-gray-500 font-medium italic text-center py-4">Nothing waiting on you right now.</p>
             ) : (
               <div className="space-y-3">
                 {witnessQueue.map(w => (
                   <div key={w.id} className="p-3.5 bg-white/5 border border-white/10 rounded-xl">
-                    <p className="text-xs font-black text-white">{w.animal_name} <span className="text-gray-500 font-medium">· {w.species}</span></p>
-                    <p className="text-[10px] text-gray-400 font-medium mt-0.5">Seller: {w.seller_name} · {w.seller_phone}</p>
+                    <p className="text-xs font-bold text-white">{w.animal_name} <span className="text-gray-500 font-medium">· {w.species}</span></p>
+                    <p className="text-xs text-gray-400 font-medium mt-0.5">Seller: {w.seller_name} · {w.seller_phone}</p>
                     <div className="flex items-center gap-3 mt-1.5">
                       {w.seller_id && (
-                        <button onClick={() => onMessageFarmer?.({ startConversationWith: w.seller_id, subject: w.animal_name })} className="flex items-center gap-1 text-[9px] font-black text-pfuma-green uppercase hover:underline">
+                        <button onClick={() => onMessageFarmer?.({ startConversationWith: w.seller_id, subject: w.animal_name })} className="flex items-center gap-1 text-xs font-bold text-pfuma-green uppercase hover:underline">
                           <MessageSquare size={10} /> Message
                         </button>
                       )}
                       {w.seller_phone && (
-                        <a href={`tel:${w.seller_phone}`} className="flex items-center gap-1 text-[9px] font-black text-gray-400 uppercase hover:text-white transition">
+                        <a href={`tel:${w.seller_phone}`} className="flex items-center gap-1 text-xs font-bold text-gray-400 uppercase hover:text-white transition">
                           <PhoneCall size={10} /> Call
                         </a>
                       )}
@@ -1426,48 +1469,48 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
           <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-1">
               <FileText size={15} className="text-pfuma-green" />
-              <h3 className="text-sm font-black text-white">Movement Permit Requests</h3>
+              <h3 className="text-sm font-bold text-white">Movement Permit Requests</h3>
             </div>
-            <p className="text-[11px] text-gray-500 font-medium mb-4">Farmer requests for a DVS Movement of Animal Permit (Form V27) — nothing is authorized until you sign.</p>
+            <p className="text-xs text-gray-500 font-medium mb-4">Farmer requests for a DVS Movement of Animal Permit (Form V27) — nothing is authorized until you sign.</p>
             {permitQueue.length === 0 ? (
-              <p className="text-[11px] text-gray-500 font-medium italic text-center py-4">No pending requests.</p>
+              <p className="text-xs text-gray-500 font-medium italic text-center py-4">No pending requests.</p>
             ) : (
               <div className="space-y-3">
                 {permitQueue.map(p => (
                   <div key={p.id} className="p-3.5 bg-white/5 border border-white/10 rounded-xl">
-                    <p className="text-xs font-black text-white">{p.animal_name} <span className="text-gray-500 font-medium">· {p.species}</span></p>
-                    <p className="text-[10px] text-gray-400 font-medium mt-0.5">{p.owner_name} · {p.owner_phone}</p>
+                    <p className="text-xs font-bold text-white">{p.animal_name} <span className="text-gray-500 font-medium">· {p.species}</span></p>
+                    <p className="text-xs text-gray-400 font-medium mt-0.5">{p.owner_name} · {p.owner_phone}</p>
                     <div className="flex items-center gap-3 mt-1">
                       {p.owner_id && (
-                        <button onClick={() => onMessageFarmer?.({ startConversationWith: p.owner_id, subject: p.animal_name })} className="flex items-center gap-1 text-[9px] font-black text-pfuma-green uppercase hover:underline">
+                        <button onClick={() => onMessageFarmer?.({ startConversationWith: p.owner_id, subject: p.animal_name })} className="flex items-center gap-1 text-xs font-bold text-pfuma-green uppercase hover:underline">
                           <MessageSquare size={10} /> Message
                         </button>
                       )}
                       {p.owner_phone && (
-                        <a href={`tel:${p.owner_phone}`} className="flex items-center gap-1 text-[9px] font-black text-gray-400 uppercase hover:text-white transition">
+                        <a href={`tel:${p.owner_phone}`} className="flex items-center gap-1 text-xs font-bold text-gray-400 uppercase hover:text-white transition">
                           <PhoneCall size={10} /> Call
                         </a>
                       )}
                     </div>
-                    <p className="text-[10px] text-gray-400 font-medium mt-1">
+                    <p className="text-xs text-gray-400 font-medium mt-1">
                       {p.from_district} → {p.to_district} · {p.period_days} day{p.period_days !== 1 ? 's' : ''}
                       {p.route_method ? ` · ${p.route_method}` : ''}
                     </p>
-                    <p className="text-[10px] text-gray-500 font-medium mt-0.5">
+                    <p className="text-xs text-gray-500 font-medium mt-0.5">
                       {ANIMAL_COUNT_LABELS.map(([key, label]) => p[key] > 0 ? `${p[key]} ${label}` : null).filter(Boolean).join(', ') || (p.other_count > 0 ? `${p.other_count} ${p.other_description || 'other'}` : 'No animal count given')}
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                       <select
                         value={permitRanks[p.id] || ''}
                         onChange={e => setPermitRanks(prev => ({ ...prev, [p.id]: e.target.value }))}
-                        className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-[11px] text-white"
+                        className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white"
                       >
                         <option value="">Sign as…</option>
                         <option value="VEA">VEA</option>
                         <option value="AHI">AHI</option>
                         <option value="GVO">GVO</option>
                       </select>
-                      <button onClick={() => rejectPermit(p.id)} className="px-3 py-1.5 bg-white/10 text-gray-300 rounded-lg text-[10px] font-black uppercase hover:bg-white/20 transition">Reject</button>
+                      <button onClick={() => rejectPermit(p.id)} className="px-3 py-1.5 bg-white/10 text-gray-300 rounded-lg text-xs font-bold uppercase hover:bg-white/20 transition">Reject</button>
                     </div>
                     <div className="mt-2">
                       <VetSignAction label="Sign & Issue Permit" onSubmit={(blob) => issuePermit(p.id, blob)} />
@@ -1481,22 +1524,22 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
           <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
             <div className="flex justify-between items-center mb-5">
               <div>
-                <h3 className="text-sm font-black text-white">Farmer Registry — {currentUser?.province || 'Mashonaland West'}</h3>
-                <p className="text-[11px] text-gray-500 font-medium mt-0.5">Farms under your provincial oversight. Click a farm to open a consultation.</p>
+                <h3 className="text-sm font-bold text-white">Farmer Registry — {currentUser?.province || 'Mashonaland West'}</h3>
+                <p className="text-xs text-gray-500 font-medium mt-0.5">Farms under your provincial oversight. Click a farm to open a consultation.</p>
               </div>
             </div>
             <div className="space-y-3">
               {farms.length === 0 ? (
-                <p className="text-[11px] text-gray-500 font-medium italic text-center py-6">No registered farmers in {currentUser?.province || 'your province'} yet.</p>
+                <p className="text-xs text-gray-500 font-medium italic text-center py-6">No registered farmers in {currentUser?.province || 'your province'} yet.</p>
               ) : farms.map(farm => (
                 <button key={farm.id} onClick={() => onMessageFarmer?.({ startConversationWith: farm.id, subject: 'Consultation' })} className="w-full flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-transparent hover:border-pfuma-green transition text-left">
-                  <div className="w-10 h-10 bg-gray-800 rounded-xl flex items-center justify-center font-black text-pfuma-green text-sm shrink-0">{(farm.full_name || '?')[0]}</div>
+                  <div className="w-10 h-10 bg-gray-800 rounded-xl flex items-center justify-center font-bold text-pfuma-green text-sm shrink-0">{(farm.full_name || '?')[0]}</div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-black text-white mb-0.5">{farm.full_name}</p>
-                    <p className="text-[10px] text-gray-500 font-medium">{farm.org_name} · {farm.animal_count} animal{farm.animal_count !== 1 ? 's' : ''}</p>
+                    <p className="text-sm font-bold text-white mb-0.5">{farm.full_name}</p>
+                    <p className="text-xs text-gray-500 font-medium">{farm.org_name} · {farm.animal_count} animal{farm.animal_count !== 1 ? 's' : ''}</p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className={`text-[9px] font-black px-2.5 py-1 rounded-full uppercase ${farm.verification_status === 'verified' ? 'bg-pfuma-green/20 text-green-400' : 'bg-orange-400/20 text-orange-400'}`}>{farm.verification_status}</span>
+                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full uppercase ${farm.verification_status === 'verified' ? 'bg-pfuma-green/20 text-green-400' : 'bg-orange-400/20 text-orange-400'}`}>{farm.verification_status}</span>
                     <MessageSquare size={14} className="text-gray-500 hover:text-pfuma-green transition" />
                   </div>
                 </button>
@@ -1508,35 +1551,35 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
           <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-1">
               <Handshake size={15} className="text-pfuma-sprout" />
-              <h3 className="text-sm font-black text-white">Group Vet Requests — {currentUser?.province || 'Your Province'}</h3>
+              <h3 className="text-sm font-bold text-white">Group Vet Requests — {currentUser?.province || 'Your Province'}</h3>
             </div>
-            <p className="text-[11px] text-gray-500 font-medium mb-4">Open requests from farmer cooperatives — one trip can serve a whole dip-tank group at once.</p>
+            <p className="text-xs text-gray-500 font-medium mb-4">Open requests from farmer cooperatives — one trip can serve a whole dip-tank group at once.</p>
             {vetRequests.length === 0 ? (
-              <p className="text-[11px] text-gray-500 font-medium italic text-center py-4">No open group requests right now.</p>
+              <p className="text-xs text-gray-500 font-medium italic text-center py-4">No open group requests right now.</p>
             ) : (
               <div className="space-y-3">
                 {vetRequests.map(r => (
                   <div key={r.id} className="p-3.5 bg-white/5 border border-white/10 rounded-xl">
-                    <p className="text-xs font-black text-white leading-snug">{r.reason}</p>
-                    <p className="text-[10px] text-gray-500 font-medium mt-1">
+                    <p className="text-xs font-bold text-white leading-snug">{r.reason}</p>
+                    <p className="text-xs text-gray-500 font-medium mt-1">
                       {r.cooperative_name} · {r.district ? `${r.district}, ` : ''}{r.province}{r.dip_tank_location ? ` · ${r.dip_tank_location}` : ''}
                     </p>
-                    <p className="text-[10px] text-gray-500 font-medium">Requested by {r.requested_by_name}{r.preferred_date ? ` · wants ${new Date(r.preferred_date).toDateString()}` : ''}</p>
+                    <p className="text-xs text-gray-500 font-medium">Requested by {r.requested_by_name}{r.preferred_date ? ` · wants ${new Date(r.preferred_date).toDateString()}` : ''}</p>
                     <div className="flex items-center gap-2 mt-2">
                       <button
                         onClick={() => claimVetRequest(r.id)}
                         disabled={claimBusyId === r.id}
-                        className="px-3 py-1.5 bg-pfuma-green text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition disabled:opacity-50"
+                        className="px-3 py-1.5 bg-pfuma-green text-white rounded-lg text-xs font-bold uppercase hover:bg-green-700 transition disabled:opacity-50"
                       >
                         {claimBusyId === r.id ? 'Claiming…' : 'Claim'}
                       </button>
                       {r.requested_by && (
-                        <button onClick={() => onMessageFarmer?.({ startConversationWith: r.requested_by, subject: r.cooperative_name })} className="flex items-center gap-1 px-3 py-1.5 bg-white/10 text-gray-300 rounded-lg text-[10px] font-black uppercase hover:bg-white/20 transition">
+                        <button onClick={() => onMessageFarmer?.({ startConversationWith: r.requested_by, subject: r.cooperative_name })} className="flex items-center gap-1 px-3 py-1.5 bg-white/10 text-gray-300 rounded-lg text-xs font-bold uppercase hover:bg-white/20 transition">
                           <MessageSquare size={10} /> Message
                         </button>
                       )}
                       {r.requested_by_phone && (
-                        <a href={`tel:${r.requested_by_phone}`} className="flex items-center gap-1 text-[9px] font-black text-gray-400 uppercase hover:text-white transition">
+                        <a href={`tel:${r.requested_by_phone}`} className="flex items-center gap-1 text-xs font-bold text-gray-400 uppercase hover:text-white transition">
                           <PhoneCall size={10} /> Call
                         </a>
                       )}
@@ -1551,28 +1594,29 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
           <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
             <div className="flex items-center gap-2 mb-1">
               <RefreshCw size={15} className="text-pfuma-sprout" />
-              <h3 className="text-sm font-black text-white">Provincial Reporting Health</h3>
+              <h3 className="text-sm font-bold text-white">Provincial Reporting Health</h3>
             </div>
-            <p className="text-[11px] text-gray-500 font-medium mb-4">Share of {currentUser?.province || 'your province'}'s farmers who logged a health event — last 7 days</p>
+            <p className="text-xs text-gray-500 font-medium mb-4">Share of {currentUser?.province || 'your province'}'s farmers who logged a health event — last 7 days</p>
             <div className="h-32">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={reportingHealth} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
                   <defs>
                     <linearGradient id="netHealth" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#22c55e" stopOpacity={0.4} />
-                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                      <stop offset="5%"  stopColor="#8A9C68" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#8A9C68" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                  <XAxis dataKey="day" fontSize={9} tick={{ fill: '#6b7280' }} tickLine={false} axisLine={false} />
-                  <YAxis domain={[0, 100]} fontSize={9} tick={{ fill: '#6b7280' }} tickLine={false} axisLine={false} />
-                  <Tooltip contentStyle={{ borderRadius: 10, border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.3)', fontSize: 11, background: '#1e293b', color: '#fff' }} formatter={v => [`${v}%`, 'Reporting rate']} />
-                  <Area type="monotone" dataKey="sync" stroke="#22c55e" fill="url(#netHealth)" strokeWidth={2.5} dot={false} />
+                  <XAxis dataKey="day" fontSize={9} tick={{ fill: '#7C7268' }} tickLine={false} axisLine={false} />
+                  <YAxis domain={[0, 100]} fontSize={9} tick={{ fill: '#7C7268' }} tickLine={false} axisLine={false} />
+                  <Tooltip contentStyle={{ borderRadius: 10, border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.3)', fontSize: 11, background: '#2B1404', color: '#fff' }} formatter={v => [`${v}%`, 'Reporting rate']} />
+                  <Area type="monotone" dataKey="sync" stroke="#8A9C68" fill="url(#netHealth)" strokeWidth={2.5} dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
         </div>
+      </div>
       </div>
       </div>
     </>
@@ -1627,32 +1671,32 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
   const outOfStockCount = myStock.filter(l => l.status === 'withdrawn').length;
   const supplierInitials = (currentUser?.name || currentUser?.org_name || 'S').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
   const supplierActions = [
-    { icon: Store,      label: 'Marketplace',    color: 'bg-pfuma-gold',  tab: 'marketplace' },
-    { icon: Package,    label: 'Supply Chain',   color: 'bg-orange-500',  tab: 'health', badge: outOfStockCount || null },
-    { icon: Wheat,      label: 'Feed Database',  color: 'bg-green-600',   tab: 'feed' },
-    { icon: BookOpen,   label: 'Trading Journal', color: 'bg-purple-500', tab: 'tradingJournal' },
-    { icon: MessageSquare, label: 'Messenger',   color: 'bg-pink-500',    tab: 'vet' },
-    { icon: Plus,       label: 'Add Stock',      color: 'bg-blue-500',    onClick: onAddStock },
+    { icon: Store,      label: 'Marketplace',    color: 'bg-white/10',  tab: 'marketplace' },
+    { icon: Package,    label: 'Supply Chain',   color: 'bg-white/10',  tab: 'health', badge: outOfStockCount || null },
+    { icon: Wheat,      label: 'Feed Database',  color: 'bg-white/10',   tab: 'feed' },
+    { icon: BookOpen,   label: 'Trading Journal', color: 'bg-white/10', tab: 'tradingJournal' },
+    { icon: MessageSquare, label: 'Messenger',   color: 'bg-white/10',    tab: 'vet' },
+    { icon: Plus,       label: 'Add Stock',      color: 'bg-white/10',    onClick: onAddStock },
   ];
 
   return (
     <>
-      <div className="lg:hidden bg-[#121212] h-full overflow-y-auto text-left">
+      <div className="lg:hidden bg-bark-950 h-full overflow-y-auto text-left">
         <div className="p-4 pb-10 space-y-4">
 
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-2xl bg-pfuma-gold flex items-center justify-center text-white font-black text-sm shrink-0">{supplierInitials}</div>
+              <div className="w-11 h-11 rounded-2xl bg-pfuma-gold flex items-center justify-center text-white font-bold text-sm shrink-0">{supplierInitials}</div>
               <div className="min-w-0">
-                <p className="text-white/40 text-[10px] font-black uppercase tracking-[2px]">{greet()}</p>
-                <h2 className="text-white text-base font-black truncate">{currentUser?.org_name || currentUser?.name || 'Supplier'}</h2>
+                <p className="text-white/40 text-xs font-bold uppercase tracking-[2px]">{greet()}</p>
+                <h2 className="text-white text-base font-bold truncate">{currentUser?.org_name || currentUser?.name || 'Supplier'}</h2>
               </div>
             </div>
             {pending > 0 && (
               <div className="flex items-center gap-1.5 bg-pfuma-gold/15 border border-pfuma-gold/30 rounded-full px-3 py-1.5 shrink-0">
                 <Clock size={12} className="text-pfuma-gold" />
-                <span className="text-[10px] font-black text-pfuma-gold">{pending}</span>
+                <span className="text-xs font-bold text-pfuma-gold">{pending}</span>
               </div>
             )}
           </div>
@@ -1661,18 +1705,18 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
           <div className="grid grid-cols-3 gap-2.5">
             <div className="bg-amber-950 border border-amber-900/60 rounded-2xl p-3">
               <Clock size={14} className="text-amber-400 mb-2" />
-              <p className="text-white text-lg font-black leading-none">{pending}</p>
-              <p className="text-amber-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">Pending</p>
+              <p className="text-white text-lg font-bold leading-none">{pending}</p>
+              <p className="text-amber-300/70 text-xs font-bold uppercase tracking-wide mt-1">Pending</p>
             </div>
             <div className="bg-blue-950 border border-blue-900/60 rounded-2xl p-3">
               <Truck size={14} className="text-blue-400 mb-2" />
-              <p className="text-white text-lg font-black leading-none">{dispatched}</p>
-              <p className="text-blue-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">In Transit</p>
+              <p className="text-white text-lg font-bold leading-none">{dispatched}</p>
+              <p className="text-blue-300/70 text-xs font-bold uppercase tracking-wide mt-1">In Transit</p>
             </div>
             <div className="bg-green-950 border border-green-900/60 rounded-2xl p-3">
               <CheckCircle size={14} className="text-green-400 mb-2" />
-              <p className="text-white text-lg font-black leading-none">{delivered}</p>
-              <p className="text-green-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">Delivered</p>
+              <p className="text-white text-lg font-bold leading-none">{delivered}</p>
+              <p className="text-green-300/70 text-xs font-bold uppercase tracking-wide mt-1">Delivered</p>
             </div>
           </div>
 
@@ -1685,20 +1729,20 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
               { icon: MessageSquare, label: 'Messenger', tab: 'vet' },
             ].map(q => (
               <button key={q.label} onClick={() => q.onClick ? q.onClick() : setActiveTab(q.tab)} className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-white/90 hover:bg-white/10 transition shrink-0 whitespace-nowrap">
-                <q.icon size={13} /><span className="text-[11px] font-black">{q.label}</span>
+                <q.icon size={13} /><span className="text-xs font-bold">{q.label}</span>
               </button>
             ))}
           </div>
 
           {/* Stock status banner */}
-          <div className={`border rounded-2xl p-4 ${myStock.length === 0 ? 'bg-[#1E1E1E] border-white/5' : outOfStockCount > 0 ? 'bg-red-950/60 border-red-900/60' : 'bg-[#1E1E1E] border-white/5'}`}>
+          <div className={`border rounded-2xl p-4 ${myStock.length === 0 ? 'bg-bark-900 border-white/5' : outOfStockCount > 0 ? 'bg-red-950/60 border-red-900/60' : 'bg-bark-900 border-white/5'}`}>
             <div className="flex items-center gap-3">
               <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${outOfStockCount > 0 ? 'bg-red-500/20' : 'bg-pfuma-gold/15'}`}>
                 <Package size={14} className={outOfStockCount > 0 ? 'text-red-400' : 'text-pfuma-gold'} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-white text-xs font-black">{myStock.length === 0 ? 'No stock listed yet' : `${myStock.length} product${myStock.length !== 1 ? 's' : ''} listed`}</p>
-                <p className={`text-[10px] font-medium truncate ${outOfStockCount > 0 ? 'text-red-300/70' : 'text-white/40'}`}>
+                <p className="text-white text-xs font-bold">{myStock.length === 0 ? 'No stock listed yet' : `${myStock.length} product${myStock.length !== 1 ? 's' : ''} listed`}</p>
+                <p className={`text-xs font-medium truncate ${outOfStockCount > 0 ? 'text-red-300/70' : 'text-white/40'}`}>
                   {myStock.length === 0 ? 'List your first product to get orders' : outOfStockCount > 0 ? `${outOfStockCount} out of stock — restock now` : 'All products in stock'}
                 </p>
               </div>
@@ -1707,33 +1751,33 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
 
           {/* Action grid */}
           <div>
-            <p className="text-white/30 text-[10px] font-black uppercase tracking-[2px] mb-2.5 px-1">Quick Actions</p>
+            <p className="text-white/30 text-xs font-bold uppercase tracking-[2px] mb-2.5 px-1">Quick Actions</p>
             <div className="grid grid-cols-3 gap-2.5">
               {supplierActions.map(a => (
-                <button key={a.label} onClick={() => a.onClick ? a.onClick() : setActiveTab(a.tab)} className="relative bg-[#1E1E1E] border border-white/5 rounded-2xl p-3 flex flex-col items-center gap-2 hover:bg-[#252525] transition">
-                  {a.badge ? <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[8px] font-black rounded-full">{a.badge}</span> : null}
+                <button key={a.label} onClick={() => a.onClick ? a.onClick() : setActiveTab(a.tab)} className="relative bg-bark-900 border border-white/5 rounded-2xl p-3 flex flex-col items-center gap-2 hover:bg-bark-800 transition">
+                  {a.badge ? <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full">{a.badge}</span> : null}
                   <div className={`w-10 h-10 rounded-xl ${a.color} flex items-center justify-center`}><a.icon size={17} className="text-white" /></div>
-                  <span className="text-white/70 text-[9px] font-bold text-center leading-tight">{a.label}</span>
+                  <span className="text-white/70 text-xs font-bold text-center leading-tight">{a.label}</span>
                 </button>
               ))}
             </div>
           </div>
 
           {/* Active orders preview */}
-          <div className="bg-[#1E1E1E] border border-white/5 rounded-2xl p-4">
-            <p className="text-white text-xs font-black mb-3">Active Orders</p>
+          <div className="bg-bark-900 border border-white/5 rounded-2xl p-4">
+            <p className="text-white text-xs font-bold mb-3">Active Orders</p>
             {orders.length === 0 ? (
-              <p className="text-white/30 text-[11px] font-medium text-center py-4 italic">No orders yet</p>
+              <p className="text-white/30 text-xs font-medium text-center py-4 italic">No orders yet</p>
             ) : (
               <div className="space-y-2">
                 {orders.slice(0, 3).map(o => (
                   <div key={o.id} className="flex items-center gap-3 p-2.5 bg-white/[0.03] rounded-xl">
                     <div className="w-9 h-9 rounded-lg bg-white/10 flex items-center justify-center shrink-0"><Package size={15} className="text-pfuma-gold" /></div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-white text-[11px] font-black truncate">{o.farmer_name}</p>
-                      <p className="text-white/30 text-[9px] font-medium truncate">{o.product_name} · {Number(o.quantity)}</p>
+                      <p className="text-white text-xs font-bold truncate">{o.farmer_name}</p>
+                      <p className="text-white/30 text-xs font-medium truncate">{o.product_name} · {Number(o.quantity)}</p>
                     </div>
-                    <span className={`text-[8px] font-black px-2 py-1 rounded-full uppercase shrink-0 ${
+                    <span className={`text-xs font-bold px-2 py-1 rounded-full uppercase shrink-0 ${
                       o.status === 'pending' ? 'bg-amber-500/15 text-amber-400'
                       : o.status === 'dispatched' ? 'bg-blue-500/15 text-blue-400'
                       : o.status === 'delivered' ? 'bg-pfuma-sprout/15 text-pfuma-sprout'
@@ -1746,34 +1790,36 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
           </div>
         </div>
       </div>
-      <div className="hidden lg:block p-6 bg-pfuma-cream space-y-6 text-left overflow-y-auto h-full">
+      <div className="hidden lg:block bg-ivory text-left overflow-y-auto h-full">
+
+      <DashboardHero
+        role="Supplier"
+        title="Supply distribution hub"
+        stats={`${pending} pending · ${dispatched} in transit · ${delivered} delivered`}
+        actions={
+          <>
+            <Button variant="onImage" onClick={onAddStock} iconRight>Post a listing</Button>
+            <Button variant="onImage" onClick={() => setActiveTab('health')}>Stock levels</Button>
+          </>
+        }
+      />
+
+      <div className="p-6 xl:p-8 space-y-6">
 
       {/* Role explanation */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-pfuma-gold rounded-3xl p-6 relative overflow-hidden">
-          <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} aria-hidden="true" />
-          <div className="absolute -top-12 -right-8 w-44 h-44 rounded-full bg-white/15 blur-3xl" aria-hidden="true" />
-          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 80% 50%, #fff 0%, transparent 60%)' }} aria-hidden="true" />
-          <div className="relative z-10">
-            <p className="text-amber-100 text-xs font-black uppercase tracking-[3px] mb-1">{greet()}, Supplier</p>
-            <h2 className="text-xl font-black text-white leading-tight">Supply Distribution Hub</h2>
-            <p className="text-amber-100/80 text-sm font-medium mt-1">
-              {pending} pending · {dispatched} in transit · {delivered} delivered
-            </p>
-          </div>
-        </div>
-        <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
-          <p className="text-[10px] font-black text-pfuma-gold uppercase tracking-widest mb-2">Your Role on PFUMA</p>
-          <p className="text-sm font-black text-gray-800 mb-2">You are a veterinary medicine &amp; vaccine distributor</p>
-          <p className="text-[11px] text-gray-500 font-medium leading-relaxed mb-3">
+      <div className="grid grid-cols-1 gap-4">
+        <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+          <p className="text-xs font-bold text-pfuma-gold uppercase tracking-wide mb-2">Your Role on PFUMA</p>
+          <p className="text-sm font-bold text-gray-800 mb-2">You are a veterinary medicine &amp; vaccine distributor</p>
+          <p className="text-xs text-gray-500 font-medium leading-relaxed mb-3">
             Farmers across Zimbabwe register on PFUMA to manage their herd health. When they run low on vaccines or medicines, they contact you through the platform. You fulfill the order and dispatch to the farm.
           </p>
-          <div className="flex items-center gap-2 text-[11px] font-medium text-gray-500 flex-wrap">
+          <div className="flex items-center gap-2 text-xs font-medium text-gray-500 flex-wrap">
             <Sprout size={16} className="text-pfuma-gold shrink-0" /><span>Farmer runs low on stock</span>
             <ArrowRight size={12} className="text-pfuma-gold shrink-0" />
             <Pill size={16} className="text-pfuma-gold shrink-0" /><span>You fulfill &amp; dispatch</span>
             <ArrowRight size={12} className="text-pfuma-gold shrink-0" />
-            <span className="text-lg">🐄</span><span>Animals stay healthy</span>
+            <HeartPulse size={16} className="text-pfuma-gold shrink-0" /><span>Animals stay healthy</span>
           </div>
         </div>
       </div>
@@ -1787,9 +1833,9 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
           { label: 'Fulfillment Rate', value: fulfillmentRate === null ? '—' : `${fulfillmentRate}%`, sub: fulfillmentRate === null ? 'No resolved orders yet' : 'Delivered vs. dispatched+delivered+cancelled', icon: Target,      iconColor: 'text-purple-500', accent: 'bg-white border-gray-100', textColor: 'text-gray-900' },
         ].map(k => (
           <div key={k.label} className={`${k.accent} border rounded-2xl p-5`}>
-            <div className="flex justify-between items-start mb-2"><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{k.label}</p><k.icon size={16} className={k.iconColor} /></div>
-            <p className={`text-3xl font-black ${k.textColor}`}>{k.value}</p>
-            <p className="text-[11px] text-gray-400 font-medium mt-1">{k.sub}</p>
+            <div className="flex justify-between items-start mb-2"><p className="text-xs font-bold text-gray-400 uppercase tracking-wide">{k.label}</p><k.icon size={16} className={k.iconColor} /></div>
+            <p className={`text-3xl font-bold ${k.textColor}`}>{k.value}</p>
+            <p className="text-xs text-gray-400 font-medium mt-1">{k.sub}</p>
           </div>
         ))}
       </div>
@@ -1800,24 +1846,24 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
       {myStock.length === 0 ? (
         <div className="bg-pfuma-gold/10 border-2 border-dashed border-pfuma-gold/40 rounded-2xl p-6 flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h3 className="text-sm font-black text-gray-800 mb-1">You haven't added any stock yet</h3>
-            <p className="text-[11px] text-gray-500 font-medium max-w-md">Posting a product on the Marketplace is how your stock gets into PFUMA — the quantity you enter is what farmers see and can order against.</p>
+            <h3 className="text-sm font-bold text-gray-800 mb-1">You haven't added any stock yet</h3>
+            <p className="text-xs text-gray-500 font-medium max-w-md">Posting a product on the Marketplace is how your stock gets into PFUMA — the quantity you enter is what farmers see and can order against.</p>
           </div>
-          <button onClick={onAddStock} className="shrink-0 flex items-center gap-2 px-5 py-3 bg-pfuma-gold text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-amber-600 transition">
+          <button onClick={onAddStock} className="shrink-0 flex items-center gap-2 px-5 py-3 bg-pfuma-gold text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-amber-600 transition">
             <Plus size={15} /> Add Your First Product
           </button>
         </div>
       ) : (
         <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h3 className="text-sm font-black text-gray-800">My Stock — {myStock.length} product{myStock.length !== 1 ? 's' : ''} listed</h3>
-            <p className="text-[11px] text-gray-400 font-medium mt-0.5">
+            <h3 className="text-sm font-bold text-gray-800">My Stock — {myStock.length} product{myStock.length !== 1 ? 's' : ''} listed</h3>
+            <p className="text-xs text-gray-400 font-medium mt-0.5">
               {outOfStockCount > 0 ? `${outOfStockCount} out of stock — restock in Supply Chain` : 'All products in stock'}
             </p>
           </div>
           <div className="flex gap-2 shrink-0">
-            <button onClick={() => setActiveTab('health')} className="px-4 py-2.5 bg-gray-50 text-gray-600 rounded-xl font-black text-[10px] uppercase hover:bg-gray-100 transition">View Supply Chain</button>
-            <button onClick={onAddStock} className="flex items-center gap-1.5 px-4 py-2.5 bg-pfuma-gold text-white rounded-xl font-black text-[10px] uppercase hover:bg-amber-600 transition"><Plus size={13} /> Add Stock</button>
+            <button onClick={() => setActiveTab('health')} className="px-4 py-2.5 bg-gray-50 text-gray-600 rounded-xl font-bold text-xs uppercase hover:bg-gray-100 transition">View Supply Chain</button>
+            <button onClick={onAddStock} className="flex items-center gap-1.5 px-4 py-2.5 bg-pfuma-gold text-white rounded-xl font-bold text-xs uppercase hover:bg-amber-600 transition"><Plus size={13} /> Add Stock</button>
           </div>
         </div>
       )}
@@ -1829,16 +1875,16 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
             <div className="flex justify-between items-center mb-5">
               <div>
-                <h3 className="text-sm font-black text-gray-800">Active Orders</h3>
-                <p className="text-[11px] text-gray-400 font-medium mt-0.5">Incoming requests from farms across Zimbabwe</p>
+                <h3 className="text-sm font-bold text-gray-800">Active Orders</h3>
+                <p className="text-xs text-gray-400 font-medium mt-0.5">Incoming requests from farms across Zimbabwe</p>
               </div>
             </div>
             <div className="space-y-3">
               {orders.length === 0 ? (
                 <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-2xl">
                   <Package size={32} className="mx-auto text-gray-300 mb-3" />
-                  <p className="text-sm font-black text-gray-400">No orders yet</p>
-                  <p className="text-[11px] text-gray-400 font-medium mt-1">Farmers can order from your medicine/equipment listings</p>
+                  <p className="text-sm font-bold text-gray-400">No orders yet</p>
+                  <p className="text-xs text-gray-400 font-medium mt-1">Farmers can order from your medicine/equipment listings</p>
                 </div>
               ) : orders.map(o => (
                 <div key={o.id} className={`flex items-center gap-4 p-4 rounded-2xl border-2 flex-wrap ${o.status === 'pending' ? 'bg-pfuma-gold/10 border-pfuma-gold/30' : 'bg-gray-50 border-gray-100'}`}>
@@ -1846,15 +1892,15 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
                     <Package size={18} className="text-pfuma-gold" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-black text-gray-800 mb-0.5">{o.farmer_name}</p>
-                    <p className="text-[10px] text-gray-500 font-medium">{o.product_name} · {Number(o.quantity)} · Order #{o.id}</p>
+                    <p className="text-xs font-bold text-gray-800 mb-0.5">{o.farmer_name}</p>
+                    <p className="text-xs text-gray-500 font-medium">{o.product_name} · {Number(o.quantity)} · Order #{o.id}</p>
                     {o.farmer_id && (
-                      <button onClick={() => onMessageFarmer?.({ startConversationWith: o.farmer_id, subject: o.product_name })} className="flex items-center gap-1 text-[9px] font-black text-pfuma-gold uppercase hover:underline mt-1">
+                      <button onClick={() => onMessageFarmer?.({ startConversationWith: o.farmer_id, subject: o.product_name })} className="flex items-center gap-1 text-xs font-bold text-pfuma-gold uppercase hover:underline mt-1">
                         <MessageSquare size={10} /> Message Farmer
                       </button>
                     )}
                   </div>
-                  <span className={`text-[10px] font-black px-3 py-1.5 rounded-full uppercase shrink-0 ${
+                  <span className={`text-xs font-bold px-3 py-1.5 rounded-full uppercase shrink-0 ${
                     o.status === 'pending'    ? 'bg-pfuma-gold/15 text-amber-700' :
                     o.status === 'dispatched' ? 'bg-blue-100 text-blue-700' :
                     o.status === 'delivered'  ? 'bg-green-100 text-green-700' :
@@ -1862,12 +1908,12 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
                   }`}>{o.status}</span>
                   {o.status === 'pending' && (
                     <div className="flex gap-2 shrink-0">
-                      <button onClick={() => advanceOrder(o, 'cancel')} disabled={busyOrderId === o.id} className="px-3 py-1.5 bg-white border-2 border-gray-200 text-gray-500 rounded-lg text-[10px] font-black uppercase hover:bg-gray-50 transition disabled:opacity-50">Cancel</button>
-                      <button onClick={() => advanceOrder(o, 'dispatch')} disabled={busyOrderId === o.id} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-black uppercase hover:bg-blue-700 transition disabled:opacity-50">Dispatch</button>
+                      <button onClick={() => advanceOrder(o, 'cancel')} disabled={busyOrderId === o.id} className="px-3 py-1.5 bg-white border-2 border-gray-200 text-gray-500 rounded-lg text-xs font-bold uppercase hover:bg-gray-50 transition disabled:opacity-50">Cancel</button>
+                      <button onClick={() => advanceOrder(o, 'dispatch')} disabled={busyOrderId === o.id} className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-bold uppercase hover:bg-blue-700 transition disabled:opacity-50">Dispatch</button>
                     </div>
                   )}
                   {o.status === 'dispatched' && (
-                    <button onClick={() => advanceOrder(o, 'deliver')} disabled={busyOrderId === o.id} className="shrink-0 px-3 py-1.5 bg-green-600 text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition disabled:opacity-50">Mark Delivered</button>
+                    <button onClick={() => advanceOrder(o, 'deliver')} disabled={busyOrderId === o.id} className="shrink-0 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-bold uppercase hover:bg-green-700 transition disabled:opacity-50">Mark Delivered</button>
                   )}
                 </div>
               ))}
@@ -1879,11 +1925,11 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
         <div className="col-span-1 space-y-5">
           {/* Demand chart */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-            <h3 className="text-sm font-black text-gray-800 mb-1">Order Demand (6 Weeks)</h3>
-            <p className="text-[11px] text-gray-400 font-medium mb-4">Your real order volume, by week</p>
+            <h3 className="text-sm font-bold text-gray-800 mb-1">Order Demand (6 Weeks)</h3>
+            <p className="text-xs text-gray-400 font-medium mb-4">Your real order volume, by week</p>
             {demand.length === 0 ? (
               <div className="h-36 flex items-center justify-center">
-                <p className="text-[11px] text-gray-400 font-medium italic">No orders yet to chart</p>
+                <p className="text-xs text-gray-400 font-medium italic">No orders yet to chart</p>
               </div>
             ) : (
             <div className="h-36">
@@ -1891,14 +1937,14 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
                 <AreaChart data={demand} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
                   <defs>
                     <linearGradient id="dg" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%"  stopColor="#ca8a04" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#ca8a04" stopOpacity={0} />
+                      <stop offset="5%"  stopColor="#C99A4A" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#C99A4A" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <XAxis dataKey="week" fontSize={9} tick={{ fill: '#bbb' }} tickLine={false} axisLine={false} />
-                  <YAxis fontSize={9} tick={{ fill: '#bbb' }} tickLine={false} axisLine={false} />
+                  <XAxis dataKey="week" fontSize={9} tick={{ fill: '#B0A496' }} tickLine={false} axisLine={false} />
+                  <YAxis fontSize={9} tick={{ fill: '#B0A496' }} tickLine={false} axisLine={false} />
                   <Tooltip contentStyle={{ borderRadius: 10, border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', fontSize: 11 }} formatter={v => [v, 'Orders']} />
-                  <Area type="monotone" dataKey="orders" stroke="#ca8a04" fill="url(#dg)" strokeWidth={2.5} dot={false} />
+                  <Area type="monotone" dataKey="orders" stroke="#C99A4A" fill="url(#dg)" strokeWidth={2.5} dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -1908,13 +1954,14 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
           {/* Contact a farmer */}
           <button onClick={() => setActiveTab('vet')} className="w-full flex items-center gap-3 p-4 bg-white border-2 border-gray-100 rounded-2xl hover:border-pfuma-gold transition text-left group">
             <div className="w-10 h-10 bg-pfuma-gold rounded-xl flex items-center justify-center shrink-0"><MessageSquare size={16} className="text-white" /></div>
-            <div><p className="text-xs font-black text-gray-800">Message a Farmer</p><p className="text-[10px] text-gray-400 font-medium">Coordinate delivery or substitutions</p></div>
+            <div><p className="text-xs font-bold text-gray-800">Message a Farmer</p><p className="text-xs text-gray-400 font-medium">Coordinate delivery or substitutions</p></div>
             <ArrowRight size={13} className="text-gray-300 group-hover:text-pfuma-gold transition ml-auto" />
           </button>
         </div>
       </div>
 
       <StakeholderMap />
+      </div>
       </div>
     </>
   );
@@ -1991,26 +2038,26 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
   const buyerInitials = (currentUser?.name || currentUser?.org_name || 'B').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
   const pendingBids = myBids.filter(b => b.status === 'pending').length;
   const buyerActions = [
-    { icon: Store,         label: 'Marketplace',    color: 'bg-pfuma-plum',  tab: 'marketplace' },
-    { icon: ShoppingCart,  label: 'Verified Stock', color: 'bg-green-600',   tab: 'profile' },
-    { icon: Wheat,         label: 'Feed Analyzer',  color: 'bg-orange-500',  tab: 'feed' },
-    { icon: BookOpen,      label: 'Trading Journal', color: 'bg-blue-500',   tab: 'tradingJournal' },
-    { icon: MessageSquare, label: 'Messenger',      color: 'bg-pink-500',    tab: 'vet' },
-    { icon: Tag,           label: 'Claim Animal',   color: 'bg-amber-500',   onClick: () => setMobileClaimOpen(v => !v) },
+    { icon: Store,         label: 'Marketplace',    color: 'bg-white/10',  tab: 'marketplace' },
+    { icon: ShoppingCart,  label: 'Verified Stock', color: 'bg-white/10',   tab: 'profile' },
+    { icon: Wheat,         label: 'Feed Analyzer',  color: 'bg-white/10',  tab: 'feed' },
+    { icon: BookOpen,      label: 'Trading Journal', color: 'bg-white/10',   tab: 'tradingJournal' },
+    { icon: MessageSquare, label: 'Messenger',      color: 'bg-white/10',    tab: 'vet' },
+    { icon: Tag,           label: 'Claim Animal',   color: 'bg-white/10',   onClick: () => setMobileClaimOpen(v => !v) },
   ];
 
   return (
     <>
-      <div className="lg:hidden bg-[#121212] h-full overflow-y-auto text-left">
+      <div className="lg:hidden bg-bark-950 h-full overflow-y-auto text-left">
         <div className="p-4 pb-10 space-y-4">
 
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-2xl bg-pfuma-plum flex items-center justify-center text-white font-black text-sm shrink-0">{buyerInitials}</div>
+              <div className="w-11 h-11 rounded-2xl bg-pfuma-plum flex items-center justify-center text-white font-bold text-sm shrink-0">{buyerInitials}</div>
               <div className="min-w-0">
-                <p className="text-white/40 text-[10px] font-black uppercase tracking-[2px]">{greet()}</p>
-                <h2 className="text-white text-base font-black truncate">{currentUser?.org_name || currentUser?.name || 'Buyer'}</h2>
+                <p className="text-white/40 text-xs font-bold uppercase tracking-[2px]">{greet()}</p>
+                <h2 className="text-white text-base font-bold truncate">{currentUser?.org_name || currentUser?.name || 'Buyer'}</h2>
               </div>
             </div>
           </div>
@@ -2019,18 +2066,18 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
           <div className="grid grid-cols-3 gap-2.5">
             <div className="bg-violet-950 border border-violet-900/60 rounded-2xl p-3">
               <Tag size={14} className="text-violet-400 mb-2" />
-              <p className="text-white text-lg font-black leading-none">{listings.length}</p>
-              <p className="text-violet-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">Listings</p>
+              <p className="text-white text-lg font-bold leading-none">{listings.length}</p>
+              <p className="text-violet-300/70 text-xs font-bold uppercase tracking-wide mt-1">Listings</p>
             </div>
             <div className="bg-blue-950 border border-blue-900/60 rounded-2xl p-3">
               <Clock size={14} className="text-blue-400 mb-2" />
-              <p className="text-white text-lg font-black leading-none">{pendingBids}</p>
-              <p className="text-blue-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">My Bids</p>
+              <p className="text-white text-lg font-bold leading-none">{pendingBids}</p>
+              <p className="text-blue-300/70 text-xs font-bold uppercase tracking-wide mt-1">My Bids</p>
             </div>
             <div className="bg-green-950 border border-green-900/60 rounded-2xl p-3">
               <CheckCircle size={14} className="text-green-400 mb-2" />
-              <p className="text-white text-lg font-black leading-none">{purchases.length}</p>
-              <p className="text-green-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">Purchases</p>
+              <p className="text-white text-lg font-bold leading-none">{purchases.length}</p>
+              <p className="text-green-300/70 text-xs font-bold uppercase tracking-wide mt-1">Purchases</p>
             </div>
           </div>
 
@@ -2043,52 +2090,52 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
               { icon: MessageSquare, label: 'Messenger',   tab: 'vet' },
             ].map(q => (
               <button key={q.label} onClick={() => q.onClick ? q.onClick() : setActiveTab(q.tab)} className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-white/90 hover:bg-white/10 transition shrink-0 whitespace-nowrap">
-                <q.icon size={13} /><span className="text-[11px] font-black">{q.label}</span>
+                <q.icon size={13} /><span className="text-xs font-bold">{q.label}</span>
               </button>
             ))}
           </div>
 
           {/* Claim animal — collapsible form */}
           {mobileClaimOpen && (
-            <div className="bg-[#1E1E1E] border border-white/5 rounded-2xl p-4">
-              <p className="text-white text-xs font-black mb-1">Claim an Animal</p>
-              <p className="text-white/40 text-[10px] font-medium mb-3">Bought off-platform? Enter the transfer code the farmer gave you.</p>
+            <div className="bg-bark-900 border border-white/5 rounded-2xl p-4">
+              <p className="text-white text-xs font-bold mb-1">Claim an Animal</p>
+              <p className="text-white/40 text-xs font-medium mb-3">Bought off-platform? Enter the transfer code the farmer gave you.</p>
               <form onSubmit={claimAnimal} className="flex gap-2">
                 <input
                   value={claimCode} onChange={e => setClaimCode(e.target.value.toUpperCase())}
                   placeholder="Code" maxLength={12}
-                  className="flex-1 min-w-0 px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl outline-none font-black text-sm text-center tracking-[0.2em] text-white placeholder:text-white/20 placeholder:tracking-normal placeholder:font-medium"
+                  className="flex-1 min-w-0 px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl outline-none font-bold text-sm text-center tracking-[0.2em] text-white placeholder:text-white/20 placeholder:tracking-normal placeholder:font-medium"
                 />
-                <button type="submit" disabled={claimBusy || !claimCode.trim()} className="shrink-0 px-4 py-2.5 bg-pfuma-plum text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-violet-700 transition disabled:opacity-50">
+                <button type="submit" disabled={claimBusy || !claimCode.trim()} className="shrink-0 px-4 py-2.5 bg-pfuma-plum text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-violet-700 transition disabled:opacity-50">
                   {claimBusy ? '…' : 'Claim'}
                 </button>
               </form>
-              {claimError && <p className="text-[10px] text-red-400 font-bold mt-2">{claimError}</p>}
-              {claimSuccess && <p className="text-[10px] text-green-400 font-bold mt-2">{claimSuccess}</p>}
+              {claimError && <p className="text-xs text-red-400 font-bold mt-2">{claimError}</p>}
+              {claimSuccess && <p className="text-xs text-green-400 font-bold mt-2">{claimSuccess}</p>}
             </div>
           )}
 
           {/* Action grid */}
           <div>
-            <p className="text-white/30 text-[10px] font-black uppercase tracking-[2px] mb-2.5 px-1">Quick Actions</p>
+            <p className="text-white/30 text-xs font-bold uppercase tracking-[2px] mb-2.5 px-1">Quick Actions</p>
             <div className="grid grid-cols-3 gap-2.5">
               {buyerActions.map(a => (
-                <button key={a.label} onClick={() => a.onClick ? a.onClick() : setActiveTab(a.tab)} className="relative bg-[#1E1E1E] border border-white/5 rounded-2xl p-3 flex flex-col items-center gap-2 hover:bg-[#252525] transition">
+                <button key={a.label} onClick={() => a.onClick ? a.onClick() : setActiveTab(a.tab)} className="relative bg-bark-900 border border-white/5 rounded-2xl p-3 flex flex-col items-center gap-2 hover:bg-bark-800 transition">
                   <div className={`w-10 h-10 rounded-xl ${a.color} flex items-center justify-center`}><a.icon size={17} className="text-white" /></div>
-                  <span className="text-white/70 text-[9px] font-bold text-center leading-tight">{a.label}</span>
+                  <span className="text-white/70 text-xs font-bold text-center leading-tight">{a.label}</span>
                 </button>
               ))}
             </div>
           </div>
 
           {/* Listings preview */}
-          <div className="bg-[#1E1E1E] border border-white/5 rounded-2xl p-4">
+          <div className="bg-bark-900 border border-white/5 rounded-2xl p-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-white text-xs font-black">Marketplace Listings</p>
-              <button onClick={() => setActiveTab('marketplace')} className="text-[10px] font-black text-violet-400 uppercase">View All</button>
+              <p className="text-white text-xs font-bold">Marketplace Listings</p>
+              <button onClick={() => setActiveTab('marketplace')} className="text-xs font-bold text-violet-400 uppercase">View All</button>
             </div>
             {listings.length === 0 ? (
-              <p className="text-white/30 text-[11px] font-medium text-center py-4 italic">No listings yet</p>
+              <p className="text-white/30 text-xs font-medium text-center py-4 italic">No listings yet</p>
             ) : (
               <div className="space-y-2">
                 {listings.slice(0, 3).map(l => (
@@ -2097,10 +2144,10 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
                       <img src={l.photo_url ? `${API}${l.photo_url}` : IMAGE_BY_SPECIES.Cattle} className="w-full h-full object-cover" alt={l.product_name} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-white text-[11px] font-black truncate">{l.product_name}</p>
-                      <p className="text-white/30 text-[9px] font-medium truncate">{l.seller_name}</p>
+                      <p className="text-white text-xs font-bold truncate">{l.product_name}</p>
+                      <p className="text-white/30 text-xs font-medium truncate">{l.seller_name}</p>
                     </div>
-                    <p className="text-violet-400 text-[11px] font-black shrink-0">${Number(l.price).toLocaleString()}</p>
+                    <p className="text-violet-400 text-xs font-bold shrink-0">${Number(l.price).toLocaleString()}</p>
                   </div>
                 ))}
               </div>
@@ -2108,29 +2155,31 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
           </div>
         </div>
       </div>
-      <div className="hidden lg:block p-6 bg-pfuma-cream space-y-6 text-left overflow-y-auto h-full">
+      <div className="hidden lg:block bg-ivory text-left overflow-y-auto h-full">
+
+      <DashboardHero
+        role="Buyer"
+        title="Livestock marketplace"
+        stats={`${listings.length} active listing${listings.length !== 1 ? 's' : ''} · every animal carries a certified health passport`}
+        actions={
+          <>
+            <Button variant="onImage" onClick={() => setActiveTab('marketplace')} iconRight>Browse listings</Button>
+            <Button variant="onImage" onClick={() => setActiveTab('tradingJournal')}>Trading journal</Button>
+          </>
+        }
+      />
+
+      <div className="p-6 xl:p-8 space-y-6">
 
       {/* Role explanation */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-pfuma-plum rounded-3xl p-6 relative overflow-hidden">
-          <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} aria-hidden="true" />
-          <div className="absolute -bottom-14 -left-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" aria-hidden="true" />
-          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 80% 50%, #fff 0%, transparent 60%)' }} aria-hidden="true" />
-          <div className="relative z-10">
-            <p className="text-purple-300 text-xs font-black uppercase tracking-[3px] mb-1">{greet()}, Buyer</p>
-            <h2 className="text-xl font-black text-white leading-tight">Livestock Marketplace</h2>
-            <p className="text-purple-200/80 text-sm font-medium mt-1">
-              {listings.length} active listing{listings.length !== 1 ? 's' : ''} · Market sentiment: Bullish
-            </p>
-          </div>
-        </div>
-        <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
-          <p className="text-[10px] font-black text-pfuma-plum uppercase tracking-widest mb-2">Your Role on PFUMA</p>
-          <p className="text-sm font-black text-gray-800 mb-2">You are a livestock buyer &amp; trader</p>
-          <p className="text-[11px] text-gray-500 font-medium leading-relaxed mb-3">
+      <div className="grid grid-cols-1 gap-4">
+        <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+          <p className="text-xs font-bold text-pfuma-plum uppercase tracking-wide mb-2">Your Role on PFUMA</p>
+          <p className="text-sm font-bold text-gray-800 mb-2">You are a livestock buyer &amp; trader</p>
+          <p className="text-xs text-gray-500 font-medium leading-relaxed mb-3">
             Farmers list their animals for sale on PFUMA. You browse verified listings — each animal comes with a certified Health Passport. You place a bid, the farmer accepts, and a DVS Vet issues an official movement certificate so you can legally transport the animal.
           </p>
-          <div className="flex items-center gap-2 text-[11px] font-medium text-gray-500 flex-wrap">
+          <div className="flex items-center gap-2 text-xs font-medium text-gray-500 flex-wrap">
             <Sprout size={16} className="text-pfuma-plum shrink-0" /><span>Farmer lists</span>
             <ArrowRight size={12} className="text-pfuma-plum shrink-0" />
             <Store size={16} className="text-pfuma-plum shrink-0" /><span>You bid</span>
@@ -2151,9 +2200,9 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
           { label: 'Sales, Last 6mo',    value: priceTrend.reduce((a, m) => a + Number(m.sales), 0), sub: 'Livestock listings marked sold',   icon: Activity,   iconColor: 'text-pfuma-gold', textColor: 'text-pfuma-plum', accent: 'bg-pfuma-plum/10 border-pfuma-plum/30' },
         ].map(k => (
           <div key={k.label} className={`${k.accent || 'bg-white border-gray-100'} border rounded-2xl p-5`}>
-            <div className="flex justify-between items-start mb-2"><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{k.label}</p><k.icon size={16} className={k.iconColor} /></div>
-            <p className={`text-2xl font-black leading-none ${k.textColor || 'text-gray-900'}`}>{k.value}</p>
-            <p className="text-[11px] text-gray-400 font-medium mt-1.5">{k.sub}</p>
+            <div className="flex justify-between items-start mb-2"><p className="text-xs font-bold text-gray-400 uppercase tracking-wide">{k.label}</p><k.icon size={16} className={k.iconColor} /></div>
+            <p className={`text-2xl font-bold leading-none ${k.textColor || 'text-gray-900'}`}>{k.value}</p>
+            <p className="text-xs text-gray-400 font-medium mt-1.5">{k.sub}</p>
           </div>
         ))}
       </div>
@@ -2165,16 +2214,16 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
             <div className="flex justify-between items-center mb-5">
               <div>
-                <h3 className="text-sm font-black text-gray-800">Verified Marketplace Listings</h3>
-                <p className="text-[11px] text-gray-400 font-medium mt-0.5">All animals have a certified PFUMA Health Passport — safe to bid</p>
+                <h3 className="text-sm font-bold text-gray-800">Verified Marketplace Listings</h3>
+                <p className="text-xs text-gray-400 font-medium mt-0.5">All animals have a certified PFUMA Health Passport — safe to bid</p>
               </div>
-              <button onClick={() => setActiveTab('profile')} className="text-[10px] font-black text-pfuma-plum hover:underline uppercase">View All →</button>
+              <button onClick={() => setActiveTab('profile')} className="text-xs font-bold text-pfuma-plum hover:underline uppercase">View All →</button>
             </div>
             {listings.length === 0 ? (
               <div className="text-center py-12 border-2 border-dashed border-gray-200 rounded-2xl">
                 <ShoppingCart size={32} className="mx-auto text-gray-300 mb-3" />
-                <p className="text-sm font-black text-gray-400">No listings yet</p>
-                <p className="text-[11px] text-gray-400 font-medium mt-1">Farmers can list animals from their Herd Registry</p>
+                <p className="text-sm font-bold text-gray-400">No listings yet</p>
+                <p className="text-xs text-gray-400 font-medium mt-1">Farmers can list animals from their Herd Registry</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -2182,23 +2231,23 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
                   <button key={l.id} onClick={() => setActiveTab('marketplace')} className="w-full flex items-center gap-5 p-4 bg-gray-50 rounded-2xl border-2 border-transparent hover:border-pfuma-plum hover:shadow-md transition group text-left">
                     <div className="w-20 h-20 rounded-2xl overflow-hidden bg-gray-200 shrink-0 relative">
                       <img src={l.photo_url ? `${API}${l.photo_url}` : IMAGE_BY_SPECIES.Cattle} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition duration-700" alt={l.product_name} />
-                      <div className="absolute top-2 left-2 bg-pfuma-gold text-[8px] font-black text-white px-1.5 py-0.5 rounded-full uppercase">Certified</div>
+                      <div className="absolute top-2 left-2 bg-pfuma-gold text-xs font-bold text-white px-1.5 py-0.5 rounded-full uppercase">Certified</div>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h4 className="text-sm font-black text-gray-900">{l.product_name}</h4>
-                        <span className="text-[9px] font-black bg-pfuma-plum/15 text-pfuma-plum px-2 py-0.5 rounded-full uppercase">For Sale</span>
+                        <h4 className="text-sm font-bold text-gray-900">{l.product_name}</h4>
+                        <span className="text-xs font-bold bg-pfuma-plum/15 text-pfuma-plum px-2 py-0.5 rounded-full uppercase">For Sale</span>
                       </div>
-                      <p className="text-[11px] text-gray-500 font-medium mb-2">{l.seller_name} · {l.location || l.seller_province}</p>
+                      <p className="text-xs text-gray-500 font-medium mb-2">{l.seller_name} · {l.location || l.seller_province}</p>
                       <div className="flex items-center gap-2">
                         <ShieldCheck size={12} className="text-pfuma-plum" />
-                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-wide">Verified Health Passport</span>
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Verified Health Passport</span>
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-[10px] text-gray-400 font-bold uppercase">Asking Price</p>
-                      <p className="text-xl font-black text-pfuma-plum">${Number(l.price).toLocaleString()}</p>
-                      <span className="inline-block mt-2 px-4 py-1.5 bg-pfuma-plum text-white text-[10px] font-black rounded-lg uppercase group-hover:bg-violet-700 transition">Bid on Marketplace →</span>
+                      <p className="text-xs text-gray-400 font-bold uppercase">Asking Price</p>
+                      <p className="text-xl font-bold text-pfuma-plum">${Number(l.price).toLocaleString()}</p>
+                      <span className="inline-block mt-2 px-4 py-1.5 bg-pfuma-plum text-white text-xs font-bold rounded-lg uppercase group-hover:bg-violet-700 transition">Bid on Marketplace →</span>
                     </div>
                   </button>
                 ))}
@@ -2209,11 +2258,11 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Price trend chart */}
             <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-              <h3 className="text-sm font-black text-gray-800 mb-1">Livestock Price Trend (USD / head)</h3>
-              <p className="text-[11px] text-gray-400 font-medium mb-4">Average price of livestock sales actually completed on PFUMA, last 6 months</p>
+              <h3 className="text-sm font-bold text-gray-800 mb-1">Livestock Price Trend (USD / head)</h3>
+              <p className="text-xs text-gray-400 font-medium mb-4">Average price of livestock sales actually completed on PFUMA, last 6 months</p>
               {priceTrend.length === 0 ? (
                 <div className="h-36 flex items-center justify-center">
-                  <p className="text-[11px] text-gray-400 font-medium italic">No completed sales yet — chart fills in as bids are accepted</p>
+                  <p className="text-xs text-gray-400 font-medium italic">No completed sales yet — chart fills in as bids are accepted</p>
                 </div>
               ) : (
                 <div className="h-36">
@@ -2221,14 +2270,14 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
                     <AreaChart data={priceTrend} margin={{ top: 0, right: 0, bottom: 0, left: -10 }}>
                       <defs>
                         <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%"  stopColor="#7c3aed" stopOpacity={0.2} />
-                          <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
+                          <stop offset="5%"  stopColor="#7B5873" stopOpacity={0.2} />
+                          <stop offset="95%" stopColor="#7B5873" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <XAxis dataKey="month" fontSize={9} tick={{ fill: '#bbb' }} tickLine={false} axisLine={false} />
-                      <YAxis fontSize={9} tick={{ fill: '#bbb' }} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
+                      <XAxis dataKey="month" fontSize={9} tick={{ fill: '#B0A496' }} tickLine={false} axisLine={false} />
+                      <YAxis fontSize={9} tick={{ fill: '#B0A496' }} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
                       <Tooltip contentStyle={{ borderRadius: 10, border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', fontSize: 11 }} formatter={v => [`$${Math.round(v)}`, 'Avg price/head']} />
-                      <Area type="monotone" dataKey="avg_price" stroke="#7c3aed" fill="url(#pg)" strokeWidth={2.5} dot={false} />
+                      <Area type="monotone" dataKey="avg_price" stroke="#7B5873" fill="url(#pg)" strokeWidth={2.5} dot={false} />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
@@ -2237,21 +2286,21 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
 
             {/* Listings by category */}
             <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-              <h3 className="text-sm font-black text-gray-800 mb-1">Listings by Category</h3>
-              <p className="text-[11px] text-gray-400 font-medium mb-4">Marketplace supply breakdown</p>
+              <h3 className="text-sm font-bold text-gray-800 mb-1">Listings by Category</h3>
+              <p className="text-xs text-gray-400 font-medium mb-4">Marketplace supply breakdown</p>
               {CATEGORY_DATA.length === 0 ? (
                 <div className="h-36 flex items-center justify-center">
-                  <p className="text-[11px] text-gray-400 font-medium italic">No active listings to chart yet</p>
+                  <p className="text-xs text-gray-400 font-medium italic">No active listings to chart yet</p>
                 </div>
               ) : (
                 <div className="h-36">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={CATEGORY_DATA} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                      <XAxis dataKey="category" fontSize={9} tick={{ fill: '#bbb' }} tickLine={false} axisLine={false} />
-                      <YAxis allowDecimals={false} fontSize={9} tick={{ fill: '#bbb' }} tickLine={false} axisLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#EFE8DD" vertical={false} />
+                      <XAxis dataKey="category" fontSize={9} tick={{ fill: '#B0A496' }} tickLine={false} axisLine={false} />
+                      <YAxis allowDecimals={false} fontSize={9} tick={{ fill: '#B0A496' }} tickLine={false} axisLine={false} />
                       <Tooltip contentStyle={{ borderRadius: 10, border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', fontSize: 11 }} formatter={v => [v, 'Listings']} />
-                      <Bar dataKey="count" fill="#ca8a04" radius={[6, 6, 0, 0]} />
+                      <Bar dataKey="count" fill="#C99A4A" radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -2265,20 +2314,20 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
           {/* Claim an animal bought off-platform — the counterpart to a
               farmer generating a transfer code from their Herd Registry. */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-            <h3 className="text-sm font-black text-gray-800 mb-1">Claim an Animal</h3>
-            <p className="text-[11px] text-gray-400 font-medium mb-3">Bought an animal from a farmer off-platform? Enter the transfer code they gave you.</p>
+            <h3 className="text-sm font-bold text-gray-800 mb-1">Claim an Animal</h3>
+            <p className="text-xs text-gray-400 font-medium mb-3">Bought an animal from a farmer off-platform? Enter the transfer code they gave you.</p>
             <form onSubmit={claimAnimal} className="flex gap-2">
               <input
                 value={claimCode} onChange={e => setClaimCode(e.target.value.toUpperCase())}
                 placeholder="Code" maxLength={12}
-                className="flex-1 min-w-0 px-3 py-2.5 bg-gray-50 rounded-xl border-2 border-transparent focus:border-pfuma-plum outline-none font-black text-sm text-center tracking-[0.2em] text-gray-800 placeholder:text-gray-300 placeholder:tracking-normal placeholder:font-medium"
+                className="flex-1 min-w-0 px-3 py-2.5 bg-gray-50 rounded-xl border-2 border-transparent focus:border-pfuma-plum outline-none font-bold text-sm text-center tracking-[0.2em] text-gray-800 placeholder:text-gray-300 placeholder:tracking-normal placeholder:font-medium"
               />
-              <button type="submit" disabled={claimBusy || !claimCode.trim()} className="shrink-0 px-4 py-2.5 bg-pfuma-plum text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-violet-700 transition disabled:opacity-50">
+              <button type="submit" disabled={claimBusy || !claimCode.trim()} className="shrink-0 px-4 py-2.5 bg-pfuma-plum text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-violet-700 transition disabled:opacity-50">
                 {claimBusy ? '…' : 'Claim'}
               </button>
             </form>
-            {claimError && <p className="text-[10px] text-red-500 font-bold mt-2">{claimError}</p>}
-            {claimSuccess && <p className="text-[10px] text-green-600 font-bold mt-2">{claimSuccess}</p>}
+            {claimError && <p className="text-xs text-red-500 font-bold mt-2">{claimError}</p>}
+            {claimSuccess && <p className="text-xs text-green-600 font-bold mt-2">{claimSuccess}</p>}
           </div>
 
           {/* My purchases — read-only ownership record (that's a Farmer's Herd
@@ -2287,7 +2336,7 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
               legally clear to move the animal yet. */}
           {purchases.length > 0 && (
             <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-              <h3 className="text-sm font-black text-gray-800 mb-4">My Purchases</h3>
+              <h3 className="text-sm font-bold text-gray-800 mb-4">My Purchases</h3>
               <div className="space-y-3">
                 {purchases.map(p => (
                   <div key={p.bid_id} className="bg-gray-50 rounded-xl overflow-hidden">
@@ -2296,24 +2345,24 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
                         <img src={resolveImageUrl(p.image_url) || IMAGE_BY_SPECIES[p.species] || IMAGE_BY_SPECIES.Cattle} className="w-full h-full object-cover" alt={p.animal_name || p.product_name} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-black text-gray-800 truncate">{p.animal_name || p.product_name}</p>
-                        <p className="text-[10px] text-gray-400 font-medium truncate">{p.breed || p.species}{p.seller_name ? ` · from ${p.seller_name}` : ''} · {new Date(p.purchased_at).toLocaleDateString()}</p>
+                        <p className="text-xs font-bold text-gray-800 truncate">{p.animal_name || p.product_name}</p>
+                        <p className="text-xs text-gray-400 font-medium truncate">{p.breed || p.species}{p.seller_name ? ` · from ${p.seller_name}` : ''} · {new Date(p.purchased_at).toLocaleDateString()}</p>
                       </div>
-                      {p.amount != null && <p className="text-xs font-black text-pfuma-plum shrink-0">${Number(p.amount).toLocaleString()}</p>}
+                      {p.amount != null && <p className="text-xs font-bold text-pfuma-plum shrink-0">${Number(p.amount).toLocaleString()}</p>}
                     </div>
                     <div className="flex items-center gap-2 px-3 pb-3 flex-wrap">
                       {p.clearance_status && (
-                        <span className={`text-[9px] font-black px-2 py-1 rounded-full uppercase ${p.clearance_status === 'cleared' ? 'bg-green-100 text-green-700' : p.clearance_status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                        <span className={`text-xs font-bold px-2 py-1 rounded-full uppercase ${p.clearance_status === 'cleared' ? 'bg-green-100 text-green-700' : p.clearance_status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
                           {p.clearance_status === 'cleared' ? 'Police Cleared ✓' : p.clearance_status === 'rejected' ? 'Clearance Rejected' : 'Awaiting Police Clearance'}
                         </span>
                       )}
                       {p.seller_id && (
-                        <button onClick={() => onMessageSeller?.({ startConversationWith: p.seller_id, subject: p.animal_name || p.product_name })} className="flex items-center gap-1 text-[9px] font-black text-pfuma-plum uppercase hover:underline">
+                        <button onClick={() => onMessageSeller?.({ startConversationWith: p.seller_id, subject: p.animal_name || p.product_name })} className="flex items-center gap-1 text-xs font-bold text-pfuma-plum uppercase hover:underline">
                           <MessageSquare size={11} /> Message Seller
                         </button>
                       )}
                       {p.animal_id && (
-                        <button onClick={() => setOpenPermitFor(v => v === p.bid_id ? null : p.bid_id)} className="flex items-center gap-1 text-[9px] font-black text-gray-500 uppercase hover:underline ml-auto">
+                        <button onClick={() => setOpenPermitFor(v => v === p.bid_id ? null : p.bid_id)} className="flex items-center gap-1 text-xs font-bold text-gray-500 uppercase hover:underline ml-auto">
                           {openPermitFor === p.bid_id ? 'Hide Movement Permit' : 'Movement Permit →'}
                         </button>
                       )}
@@ -2331,7 +2380,7 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
 
           {/* Recent bids */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-            <h3 className="text-sm font-black text-gray-800 mb-4">Recent Bids</h3>
+            <h3 className="text-sm font-bold text-gray-800 mb-4">Recent Bids</h3>
             {myBids.length === 0 ? (
               <p className="text-xs text-gray-400 italic font-medium text-center py-4">No bids placed yet</p>
             ) : (
@@ -2339,15 +2388,15 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
                 {myBids.map(b => (
                   <div key={b.id} className="p-3.5 bg-pfuma-plum/10 border border-pfuma-plum/20 rounded-xl">
                     <div className="flex justify-between items-start mb-1">
-                      <p className="text-xs font-black text-gray-800">{b.product_name}</p>
-                      <p className="text-sm font-black text-pfuma-plum">${Number(b.amount).toLocaleString()}</p>
+                      <p className="text-xs font-bold text-gray-800">{b.product_name}</p>
+                      <p className="text-sm font-bold text-pfuma-plum">${Number(b.amount).toLocaleString()}</p>
                     </div>
                     <div className="flex items-center justify-between mt-1">
-                      <p className="text-[10px] text-gray-400 font-bold uppercase">
+                      <p className="text-xs text-gray-400 font-bold uppercase">
                         {b.status === 'accepted' ? 'Accepted ✓' : b.status === 'declined' ? 'Declined' : 'Pending'} · {new Date(b.created_at).toLocaleDateString()}
                       </p>
                       {b.status === 'pending' && b.seller_id && (
-                        <button onClick={() => onMessageSeller?.({ startConversationWith: b.seller_id, subject: b.product_name })} className="flex items-center gap-1 text-[9px] font-black text-pfuma-plum uppercase hover:underline shrink-0">
+                        <button onClick={() => onMessageSeller?.({ startConversationWith: b.seller_id, subject: b.product_name })} className="flex items-center gap-1 text-xs font-bold text-pfuma-plum uppercase hover:underline shrink-0">
                           <MessageSquare size={10} /> Message
                         </button>
                       )}
@@ -2360,7 +2409,7 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
 
           {/* How it works */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-            <h3 className="text-sm font-black text-gray-800 mb-3">How to Buy</h3>
+            <h3 className="text-sm font-bold text-gray-800 mb-3">How to Buy</h3>
             <div className="space-y-3">
               {[
                 { n: '1', t: 'Browse Listings', d: 'All animals carry a certified PFUMA Health Passport' },
@@ -2369,10 +2418,10 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
                 { n: '4', t: 'Receive Certificate', d: 'DVS movement permit issued on confirmed sale' },
               ].map(s => (
                 <div key={s.n} className="flex items-start gap-3">
-                  <div className="w-5 h-5 bg-pfuma-plum rounded-full flex items-center justify-center text-[9px] font-black text-white shrink-0 mt-0.5">{s.n}</div>
+                  <div className="w-5 h-5 bg-pfuma-plum rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 mt-0.5">{s.n}</div>
                   <div>
-                    <p className="text-[11px] font-black text-gray-800">{s.t}</p>
-                    <p className="text-[10px] text-gray-400 font-medium">{s.d}</p>
+                    <p className="text-xs font-bold text-gray-800">{s.t}</p>
+                    <p className="text-xs text-gray-400 font-medium">{s.d}</p>
                   </div>
                 </div>
               ))}
@@ -2382,13 +2431,14 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
           {/* Contact seller */}
           <button onClick={() => setActiveTab('vet')} className="w-full flex items-center gap-3 p-4 bg-pfuma-plum rounded-2xl text-left hover:bg-violet-700 transition group">
             <MessageSquare size={16} className="text-white shrink-0" />
-            <div><p className="text-xs font-black text-white">Contact a Seller</p><p className="text-[10px] text-purple-200 font-medium">Message the farmer directly</p></div>
+            <div><p className="text-xs font-bold text-white">Contact a Seller</p><p className="text-xs text-purple-200 font-medium">Message the farmer directly</p></div>
             <ArrowRight size={13} className="text-purple-300 ml-auto" />
           </button>
         </div>
       </div>
 
       <StakeholderMap />
+      </div>
       </div>
     </>
   );
@@ -2565,31 +2615,31 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
   const policeInitials = (currentUser?.name || 'O').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
   const scrollToId = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const policeActions = [
-    { icon: ShieldCheck,   label: 'Verifications', color: 'bg-amber-500', badge: verifications.length || null, onClick: () => scrollToId('police-verify-queue') },
-    { icon: Tag,           label: 'Clearances',    color: 'bg-blue-500',  badge: clearances.length || null,     onClick: () => scrollToId('police-clearance-queue') },
-    { icon: AlertTriangle, label: 'Theft Alerts',  color: 'bg-red-600',   badge: theftAlerts.length || null,    tab: 'iot' },
-    { icon: Store,         label: 'Marketplace',   color: 'bg-purple-500', tab: 'marketplace' },
-    { icon: MessageSquare, label: 'Messenger',     color: 'bg-pink-500',  tab: 'vet' },
-    { icon: UserPlus,      label: 'Add Officer',   color: 'bg-green-600', onClick: () => { setShowAddOfficer(true); setOfficerError(''); scrollToId('police-officer-form'); } },
+    { icon: ShieldCheck,   label: 'Verifications', color: 'bg-white/10', badge: verifications.length || null, onClick: () => scrollToId('police-verify-queue') },
+    { icon: Tag,           label: 'Clearances',    color: 'bg-white/10',  badge: clearances.length || null,     onClick: () => scrollToId('police-clearance-queue') },
+    { icon: AlertTriangle, label: 'Theft Alerts',  color: 'bg-white/10',   badge: theftAlerts.length || null,    tab: 'iot' },
+    { icon: Store,         label: 'Marketplace',   color: 'bg-white/10', tab: 'marketplace' },
+    { icon: MessageSquare, label: 'Messenger',     color: 'bg-white/10',  tab: 'vet' },
+    { icon: UserPlus,      label: 'Add Officer',   color: 'bg-white/10', onClick: () => { setShowAddOfficer(true); setOfficerError(''); scrollToId('police-officer-form'); } },
   ];
 
   return (
-    <div className="bg-[#121212] lg:bg-gray-950 h-full overflow-y-auto text-left">
+    <div className="bg-bark-950 lg:bg-gray-950 h-full overflow-y-auto text-left">
       <div className="lg:hidden p-4 pb-4 space-y-4">
 
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-11 h-11 rounded-2xl bg-red-700 flex items-center justify-center text-white font-black text-sm shrink-0">{policeInitials}</div>
+              <div className="w-11 h-11 rounded-2xl bg-red-700 flex items-center justify-center text-white font-bold text-sm shrink-0">{policeInitials}</div>
               <div className="min-w-0">
-                <p className="text-white/40 text-[10px] font-black uppercase tracking-[2px]">{greet()}</p>
-                <h2 className="text-white text-base font-black truncate">{currentUser?.name || 'Officer'}</h2>
+                <p className="text-white/40 text-xs font-bold uppercase tracking-[2px]">{greet()}</p>
+                <h2 className="text-white text-base font-bold truncate">{currentUser?.name || 'Officer'}</h2>
               </div>
             </div>
             {!apiOnline && (
               <div className="flex items-center gap-1.5 bg-yellow-400/15 border border-yellow-400/30 rounded-full px-3 py-1.5 shrink-0">
                 <AlertTriangle size={12} className="text-yellow-400" />
-                <span className="text-[9px] font-black text-yellow-300 uppercase">Demo</span>
+                <span className="text-xs font-bold text-yellow-300 uppercase">Demo</span>
               </div>
             )}
           </div>
@@ -2603,20 +2653,20 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
               { icon: MessageSquare, label: 'Messenger',   tab: 'vet' },
             ].map(q => (
               <button key={q.label} onClick={() => q.onClick ? q.onClick() : setActiveTab(q.tab)} className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-white/90 hover:bg-white/10 transition shrink-0 whitespace-nowrap">
-                <q.icon size={13} /><span className="text-[11px] font-black">{q.label}</span>
+                <q.icon size={13} /><span className="text-xs font-bold">{q.label}</span>
               </button>
             ))}
           </div>
 
           {/* Status banner */}
-          <div className={`border rounded-2xl p-4 ${theftAlerts.length ? 'bg-red-950/60 border-red-900/60' : 'bg-[#1E1E1E] border-white/5'}`}>
+          <div className={`border rounded-2xl p-4 ${theftAlerts.length ? 'bg-red-950/60 border-red-900/60' : 'bg-bark-900 border-white/5'}`}>
             <div className="flex items-center gap-3">
               <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${theftAlerts.length ? 'bg-red-500/20' : 'bg-pfuma-gold/15'}`}>
                 <AlertTriangle size={14} className={theftAlerts.length ? 'text-red-400' : 'text-pfuma-gold'} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-white text-xs font-black">{theftAlerts.length ? `${theftAlerts.length} Theft Alert${theftAlerts.length !== 1 ? 's' : ''}` : 'No theft alerts'}</p>
-                <p className={`text-[10px] font-medium truncate ${theftAlerts.length ? 'text-red-300/70' : 'text-white/40'}`}>
+                <p className="text-white text-xs font-bold">{theftAlerts.length ? `${theftAlerts.length} Theft Alert${theftAlerts.length !== 1 ? 's' : ''}` : 'No theft alerts'}</p>
+                <p className={`text-xs font-medium truncate ${theftAlerts.length ? 'text-red-300/70' : 'text-white/40'}`}>
                   {verifications.length} signup{verifications.length !== 1 ? 's' : ''} and {clearances.length} clearance{clearances.length !== 1 ? 's' : ''} awaiting your review
                 </p>
               </div>
@@ -2625,52 +2675,44 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
 
           {/* Action grid */}
           <div>
-            <p className="text-white/30 text-[10px] font-black uppercase tracking-[2px] mb-2.5 px-1">Quick Actions</p>
+            <p className="text-white/30 text-xs font-bold uppercase tracking-[2px] mb-2.5 px-1">Quick Actions</p>
             <div className="grid grid-cols-3 gap-2.5">
               {policeActions.map(a => (
-                <button key={a.label} onClick={() => a.onClick ? a.onClick() : setActiveTab(a.tab)} className="relative bg-[#1E1E1E] border border-white/5 rounded-2xl p-3 flex flex-col items-center gap-2 hover:bg-[#252525] transition">
-                  {a.badge ? <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[8px] font-black rounded-full">{a.badge}</span> : null}
+                <button key={a.label} onClick={() => a.onClick ? a.onClick() : setActiveTab(a.tab)} className="relative bg-bark-900 border border-white/5 rounded-2xl p-3 flex flex-col items-center gap-2 hover:bg-bark-800 transition">
+                  {a.badge ? <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full">{a.badge}</span> : null}
                   <div className={`w-10 h-10 rounded-xl ${a.color} flex items-center justify-center`}><a.icon size={17} className="text-white" /></div>
-                  <span className="text-white/70 text-[9px] font-bold text-center leading-tight">{a.label}</span>
+                  <span className="text-white/70 text-xs font-bold text-center leading-tight">{a.label}</span>
                 </button>
               ))}
             </div>
           </div>
       </div>
-      <div className="hidden lg:block p-6 pb-0">
+      <div className="hidden lg:block">
 
-      {/* Greeting */}
-      <div className="bg-red-900/30 border border-red-700/40 rounded-3xl p-6 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.08]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} aria-hidden="true" />
-        <div className="absolute -top-16 -right-10 w-56 h-56 rounded-full bg-red-500/15 blur-3xl" aria-hidden="true" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-4">
-          <div className="flex-1">
-            <p className="text-red-300 text-xs font-black uppercase tracking-[3px] mb-1">Stock Theft &amp; Verification Unit · {currentUser?.jurisdictionProvince || currentUser?.province || 'Mashonaland West'}</p>
-            <h2 className="text-2xl font-black text-white leading-tight">{greet()}, {currentUser?.name || 'Officer'}</h2>
-            <p className="text-gray-400 text-sm font-medium mt-1">Review signup verifications and livestock sale-clearance requests before they go live on PFUMA.</p>
+      <DashboardHero
+        role="Police"
+        eyebrow={`Stock theft & verification unit · ${currentUser?.jurisdictionProvince || currentUser?.province || 'Mashonaland West'}`}
+        title={`${greet()}, ${currentUser?.name || 'Officer'}`}
+        stats="Review signup verifications and livestock sale-clearance requests before they go live on PFUMA."
+        actions={
+          <Button variant="onImage" icon={UserPlus} onClick={() => { setShowAddOfficer(s => !s); setOfficerError(''); }}>
+            {showAddOfficer ? 'Cancel' : 'Add officer'}
+          </Button>
+        }
+        alert={!apiOnline && (
+          <div className="flex items-center gap-2.5 rounded-xl border border-amber-300/40 bg-amber-950/40 px-5 py-3 backdrop-blur-sm">
+            <AlertTriangle size={15} className="text-amber-300 shrink-0" aria-hidden="true" />
+            <span className="text-sm font-bold text-amber-50">Demo mode — start the Flask API to go live</span>
           </div>
-          <div className="flex items-center gap-3 shrink-0">
-            {!apiOnline && (
-              <div className="flex items-center gap-2 bg-yellow-400/20 border border-yellow-400/30 px-4 py-2.5 rounded-2xl">
-                <AlertTriangle size={13} className="text-yellow-400" />
-                <span className="text-xs font-black text-yellow-300">Demo mode — start Flask API to go live</span>
-              </div>
-            )}
-            <button
-              onClick={() => { setShowAddOfficer(s => !s); setOfficerError(''); }}
-              className="flex items-center gap-2 bg-white text-red-900 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wide hover:bg-red-50 transition"
-            >
-              <UserPlus size={14} /> {showAddOfficer ? 'Cancel' : 'Add Officer'}
-            </button>
-          </div>
-        </div>
-      </div>
+        )}
+      />
+
       </div>
 
       <div className="p-4 pt-4 lg:p-6 lg:pt-6 space-y-6">
 
       {feedback && (
-        <div className="flex items-center gap-2 bg-green-900/30 border border-green-700/40 text-green-300 text-xs font-black px-4 py-3 rounded-xl" role="status">
+        <div className="flex items-center gap-2 bg-green-900/30 border border-green-700/40 text-green-300 text-xs font-bold px-4 py-3 rounded-xl" role="status">
           <CheckCircle size={14} /> {feedback}
         </div>
       )}
@@ -2684,8 +2726,8 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
         <form id="police-officer-form" onSubmit={provisionOfficer} className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-4">
           <div className="flex items-start justify-between">
             <div>
-              <h3 className="text-sm font-black text-white mb-1">Nominate New Officer</h3>
-              <p className="text-[11px] text-gray-500 font-medium">Police accounts aren't self-service signup. This submits a request — PFUMA Admin must review and approve it (confirming a real officer vouched for them) before the account can log in and act as Police.</p>
+              <h3 className="text-sm font-bold text-white mb-1">Nominate New Officer</h3>
+              <p className="text-xs text-gray-500 font-medium">Police accounts aren't self-service signup. This submits a request — PFUMA Admin must review and approve it (confirming a real officer vouched for them) before the account can log in and act as Police.</p>
             </div>
             <button type="button" onClick={() => setShowAddOfficer(false)} className="text-gray-500 hover:text-white transition p-1">
               <X size={16} />
@@ -2693,55 +2735,55 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
           </div>
 
           {officerError && (
-            <div className="flex items-center gap-2 bg-red-900/30 border border-red-700/40 text-red-300 text-[11px] font-bold px-3 py-2 rounded-lg">
+            <div className="flex items-center gap-2 bg-red-900/30 border border-red-700/40 text-red-300 text-xs font-bold px-3 py-2 rounded-lg">
               <AlertTriangle size={12} className="shrink-0" /> {officerError}
             </div>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <label className="text-[11px] text-gray-400 font-bold space-y-1 block">
+            <label className="text-xs text-gray-400 font-bold space-y-1 block">
               Full Name *
               <input required value={officerForm.full_name} onChange={e => setOfficerField('full_name', e.target.value)}
                 placeholder="e.g. Officer Tapiwa Gumbo"
                 className="w-full mt-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs font-medium text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50" />
             </label>
-            <label className="text-[11px] text-gray-400 font-bold space-y-1 block">
+            <label className="text-xs text-gray-400 font-bold space-y-1 block">
               Phone Number *
               <input required value={officerForm.phone} onChange={e => setOfficerField('phone', e.target.value)}
                 placeholder="+263 77 123 4567"
                 className="w-full mt-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs font-medium text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50" />
             </label>
-            <label className="text-[11px] text-gray-400 font-bold space-y-1 block">
+            <label className="text-xs text-gray-400 font-bold space-y-1 block">
               National ID Number *
               <input required value={officerForm.national_id_number} onChange={e => setOfficerField('national_id_number', e.target.value)}
                 placeholder="e.g. 63-1234567A00"
                 className="w-full mt-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs font-medium text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50" />
             </label>
-            <label className="text-[11px] text-gray-400 font-bold space-y-1 block">
+            <label className="text-xs text-gray-400 font-bold space-y-1 block">
               Badge Number *
               <input required value={officerForm.badge_number} onChange={e => setOfficerField('badge_number', e.target.value)}
                 placeholder="e.g. ZRP-STU-0231"
                 className="w-full mt-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs font-medium text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50" />
             </label>
-            <label className="text-[11px] text-gray-400 font-bold space-y-1 block">
+            <label className="text-xs text-gray-400 font-bold space-y-1 block">
               Station
               <input value={officerForm.station} onChange={e => setOfficerField('station', e.target.value)}
                 placeholder="e.g. Chegutu Police Station"
                 className="w-full mt-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs font-medium text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50" />
             </label>
-            <label className="text-[11px] text-gray-400 font-bold space-y-1 block">
+            <label className="text-xs text-gray-400 font-bold space-y-1 block">
               Jurisdiction Province
               <input value={officerForm.jurisdiction_province} onChange={e => setOfficerField('jurisdiction_province', e.target.value)}
                 placeholder="e.g. Mashonaland West"
                 className="w-full mt-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs font-medium text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50" />
             </label>
-            <label className="text-[11px] text-gray-400 font-bold space-y-1 block">
+            <label className="text-xs text-gray-400 font-bold space-y-1 block">
               Email
               <input type="email" value={officerForm.email} onChange={e => setOfficerField('email', e.target.value)}
                 placeholder="officer@zrp.gov.zw"
                 className="w-full mt-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs font-medium text-white placeholder:text-gray-600 focus:outline-none focus:border-red-500/50" />
             </label>
-            <label className="text-[11px] text-gray-400 font-bold space-y-1 block">
+            <label className="text-xs text-gray-400 font-bold space-y-1 block">
               Temporary Password *
               <div className="relative mt-1">
                 <input required type={showOfficerPassword ? 'text' : 'password'} value={officerForm.password} onChange={e => setOfficerField('password', e.target.value)}
@@ -2757,7 +2799,7 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
           </div>
 
           <button type="submit" disabled={officerBusy}
-            className="w-full py-2.5 bg-red-700 text-white rounded-xl text-xs font-black uppercase tracking-wide hover:bg-red-600 transition disabled:opacity-40">
+            className="w-full py-2.5 bg-red-700 text-white rounded-xl text-xs font-bold uppercase tracking-wide hover:bg-red-600 transition disabled:opacity-40">
             {officerBusy ? 'Provisioning…' : 'Provision & Verify Officer'}
           </button>
         </form>
@@ -2766,19 +2808,19 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-          <div className="flex justify-between items-start mb-2"><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Pending Signups</p><ShieldCheck size={16} className="text-yellow-400" /></div>
-          <p className="text-3xl font-black text-white">{verifications.length}</p>
-          <p className="text-[11px] text-gray-500 font-medium mt-1">Farmer / Buyer / Supplier applications awaiting review</p>
+          <div className="flex justify-between items-start mb-2"><p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Pending Signups</p><ShieldCheck size={16} className="text-yellow-400" /></div>
+          <p className="text-3xl font-bold text-white">{verifications.length}</p>
+          <p className="text-xs text-gray-500 font-medium mt-1">Farmer / Buyer / Supplier applications awaiting review</p>
         </div>
         <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-          <div className="flex justify-between items-start mb-2"><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Pending Clearances</p><Tag size={16} className="text-orange-400" /></div>
-          <p className="text-3xl font-black text-white">{clearances.length}</p>
-          <p className="text-[11px] text-gray-500 font-medium mt-1">Livestock listings awaiting sale clearance</p>
+          <div className="flex justify-between items-start mb-2"><p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Pending Clearances</p><Tag size={16} className="text-orange-400" /></div>
+          <p className="text-3xl font-bold text-white">{clearances.length}</p>
+          <p className="text-xs text-gray-500 font-medium mt-1">Livestock listings awaiting sale clearance</p>
         </div>
         <div className={`${theftAlerts.length ? 'bg-red-500/10 border-red-500/20' : 'bg-white/5 border-white/10'} border rounded-2xl p-5`}>
-          <div className="flex justify-between items-start mb-2"><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Theft Alerts</p><AlertTriangle size={16} className={theftAlerts.length ? 'text-red-400' : 'text-gray-500'} /></div>
-          <p className={`text-3xl font-black ${theftAlerts.length ? 'text-red-400' : 'text-white'}`}>{theftAlerts.length}</p>
-          <p className="text-[11px] text-gray-500 font-medium mt-1">Reported theft, breach &amp; security incidents</p>
+          <div className="flex justify-between items-start mb-2"><p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Theft Alerts</p><AlertTriangle size={16} className={theftAlerts.length ? 'text-red-400' : 'text-gray-500'} /></div>
+          <p className={`text-3xl font-bold ${theftAlerts.length ? 'text-red-400' : 'text-white'}`}>{theftAlerts.length}</p>
+          <p className="text-xs text-gray-500 font-medium mt-1">Reported theft, breach &amp; security incidents</p>
         </div>
       </div>
 
@@ -2786,12 +2828,12 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
 
         {/* Verification queue */}
         <div id="police-verify-queue" className="bg-white/5 border border-white/10 rounded-2xl p-5">
-          <h3 className="text-sm font-black text-white mb-1">Signup Verification Queue</h3>
-          <p className="text-[11px] text-gray-500 font-medium mb-4">Confirm ID and credential documents before an applicant gets full access. Vet applicants are peer-reviewed by an existing verified vet, not shown here.</p>
+          <h3 className="text-sm font-bold text-white mb-1">Signup Verification Queue</h3>
+          <p className="text-xs text-gray-500 font-medium mb-4">Confirm ID and credential documents before an applicant gets full access. Vet applicants are peer-reviewed by an existing verified vet, not shown here.</p>
           {verifications.length === 0 ? (
             <div className="flex flex-col items-center py-8 text-center">
               <CheckCircle size={26} className="text-green-500 mb-2" />
-              <p className="text-xs font-black text-gray-400">Queue is clear</p>
+              <p className="text-xs font-bold text-gray-400">Queue is clear</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -2799,17 +2841,17 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
                 <div key={v.id} className="p-4 bg-white/5 rounded-xl border border-white/10">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div>
-                      <p className="text-xs font-black text-white">{v.full_name}</p>
-                      <p className="text-[10px] text-gray-400 font-medium">{v.role} · {v.org_name} · {v.province}</p>
+                      <p className="text-xs font-bold text-white">{v.full_name}</p>
+                      <p className="text-xs text-gray-400 font-medium">{v.role} · {v.org_name} · {v.province}</p>
                     </div>
-                    <span className="text-[9px] font-black text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full uppercase shrink-0">Pending</span>
+                    <span className="text-xs font-bold text-yellow-400 bg-yellow-400/10 px-2 py-0.5 rounded-full uppercase shrink-0">Pending</span>
                   </div>
-                  <button onClick={() => setViewingUser(v)} className="flex items-center gap-1.5 text-[10px] font-black text-gray-300 hover:text-white uppercase tracking-wide mb-2">
+                  <button onClick={() => setViewingUser(v)} className="flex items-center gap-1.5 text-xs font-bold text-gray-300 hover:text-white uppercase tracking-wide mb-2">
                     <Eye size={12} /> View Full Details
                   </button>
                   <div className="flex gap-2 mt-1">
-                    <button disabled={busyId === v.id} onClick={() => resolveVerification(v.id, 'verified')} className="flex-1 py-2 bg-green-600 text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition disabled:opacity-40">Verify</button>
-                    <button disabled={busyId === v.id} onClick={() => resolveVerification(v.id, 'rejected')} className="flex-1 py-2 bg-white/10 text-gray-300 rounded-lg text-[10px] font-black uppercase hover:bg-white/20 transition disabled:opacity-40">Reject</button>
+                    <button disabled={busyId === v.id} onClick={() => resolveVerification(v.id, 'verified')} className="flex-1 py-2 bg-green-600 text-white rounded-lg text-xs font-bold uppercase hover:bg-green-700 transition disabled:opacity-40">Verify</button>
+                    <button disabled={busyId === v.id} onClick={() => resolveVerification(v.id, 'rejected')} className="flex-1 py-2 bg-white/10 text-gray-300 rounded-lg text-xs font-bold uppercase hover:bg-white/20 transition disabled:opacity-40">Reject</button>
                   </div>
                 </div>
               ))}
@@ -2819,12 +2861,12 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
 
         {/* Clearance queue */}
         <div id="police-clearance-queue" className="bg-white/5 border border-white/10 rounded-2xl p-5">
-          <h3 className="text-sm font-black text-white mb-1">Sale Clearance Queue</h3>
-          <p className="text-[11px] text-gray-500 font-medium mb-4">Verify ownership/brand papers match the animal before a livestock listing is allowed on the Marketplace.</p>
+          <h3 className="text-sm font-bold text-white mb-1">Sale Clearance Queue</h3>
+          <p className="text-xs text-gray-500 font-medium mb-4">Verify ownership/brand papers match the animal before a livestock listing is allowed on the Marketplace.</p>
           {clearances.length === 0 ? (
             <div className="flex flex-col items-center py-8 text-center">
               <CheckCircle size={26} className="text-green-500 mb-2" />
-              <p className="text-xs font-black text-gray-400">Queue is clear</p>
+              <p className="text-xs font-bold text-gray-400">Queue is clear</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -2836,45 +2878,45 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
                         <img src={resolveImageUrl(c.animal_image_url)} alt={c.animal_name} className="w-14 h-14 rounded-lg object-contain bg-black/30 shrink-0" />
                       )}
                       <div className="min-w-0">
-                        <p className="text-xs font-black text-white">{c.product_name || c.animal_name}</p>
-                        <p className="text-[10px] text-gray-400 font-medium">Seller: {c.seller_name} · {c.species || 'Livestock'}</p>
+                        <p className="text-xs font-bold text-white">{c.product_name || c.animal_name}</p>
+                        <p className="text-xs text-gray-400 font-medium">Seller: {c.seller_name} · {c.species || 'Livestock'}</p>
                         <div className="flex items-center gap-3 mt-1">
                           {c.seller_id && (
-                            <button onClick={() => onMessageFarmer?.({ startConversationWith: c.seller_id, subject: c.product_name || c.animal_name })} className="flex items-center gap-1 text-[9px] font-black text-pfuma-green uppercase hover:underline">
+                            <button onClick={() => onMessageFarmer?.({ startConversationWith: c.seller_id, subject: c.product_name || c.animal_name })} className="flex items-center gap-1 text-xs font-bold text-pfuma-green uppercase hover:underline">
                               <MessageSquare size={10} /> Message
                             </button>
                           )}
                           {c.seller_phone && (
-                            <a href={`tel:${c.seller_phone}`} className="flex items-center gap-1 text-[9px] font-black text-gray-400 uppercase hover:text-white transition">
+                            <a href={`tel:${c.seller_phone}`} className="flex items-center gap-1 text-xs font-bold text-gray-400 uppercase hover:text-white transition">
                               <PhoneCall size={10} /> Call
                             </a>
                           )}
                         </div>
                       </div>
                     </div>
-                    <span className="text-[9px] font-black text-orange-400 bg-orange-400/10 px-2 py-0.5 rounded-full uppercase shrink-0">Pending</span>
+                    <span className="text-xs font-bold text-orange-400 bg-orange-400/10 px-2 py-0.5 rounded-full uppercase shrink-0">Pending</span>
                   </div>
 
                   {/* Traditional-authority step. It comes before the police one,
                       so the officer sees the seller's answer before deciding. */}
                   {c.leader_clearance === 'attested' ? (
                     <div className="rounded-lg bg-green-500/10 border border-green-500/20 px-3 py-2 mb-1">
-                      <p className="text-[9px] font-black text-green-400 uppercase tracking-widest mb-0.5">Cleared by {c.leader_type || 'traditional authority'}</p>
-                      <p className="text-[11px] text-gray-200 font-medium">{c.leader_name}{c.leader_village ? ` · ${c.leader_village}` : ''}</p>
-                      <p className="text-[10px] text-gray-400 mt-0.5">
+                      <p className="text-xs font-bold text-green-400 uppercase tracking-wide mb-0.5">Cleared by {c.leader_type || 'traditional authority'}</p>
+                      <p className="text-xs text-gray-200 font-medium">{c.leader_name}{c.leader_village ? ` · ${c.leader_village}` : ''}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
                         {c.leader_cleared_on ? String(c.leader_cleared_on).slice(0, 10) : 'No date given'}
                         {c.leader_reference ? ` · Ref ${c.leader_reference}` : ''}
                       </p>
                     </div>
                   ) : c.leader_clearance === 'not_applicable' ? (
                     <div className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 mb-1">
-                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">No traditional authority</p>
-                      <p className="text-[11px] text-gray-300 font-medium">{c.leader_na_reason}</p>
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-0.5">No traditional authority</p>
+                      <p className="text-xs text-gray-300 font-medium">{c.leader_na_reason}</p>
                     </div>
                   ) : (
                     <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 mb-1 flex items-start gap-2">
                       <AlertTriangle size={13} className="text-red-400 shrink-0 mt-0.5" />
-                      <p className="text-[11px] text-red-300 font-medium">No Sabuku or Mambo clearance on record. Ask the seller to record it, or to state why none applies, before clearing.</p>
+                      <p className="text-xs text-red-300 font-medium">No Sabuku or Mambo clearance on record. Ask the seller to record it, or to state why none applies, before clearing.</p>
                     </div>
                   )}
 
@@ -2888,7 +2930,7 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
                         <Camera size={14} className="text-gray-500" />
                       </div>
                     )}
-                    <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide border border-white/10 transition ${photoUploadingId === c.id ? 'opacity-50' : 'cursor-pointer text-gray-300 hover:bg-white/10'}`}>
+                    <label className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide border border-white/10 transition ${photoUploadingId === c.id ? 'opacity-50' : 'cursor-pointer text-gray-300 hover:bg-white/10'}`}>
                       {photoUploadingId === c.id ? <RefreshCw size={11} className="animate-spin" /> : <Camera size={11} />}
                       {c.officer_photo_path ? 'Replace photo' : 'Upload photo of animal'}
                       <input
@@ -2900,17 +2942,17 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
 
                   {/* ZRP Form 392 Part A/B/C — whatever the seller has filled in so far */}
                   <div className="mt-2 rounded-lg bg-white/5 border border-white/10 px-3 py-2 space-y-1">
-                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">Livestock Clearance Certificate — Part A/B/C</p>
-                    <p className="text-[11px] text-gray-300 font-medium">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Livestock Clearance Certificate — Part A/B/C</p>
+                    <p className="text-xs text-gray-300 font-medium">
                       Seller Nat. ID: {c.seller_national_id || '—'} · Register No: {c.livestock_register_no || '—'} · Dip Tank: {c.dip_tank_name || '—'}
                     </p>
-                    <p className="text-[11px] text-gray-300 font-medium">
+                    <p className="text-xs text-gray-300 font-medium">
                       Buyer: {c.buyer_name || 'not yet arranged'}{c.buyer_national_id ? ` (${c.buyer_national_id})` : ''}{c.buyer_destination ? ` → ${c.buyer_destination}` : ''}
                     </p>
                     {c.transport_mode && (
-                      <p className="text-[11px] text-gray-300 font-medium">Transport: {c.transport_mode} — {c.transport_reference || '—'}</p>
+                      <p className="text-xs text-gray-300 font-medium">Transport: {c.transport_mode} — {c.transport_reference || '—'}</p>
                     )}
-                    {c.animal_description_note && <p className="text-[11px] text-gray-300 font-medium">Description: {c.animal_description_note}</p>}
+                    {c.animal_description_note && <p className="text-xs text-gray-300 font-medium">Description: {c.animal_description_note}</p>}
                   </div>
 
                   {/* Part D — witness signatures on file */}
@@ -2920,12 +2962,12 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
                       ['Vet Officer', c.vet_officer_signature_path, c.vet_officer_name],
                       ['Buyer', c.buyer_signature_path],
                     ].map(([label, path, extra]) => (
-                      <div key={label} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase ${path ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-gray-500'}`}>
+                      <div key={label} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold uppercase ${path ? 'bg-green-500/10 text-green-400' : 'bg-white/5 text-gray-500'}`}>
                         {path ? <CheckCircle size={11} /> : <X size={11} />} {label}{extra ? ` (${extra})` : ''} signed
                       </div>
                     ))}
                     {c.movement_permit_number && (
-                      <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase bg-blue-500/10 text-blue-400">
+                      <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold uppercase bg-blue-500/10 text-blue-400">
                         Vet Permit {c.movement_permit_number}
                       </div>
                     )}
@@ -2938,21 +2980,21 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
                         placeholder="Clearance Register No."
                         value={clearanceDrafts[c.id]?.registerNo || ''}
                         onChange={e => setDraft(c.id, { registerNo: e.target.value })}
-                        className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-2 text-[11px] text-white placeholder:text-gray-600 focus:outline-none focus:border-pfuma-green/50"
+                        className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-pfuma-green/50"
                       />
                       <input
                         placeholder="Vet/DVS Permit No. (if any)"
                         value={clearanceDrafts[c.id]?.permitNumber ?? c.movement_permit_number ?? ''}
                         onChange={e => setDraft(c.id, { permitNumber: e.target.value })}
-                        className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-2 text-[11px] text-white placeholder:text-gray-600 focus:outline-none focus:border-pfuma-green/50"
+                        className="bg-white/5 border border-white/10 rounded-lg px-2.5 py-2 text-xs text-white placeholder:text-gray-600 focus:outline-none focus:border-pfuma-green/50"
                       />
                     </div>
-                    <label className="flex items-start gap-2 text-[11px] text-gray-300 font-medium">
+                    <label className="flex items-start gap-2 text-xs text-gray-300 font-medium">
                       <input type="checkbox" className="mt-0.5" checked={!!clearanceDrafts[c.id]?.certified} onChange={e => setDraft(c.id, { certified: e.target.checked })} />
                       I certify that at the time of clearance the livestock described above had not been reported stolen.
                     </label>
                     <div>
-                      <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">Your Signature</p>
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Your Signature</p>
                       <SignaturePad onChange={blob => setDraft(c.id, { signatureBlob: blob })} height={100} />
                     </div>
                   </div>
@@ -2962,9 +3004,9 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
                       disabled={busyId === c.id || !c.leader_clearance || !clearanceDrafts[c.id]?.certified || !clearanceDrafts[c.id]?.signatureBlob}
                       title={!c.leader_clearance ? 'Sabuku or Mambo clearance must be on record first' : !clearanceDrafts[c.id]?.certified ? 'Certify the livestock was not reported stolen first' : !clearanceDrafts[c.id]?.signatureBlob ? 'Sign above first' : undefined}
                       onClick={() => resolveClearance(c.id, 'cleared')}
-                      className="flex-1 py-2 bg-green-600 text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="flex-1 py-2 bg-green-600 text-white rounded-lg text-xs font-bold uppercase hover:bg-green-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
                     >Clear Sale</button>
-                    <button disabled={busyId === c.id} onClick={() => resolveClearance(c.id, 'rejected')} className="flex-1 py-2 bg-white/10 text-gray-300 rounded-lg text-[10px] font-black uppercase hover:bg-white/20 transition disabled:opacity-40">Reject</button>
+                    <button disabled={busyId === c.id} onClick={() => resolveClearance(c.id, 'rejected')} className="flex-1 py-2 bg-white/10 text-gray-300 rounded-lg text-xs font-bold uppercase hover:bg-white/20 transition disabled:opacity-40">Reject</button>
                   </div>
                 </div>
               ))}
@@ -2977,8 +3019,8 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
           here. A cash sale never creates a listing for this unit to clear,
           so this is the only place an officer can see the pattern at all. */}
       <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-        <h3 className="text-sm font-black text-white mb-1">Off-Platform Transfers</h3>
-        <p className="text-[11px] text-gray-500 font-medium mb-4">Animals moved via a seller-generated code instead of a cleared Marketplace sale — visibility only, nothing to approve here.</p>
+        <h3 className="text-sm font-bold text-white mb-1">Off-Platform Transfers</h3>
+        <p className="text-xs text-gray-500 font-medium mb-4">Animals moved via a seller-generated code instead of a cleared Marketplace sale — visibility only, nothing to approve here.</p>
         {transfers.length === 0 ? (
           <p className="text-xs text-gray-500 font-medium italic text-center py-4">No off-platform transfers recorded yet.</p>
         ) : (
@@ -2986,24 +3028,24 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
             {transfers.slice(0, 20).map(t => (
               <div key={t.id} className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/10">
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-black text-white">{t.animal_name} <span className="text-gray-500 font-medium">· {t.species}</span></p>
-                  <p className="text-[10px] text-gray-400 font-medium">
+                  <p className="text-xs font-bold text-white">{t.animal_name} <span className="text-gray-500 font-medium">· {t.species}</span></p>
+                  <p className="text-xs text-gray-400 font-medium">
                     {t.seller_name} ({t.seller_phone}){t.buyer_name ? ` → ${t.buyer_name} (${t.buyer_phone})` : ''}
                   </p>
                   <div className="flex items-center gap-3 mt-1">
                     {t.seller_id && (
-                      <button onClick={() => onMessageFarmer?.({ startConversationWith: t.seller_id, subject: t.animal_name })} className="flex items-center gap-1 text-[9px] font-black text-pfuma-green uppercase hover:underline">
+                      <button onClick={() => onMessageFarmer?.({ startConversationWith: t.seller_id, subject: t.animal_name })} className="flex items-center gap-1 text-xs font-bold text-pfuma-green uppercase hover:underline">
                         <MessageSquare size={10} /> Message Seller
                       </button>
                     )}
                     {t.buyer_id && (
-                      <button onClick={() => onMessageFarmer?.({ startConversationWith: t.buyer_id, subject: t.animal_name })} className="flex items-center gap-1 text-[9px] font-black text-pfuma-green uppercase hover:underline">
+                      <button onClick={() => onMessageFarmer?.({ startConversationWith: t.buyer_id, subject: t.animal_name })} className="flex items-center gap-1 text-xs font-bold text-pfuma-green uppercase hover:underline">
                         <MessageSquare size={10} /> Message Buyer
                       </button>
                     )}
                   </div>
                 </div>
-                <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase shrink-0 ${
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full uppercase shrink-0 ${
                   t.status === 'claimed' ? 'bg-green-500/10 text-green-400' :
                   t.status === 'cancelled' ? 'bg-gray-500/10 text-gray-400' : 'bg-yellow-400/10 text-yellow-400'
                 }`}>{t.status}</span>
@@ -3015,7 +3057,7 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
 
       {/* Quick nav */}
       <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
-        <h3 className="text-sm font-black text-white mb-3">Quick Navigation</h3>
+        <h3 className="text-sm font-bold text-white mb-3">Quick Navigation</h3>
         <div className="grid grid-cols-2 gap-3">
           <QuickAction icon={Store}          label="Marketplace"    desc="Monitor livestock trade activity" color="bg-red-700" onClick={() => setActiveTab('marketplace')} />
           <QuickAction icon={MessageSquare}  label="Messenger"      desc="Coordinate with farmers &amp; vets" color="bg-red-700" onClick={() => setActiveTab('vet')} />
@@ -3086,15 +3128,15 @@ const InstitutionDashboard = ({ currentUser, setActiveTab }) => {
   const scrollToId = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   return (
-    <div className="bg-[#121212] lg:bg-pfuma-cream h-full overflow-y-auto text-left">
+    <div className="bg-bark-950 lg:bg-pfuma-cream h-full overflow-y-auto text-left">
       <div className="lg:hidden p-4 pb-4 space-y-4">
 
         {/* Header */}
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-teal-700 flex items-center justify-center text-white font-black text-sm shrink-0">{institutionInitials}</div>
+          <div className="w-11 h-11 rounded-2xl bg-teal-700 flex items-center justify-center text-white font-bold text-sm shrink-0">{institutionInitials}</div>
           <div className="min-w-0">
-            <p className="text-white/40 text-[10px] font-black uppercase tracking-[2px]">{greet()}, {currentUser?.institutionType || 'Institution'}</p>
-            <h2 className="text-white text-base font-black truncate">{currentUser?.org_name || currentUser?.name || 'Institution'}</h2>
+            <p className="text-white/40 text-xs font-bold uppercase tracking-[2px]">{greet()}, {currentUser?.institutionType || 'Institution'}</p>
+            <h2 className="text-white text-base font-bold truncate">{currentUser?.org_name || currentUser?.name || 'Institution'}</h2>
           </div>
         </div>
 
@@ -3102,13 +3144,13 @@ const InstitutionDashboard = ({ currentUser, setActiveTab }) => {
         <div className="grid grid-cols-2 gap-2.5">
           <div className="bg-teal-950 border border-teal-900/60 rounded-2xl p-3">
             <Search size={14} className="text-teal-400 mb-2" />
-            <p className="text-white text-lg font-black leading-none">{ledger.length}</p>
-            <p className="text-teal-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">Checked</p>
+            <p className="text-white text-lg font-bold leading-none">{ledger.length}</p>
+            <p className="text-teal-300/70 text-xs font-bold uppercase tracking-wide mt-1">Checked</p>
           </div>
           <div className="bg-amber-950 border border-amber-900/60 rounded-2xl p-3">
             <ShieldAlert size={14} className="text-amber-400 mb-2" />
-            <p className="text-white text-lg font-black leading-none">{flaggedCount}</p>
-            <p className="text-amber-300/70 text-[9px] font-bold uppercase tracking-wide mt-1">Flagged</p>
+            <p className="text-white text-lg font-bold leading-none">{flaggedCount}</p>
+            <p className="text-amber-300/70 text-xs font-bold uppercase tracking-wide mt-1">Flagged</p>
           </div>
         </div>
 
@@ -3119,52 +3161,50 @@ const InstitutionDashboard = ({ currentUser, setActiveTab }) => {
             { icon: Landmark,      label: 'My Lookups', onClick: () => scrollToId('institution-ledger') },
           ].map(q => (
             <button key={q.label} onClick={q.onClick} className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-white/90 hover:bg-white/10 transition shrink-0 whitespace-nowrap">
-              <q.icon size={13} /><span className="text-[11px] font-black">{q.label}</span>
+              <q.icon size={13} /><span className="text-xs font-bold">{q.label}</span>
             </button>
           ))}
         </div>
 
         {/* Action grid */}
         <div>
-          <p className="text-white/30 text-[10px] font-black uppercase tracking-[2px] mb-2.5 px-1">Quick Actions</p>
+          <p className="text-white/30 text-xs font-bold uppercase tracking-[2px] mb-2.5 px-1">Quick Actions</p>
           <div className="grid grid-cols-3 gap-2.5">
             {[
-              { icon: Search,        label: 'Look Up',    color: 'bg-teal-600', onClick: () => scrollToId('institution-lookup') },
-              { icon: Landmark,      label: 'My Lookups', color: 'bg-amber-500', badge: flaggedCount || null, onClick: () => scrollToId('institution-ledger') },
-              { icon: MessageSquare, label: 'Messenger',  color: 'bg-pink-500', tab: 'vet' },
+              { icon: Search,        label: 'Look Up',    color: 'bg-white/10', onClick: () => scrollToId('institution-lookup') },
+              { icon: Landmark,      label: 'My Lookups', color: 'bg-white/10', badge: flaggedCount || null, onClick: () => scrollToId('institution-ledger') },
+              { icon: MessageSquare, label: 'Messenger',  color: 'bg-white/10', tab: 'vet' },
             ].map(a => (
-              <button key={a.label} onClick={() => a.onClick ? a.onClick() : setActiveTab(a.tab)} className="relative bg-[#1E1E1E] border border-white/5 rounded-2xl p-3 flex flex-col items-center gap-2 hover:bg-[#252525] transition">
-                {a.badge ? <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-[8px] font-black rounded-full">{a.badge}</span> : null}
+              <button key={a.label} onClick={() => a.onClick ? a.onClick() : setActiveTab(a.tab)} className="relative bg-bark-900 border border-white/5 rounded-2xl p-3 flex flex-col items-center gap-2 hover:bg-bark-800 transition">
+                {a.badge ? <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full">{a.badge}</span> : null}
                 <div className={`w-10 h-10 rounded-xl ${a.color} flex items-center justify-center`}><a.icon size={17} className="text-white" /></div>
-                <span className="text-white/70 text-[9px] font-bold text-center leading-tight">{a.label}</span>
+                <span className="text-white/70 text-xs font-bold text-center leading-tight">{a.label}</span>
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="hidden lg:block p-6 pb-0">
+      <div className="hidden lg:block">
+
+      <DashboardHero
+        role="Institution"
+        eyebrow={`${greet()} · ${currentUser?.institutionType || 'Institution'}`}
+        title="Certificate verification"
+        stats={`${ledger.length} certificate${ledger.length !== 1 ? 's' : ''} checked · ${ledger.filter(l => l.flagged_as_collateral).length} flagged as collateral`}
+      />
+
+      <div className="p-6 pb-0">
       {/* Role explanation */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-teal-800 rounded-3xl p-6 relative overflow-hidden">
-          <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '20px 20px' }} aria-hidden="true" />
-          <div className="absolute -bottom-12 -right-8 w-44 h-44 rounded-full bg-white/10 blur-3xl" aria-hidden="true" />
-          <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 80% 50%, #fff 0%, transparent 60%)' }} aria-hidden="true" />
-          <div className="relative z-10">
-            <p className="text-teal-200 text-xs font-black uppercase tracking-[3px] mb-1">{greet()}, {currentUser?.institutionType || 'Institution'}</p>
-            <h2 className="text-xl font-black text-white leading-tight">Certificate Verification</h2>
-            <p className="text-teal-100/80 text-sm font-medium mt-1">
-              {ledger.length} certificate{ledger.length !== 1 ? 's' : ''} checked · {ledger.filter(l => l.flagged_as_collateral).length} flagged as collateral
-            </p>
-          </div>
-        </div>
-        <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm">
-          <p className="text-[10px] font-black text-teal-700 uppercase tracking-widest mb-2">Your Role on PFUMA</p>
-          <p className="text-sm font-black text-gray-800 mb-2">You verify livestock as loan/insurance collateral</p>
-          <p className="text-[11px] text-gray-500 font-medium leading-relaxed">
+      <div className="grid grid-cols-1 gap-4">
+        <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+          <p className="text-xs font-bold text-teal-700 uppercase tracking-wide mb-2">Your Role on PFUMA</p>
+          <p className="text-sm font-bold text-gray-800 mb-2">You verify livestock as loan/insurance collateral</p>
+          <p className="text-xs text-gray-500 font-medium leading-relaxed">
             A farmer shares you a certificate code for an animal they're offering as collateral. Look it up here — the check is saved to your ledger, and flagging it as held collateral warns any other lender who checks the same certificate.
           </p>
         </div>
+      </div>
       </div>
       </div>
 
@@ -3173,25 +3213,25 @@ const InstitutionDashboard = ({ currentUser, setActiveTab }) => {
 
         <div className="col-span-2 space-y-5">
           {/* Lookup box */}
-          <div id="institution-lookup" className="bg-[#1E1E1E] lg:bg-white border border-white/5 lg:border-gray-100 rounded-2xl p-5 lg:shadow-sm">
-            <h3 className="text-sm font-black text-white lg:text-gray-800 mb-1">Look Up a Certificate</h3>
-            <p className="text-[11px] text-white/40 lg:text-gray-400 font-medium mb-4">Enter the code from the certificate the farmer shared with you.</p>
+          <div id="institution-lookup" className="bg-bark-900 lg:bg-white border border-white/5 lg:border-gray-100 rounded-2xl p-5 lg:shadow-sm">
+            <h3 className="text-sm font-bold text-white lg:text-gray-800 mb-1">Look Up a Certificate</h3>
+            <p className="text-xs text-white/40 lg:text-gray-400 font-medium mb-4">Enter the code from the certificate the farmer shared with you.</p>
             <form onSubmit={lookup} className="flex gap-2">
               <input
                 value={code} onChange={e => setCode(e.target.value)}
                 placeholder="e.g. 51a18e001813" maxLength={20}
-                className="flex-1 min-w-0 px-3 py-2.5 bg-white/5 lg:bg-gray-50 rounded-xl border-2 border-transparent focus:border-teal-700 outline-none font-black text-sm text-center tracking-[0.15em] text-white lg:text-gray-800 placeholder:text-white/20 lg:placeholder:text-gray-300 placeholder:tracking-normal placeholder:font-medium"
+                className="flex-1 min-w-0 px-3 py-2.5 bg-white/5 lg:bg-gray-50 rounded-xl border-2 border-transparent focus:border-teal-700 outline-none font-bold text-sm text-center tracking-[0.15em] text-white lg:text-gray-800 placeholder:text-white/20 lg:placeholder:text-gray-300 placeholder:tracking-normal placeholder:font-medium"
               />
-              <button type="submit" disabled={lookupBusy || !code.trim()} className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-teal-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-teal-800 transition disabled:opacity-50">
+              <button type="submit" disabled={lookupBusy || !code.trim()} className="shrink-0 flex items-center gap-2 px-5 py-2.5 bg-teal-700 text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-teal-800 transition disabled:opacity-50">
                 <Search size={14} /> {lookupBusy ? '…' : 'Verify'}
               </button>
             </form>
-            {lookupError && <p className="text-[11px] text-red-400 lg:text-red-500 font-bold mt-3">{lookupError}</p>}
+            {lookupError && <p className="text-xs text-red-400 lg:text-red-500 font-bold mt-3">{lookupError}</p>}
 
             {result && (
               <div className="mt-4 rounded-2xl border-2 border-teal-900/60 lg:border-teal-100 bg-teal-950/40 lg:bg-teal-50/50 p-5">
                 {result.already_pledged && (
-                  <div className="flex items-center gap-2 bg-red-950/60 lg:bg-red-50 border border-red-900/60 lg:border-red-200 text-red-300 lg:text-red-700 rounded-xl px-3 py-2.5 mb-4 text-[11px] font-black">
+                  <div className="flex items-center gap-2 bg-red-950/60 lg:bg-red-50 border border-red-900/60 lg:border-red-200 text-red-300 lg:text-red-700 rounded-xl px-3 py-2.5 mb-4 text-xs font-bold">
                     <ShieldAlert size={14} className="shrink-0" /> Already flagged as held collateral{result.flagged_by_me ? ' by you' : ' by another institution'} — verify with the farmer before relying on it.
                   </div>
                 )}
@@ -3203,14 +3243,14 @@ const InstitutionDashboard = ({ currentUser, setActiveTab }) => {
                     ['Certified Value', `USD ${Number(result.estimated_value).toLocaleString()}`],
                   ].map(([label, value]) => (
                     <div key={label}>
-                      <p className="text-[9px] font-black text-white/40 lg:text-gray-400 uppercase tracking-widest mb-0.5">{label}</p>
-                      <p className="text-sm font-black text-white lg:text-gray-800">{value}</p>
+                      <p className="text-xs font-bold text-white/40 lg:text-gray-400 uppercase tracking-wide mb-0.5">{label}</p>
+                      <p className="text-sm font-bold text-white lg:text-gray-800">{value}</p>
                     </div>
                   ))}
                 </div>
                 <button
                   onClick={flagCollateral} disabled={flagBusy || result.flagged_by_me}
-                  className="w-full mt-4 py-2.5 bg-gray-700 lg:bg-gray-800 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-gray-600 lg:hover:bg-gray-900 transition disabled:opacity-50"
+                  className="w-full mt-4 py-2.5 bg-gray-700 lg:bg-gray-800 text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-gray-600 lg:hover:bg-gray-900 transition disabled:opacity-50"
                 >
                   {result.flagged_by_me ? 'Flagged as Held Collateral ✓' : flagBusy ? 'Flagging…' : 'Flag as Held Collateral'}
                 </button>
@@ -3219,27 +3259,27 @@ const InstitutionDashboard = ({ currentUser, setActiveTab }) => {
           </div>
 
           {/* Ledger */}
-          <div id="institution-ledger" className="bg-[#1E1E1E] lg:bg-white border border-white/5 lg:border-gray-100 rounded-2xl p-5 lg:shadow-sm">
-            <h3 className="text-sm font-black text-white lg:text-gray-800 mb-1">My Lookups</h3>
-            <p className="text-[11px] text-white/40 lg:text-gray-400 font-medium mb-4">Every certificate you've checked, most recent first.</p>
+          <div id="institution-ledger" className="bg-bark-900 lg:bg-white border border-white/5 lg:border-gray-100 rounded-2xl p-5 lg:shadow-sm">
+            <h3 className="text-sm font-bold text-white lg:text-gray-800 mb-1">My Lookups</h3>
+            <p className="text-xs text-white/40 lg:text-gray-400 font-medium mb-4">Every certificate you've checked, most recent first.</p>
             {ledgerLoading ? (
               <p className="text-xs text-white/30 lg:text-gray-400 font-medium italic text-center py-8">Loading…</p>
             ) : ledger.length === 0 ? (
               <div className="text-center py-10 border-2 border-dashed border-white/10 lg:border-gray-200 rounded-2xl">
                 <Landmark size={28} className="mx-auto text-white/20 lg:text-gray-300 mb-2" />
-                <p className="text-sm font-black text-white/30 lg:text-gray-400">No certificates checked yet</p>
+                <p className="text-sm font-bold text-white/30 lg:text-gray-400">No certificates checked yet</p>
               </div>
             ) : (
               <div className="space-y-2.5">
                 {ledger.map((l, i) => (
                   <div key={`${l.verification_code}-${i}`} className="flex items-center gap-3 p-3.5 bg-white/[0.03] lg:bg-gray-50 rounded-xl">
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-black text-white lg:text-gray-800 truncate">{l.animal_name} <span className="text-white/40 lg:text-gray-400 font-medium">· {l.species}</span></p>
-                      <p className="text-[10px] text-white/30 lg:text-gray-400 font-medium">{l.owner_name} · checked {new Date(l.looked_up_at).toLocaleDateString()}</p>
+                      <p className="text-xs font-bold text-white lg:text-gray-800 truncate">{l.animal_name} <span className="text-white/40 lg:text-gray-400 font-medium">· {l.species}</span></p>
+                      <p className="text-xs text-white/30 lg:text-gray-400 font-medium">{l.owner_name} · checked {new Date(l.looked_up_at).toLocaleDateString()}</p>
                     </div>
-                    <p className="text-xs font-black text-teal-400 lg:text-teal-700 shrink-0">${Number(l.estimated_value).toLocaleString()}</p>
+                    <p className="text-xs font-bold text-teal-400 lg:text-teal-700 shrink-0">${Number(l.estimated_value).toLocaleString()}</p>
                     {!!l.flagged_as_collateral && (
-                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full uppercase shrink-0 bg-teal-500/15 lg:bg-teal-100 text-teal-300 lg:text-teal-700">Flagged</span>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full uppercase shrink-0 bg-teal-500/15 lg:bg-teal-100 text-teal-300 lg:text-teal-700">Flagged</span>
                     )}
                   </div>
                 ))}
@@ -3249,8 +3289,8 @@ const InstitutionDashboard = ({ currentUser, setActiveTab }) => {
         </div>
 
         <div className="col-span-1 space-y-5">
-          <div className="bg-[#1E1E1E] lg:bg-white border border-white/5 lg:border-gray-100 rounded-2xl p-5 lg:shadow-sm">
-            <h3 className="text-sm font-black text-white lg:text-gray-800 mb-3">How It Works</h3>
+          <div className="bg-bark-900 lg:bg-white border border-white/5 lg:border-gray-100 rounded-2xl p-5 lg:shadow-sm">
+            <h3 className="text-sm font-bold text-white lg:text-gray-800 mb-3">How It Works</h3>
             <div className="space-y-3">
               {[
                 { n: '1', t: 'Get the Code', d: 'A farmer shares the certificate code for an animal offered as collateral' },
@@ -3259,10 +3299,10 @@ const InstitutionDashboard = ({ currentUser, setActiveTab }) => {
                 { n: '4', t: 'Flag It', d: 'Mark it as held collateral so the next lender sees it’s taken' },
               ].map(s => (
                 <div key={s.n} className="flex items-start gap-3">
-                  <div className="w-5 h-5 bg-teal-700 rounded-full flex items-center justify-center text-[9px] font-black text-white shrink-0 mt-0.5">{s.n}</div>
+                  <div className="w-5 h-5 bg-teal-700 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 mt-0.5">{s.n}</div>
                   <div>
-                    <p className="text-[11px] font-black text-white lg:text-gray-800">{s.t}</p>
-                    <p className="text-[10px] text-white/40 lg:text-gray-400 font-medium">{s.d}</p>
+                    <p className="text-xs font-bold text-white lg:text-gray-800">{s.t}</p>
+                    <p className="text-xs text-white/40 lg:text-gray-400 font-medium">{s.d}</p>
                   </div>
                 </div>
               ))}
@@ -3418,19 +3458,34 @@ const NAV_SECTIONS = {
   ],
 };
 
+// ── Role chrome ──
+// Every role now shares one identity: a deep bark sidebar. Painting each
+// role's entire chrome a different hue (green / slate / gold / violet /
+// red) made the product look like five different products, and a Farmer
+// sitting next to a Vet at a dip tank saw two unrelated apps. Role is
+// instead carried by a single accent — used on the active nav marker and
+// the role chip — which is enough to orient someone without fracturing the
+// brand.
+const SIDEBAR_BG = 'bg-bark-900';
+
 const ROLE_ACCENT = {
-  Farmer:      'bg-pfuma-green',
-  Veterinarian:'bg-pfuma-slate',
-  Supplier:    'bg-pfuma-gold',
-  Buyer:    'bg-pfuma-plum',
-  Police:      'bg-red-800',
+  Farmer: SIDEBAR_BG, Veterinarian: SIDEBAR_BG, Supplier: SIDEBAR_BG,
+  Buyer: SIDEBAR_BG, Police: SIDEBAR_BG, Institution: SIDEBAR_BG,
 };
 const ROLE_ACTIVE_BG = {
-  Farmer:      'bg-white/10',
-  Veterinarian:'bg-white/10',
-  Supplier:    'bg-white/15',
-  Buyer:    'bg-white/10',
-  Police:      'bg-white/10',
+  Farmer: 'bg-white/[0.07]', Veterinarian: 'bg-white/[0.07]', Supplier: 'bg-white/[0.07]',
+  Buyer: 'bg-white/[0.07]', Police: 'bg-white/[0.07]', Institution: 'bg-white/[0.07]',
+};
+
+// The one differentiating colour per role, drawn from the earthy palette so
+// no role ever falls outside it.
+const ROLE_TINT = {
+  Farmer:       { text: 'text-amber-400',  bg: 'bg-amber-400'  },
+  Veterinarian: { text: 'text-teal-300',   bg: 'bg-teal-300'   },
+  Supplier:     { text: 'text-orange-300', bg: 'bg-orange-300' },
+  Buyer:        { text: 'text-purple-300', bg: 'bg-purple-300' },
+  Police:       { text: 'text-red-300',    bg: 'bg-red-300'    },
+  Institution:  { text: 'text-green-300',  bg: 'bg-green-300'  },
 };
 
 const IMAGE_BY_SPECIES = {
@@ -3449,6 +3504,10 @@ const resolveImageUrl = (url) => (url && url.startsWith('/uploads/')) ? `${API}$
 const animalFromApi = (a) => ({
   id: a.id, name: a.name, species: a.species, breed: a.breed,
   birthDate: a.birth_date, tagId: a.tag_id, brandId: a.brand_id,
+  // Derived, not sent by the API. The herd registry, the animal detail
+  // header, the health passport and the Lifecycle animal picker all render
+  // `animal.age`; without this they render nothing at all.
+  age: calculateAge(a.birth_date),
   sireId: a.sire_id, damId: a.dam_id, birthWeight: a.birth_weight, currentWeight: a.current_weight,
   imageUrl: resolveImageUrl(a.image_url) || IMAGE_BY_SPECIES[a.species] || IMAGE_BY_SPECIES.Cattle,
   photos: (a.photos && a.photos.length > 0 ? a.photos : (a.image_url ? [a.image_url] : [])).map(resolveImageUrl),
@@ -3805,11 +3864,12 @@ function App() {
 
   const role        = currentUser.role;
   const navSections = NAV_SECTIONS[role] || NAV_SECTIONS.Farmer;
-  const sidebarBg   = ROLE_ACCENT[role]  || 'bg-pfuma-green';
-  const activeBg    = ROLE_ACTIVE_BG[role] || 'bg-white/10';
+  const sidebarBg   = ROLE_ACCENT[role]  || SIDEBAR_BG;
+  const activeBg    = ROLE_ACTIVE_BG[role] || 'bg-white/[0.07]';
+  const tint        = ROLE_TINT[role] || ROLE_TINT.Farmer;
 
   return (
-    <div className="flex h-screen bg-gray-100 font-sans overflow-hidden relative">
+    <div className="flex h-screen bg-ivory font-sans overflow-hidden relative">
 
       {/* Backdrop — closes the mobile nav drawer when tapped outside it */}
       {isMobileNavOpen && (
@@ -3823,21 +3883,26 @@ function App() {
       {/* ── SIDEBAR ── Fixed off-canvas drawer below the lg breakpoint,
           normal static column at lg and above. */}
       <aside className={`
-        fixed inset-y-0 left-0 z-40 w-64 flex flex-col shrink-0 ${sidebarBg} text-white
-        transform transition-transform duration-300 ease-in-out
+        fixed inset-y-0 left-0 z-40 w-[17.5rem] flex flex-col shrink-0 ${sidebarBg} text-white
+        transform transition-transform duration-300 ease-out
         ${isMobileNavOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:static lg:translate-x-0 lg:z-20
       `}>
 
-        {/* Logo */}
-        <div className="px-6 pt-6 pb-4 flex items-center gap-3">
-          <img src={pfumaMark} alt="PFUMA" className="w-10 h-10 rounded-xl shadow-lg shrink-0 object-cover" />
-          <div className="flex-1">
-            <span className="text-base font-extrabold tracking-tight block leading-none">PFUMA</span>
+        {/* Logo lockup — the mark, the wordmark, and the role the current
+            account is signed in as. Role lives here rather than colouring
+            the whole sidebar. */}
+        <div className="px-5 pt-6 pb-5 flex items-start gap-3">
+          <img src={pfumaMark} alt="" className="w-10 h-10 rounded-xl shrink-0 object-cover" />
+          <div className="flex-1 min-w-0 pt-0.5">
+            <span className="text-[1.0625rem] font-extrabold tracking-tight block leading-none">PFUMA</span>
+            <span className={`text-[0.6875rem] font-bold uppercase tracking-[0.12em] mt-1.5 block ${tint.text}`}>
+              {role}
+            </span>
           </div>
           <button
             onClick={() => setIsMobileNavOpen(false)}
-            className="lg:hidden w-8 h-8 flex items-center justify-center text-white/60 hover:text-white transition"
+            className="lg:hidden w-8 h-8 -mt-1 flex items-center justify-center text-white/50 hover:text-white transition rounded-lg"
             aria-label="Close menu"
           >
             <X size={18} />
@@ -3845,10 +3910,10 @@ function App() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-4 overflow-y-auto pb-4 space-y-5 mt-2">
+        <nav className="flex-1 px-3 overflow-y-auto pb-4 space-y-6" aria-label="Main">
           {navSections.map(sec => (
             <div key={sec.section}>
-              <p className="text-[9px] font-black text-white/30 uppercase tracking-[2px] px-2 mb-1.5">{sec.section}</p>
+              <p className="pf-eyebrow-light px-3 mb-2">{sec.section}</p>
               <div className="space-y-0.5">
                 {sec.items.map(item => {
                   const isActive = activeTab === item.tab;
@@ -3856,14 +3921,30 @@ function App() {
                     <button
                       key={item.tab}
                       onClick={() => { setActiveTab(item.tab); setIsMobileNavOpen(false); }}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition text-left ${isActive ? `${activeBg} text-white` : 'text-white/40 hover:bg-white/5 hover:text-white/80'}`}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`relative w-full flex items-start gap-3 pl-4 pr-3 py-2.5 rounded-xl transition-colors duration-200 text-left ${
+                        isActive ? `${activeBg} text-white` : 'text-white/55 hover:bg-white/[0.05] hover:text-white/90'
+                      }`}
                     >
-                      <item.icon size={16} className={isActive ? 'text-yellow-400' : ''} aria-hidden="true" />
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-xs font-black leading-none ${isActive ? 'text-white' : ''}`}>{item.label}</p>
-                        <p className={`text-[10px] font-medium leading-none mt-0.5 ${isActive ? 'text-white/60' : 'text-white/25'}`}>{item.desc}</p>
-                      </div>
-                      {isActive && <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 shrink-0" />}
+                      {/* Active marker: a short accent rule, not a floating
+                          dot. Reads as a position in a list. */}
+                      <span
+                        aria-hidden="true"
+                        className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full transition-all duration-200 ${
+                          isActive ? `${tint.bg} opacity-100` : 'opacity-0'
+                        }`}
+                      />
+                      <item.icon
+                        size={17}
+                        className={`shrink-0 mt-px transition-colors ${isActive ? tint.text : 'text-white/45'}`}
+                        aria-hidden="true"
+                      />
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-[0.8125rem] font-semibold leading-tight">{item.label}</span>
+                        <span className={`block text-[0.6875rem] font-medium leading-snug mt-1 ${isActive ? 'text-white/55' : 'text-white/35'}`}>
+                          {item.desc}
+                        </span>
+                      </span>
                     </button>
                   );
                 })}
@@ -3898,7 +3979,7 @@ function App() {
                     onChange={e => setNameDraft(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') handleNameChange(); if (e.key === 'Escape') setIsEditingName(false); }}
                     disabled={nameSaving}
-                    className="w-full min-w-0 bg-white/10 text-white text-xs font-black rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-yellow-400"
+                    className="w-full min-w-0 bg-white/10 text-white text-xs font-bold rounded-lg px-2 py-1 outline-none focus:ring-1 focus:ring-yellow-400"
                   />
                   <button onClick={handleNameChange} disabled={nameSaving} aria-label="Save name" className="text-yellow-400 hover:text-yellow-300 shrink-0 disabled:opacity-50">
                     <Check size={14} />
@@ -3910,14 +3991,15 @@ function App() {
               ) : (
                 <button
                   onClick={() => { setNameDraft(currentUser.name); setIsEditingName(true); }}
-                  className="flex items-center gap-1.5 group/name text-left w-full min-w-0"
+                  className="flex items-center gap-1.5 group/name text-left w-full min-w-0 py-2.5 -my-2 rounded-lg"
                   title="Edit your registered name"
+                  aria-label={`Edit your registered name (${currentUser.name})`}
                 >
-                  <p className="text-xs font-black text-white leading-none truncate">{currentUser.name}</p>
-                  <Pencil size={10} className="text-white/0 group-hover/name:text-white/50 transition shrink-0" />
+                  <span className="text-xs font-bold text-white leading-none truncate">{currentUser.name}</span>
+                  <Pencil size={11} className="text-white/0 group-hover/name:text-white/50 transition shrink-0" aria-hidden="true" />
                 </button>
               )}
-              <p className="text-[10px] text-yellow-400 font-black uppercase tracking-widest leading-none mt-0.5">{role}</p>
+              <p className="text-xs text-yellow-400 font-bold uppercase tracking-wide leading-none mt-0.5">{role}</p>
             </div>
           </div>
 
@@ -3928,23 +4010,23 @@ function App() {
                 <input
                   autoFocus placeholder="Next of kin full name" value={kinDraft.name}
                   onChange={e => setKinDraft(p => ({ ...p, name: e.target.value }))}
-                  className="w-full bg-white/10 text-white text-[11px] font-bold rounded-lg px-2.5 py-1.5 outline-none placeholder:text-white/30 focus:ring-1 focus:ring-yellow-400"
+                  className="w-full bg-white/10 text-white text-xs font-bold rounded-lg px-2.5 py-1.5 outline-none placeholder:text-white/30 focus:ring-1 focus:ring-yellow-400"
                 />
                 <input
                   placeholder="Phone number" value={kinDraft.phone}
                   onChange={e => setKinDraft(p => ({ ...p, phone: e.target.value }))}
-                  className="w-full bg-white/10 text-white text-[11px] font-bold rounded-lg px-2.5 py-1.5 outline-none placeholder:text-white/30 focus:ring-1 focus:ring-yellow-400"
+                  className="w-full bg-white/10 text-white text-xs font-bold rounded-lg px-2.5 py-1.5 outline-none placeholder:text-white/30 focus:ring-1 focus:ring-yellow-400"
                 />
                 <input
                   placeholder="Relationship (e.g. Spouse)" value={kinDraft.relationship}
                   onChange={e => setKinDraft(p => ({ ...p, relationship: e.target.value }))}
-                  className="w-full bg-white/10 text-white text-[11px] font-bold rounded-lg px-2.5 py-1.5 outline-none placeholder:text-white/30 focus:ring-1 focus:ring-yellow-400"
+                  className="w-full bg-white/10 text-white text-xs font-bold rounded-lg px-2.5 py-1.5 outline-none placeholder:text-white/30 focus:ring-1 focus:ring-yellow-400"
                 />
                 <div className="flex items-center gap-2 pt-1">
-                  <button onClick={handleKinSave} disabled={kinSaving} className="flex-1 py-1.5 bg-pfuma-green text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition disabled:opacity-50">
+                  <button onClick={handleKinSave} disabled={kinSaving} className="flex-1 py-1.5 bg-pfuma-green text-white rounded-lg text-xs font-bold uppercase hover:bg-green-700 transition disabled:opacity-50">
                     {kinSaving ? 'Saving…' : 'Save'}
                   </button>
-                  <button onClick={() => setIsEditingKin(false)} disabled={kinSaving} className="px-3 py-1.5 border border-white/10 text-white/60 rounded-lg text-[10px] font-black uppercase hover:text-white transition disabled:opacity-50">
+                  <button onClick={() => setIsEditingKin(false)} disabled={kinSaving} className="px-3 py-1.5 border border-white/10 text-white/60 rounded-lg text-xs font-bold uppercase hover:text-white transition disabled:opacity-50">
                     Cancel
                   </button>
                 </div>
@@ -3958,15 +4040,15 @@ function App() {
                   });
                   setIsEditingKin(true);
                 }}
-                className="w-full flex items-center gap-2 py-2 px-1 text-white/40 hover:text-white transition text-left"
+                className="w-full flex items-center gap-2 py-2.5 px-1 text-white/55 hover:text-white transition text-left rounded-lg"
                 title="Set who can take over this account if something happens to you"
               >
                 <UserPlus size={12} className="shrink-0" />
-                <span className="text-[10px] font-bold uppercase tracking-wide flex-1 truncate">
+                <span className="text-xs font-bold uppercase tracking-wide flex-1 truncate">
                   {currentUser.nextOfKinName ? `Next of kin: ${currentUser.nextOfKinName}` : 'Add next of kin'}
                 </span>
                 {currentUser.nextOfKinName && (
-                  <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-full uppercase shrink-0 ${currentUser.nextOfKinVerificationStatus === 'verified' ? 'bg-pfuma-green/30 text-green-300' : 'bg-orange-400/20 text-orange-300'}`}>
+                  <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full uppercase shrink-0 ${currentUser.nextOfKinVerificationStatus === 'verified' ? 'bg-pfuma-green/30 text-green-300' : 'bg-orange-400/20 text-orange-300'}`}>
                     {currentUser.nextOfKinVerificationStatus === 'verified' ? 'Verified' : 'Pending'}
                   </span>
                 )}
@@ -3976,37 +4058,46 @@ function App() {
 
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center justify-center gap-2 py-2.5 border border-white/10 rounded-xl text-white/40 hover:text-white hover:bg-red-600/20 transition text-[10px] font-black uppercase tracking-widest"
+            className="w-full flex items-center justify-center gap-2 py-2.5 border border-white/12 rounded-xl text-white/55 hover:text-white hover:bg-red-600/25 hover:border-red-400/30 transition text-xs font-semibold"
           >
-            <LogOut size={13} /> Sign Out
+            <LogOut size={14} /> Sign out
           </button>
         </div>
       </aside>
 
       {/* ── MAIN ── */}
-      <main className="flex-1 flex flex-col overflow-hidden bg-white relative w-full min-w-0">
+      <main className="flex-1 flex flex-col overflow-hidden bg-ivory relative w-full min-w-0">
 
-        {/* Mobile top bar — hamburger + logo, only shown below lg since the
-            sidebar is off-canvas there and this is the only way back to it. */}
-        <div className="lg:hidden flex items-center gap-3 px-4 py-3 border-b border-gray-100 shrink-0">
+        {/* Mobile top bar — hamburger + wordmark + bell. Below lg the
+            sidebar is off-canvas, so this is the only way back to it. The
+            bell lives inline here rather than floating: as an absolutely
+            positioned element it sat on top of this bar and covered the
+            wordmark on every phone. */}
+        <div className="lg:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-bark-500/10 shrink-0 z-20">
           <button
             onClick={() => setIsMobileNavOpen(true)}
-            className="w-9 h-9 flex items-center justify-center text-gray-600 hover:text-gray-900 transition"
+            className="w-9 h-9 -ml-1 flex items-center justify-center text-gray-700 hover:text-gray-900 rounded-lg transition"
             aria-label="Open menu"
           >
             <Menu size={20} />
           </button>
-          <img src={pfumaMark} alt="PFUMA" className="w-7 h-7 rounded-lg shadow shrink-0 object-cover" />
-          <span className="text-sm font-extrabold text-gray-900 tracking-tight">PFUMA</span>
+          <img src={pfumaMark} alt="" className="w-7 h-7 rounded-lg shrink-0 object-cover" />
+          <span className="text-[0.9375rem] font-extrabold text-gray-900 tracking-tight">PFUMA</span>
+          <span className={`text-[0.625rem] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full bg-cream text-bark-500`}>
+            {role}
+          </span>
+          <span className="flex-1" />
         </div>
 
-        {/* Notification bell */}
-        <div className="absolute top-4 right-5 z-30">
+        {/* Notification bell — floats top-right on desktop only; on mobile
+            it is anchored into the bar above so it can never overlap. */}
+        <div className="absolute top-3.5 right-4 lg:top-5 lg:right-6 z-30">
           <div className="relative">
             <button
-              className={`p-2.5 rounded-xl transition-all ${isNotifOpen ? `${sidebarBg} text-white shadow-lg` : 'bg-white text-gray-400 shadow-sm hover:text-gray-700 border border-gray-100'}`}
+              className={`p-2.5 rounded-xl transition-all ${isNotifOpen ? `${sidebarBg} text-white shadow-lg` : 'bg-white text-gray-500 shadow-sm hover:text-gray-800 border border-bark-500/10'}`}
               onClick={() => setIsNotifOpen(p => !p)}
               aria-label="Notifications"
+              aria-expanded={isNotifOpen}
             >
               <Bell size={17} />
               {(realNotifications.some(n => !n.read_at) || notifications.length > 0) && <span className="absolute top-0.5 right-0.5 w-2 h-2 bg-red-500 rounded-full border border-white" />}
@@ -4015,22 +4106,22 @@ function App() {
               <div className="absolute top-12 right-0 w-80 max-h-[70vh] overflow-y-auto bg-white rounded-2xl shadow-2xl border border-gray-100 p-5 text-left z-40 animate-in slide-in-from-top-2 duration-200">
                 {realNotifications.length > 0 && (
                   <>
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Activity</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Activity</p>
                     <div className="space-y-2.5 mb-5">
                       {realNotifications.map(n => (
                         <div key={n.id} className={`p-3 rounded-xl ${n.read_at ? 'bg-gray-50' : 'bg-pfuma-green/5 border border-pfuma-green/20'}`}>
                           <div className="flex items-start gap-2.5">
                             <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.read_at ? 'bg-gray-300' : 'bg-pfuma-green'}`} />
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-black text-gray-800">{n.title}</p>
-                              <p className="text-[10px] text-gray-500 font-medium mt-0.5">{n.message}</p>
-                              <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">{timeAgo(n.created_at)}</p>
+                              <p className="text-xs font-bold text-gray-800">{n.title}</p>
+                              <p className="text-xs text-gray-500 font-medium mt-0.5">{n.message}</p>
+                              <p className="text-xs text-gray-400 font-bold uppercase mt-1">{timeAgo(n.created_at)}</p>
                             </div>
                           </div>
                           {n.related_user_id && (
                             <button
                               onClick={() => messageFromNotification(n)}
-                              className="mt-2 ml-4 flex items-center gap-1.5 px-3 py-1.5 bg-pfuma-green text-white rounded-lg text-[10px] font-black uppercase hover:bg-green-700 transition"
+                              className="mt-2 ml-4 flex items-center gap-1.5 px-3 py-1.5 bg-pfuma-green text-white rounded-lg text-xs font-bold uppercase hover:bg-green-700 transition"
                             >
                               <MessageSquare size={11} /> Message
                             </button>
@@ -4040,15 +4131,15 @@ function App() {
                     </div>
                   </>
                 )}
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Regional Alerts</p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-4">Regional Alerts</p>
                 <div className="space-y-3">
                   {notifications.map(n => (
                     <div key={n.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
                       <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${n.type === 'Critical' ? 'bg-red-500' : 'bg-blue-500'}`} />
                       <div>
-                        <p className="text-xs font-black text-gray-800">{n.title}</p>
-                        <p className="text-[10px] text-gray-500 font-medium mt-0.5">{n.msg}</p>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">{n.time}</p>
+                        <p className="text-xs font-bold text-gray-800">{n.title}</p>
+                        <p className="text-xs text-gray-500 font-medium mt-0.5">{n.msg}</p>
+                        <p className="text-xs text-gray-400 font-bold uppercase mt-1">{n.time}</p>
                       </div>
                     </div>
                   ))}

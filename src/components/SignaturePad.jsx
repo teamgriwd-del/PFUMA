@@ -73,12 +73,12 @@ const SignaturePad = ({ onChange, height = 160 }) => {
           onPointerLeave={end}
         />
         {!hasDrawn && (
-          <p className="absolute inset-0 flex items-center justify-center text-xs text-gray-300 font-bold uppercase tracking-widest pointer-events-none">
+          <p className="absolute inset-0 flex items-center justify-center text-xs text-gray-300 font-bold uppercase tracking-wide pointer-events-none">
             Sign here
           </p>
         )}
       </div>
-      <button type="button" onClick={clear} className="mt-2 flex items-center gap-1.5 text-[10px] font-black text-gray-400 hover:text-gray-600 uppercase tracking-widest transition">
+      <button type="button" onClick={clear} className="mt-2 flex items-center gap-1.5 text-xs font-bold text-gray-400 hover:text-gray-600 uppercase tracking-wide transition">
         <Eraser size={11} /> Clear
       </button>
     </div>

@@ -55,7 +55,7 @@ const Avatar = ({ user, size = 'md' }) => {
   const meta = ROLE_META[user?.role];
   const Icon = meta?.icon;
   return (
-    <div className={`${sizeClass} ${meta?.color || 'bg-gray-500'} rounded-full flex items-center justify-center text-white font-black shrink-0`}>
+    <div className={`${sizeClass} ${meta?.color || 'bg-gray-500'} rounded-full flex items-center justify-center text-white font-bold shrink-0`}>
       {Icon ? <Icon size={iconSize} /> : initials(user?.full_name)}
     </div>
   );
@@ -108,7 +108,7 @@ const AttachmentPreview = ({ msg, token, isOwn }) => {
            className="max-w-full max-h-64 rounded-xl cursor-pointer object-cover" />
     ) : (
       <div className="w-40 h-32 rounded-xl bg-black/10 flex items-center justify-center">
-        {error ? <span className="text-[10px]">Couldn't load image</span> : <Loader2 size={16} className="animate-spin" />}
+        {error ? <span className="text-xs">Couldn't load image</span> : <Loader2 size={16} className="animate-spin" />}
       </div>
     );
   }
@@ -134,7 +134,7 @@ const MessageBubble = ({ msg, isOwn, token }) => (
         {msg.message && <div>{msg.message}</div>}
       </div>
       <div className={`flex items-center gap-1 mt-1 px-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
-        <span className="text-[10px] text-gray-400 font-medium">{fmtTime(msg.sent_at)}</span>
+        <span className="text-xs text-gray-400 font-medium">{fmtTime(msg.sent_at)}</span>
         {isOwn && (msg.read_at ? <CheckCheck size={12} className="text-blue-400" /> : <Check size={12} className="text-gray-400" />)}
       </div>
     </div>
@@ -442,7 +442,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
 
         <div className="px-5 pt-6 pb-4 border-b border-gray-100">
           <div className="flex justify-between items-center mb-1">
-            <h2 className="text-xl font-black text-gray-900">PFUMA Messenger</h2>
+            <h2 className="text-xl font-bold text-gray-900">PFUMA Messenger</h2>
             <button
               onClick={() => { setIsComposing(true); setSelectedContact(null); setActiveConvId(null); setPeopleQuery(''); }}
               className="w-9 h-9 bg-pfuma-green text-white rounded-full flex items-center justify-center hover:bg-green-700 transition shadow-md"
@@ -451,9 +451,9 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
               <Plus size={18} />
             </button>
           </div>
-          <p className="text-[11px] text-gray-400 font-medium mb-4">Any verified PFUMA member can message any other — vets, suppliers, farmers &amp; buyers.</p>
+          <p className="text-xs text-gray-400 font-medium mb-4">Any verified PFUMA member can message any other — vets, suppliers, farmers &amp; buyers.</p>
           {!apiOnline && (
-            <div className="mb-3 flex items-center gap-2 bg-yellow-50 border border-yellow-200 px-3 py-2 rounded-xl text-[11px] font-bold text-yellow-700">
+            <div className="mb-3 flex items-center gap-2 bg-yellow-50 border border-yellow-200 px-3 py-2 rounded-xl text-xs font-bold text-yellow-700">
               Can't reach the PFUMA API — check the Flask backend is running.
             </div>
           )}
@@ -472,7 +472,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
               <button
                 key={f.key}
                 onClick={() => setActiveFilter(f.key)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wide whitespace-nowrap transition shrink-0 ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide whitespace-nowrap transition shrink-0 ${
                   activeFilter === f.key ? 'bg-pfuma-green text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                 }`}
               >
@@ -486,11 +486,11 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
           {/* Live people search results — only while the search box has real input */}
           {searchQuery.trim().length >= 2 && (
             <div className="px-5 pt-4 pb-2 border-b border-gray-100">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
                 People {sidebarSearch.searching && <Loader2 size={11} className="animate-spin" />}
               </p>
               {sidebarSearch.results.filter(p => activeFilter === 'All' || p.role === activeFilter).length === 0 && !sidebarSearch.searching ? (
-                <p className="text-[11px] text-gray-400 font-medium pb-2">No verified members match "{searchQuery}".</p>
+                <p className="text-xs text-gray-400 font-medium pb-2">No verified members match "{searchQuery}".</p>
               ) : (
                 <div className="space-y-1 pb-2">
                   {sidebarSearch.results.filter(p => activeFilter === 'All' || p.role === activeFilter).map(person => (
@@ -502,7 +502,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
                       <Avatar user={person} size="sm" />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold text-gray-800 truncate">{person.full_name}</p>
-                        <p className="text-[10px] text-gray-400 font-medium truncate">{person.role}{person.org_name ? ` · ${person.org_name}` : ''}{person.province ? ` · ${person.province}` : ''}</p>
+                        <p className="text-xs text-gray-400 font-medium truncate">{person.role}{person.org_name ? ` · ${person.org_name}` : ''}{person.province ? ` · ${person.province}` : ''}</p>
                       </div>
                     </button>
                   ))}
@@ -512,7 +512,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
           )}
 
           <div className="px-5 pt-4 pb-2">
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Conversations</p>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Conversations</p>
           </div>
           <div className="space-y-0">
             {filteredConvs.length === 0 ? (
@@ -534,22 +534,22 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
                     <Avatar user={other} />
                     {conv.unread_count > 0 && (
                       <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 bg-pfuma-green rounded-full flex items-center justify-center">
-                        <span className="text-white text-[9px] font-black">{conv.unread_count}</span>
+                        <span className="text-white text-xs font-bold">{conv.unread_count}</span>
                       </span>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-baseline mb-0.5">
                       <span className="text-sm font-bold text-gray-900 truncate">{other?.full_name || 'Unknown'}</span>
-                      <span className="text-[10px] text-gray-400 shrink-0 ml-2">{fmtDate(conv.last_message_at)}</span>
+                      <span className="text-xs text-gray-400 shrink-0 ml-2">{fmtDate(conv.last_message_at)}</span>
                     </div>
-                    <p className={`text-[11px] font-medium truncate ${conv.unread_count > 0 ? 'text-gray-800 font-bold' : 'text-gray-500'}`}>
+                    <p className={`text-xs font-medium truncate ${conv.unread_count > 0 ? 'text-gray-800 font-bold' : 'text-gray-500'}`}>
                       {conv.last_message ? `${conv.last_message_is_own ? 'You: ' : ''}${conv.last_message}` : 'Start the conversation...'}
                     </p>
                     {conv.category !== 'General' && (
                       <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-wide bg-blue-100 text-blue-600">{conv.category}</span>
-                        {conv.subject && <span className="text-[10px] text-gray-400 truncate">· {conv.subject}</span>}
+                        <span className="text-xs font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide bg-blue-100 text-blue-600">{conv.category}</span>
+                        {conv.subject && <span className="text-xs text-gray-400 truncate">· {conv.subject}</span>}
                       </div>
                     )}
                   </div>
@@ -560,7 +560,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
         </div>
 
         <div className="border-t border-gray-100 px-5 py-3">
-          <button onClick={() => setShowHotlines(p => !p)} className="flex items-center gap-2 text-[11px] font-bold text-gray-500 hover:text-pfuma-green transition w-full">
+          <button onClick={() => setShowHotlines(p => !p)} className="flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-pfuma-green transition w-full">
             <Phone size={12} />
             <span>Emergency Hotlines</span>
             <ChevronDown size={12} className={`ml-auto transition ${showHotlines ? 'rotate-180' : ''}`} />
@@ -569,8 +569,8 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
             <div className="mt-2 space-y-1.5">
               {EMERGENCY_HOTLINES.map((h, i) => (
                 <div key={i} className="flex justify-between items-center px-2 py-1.5 bg-gray-50 rounded-xl">
-                  <span className="text-[10px] text-gray-500 font-medium">{h.label}</span>
-                  <a href={`tel:${h.number}`} className="text-[11px] font-black text-pfuma-green hover:underline flex items-center gap-1">
+                  <span className="text-xs text-gray-500 font-medium">{h.label}</span>
+                  <a href={`tel:${h.number}`} className="text-xs font-bold text-pfuma-green hover:underline flex items-center gap-1">
                     <PhoneCall size={10} />{h.number}
                   </a>
                 </div>
@@ -593,7 +593,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
                   <ArrowLeft size={18} className="text-gray-600" />
                 </button>
                 <div>
-                  <h3 className="text-xl font-black text-gray-900">
+                  <h3 className="text-xl font-bold text-gray-900">
                     {selectedContact ? `Message ${selectedContact.full_name}` : 'New Message'}
                   </h3>
                   {selectedContact && <p className="text-xs text-gray-400 font-medium">{selectedContact.role}{selectedContact.speciality ? ` · ${selectedContact.speciality}` : ''}{selectedContact.province ? ` · ${selectedContact.province}` : ''}</p>}
@@ -607,7 +607,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
 
               {!selectedContact ? (
                 <div>
-                  <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5" htmlFor="cc-search">Who do you want to message? <span className="text-red-400">*</span></label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5" htmlFor="cc-search">Who do you want to message? <span className="text-red-400">*</span></label>
                   <div className="relative mb-3">
                     <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
@@ -634,7 +634,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
                           <Avatar user={person} size="sm" />
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-bold text-gray-800 truncate">{person.full_name}</p>
-                            <p className="text-[10px] text-gray-400 font-medium truncate">{person.role}{person.org_name ? ` · ${person.org_name}` : ''}</p>
+                            <p className="text-xs text-gray-400 font-medium truncate">{person.role}{person.org_name ? ` · ${person.org_name}` : ''}</p>
                           </div>
                         </button>
                       ))}
@@ -649,7 +649,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
                 <form onSubmit={handleCreateCase} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5" htmlFor="cc-type">Case Type</label>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5" htmlFor="cc-type">Case Type</label>
                       <select id="cc-type" className="w-full p-3 bg-white rounded-xl border border-gray-200 font-medium text-sm outline-none focus:ring-2 focus:ring-pfuma-green/30" value={newCase.category} onChange={e => setNewCase(p => ({ ...p, category: e.target.value }))}>
                         <option>Emergency</option>
                         <option>Vaccination</option>
@@ -658,21 +658,21 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5" htmlFor="cc-animal">Animal</label>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5" htmlFor="cc-animal">Animal</label>
                       <select id="cc-animal" className="w-full p-3 bg-white rounded-xl border border-gray-200 font-medium text-sm outline-none focus:ring-2 focus:ring-pfuma-green/30" value={newCase.animalId} onChange={e => setNewCase(p => ({ ...p, animalId: e.target.value }))}>
                         <option value="">Select animal...</option>
                         {animals.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5" htmlFor="cc-province">Province</label>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5" htmlFor="cc-province">Province</label>
                       <select id="cc-province" className="w-full p-3 bg-white rounded-xl border border-gray-200 font-medium text-sm outline-none focus:ring-2 focus:ring-pfuma-green/30" value={newCase.province} onChange={e => setNewCase(p => ({ ...p, province: e.target.value, district: '' }))}>
                         <option value="">Select province...</option>
                         {Object.keys(ZIMBABWE_REGIONS).map(p => <option key={p} value={p}>{p}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5" htmlFor="cc-district">District</label>
+                      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5" htmlFor="cc-district">District</label>
                       <select id="cc-district" className="w-full p-3 bg-white rounded-xl border border-gray-200 font-medium text-sm outline-none focus:ring-2 focus:ring-pfuma-green/30" value={newCase.district} onChange={e => setNewCase(p => ({ ...p, district: e.target.value }))} disabled={!newCase.province}>
                         <option value="">Select district...</option>
                         {(ZIMBABWE_REGIONS[newCase.province] || []).map(d => <option key={d} value={d}>{d}</option>)}
@@ -681,7 +681,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5" htmlFor="cc-subject">Subject <span className="text-red-400">*</span></label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5" htmlFor="cc-subject">Subject <span className="text-red-400">*</span></label>
                     <input
                       id="cc-subject" type="text" required maxLength={120}
                       placeholder="e.g. Suspected FMD — Chegutu Farm"
@@ -692,7 +692,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1.5" htmlFor="cc-desc">Initial Message</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5" htmlFor="cc-desc">Initial Message</label>
                     <textarea
                       id="cc-desc" rows={4} maxLength={2000}
                       placeholder="Describe symptoms, timeline, and animals affected..."
@@ -702,7 +702,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
                     />
                   </div>
 
-                  <button type="submit" className="w-full py-4 bg-pfuma-green text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg hover:bg-green-700 transition flex items-center justify-center gap-2">
+                  <button type="submit" className="w-full py-4 bg-pfuma-green text-white rounded-2xl font-bold uppercase text-xs tracking-wide shadow-lg hover:bg-green-700 transition flex items-center justify-center gap-2">
                     <Send size={16} /> Send to {selectedContact?.full_name}
                   </button>
                 </form>
@@ -721,15 +721,15 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
               <button onClick={openContactModal} className="flex items-center gap-3 flex-1 min-w-0 text-left" aria-label={`View ${activeConv.other_user?.full_name}'s details`}>
                 <Avatar user={activeConv.other_user} size="md" />
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-black text-gray-900 text-sm leading-none mb-0.5">{activeConv.other_user?.full_name}</h4>
-                  <p className="text-[11px] text-gray-500 font-medium">
+                  <h4 className="font-bold text-gray-900 text-sm leading-none mb-0.5">{activeConv.other_user?.full_name}</h4>
+                  <p className="text-xs text-gray-500 font-medium">
                     {activeConv.other_user?.role}{activeConv.other_user?.org_name ? ` · ${activeConv.other_user.org_name}` : ''}
                   </p>
                 </div>
               </button>
               <div className="flex items-center gap-2">
                 {activeConv.category === 'Emergency' && (
-                  <span className="flex items-center gap-1 bg-red-600 text-white text-[9px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest animate-pulse">
+                  <span className="flex items-center gap-1 bg-red-600 text-white text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wide animate-pulse">
                     <Zap size={10} /> URGENT
                   </span>
                 )}
@@ -742,7 +742,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
             {activeConv.category !== 'General' && (
               <div className="px-5 py-2 bg-yellow-50 border-b border-yellow-100 flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="px-2 py-0.5 rounded-full font-black uppercase text-[10px] bg-blue-100 text-blue-600">{activeConv.category}</span>
+                  <span className="px-2 py-0.5 rounded-full font-bold uppercase text-xs bg-blue-100 text-blue-600">{activeConv.category}</span>
                   <span className="text-gray-500 font-medium">{activeConv.subject}</span>
                 </div>
               </div>
@@ -755,7 +755,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
               aria-label="Conversation"
             >
               <div className="flex justify-center">
-                <span className="bg-white text-[10px] font-bold text-gray-400 px-3 py-1 rounded-full shadow-sm border border-gray-100">{fmtDate(activeConv.created_at)}</span>
+                <span className="bg-white text-xs font-bold text-gray-400 px-3 py-1 rounded-full shadow-sm border border-gray-100">{fmtDate(activeConv.created_at)}</span>
               </div>
 
               {activeMessages.length === 0 ? (
@@ -813,7 +813,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
                   <Send size={16} />
                 </button>
               </div>
-              <p className="flex items-center justify-center gap-1 text-center text-[10px] text-gray-400 font-medium mt-2">
+              <p className="flex items-center justify-center gap-1 text-center text-xs text-gray-400 font-medium mt-2">
                 <Lock size={10} /> Messages are stored on your PFUMA account
               </p>
             </div>
@@ -826,13 +826,13 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
             <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-lg mb-6 border border-gray-100">
               <Users size={40} className="text-pfuma-green" />
             </div>
-            <h3 className="text-2xl font-black text-gray-800 mb-2">PFUMA Messenger</h3>
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">PFUMA Messenger</h3>
             <p className="text-gray-400 font-medium text-sm max-w-xs leading-relaxed mb-8">
               Search for anyone by name or phone number — vets, suppliers, farmers, or buyers — and start a real conversation.
             </p>
             <button
               onClick={() => { setIsComposing(true); setSelectedContact(null); setPeopleQuery(''); }}
-              className="flex items-center gap-2 px-6 py-3 bg-pfuma-green text-white rounded-2xl font-black text-sm shadow-lg hover:bg-green-700 transition"
+              className="flex items-center gap-2 px-6 py-3 bg-pfuma-green text-white rounded-2xl font-bold text-sm shadow-lg hover:bg-green-700 transition"
             >
               <Plus size={16} /> New Message
             </button>
@@ -845,7 +845,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
           backend /conversations/<id>/contact). */}
       {contactModalOpen && (
         <div className="fixed inset-0 z-[3200] flex items-center justify-center bg-gray-950/60 backdrop-blur-sm p-4" onClick={() => setContactModalOpen(false)}>
-          <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl p-6" onClick={e => e.stopPropagation()}>
+          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6" onClick={e => e.stopPropagation()}>
             {contactLoading ? (
               <div className="py-10 flex justify-center"><Loader2 size={22} className="animate-spin text-pfuma-green" /></div>
             ) : !contactDetails ? (
@@ -854,7 +854,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
               <>
                 <div className="flex flex-col items-center text-center mb-5">
                   <Avatar user={contactDetails} size="lg" />
-                  <h3 className="text-lg font-black text-gray-900 mt-3">{contactDetails.full_name}</h3>
+                  <h3 className="text-lg font-bold text-gray-900 mt-3">{contactDetails.full_name}</h3>
                   <p className="text-xs text-gray-500 font-bold uppercase tracking-wide mt-0.5">
                     {contactDetails.role}{contactDetails.org_name ? ` · ${contactDetails.org_name}` : ''}
                   </p>
@@ -889,7 +889,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
                 </div>
               </>
             )}
-            <button onClick={() => setContactModalOpen(false)} className="w-full mt-5 py-3 bg-gray-100 text-gray-600 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-gray-200 transition">
+            <button onClick={() => setContactModalOpen(false)} className="w-full mt-5 py-3 bg-gray-100 text-gray-600 rounded-2xl font-bold uppercase text-xs tracking-wide hover:bg-gray-200 transition">
               Close
             </button>
           </div>

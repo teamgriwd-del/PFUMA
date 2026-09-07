@@ -10,15 +10,15 @@
   background: white;
   padding: 2.5rem;
   border-radius: 16px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 15px rgba(65, 35, 12, 0.05);
   text-align: left;
 }
 
 .profile-registration h3 {
   margin-top: 0;
-  color: #1b5e20;
+  color: #7A3F0B;
   margin-bottom: 2rem;
-  border-bottom: 2px solid #e8f5e9;
+  border-bottom: 2px solid #F6E9CF;
   padding-bottom: 0.5rem;
 }
 
@@ -29,7 +29,7 @@
 .form-section h4 {
   font-size: 0.8rem;
   text-transform: uppercase;
-  color: #888;
+  color: #7C7268;
   margin-bottom: 0.8rem;
   letter-spacing: 1px;
 }
@@ -43,13 +43,13 @@
 .enterprise-form input, .enterprise-form select {
   flex: 1;
   padding: 0.75rem;
-  border: 1px solid #ddd;
+  border: 1px solid #CBBFAD;
   border-radius: 6px;
   font-family: inherit;
 }
 
 .register-btn {
-  background: #1b5e20;
+  background: #7A3F0B;
   color: white;
   border: none;
   padding: 1rem 2rem;
@@ -63,7 +63,7 @@
 
 /* Animal Grid & ID Cards */
 .animal-grid-section h3 {
-  color: #1b5e20;
+  color: #7A3F0B;
   text-align: left;
   margin-bottom: 1.5rem;
 }
@@ -78,8 +78,8 @@
   background: #fff;
   border-radius: 14px;
   overflow: hidden;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.05);
-  border: 1px solid #eee;
+  box-shadow: 0 10px 20px rgba(65, 35, 12, 0.05);
+  border: 1px solid #E0D6C7;
   display: flex;
   flex-direction: column;
   transition: transform 0.2s;
@@ -91,16 +91,16 @@
 }
 
 .card-header {
-  background: #f8f9fa;
+  background: #F7F3ED;
   padding: 0.8rem 1.2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #E0D6C7;
 }
 
 .tag-pill {
-  background: #1b5e20;
+  background: #7A3F0B;
   color: white;
   padding: 0.2rem 0.6rem;
   border-radius: 4px;
@@ -110,7 +110,7 @@
 
 .species-label {
   font-size: 0.75rem;
-  color: #888;
+  color: #7C7268;
   font-weight: bold;
   text-transform: uppercase;
 }
@@ -123,18 +123,18 @@
 .main-info h4 {
   margin: 0;
   font-size: 1.3rem;
-  color: #333;
+  color: #29231E;
 }
 
-.breed-text { margin: 0.2rem 0; color: #666; font-size: 0.9rem; font-weight: 500; }
-.age-text { margin: 0; color: #2e7d32; font-weight: bold; font-size: 0.85rem; }
+.breed-text { margin: 0.2rem 0; color: #6F665D; font-size: 0.9rem; font-weight: 500; }
+.age-text { margin: 0; color: #8E450E; font-weight: bold; font-size: 0.85rem; }
 
 .lineage-box {
   margin: 1.2rem 0;
-  background: #fcfcfc;
+  background: #FAF6F1;
   padding: 0.8rem;
   border-radius: 8px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid #EFE8DD;
 }
 
 .parent {
@@ -144,12 +144,12 @@
   margin-bottom: 0.3rem;
 }
 
-.parent span { color: #888; }
+.parent span { color: #7C7268; }
 
 .performance-stats {
   display: flex;
   justify-content: space-between;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid #EFE8DD;
   padding-top: 1rem;
 }
 
@@ -158,20 +158,20 @@
   flex-direction: column;
 }
 
-.stat label { font-size: 0.7rem; color: #999; text-transform: uppercase; }
-.stat strong { font-size: 1rem; color: #333; }
-.stat strong.positive { color: #2e7d32; }
+.stat label { font-size: 0.7rem; color: #968C82; text-transform: uppercase; }
+.stat strong { font-size: 1rem; color: #29231E; }
+.stat strong.positive { color: #8E450E; }
 
 .card-footer {
   padding: 1rem;
-  background: #fcfcfc;
-  border-top: 1px solid #eee;
+  background: #FAF6F1;
+  border-top: 1px solid #E0D6C7;
 }
 
 .history-toggle {
   background: none;
-  border: 1px solid #ddd;
-  color: #666;
+  border: 1px solid #CBBFAD;
+  color: #6F665D;
   width: 100%;
   padding: 0.5rem;
   border-radius: 6px;
@@ -181,21 +181,21 @@
 }
 
 .history-toggle:hover {
-  background: #f0f0f0;
-  color: #333;
+  background: #EFE8DD;
+  color: #29231E;
 }
 
 .card-history-panel {
   padding: 1.2rem;
   background: #fff;
-  border-top: 1px solid #eee;
+  border-top: 1px solid #E0D6C7;
   animation: slideDown 0.3s ease-out;
 }
 
 .card-history-panel h5 {
   margin: 0 0 0.8rem 0;
   font-size: 0.85rem;
-  color: #1b5e20;
+  color: #7A3F0B;
 }
 
 .card-history-panel ul {
@@ -208,11 +208,11 @@
   display: flex;
   justify-content: space-between;
   padding: 0.4rem 0;
-  border-bottom: 1px dashed #eee;
+  border-bottom: 1px dashed #E0D6C7;
   font-size: 0.8rem;
 }
 
-.card-history-panel li span { color: #888; }
+.card-history-panel li span { color: #7C7268; }
 
 @keyframes slideDown {
   from { opacity: 0; transform: translateY(-10px); }
@@ -222,8 +222,8 @@
 .empty-hint {
   grid-column: 1 / -1;
   padding: 3rem;
-  background: #f9f9f9;
-  border: 1px dashed #ddd;
+  background: #F7F3ED;
+  border: 1px dashed #CBBFAD;
   border-radius: 12px;
-  color: #999;
+  color: #968C82;
 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import pfumaMark from '../../assets/pfuma-mark.png';
+import pfumaMark from '../../assets/pfuma-mark.svg';
 import {
   Sprout, ShoppingBag, Truck, ArrowRight, ArrowLeft,
   Phone, Mail, MapPin, Building2, CheckCircle, Stethoscope,
@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 
 import { API } from '../../config';
+import { photo, AUTH_HERO } from '../../theme/imagery';
+import { Button } from '../ui';
 
 // ── Zimbabwe-specific format validation (mirrors backend/app.py so the user
 // sees the same feedback before submitting, not just after a 400 comes back) ──
@@ -99,16 +101,21 @@ const SUPPLY_CATEGORIES = ['Vaccines', 'Antibiotics', 'Antiparasitcs', 'Feed Sup
 const STEPS = ['Role', 'Personal', 'Organization', 'Details', 'Confirm'];
 
 // ── helpers ────────────────────────────────────────────────────────────────
+// Labels sit at 11px/700 with open tracking rather than the 10px/900
+// "font-bold uppercase tracking-wide" the app used everywhere — same
+// eyebrow role, read as considered instead of shouted.
 const Field = ({ label, required, children }) => (
-  <div className="space-y-1.5">
-    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest">
-      {label}{required && <span className="text-red-400 ml-1">*</span>}
+  <div className="space-y-2">
+    <label className="block text-[0.6875rem] font-bold text-gray-500 uppercase tracking-[0.1em]">
+      {label}{required && <span className="text-terra-500 ml-1">*</span>}
     </label>
     {children}
   </div>
 );
 
-const inputCls = 'w-full p-3.5 bg-gray-50 rounded-xl border-2 border-transparent focus:border-pfuma-green outline-none font-semibold text-sm text-gray-800 placeholder:text-gray-400 transition';
+// Every input in the 5-step registration flows through this one string, so
+// the whole form adopts the warm hairline treatment at once.
+const inputCls = 'w-full px-4 py-3.5 bg-gray-50 rounded-xl border border-bark-500/12 focus:border-bark-500/45 focus:bg-white outline-none font-medium text-sm text-gray-900 placeholder:text-gray-400 transition';
 const selectCls = inputCls + ' appearance-none cursor-pointer';
 
 // Module-scope so its identity is stable across AuthPortal re-renders — see
@@ -305,8 +312,8 @@ const AuthPortal = ({ onLogin }) => {
   const renderStep0 = () => (
     <div className="space-y-4">
       <div>
-        <h3 className="text-2xl font-black text-gray-900 mb-1">Choose Your Role</h3>
-        <p className="text-sm text-gray-400 font-medium">Your role determines what you can see and do on PFUMA.</p>
+        <h3 className="pf-display text-2xl text-gray-900">Choose Your Role</h3>
+        <p className="text-sm text-gray-600 mt-2.5 leading-relaxed">Your role determines what you can see and do on PFUMA.</p>
       </div>
       <div className="grid grid-cols-2 gap-3">
         {ROLES.map(r => (
@@ -319,8 +326,8 @@ const AuthPortal = ({ onLogin }) => {
             <div className={`w-10 h-10 rounded-xl ${form.role === r.name ? r.color : 'bg-gray-100'} flex items-center justify-center mb-3 transition`}>
               <r.icon size={20} className={form.role === r.name ? 'text-white' : 'text-gray-400'} />
             </div>
-            <p className="text-sm font-black text-gray-800 mb-1">{r.name}</p>
-            <p className="text-[10px] text-gray-400 font-medium leading-snug">{r.desc}</p>
+            <p className="text-sm font-bold text-gray-800 mb-1">{r.name}</p>
+            <p className="text-xs text-gray-400 font-medium leading-snug">{r.desc}</p>
           </button>
         ))}
       </div>
@@ -330,8 +337,8 @@ const AuthPortal = ({ onLogin }) => {
   const renderStep1 = () => (
     <div className="space-y-4">
       <div>
-        <h3 className="text-2xl font-black text-gray-900 mb-1">Your Personal Details</h3>
-        <p className="text-sm text-gray-400 font-medium">This is how other stakeholders will identify and contact you.</p>
+        <h3 className="pf-display text-2xl text-gray-900">Your Personal Details</h3>
+        <p className="text-sm text-gray-600 mt-2.5 leading-relaxed">This is how other stakeholders will identify and contact you.</p>
       </div>
       <Field label="Full Name" required>
         <input className={inputCls} type="text" placeholder="e.g. Tatenda Moyo" value={form.fullName} onChange={e => set('fullName', e.target.value)} />
@@ -342,7 +349,7 @@ const AuthPortal = ({ onLogin }) => {
           <input className={inputCls + ' pl-10'} type="tel" placeholder="+263 77 123 4567" value={form.phone} onChange={e => set('phone', e.target.value)} />
         </div>
         {form.phone.trim() && !isValidZwPhone(form.phone) && (
-          <p className="text-[10px] text-red-500 font-bold mt-1">Enter a valid Zimbabwean mobile number (Econet 077/078, NetOne 071, or Telecel 073).</p>
+          <p className="text-xs text-red-500 font-bold mt-1">Enter a valid Zimbabwean mobile number (Econet 077/078, NetOne 071, or Telecel 073).</p>
         )}
       </Field>
       <Field label="National ID Number" required>
@@ -351,9 +358,9 @@ const AuthPortal = ({ onLogin }) => {
           <input className={inputCls + ' pl-10'} type="text" placeholder="e.g. 63-1234567A00" value={form.nationalId} onChange={e => set('nationalId', e.target.value)} />
         </div>
         {form.nationalId.trim() && !isValidZwNationalId(form.nationalId) && (
-          <p className="text-[10px] text-red-500 font-bold mt-1">Doesn't match the Zimbabwe ID format (district-serial-checkletter-citizenship code), e.g. 63-1234567A00.</p>
+          <p className="text-xs text-red-500 font-bold mt-1">Doesn't match the Zimbabwe ID format (district-serial-checkletter-citizenship code), e.g. 63-1234567A00.</p>
         )}
-        <p className="text-[10px] text-gray-400 font-medium mt-1">Used alongside your uploaded ID document so a reviewer can confirm they match.</p>
+        <p className="text-xs text-gray-400 font-medium mt-1">Used alongside your uploaded ID document so a reviewer can confirm they match.</p>
       </Field>
       <Field label="Email Address">
         <div className="relative">
@@ -368,9 +375,9 @@ const AuthPortal = ({ onLogin }) => {
         <PasswordInput placeholder="Re-enter your password" value={form.confirmPassword} onChange={e => set('confirmPassword', e.target.value)} />
       </Field>
       {form.password && form.confirmPassword && form.password !== form.confirmPassword && (
-        <p className="text-[10px] text-red-500 font-bold">Passwords don't match.</p>
+        <p className="text-xs text-red-500 font-bold">Passwords don't match.</p>
       )}
-      <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-[10px] text-blue-700 font-medium">
+      <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700 font-medium">
         Your phone number is used so farmers, vets, and suppliers can reach you directly through the PFUMA directory.
       </div>
     </div>
@@ -379,8 +386,8 @@ const AuthPortal = ({ onLogin }) => {
   const renderStep2 = () => (
     <div className="space-y-4">
       <div>
-        <h3 className="text-2xl font-black text-gray-900 mb-1">Your Organisation</h3>
-        <p className="text-sm text-gray-400 font-medium">
+        <h3 className="pf-display text-2xl text-gray-900">Your Organisation</h3>
+        <p className="text-sm text-gray-600 mt-2.5 leading-relaxed">
           {form.role === 'Farmer' ? 'Your farm name and location.' :
            form.role === 'Veterinarian' ? 'Your practice or government department.' :
            form.role === 'Supplier' ? 'Your supply business details.' :
@@ -416,8 +423,8 @@ const AuthPortal = ({ onLogin }) => {
       </Field>
 
       <div className="pt-2 border-t border-gray-100">
-        <h4 className="text-sm font-black text-gray-900 mb-1">Next of Kin</h4>
-        <p className="text-[11px] text-gray-400 font-medium mb-3">
+        <h4 className="text-sm font-bold text-gray-900 mb-1">Next of Kin</h4>
+        <p className="text-xs text-gray-400 font-medium mb-3">
           Who should PFUMA contact — and who can request to take over this account — if something happens to you. Required for every role.
         </p>
       </div>
@@ -430,7 +437,7 @@ const AuthPortal = ({ onLogin }) => {
           <input className={inputCls + ' pl-10'} type="tel" placeholder="+263 77 123 4567" value={form.nextOfKinPhone} onChange={e => set('nextOfKinPhone', e.target.value)} />
         </div>
         {form.nextOfKinPhone.trim() && !isValidZwPhone(form.nextOfKinPhone) && (
-          <p className="text-[10px] text-red-500 font-bold mt-1">Enter a valid Zimbabwean mobile number.</p>
+          <p className="text-xs text-red-500 font-bold mt-1">Enter a valid Zimbabwean mobile number.</p>
         )}
       </Field>
       <div className="grid grid-cols-2 gap-4">
@@ -448,8 +455,8 @@ const AuthPortal = ({ onLogin }) => {
     if (form.role === 'Farmer') return (
       <div className="space-y-4">
         <div>
-          <h3 className="text-2xl font-black text-gray-900 mb-1">Farm Details</h3>
-          <p className="text-sm text-gray-400 font-medium">Help vets and suppliers understand the scale of your operation.</p>
+          <h3 className="pf-display text-2xl text-gray-900">Farm Details</h3>
+          <p className="text-sm text-gray-600 mt-2.5 leading-relaxed">Help vets and suppliers understand the scale of your operation.</p>
         </div>
         <Field label="Farm Size (hectares)">
           <input className={inputCls} type="number" min="0" placeholder="e.g. 50" value={form.farmSize} onChange={e => set('farmSize', e.target.value)} />
@@ -458,13 +465,13 @@ const AuthPortal = ({ onLogin }) => {
           <div className="flex flex-wrap gap-2 mt-1">
             {SPECIES_OPTIONS.map(s => (
               <button key={s} type="button" onClick={() => toggleArr('species', s)}
-                className={`px-3.5 py-2 rounded-xl border-2 text-xs font-black uppercase tracking-wide transition ${form.species.includes(s) ? 'bg-pfuma-green text-white border-pfuma-green' : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-pfuma-green/40'}`}>
+                className={`px-3.5 py-2 rounded-xl border-2 text-xs font-bold uppercase tracking-wide transition ${form.species.includes(s) ? 'bg-pfuma-green text-white border-pfuma-green' : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-pfuma-green/40'}`}>
                 {s}
               </button>
             ))}
           </div>
         </Field>
-        <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-[11px] text-green-700 font-medium">
+        <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-xs text-green-700 font-medium">
           This helps the PFUMA AI recommend the right vaccine schedules and dosages for your specific livestock.
         </div>
       </div>
@@ -473,8 +480,8 @@ const AuthPortal = ({ onLogin }) => {
     if (form.role === 'Veterinarian') return (
       <div className="space-y-4">
         <div>
-          <h3 className="text-2xl font-black text-gray-900 mb-1">Professional Details</h3>
-          <p className="text-sm text-gray-400 font-medium">Your credentials verify your authority to issue health certificates.</p>
+          <h3 className="pf-display text-2xl text-gray-900">Professional Details</h3>
+          <p className="text-sm text-gray-600 mt-2.5 leading-relaxed">Your credentials verify your authority to issue health certificates.</p>
         </div>
         <Field label="DVS License Number" required>
           <input className={inputCls} type="text" placeholder="e.g. DVS-ZIM-2024-0045" value={form.licenseNumber} onChange={e => set('licenseNumber', e.target.value)} />
@@ -485,7 +492,7 @@ const AuthPortal = ({ onLogin }) => {
             {['General Practice', 'Tick-borne Diseases', 'Reproductive Health', 'Surgery', 'FMD & CBPP Specialist', 'Emergency Response'].map(s => <option key={s}>{s}</option>)}
           </select>
         </Field>
-        <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-[11px] text-blue-700 font-medium">
+        <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700 font-medium">
           Your license number is verified against the DVS Zimbabwe registry. Farmers can search for you by name and speciality.
         </div>
       </div>
@@ -494,8 +501,8 @@ const AuthPortal = ({ onLogin }) => {
     if (form.role === 'Supplier') return (
       <div className="space-y-4">
         <div>
-          <h3 className="text-2xl font-black text-gray-900 mb-1">Supply Details</h3>
-          <p className="text-sm text-gray-400 font-medium">Farmers search for suppliers by product category and province.</p>
+          <h3 className="pf-display text-2xl text-gray-900">Supply Details</h3>
+          <p className="text-sm text-gray-600 mt-2.5 leading-relaxed">Farmers search for suppliers by product category and province.</p>
         </div>
         <Field label="Business Registration Number">
           <input className={inputCls} type="text" placeholder="e.g. BP 12345/2024" value={form.businessReg} onChange={e => set('businessReg', e.target.value)} />
@@ -504,13 +511,13 @@ const AuthPortal = ({ onLogin }) => {
           <div className="flex flex-wrap gap-2 mt-1">
             {SUPPLY_CATEGORIES.map(s => (
               <button key={s} type="button" onClick={() => toggleArr('supplyCategories', s)}
-                className={`px-3.5 py-2 rounded-xl border-2 text-xs font-black uppercase tracking-wide transition ${form.supplyCategories.includes(s) ? 'bg-orange-500 text-white border-orange-500' : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-orange-400'}`}>
+                className={`px-3.5 py-2 rounded-xl border-2 text-xs font-bold uppercase tracking-wide transition ${form.supplyCategories.includes(s) ? 'bg-orange-500 text-white border-orange-500' : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-orange-400'}`}>
                 {s}
               </button>
             ))}
           </div>
         </Field>
-        <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 text-[11px] text-orange-700 font-medium">
+        <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 text-xs text-orange-700 font-medium">
           Farmers search the supplier directory when they need to restock. Your product categories determine when you appear.
         </div>
       </div>
@@ -519,8 +526,8 @@ const AuthPortal = ({ onLogin }) => {
     if (form.role === 'Buyer') return (
       <div className="space-y-4">
         <div>
-          <h3 className="text-2xl font-black text-gray-900 mb-1">Trading Details</h3>
-          <p className="text-sm text-gray-400 font-medium">Farmers and vets verify your trading identity before completing a sale.</p>
+          <h3 className="pf-display text-2xl text-gray-900">Trading Details</h3>
+          <p className="text-sm text-gray-600 mt-2.5 leading-relaxed">Farmers and vets verify your trading identity before completing a sale.</p>
         </div>
         <Field label="Business Registration Number">
           <input className={inputCls} type="text" placeholder="e.g. BP 67890/2023" value={form.buyerReg} onChange={e => set('buyerReg', e.target.value)} />
@@ -528,7 +535,7 @@ const AuthPortal = ({ onLogin }) => {
         <Field label="Trading Areas / Provinces Served">
           <input className={inputCls} type="text" placeholder="e.g. Mashonaland West, Midlands, Harare" value={form.tradingAreas} onChange={e => set('tradingAreas', e.target.value)} />
         </Field>
-        <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 text-[11px] text-purple-700 font-medium">
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 text-xs text-purple-700 font-medium">
           Your registration number is attached to every bid you place, ensuring farmers know they are selling to a verified trader.
         </div>
       </div>
@@ -537,14 +544,14 @@ const AuthPortal = ({ onLogin }) => {
     if (form.role === 'Institution') return (
       <div className="space-y-4">
         <div>
-          <h3 className="text-2xl font-black text-gray-900 mb-1">Institution Details</h3>
-          <p className="text-sm text-gray-400 font-medium">Farmers share you a certificate code; you verify and track it here.</p>
+          <h3 className="pf-display text-2xl text-gray-900">Institution Details</h3>
+          <p className="text-sm text-gray-600 mt-2.5 leading-relaxed">Farmers share you a certificate code; you verify and track it here.</p>
         </div>
         <Field label="Institution Type" required>
           <div className="flex flex-wrap gap-2 mt-1">
             {['Bank', 'Insurer', 'Other'].map(t => (
               <button key={t} type="button" onClick={() => set('institutionType', t)}
-                className={`px-3.5 py-2 rounded-xl border-2 text-xs font-black uppercase tracking-wide transition ${form.institutionType === t ? 'bg-teal-700 text-white border-teal-700' : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-teal-600/40'}`}>
+                className={`px-3.5 py-2 rounded-xl border-2 text-xs font-bold uppercase tracking-wide transition ${form.institutionType === t ? 'bg-teal-700 text-white border-teal-700' : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-teal-600/40'}`}>
                 {t}
               </button>
             ))}
@@ -553,7 +560,7 @@ const AuthPortal = ({ onLogin }) => {
         <Field label="Registration / License Number">
           <input className={inputCls} type="text" placeholder="e.g. RBZ-BNK-2024-0012" value={form.businessReg} onChange={e => set('businessReg', e.target.value)} />
         </Field>
-        <div className="bg-teal-50 border border-teal-200 rounded-xl p-3 text-[11px] text-teal-700 font-medium">
+        <div className="bg-teal-50 border border-teal-200 rounded-xl p-3 text-xs text-teal-700 font-medium">
           Once verified, you can look up any PFUMA valuation certificate and flag it as held collateral — so a second lender sees it's already pledged.
         </div>
       </div>
@@ -567,8 +574,8 @@ const AuthPortal = ({ onLogin }) => {
       {roleFields()}
       <div className="pt-2 border-t border-gray-100 space-y-4">
         <div>
-          <h4 className="text-sm font-black text-gray-900 mb-1">Verification Documents</h4>
-          <p className="text-[11px] text-gray-400 font-medium">Required so Police (or, for vets, an existing verified vet) can confirm you're who you say you are before you get full access. See <span className="font-bold">compliance/signup-verification-requirements.md</span> for what's expected per role.</p>
+          <h4 className="text-sm font-bold text-gray-900 mb-1">Verification Documents</h4>
+          <p className="text-xs text-gray-400 font-medium">Required so Police (or, for vets, an existing verified vet) can confirm you're who you say you are before you get full access. See <span className="font-bold">compliance/signup-verification-requirements.md</span> for what's expected per role.</p>
         </div>
         <FileField label="National ID Document" field="idDocument" required form={form} set={set} />
         <FileField
@@ -586,12 +593,12 @@ const AuthPortal = ({ onLogin }) => {
     return (
       <div className="space-y-4">
         <div>
-          <h3 className="text-2xl font-black text-gray-900 mb-1">Confirm Your Identity</h3>
-          <p className="text-sm text-gray-400 font-medium">Review your details before creating your PFUMA Digital ID.</p>
+          <h3 className="pf-display text-2xl text-gray-900">Confirm Your Identity</h3>
+          <p className="text-sm text-gray-600 mt-2.5 leading-relaxed">Review your details before creating your PFUMA Digital ID.</p>
         </div>
         <div className="bg-gray-50 rounded-2xl p-5 space-y-3">
           {/* Role badge */}
-          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-black text-white ${role.color}`}>
+          <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold text-white ${role.color}`}>
             <role.icon size={13} /> {form.role}
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
@@ -616,14 +623,14 @@ const AuthPortal = ({ onLogin }) => {
               { label: 'Credential Document',  value: form.credentialDocument ? form.credentialDocument.name : 'Not attached' },
             ].filter(Boolean).map(f => f && (
               <div key={f.label}>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wide">{f.label}</p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">{f.label}</p>
                 <p className="font-bold text-gray-800 truncate">{f.value}</p>
               </div>
             ))}
           </div>
         </div>
-        <div className="bg-pfuma-green/5 border border-pfuma-green/20 rounded-xl p-3 text-[11px] text-gray-600 font-medium leading-relaxed">
-          Your account starts <span className="font-black">pending verification</span> — {form.role === 'Veterinarian' ? 'an existing verified vet' : 'Police'} reviews your documents before you get full access. Your profile is only visible in the PFUMA directory once verified.
+        <div className="bg-pfuma-green/5 border border-pfuma-green/20 rounded-xl p-3 text-xs text-gray-600 font-medium leading-relaxed">
+          Your account starts <span className="font-bold">pending verification</span> — {form.role === 'Veterinarian' ? 'an existing verified vet' : 'Police'} reviews your documents before you get full access. Your profile is only visible in the PFUMA directory once verified.
         </div>
 
         <div className="border border-gray-200 rounded-xl p-3.5">
@@ -634,9 +641,9 @@ const AuthPortal = ({ onLogin }) => {
               checked={agreedToTerms}
               onChange={e => setAgreedToTerms(e.target.checked)}
             />
-            <span className="text-[11px] text-gray-600 font-medium leading-relaxed">
+            <span className="text-xs text-gray-600 font-medium leading-relaxed">
               I confirm the details above are accurate and I agree to PFUMA's{' '}
-              <button type="button" onClick={() => setShowTerms(true)} className="text-pfuma-green font-black hover:underline">
+              <button type="button" onClick={() => setShowTerms(true)} className="text-pfuma-green font-bold hover:underline">
                 Terms &amp; Conditions and Privacy Policy
               </button>.
             </span>
@@ -645,8 +652,8 @@ const AuthPortal = ({ onLogin }) => {
 
         {showTerms && (
           <div className="fixed inset-0 z-[3100] flex items-center justify-center bg-gray-950/70 backdrop-blur-sm p-4" onClick={() => setShowTerms(false)}>
-            <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl p-6 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-              <h4 className="text-lg font-black text-gray-900 mb-3">Terms &amp; Conditions</h4>
+            <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+              <h4 className="text-lg font-bold text-gray-900 mb-3">Terms &amp; Conditions</h4>
               <div className="space-y-3 text-xs text-gray-600 font-medium leading-relaxed">
                 <p>By creating a PFUMA Digital ID you agree that:</p>
                 <ul className="list-disc pl-5 space-y-1.5">
@@ -658,7 +665,7 @@ const AuthPortal = ({ onLogin }) => {
                 </ul>
                 <p>See <span className="font-bold">docs/PRIVACY_POLICY.md</span> in the project repository for the full data-handling policy.</p>
               </div>
-              <button onClick={() => setShowTerms(false)} className="w-full mt-5 py-3 bg-pfuma-green text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-green-700 transition">
+              <button onClick={() => setShowTerms(false)} className="w-full mt-5 py-3 bg-pfuma-green text-white rounded-2xl font-bold uppercase text-xs tracking-wide hover:bg-green-700 transition">
                 Close
               </button>
             </div>
@@ -666,7 +673,7 @@ const AuthPortal = ({ onLogin }) => {
         )}
 
         {authError && (
-          <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3 text-[11px] text-red-700 font-bold">
+          <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3 text-xs text-red-700 font-bold">
             <AlertTriangle size={14} className="shrink-0 mt-0.5" /> {authError}
           </div>
         )}
@@ -678,161 +685,206 @@ const AuthPortal = ({ onLogin }) => {
 
   // ── render ──
   return (
-    <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-gray-950 overflow-hidden font-sans p-0 sm:p-4">
-      {/* Background glows */}
-      <div className="absolute top-[-15%] left-[-10%] w-[45%] h-[45%] bg-pfuma-green/20 rounded-full blur-[140px]" aria-hidden="true" />
-      <div className="absolute bottom-[-15%] right-[-10%] w-[45%] h-[45%] bg-yellow-400/10 rounded-full blur-[140px]" aria-hidden="true" />
+    <div className="fixed inset-0 z-[3000] bg-ivory font-sans overflow-y-auto lg:overflow-hidden">
+      <div className="min-h-full lg:h-screen grid grid-cols-1 lg:grid-cols-[1.1fr_minmax(27rem,0.9fr)]">
 
-      <div className="bg-white w-full max-w-5xl rounded-none sm:rounded-[40px] shadow-2xl overflow-y-auto sm:overflow-hidden flex flex-col md:flex-row relative z-10 animate-in fade-in zoom-in duration-400 h-full sm:h-auto sm:max-h-[95vh] md:h-[680px]">
+        {/* ══ BRAND PANEL ══
+            Full-bleed photography rather than a flat brand colour: this is
+            the one screen a first-time user judges the product on, and the
+            livestock has to be the thing they see. On mobile it becomes a
+            shorter band above the form — the form is what matters on a
+            phone, so it gets the screen. */}
+        <aside className="relative isolate overflow-hidden min-h-[17rem] sm:min-h-[20rem] lg:min-h-0">
+          <img
+            src={photo(AUTH_HERO, { w: 1600, q: 76 })}
+            alt=""
+            className="absolute inset-0 w-full h-full pf-photo"
+            decoding="async"
+          />
+          {/* Two-layer scrim: an overall warm tint to unify the photograph
+              with the palette, then a bottom-weighted wash so the headline
+              never sits on a bright patch of sky. */}
+          <div
+            className="absolute inset-0"
+            aria-hidden="true"
+            style={{ background: 'linear-gradient(150deg, rgba(43,20,4,0.62) 0%, rgba(43,20,4,0.34) 45%, rgba(43,20,4,0.30) 100%)' }}
+          />
+          <div
+            className="absolute inset-0"
+            aria-hidden="true"
+            style={{ background: 'linear-gradient(0deg, rgba(26,12,2,0.92) 0%, rgba(26,12,2,0.55) 34%, rgba(26,12,2,0.05) 72%)' }}
+          />
 
-        {/* ── Left branding panel ── */}
-        <div className="w-full md:w-[38%] bg-pfuma-green p-6 md:p-12 text-white flex flex-col justify-between relative overflow-hidden shrink-0">
-          {/* Dot grid */}
-          <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '24px 24px' }} aria-hidden="true" />
+          <div className="relative h-full flex flex-col justify-between p-6 sm:p-9 lg:p-12 xl:p-14 text-white">
+            <div className="flex items-center gap-3">
+              <img src={pfumaMark} alt="" className="w-10 h-10 rounded-xl object-cover shadow-lg shrink-0" />
+              <span className="text-lg font-extrabold tracking-tight">PFUMA</span>
+            </div>
 
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-3 md:mb-8">
-              <img src={pfumaMark} alt="PFUMA" className="w-10 h-10 rounded-xl shadow-lg shrink-0 object-cover" />
-              <div>
-                <p className="text-base font-extrabold tracking-tight leading-none">PFUMA</p>
+            <div className="mt-10 lg:mt-0">
+              <p className="pf-eyebrow-light mb-3 pf-rise">Zimbabwe · Livestock Intelligence</p>
+              <h1
+                className="pf-display text-[2rem] sm:text-[2.75rem] xl:text-[3.25rem] max-w-[13ch] text-balance pf-rise"
+                style={{ '--pf-delay': '70ms' }}
+              >
+                Every animal, traceable from birth to sale.
+              </h1>
+              <p
+                className="mt-5 text-sm sm:text-base text-white/75 leading-relaxed max-w-[38ch] pf-rise"
+                style={{ '--pf-delay': '150ms' }}
+              >
+                One verified record connecting farmers, veterinarians, suppliers and buyers
+                across all ten provinces.
+              </p>
+
+              {/* The trust strip. Describes what the platform actually
+                  enforces — not badges, not partner logos we don't have. */}
+              <ul
+                className="mt-8 flex flex-wrap gap-x-6 gap-y-2.5 text-[0.8125rem] font-medium text-white/70 pf-rise"
+                style={{ '--pf-delay': '230ms' }}
+              >
+                {['National ID verified', 'Vet-certified health', 'Police sale clearance'].map(t => (
+                  <li key={t} className="flex items-center gap-2">
+                    <CheckCircle size={14} className="text-amber-400 shrink-0" aria-hidden="true" />
+                    {t}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Role preview — desktop only. During registration the chosen
+                role lights up here, so the two panels stay connected. */}
+            <div className="hidden lg:block mt-10">
+              <p className="pf-eyebrow-light mb-3">Who PFUMA is for</p>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                {ROLES.map(r => {
+                  const on = form.role === r.name && !isReturning;
+                  return (
+                    <div
+                      key={r.name}
+                      className={`flex items-center gap-2.5 py-1.5 transition-colors ${on ? 'text-amber-300' : 'text-white/55'}`}
+                    >
+                      <r.icon size={14} className="shrink-0" aria-hidden="true" />
+                      <span className="text-[0.8125rem] font-semibold">{r.name}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-            <h2 className="text-xl md:text-3xl font-black leading-tight mb-2 md:mb-4">Zimbabwe's Livestock Intelligence Platform</h2>
-            <p className="hidden md:block text-green-200 text-sm font-medium leading-relaxed opacity-80">
-              Connecting farmers, veterinarians, suppliers, and buyers into one verified digital ecosystem.
-            </p>
           </div>
+        </aside>
 
-          {/* Stakeholder roles preview — full detail on desktop; a compact
-              horizontal strip on mobile to save vertical space, since the
-              form below is what actually matters most on a small screen. */}
-          <div className="relative z-10 hidden md:block space-y-2">
-            {ROLES.map(r => (
-              <div key={r.name} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition ${form.role === r.name && !isReturning ? 'bg-white/20 border border-white/30' : 'opacity-40'}`}>
-                <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center shrink-0">
-                  <r.icon size={15} className="text-white" />
-                </div>
-                <div>
-                  <p className="text-xs font-black text-white leading-none">{r.name}</p>
-                  <p className="text-[9px] text-green-200 font-medium leading-none mt-0.5">{r.desc.split('.')[0]}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="relative z-10 flex md:hidden gap-2 overflow-x-auto pb-1 mt-3 scrollbar-hide">
-            {ROLES.map(r => (
-              <div key={r.name} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shrink-0 transition ${form.role === r.name && !isReturning ? 'bg-white/20 border border-white/30' : 'opacity-40'}`}>
-                <r.icon size={12} className="text-white shrink-0" />
-                <p className="text-[10px] font-black text-white leading-none whitespace-nowrap">{r.name}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Right form panel ── */}
-        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+        {/* ══ FORM PANEL ══ */}
+        <main className="bg-white flex flex-col min-h-0 lg:overflow-hidden">
 
           {isReturning ? (
             /* ── Quick Login ── */
-            <div className="flex-1 overflow-y-auto p-6 md:p-12 text-left">
-              <h3 className="text-2xl font-black text-gray-900 mb-1">Welcome Back</h3>
-              <p className="text-sm text-gray-400 font-medium mb-8">Sign in with your phone number and password. Your role comes from your verified PFUMA account.</p>
+            <div className="flex-1 lg:overflow-y-auto flex flex-col justify-center px-6 sm:px-10 lg:px-14 py-10 lg:py-12 text-left">
+              <div className="w-full max-w-[26rem] mx-auto">
+                <p className="pf-eyebrow mb-3">Sign in</p>
+                <h2 className="pf-display text-3xl text-gray-900">Welcome back</h2>
+                <p className="text-sm text-gray-600 mt-3 leading-relaxed">
+                  Your role and permissions come from your verified PFUMA account.
+                </p>
 
-              <form onSubmit={handleLogin} className="space-y-5">
-                <Field label="Phone Number" required>
-                  <div className="relative">
-                    <Phone size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input className={inputCls + ' pl-10'} type="tel" placeholder="+263 77 123 4567" required value={loginPhone} onChange={e => setLoginPhone(e.target.value)} />
-                  </div>
-                </Field>
-                <Field label="Password" required>
-                  <PasswordInput required value={loginPassword} onChange={e => setLoginPassword(e.target.value)} />
-                </Field>
+                <form onSubmit={handleLogin} className="space-y-5 mt-9">
+                  <Field label="Phone Number" required>
+                    <div className="relative">
+                      <Phone size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+                      <input className={inputCls + ' pl-11'} type="tel" placeholder="+263 77 123 4567" required value={loginPhone} onChange={e => setLoginPhone(e.target.value)} />
+                    </div>
+                  </Field>
+                  <Field label="Password" required>
+                    <PasswordInput required value={loginPassword} onChange={e => setLoginPassword(e.target.value)} />
+                  </Field>
 
-                {authError && (
-                  <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl p-3 text-[11px] text-red-700 font-bold">
-                    <AlertTriangle size={14} className="shrink-0 mt-0.5" /> {authError}
-                  </div>
-                )}
+                  {authError && (
+                    <div role="alert" className="flex items-start gap-2.5 bg-red-50 border border-red-200 rounded-xl p-3.5 text-xs text-red-800 font-semibold leading-relaxed">
+                      <AlertTriangle size={15} className="shrink-0 mt-px" aria-hidden="true" /> {authError}
+                    </div>
+                  )}
 
-                <button type="submit" disabled={authBusy} className="w-full py-4 bg-pfuma-green text-white rounded-2xl font-black uppercase text-xs tracking-widest shadow-lg hover:bg-green-700 transition flex items-center justify-center gap-2 disabled:opacity-50">
-                  {authBusy ? 'Signing In…' : 'Enter Portal'} {!authBusy && <ArrowRight size={15} />}
-                </button>
-              </form>
+                  <Button type="submit" size="lg" disabled={authBusy} loading={authBusy} iconRight={!authBusy} className="w-full !mt-7">
+                    {authBusy ? 'Signing in…' : 'Enter portal'}
+                  </Button>
+                </form>
 
-              <p className="mt-8 text-center text-xs text-gray-400 font-medium">
-                New to PFUMA?{' '}
-                <button onClick={() => { setIsReturning(false); setStep(0); setAuthError(''); }} className="text-pfuma-green font-black hover:underline uppercase tracking-widest">
-                  Create Digital ID
-                </button>
-              </p>
+                <p className="mt-9 text-sm text-gray-500">
+                  New to PFUMA?{' '}
+                  <button onClick={() => { setIsReturning(false); setStep(0); setAuthError(''); }} className="text-bark-500 font-bold hover:text-bark-700 pf-navlink">
+                    Create a Digital ID
+                  </button>
+                </p>
+              </div>
             </div>
 
           ) : (
             /* ── Multi-step Registration ── */
             <>
-              {/* Progress bar */}
-              <div className="px-5 md:px-10 pt-5 md:pt-8 pb-0">
-                <div className="flex items-center gap-1 mb-2">
-                  {STEPS.map((s, i) => (
-                    <React.Fragment key={s}>
-                      <div className={`flex items-center gap-1.5 ${i <= step ? 'text-pfuma-green' : 'text-gray-300'}`}>
-                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border-2 transition ${
-                          i < step  ? 'bg-pfuma-green border-pfuma-green text-white' :
-                          i === step ? 'border-pfuma-green text-pfuma-green' :
-                          'border-gray-200 text-gray-300'
-                        }`}>
-                          {i < step ? '✓' : i + 1}
-                        </div>
-                        <span className={`text-[10px] font-black uppercase tracking-wide hidden sm:block ${i === step ? 'text-gray-700' : 'text-gray-300'}`}>{s}</span>
-                      </div>
-                      {i < STEPS.length - 1 && <div className={`flex-1 h-0.5 rounded-full ${i < step ? 'bg-pfuma-green' : 'bg-gray-100'}`} />}
-                    </React.Fragment>
-                  ))}
+              {/* Progress — a thin rule with a filled portion plus the
+                  current step named in words. The five numbered circles it
+                  replaces were the widest element on a phone and pushed the
+                  actual form below the fold. */}
+              <div className="px-6 sm:px-10 lg:px-14 pt-8 lg:pt-10 shrink-0">
+                <div className="flex items-baseline justify-between mb-3">
+                  <p className="pf-eyebrow">Step {step + 1} of {STEPS.length} · {STEPS[step]}</p>
+                  <p className="text-xs font-semibold text-gray-400 hidden sm:block">
+                    {STEPS.slice(step + 1).length
+                      ? `Next: ${STEPS[step + 1]}`
+                      : 'Final step'}
+                  </p>
+                </div>
+                <div className="h-1 rounded-full bg-cream overflow-hidden" role="progressbar" aria-valuenow={step + 1} aria-valuemin={1} aria-valuemax={STEPS.length} aria-label="Registration progress">
+                  <div
+                    className="h-full rounded-full bg-bark-500 transition-[width] duration-500 ease-out"
+                    style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
+                  />
                 </div>
               </div>
 
               {/* Step content */}
-              <div className="flex-1 overflow-y-auto px-5 md:px-10 py-6">
-                {stepContent[step]()}
+              <div className="flex-1 lg:overflow-y-auto px-6 sm:px-10 lg:px-14 py-8">
+                <div className="w-full max-w-[30rem] mx-auto lg:mx-0">
+                  {stepContent[step]()}
+                </div>
               </div>
 
               {/* Navigation */}
-              <div className="px-5 md:px-10 pb-5 md:pb-8 flex gap-3">
-                {step > 0 && (
-                  <button onClick={back} className="flex items-center gap-2 px-5 py-3.5 bg-gray-100 text-gray-600 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-gray-200 transition">
-                    <ArrowLeft size={14} /> Back
+              <div className="px-6 sm:px-10 lg:px-14 pb-8 shrink-0 border-t border-bark-500/8 pt-5">
+                <div className="w-full max-w-[30rem] mx-auto lg:mx-0 flex gap-3">
+                  {step > 0 && (
+                    <Button variant="secondary" size="lg" onClick={back} icon={ArrowLeft}>
+                      Back
+                    </Button>
+                  )}
+                  {step < STEPS.length - 1 ? (
+                    <Button size="lg" onClick={advance} disabled={!canAdvance()} iconRight className="flex-1">
+                      Continue
+                    </Button>
+                  ) : (
+                    <Button
+                      size="lg"
+                      onClick={confirm}
+                      disabled={authBusy || !agreedToTerms}
+                      loading={authBusy}
+                      icon={CheckCircle}
+                      title={!agreedToTerms ? 'Please accept the Terms & Conditions first' : undefined}
+                      className="flex-1"
+                    >
+                      {authBusy ? 'Creating…' : 'Create Digital ID'}
+                    </Button>
+                  )}
+                </div>
+                <p className="w-full max-w-[30rem] mx-auto lg:mx-0 mt-5 text-sm text-gray-500">
+                  Already registered?{' '}
+                  <button onClick={() => setIsReturning(true)} className="text-bark-500 font-bold hover:text-bark-700 pf-navlink">
+                    Sign in
                   </button>
-                )}
-                {step < STEPS.length - 1 ? (
-                  <button
-                    onClick={advance}
-                    disabled={!canAdvance()}
-                    className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-pfuma-green text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg hover:bg-green-700 transition disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    Continue <ArrowRight size={14} />
-                  </button>
-                ) : (
-                  <button
-                    onClick={confirm}
-                    disabled={authBusy || !agreedToTerms}
-                    title={!agreedToTerms ? 'Please accept the Terms & Conditions first' : undefined}
-                    className="flex-1 flex items-center justify-center gap-2 py-3.5 bg-pfuma-green text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <CheckCircle size={15} /> {authBusy ? 'Creating…' : 'Create Digital ID & Enter'}
-                  </button>
-                )}
+                </p>
               </div>
-
-              <p className="pb-5 text-center text-xs text-gray-400 font-medium">
-                Already registered?{' '}
-                <button onClick={() => setIsReturning(true)} className="text-pfuma-green font-black hover:underline uppercase tracking-widest">
-                  Sign In
-                </button>
-              </p>
             </>
           )}
-        </div>
+        </main>
       </div>
     </div>
   );

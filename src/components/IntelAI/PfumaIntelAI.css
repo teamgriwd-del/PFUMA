@@ -4,16 +4,16 @@
   right: 2rem;
   width: 70px;
   height: 70px;
-  background: #1b5e20;
+  background: #7A3F0B;
   color: white;
-  border-radius: 25px;
+  border-radius: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
   cursor: pointer;
   z-index: 1000;
-  box-shadow: 0 10px 30px rgba(27, 94, 32, 0.4);
+  box-shadow: 0 10px 30px rgba(122, 63, 11, 0.35);
 }
 
 /* On phone-width screens the 70px FAB at 2rem from the edge eats into
@@ -26,7 +26,7 @@
     height: 52px;
     bottom: 1rem;
     right: 1rem;
-    border-radius: 18px;
+    border-radius: 16px;
   }
 }
 
@@ -36,7 +36,7 @@
   right: -2px;
   width: 15px;
   height: 15px;
-  background: #fbc02d;
+  background: #C99A4A;
   border-radius: 50%;
   border: 3px solid white;
 }
@@ -48,7 +48,7 @@
   width: 400px;
   height: 600px;
   background: white;
-  border-radius: 35px;
+  border-radius: 24px;
   display: flex;
   flex-direction: column;
   z-index: 1001;
@@ -57,7 +57,7 @@
 }
 
 .ai-header {
-  background: #1b5e20;
+  background: #7A3F0B;
   padding: 1.5rem 2rem;
   display: flex;
   justify-content: space-between;
@@ -71,7 +71,7 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  background: #f8f9fa;
+  background: #F7F3ED;
 }
 
 .ai-msg-wrapper {
@@ -92,30 +92,30 @@
 
 .ai.ai-msg-wrapper .ai-bubble {
   background: white;
-  color: #333;
+  color: #29231E;
   border-radius: 20px;
   border-bottom-left-radius: 5px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+  box-shadow: 0 4px 10px rgba(65, 35, 12, 0.03);
 }
 
 .user.ai-msg-wrapper .ai-bubble {
-  background: #1b5e20;
+  background: #7A3F0B;
   color: white;
   border-radius: 20px;
   border-bottom-right-radius: 5px;
-  box-shadow: 0 4px 15px rgba(27, 94, 32, 0.2);
+  box-shadow: 0 4px 15px rgba(122, 63, 11, 0.18);
 }
 
-.ai-bubble.nav { border-left: 4px solid #fbc02d; }
-.ai-bubble.info { border-left: 4px solid #2196f3; }
-.ai-bubble.help { border-left: 4px solid #ff5722; }
+.ai-bubble.nav { border-left: 4px solid #C99A4A; }
+.ai-bubble.info { border-left: 4px solid #4F6A82; }
+.ai-bubble.help { border-left: 4px solid #A65312; }
 
 .ai-input-area {
   padding: 1.5rem 2rem;
   background: white;
   display: flex;
   gap: 1rem;
-  border-top: 1px solid #eee;
+  border-top: 1px solid #E0D6C7;
 }
 
 .ai-input-area input {

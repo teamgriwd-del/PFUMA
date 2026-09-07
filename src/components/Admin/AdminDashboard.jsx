@@ -14,10 +14,10 @@ import UserDetailModal, { DetailRow } from '../UserDetailModal';
 const StatCard = ({ label, value, icon: Icon, color }) => (
   <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
     <div className="flex justify-between items-start mb-2">
-      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{label}</p>
+      <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">{label}</p>
       <Icon size={16} className={color} />
     </div>
-    <p className="text-2xl font-black text-gray-900">{value}</p>
+    <p className="text-2xl font-bold text-gray-900">{value}</p>
   </div>
 );
 
@@ -133,14 +133,14 @@ const UsersTab = ({ currentUser }) => {
           <div className="divide-y divide-gray-50">
             {users.map(u => (
               <div key={u.id} className="flex items-center gap-4 p-4">
-                <div className="w-9 h-9 rounded-full bg-gray-800 flex items-center justify-center text-white font-black text-[10px] shrink-0">
+                <div className="w-9 h-9 rounded-full bg-gray-800 flex items-center justify-center text-white font-bold text-xs shrink-0">
                   {(u.full_name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-black text-gray-900">{u.full_name} <span className="text-gray-400 font-medium">· {u.role}</span></p>
-                  <p className="text-[10px] text-gray-500 font-medium">{u.phone} · {u.org_name || '—'} · {u.province || '—'}{u.district ? `, ${u.district}` : ''}</p>
+                  <p className="text-xs font-bold text-gray-900">{u.full_name} <span className="text-gray-400 font-medium">· {u.role}</span></p>
+                  <p className="text-xs text-gray-500 font-medium">{u.phone} · {u.org_name || '—'} · {u.province || '—'}{u.district ? `, ${u.district}` : ''}</p>
                   {u.role === 'Police' && u.requested_by_name && (
-                    <p className="text-[10px] text-amber-700 font-bold mt-0.5">
+                    <p className="text-xs text-amber-700 font-bold mt-0.5">
                       Nominated by Officer {u.requested_by_name}{u.requested_by_badge ? ` (${u.requested_by_badge})` : ''} — verify this is a real, legitimate request before approving.
                     </p>
                   )}
@@ -148,12 +148,12 @@ const UsersTab = ({ currentUser }) => {
                 <button onClick={() => setViewingUser(u)} className="shrink-0 p-1.5 bg-gray-50 hover:bg-gray-100 text-gray-500 rounded-lg transition" aria-label={`View ${u.full_name}'s full details`} title="View full details">
                   <Eye size={14} />
                 </button>
-                <span className={`shrink-0 text-[9px] font-black px-2.5 py-1 rounded-full uppercase ${
+                <span className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full uppercase ${
                   u.verification_status === 'verified' ? 'bg-green-100 text-green-700' :
                   u.verification_status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
                 }`}>{u.verification_status}</span>
                 {u.account_status === 'suspended' && (
-                  <span className="shrink-0 text-[9px] font-black px-2.5 py-1 rounded-full uppercase bg-red-600 text-white" title={u.suspension_reason || ''}>
+                  <span className="shrink-0 text-xs font-bold px-2.5 py-1 rounded-full uppercase bg-red-600 text-white" title={u.suspension_reason || ''}>
                     Suspended
                   </span>
                 )}
@@ -226,19 +226,19 @@ const TrendsTab = ({ currentUser }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-          <h3 className="text-sm font-black text-gray-800 mb-1">Signups (8 Weeks)</h3>
-          <p className="text-[11px] text-gray-400 font-medium mb-4">New accounts per week, platform-wide</p>
+          <h3 className="text-sm font-bold text-gray-800 mb-1">Signups (8 Weeks)</h3>
+          <p className="text-xs text-gray-400 font-medium mb-4">New accounts per week, platform-wide</p>
           {trends.signups_per_week.length === 0 ? (
             <p className="text-xs text-gray-400 font-medium italic text-center py-10">No signups in this window yet.</p>
           ) : (
             <div className="h-40">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trends.signups_per_week} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                  <XAxis dataKey="week" fontSize={9} tick={{ fill: '#bbb' }} tickLine={false} axisLine={false} />
-                  <YAxis allowDecimals={false} fontSize={9} tick={{ fill: '#bbb' }} tickLine={false} axisLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#EFE8DD" vertical={false} />
+                  <XAxis dataKey="week" fontSize={9} tick={{ fill: '#B0A496' }} tickLine={false} axisLine={false} />
+                  <YAxis allowDecimals={false} fontSize={9} tick={{ fill: '#B0A496' }} tickLine={false} axisLine={false} />
                   <Tooltip contentStyle={{ borderRadius: 10, border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', fontSize: 11 }} />
-                  <Area type="monotone" dataKey="signups" stroke="#1b5e20" fill="#1b5e2022" strokeWidth={2.5} />
+                  <Area type="monotone" dataKey="signups" stroke="#7A3F0B" fill="#7A3F0B22" strokeWidth={2.5} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -246,34 +246,34 @@ const TrendsTab = ({ currentUser }) => {
         </div>
 
         <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-          <h3 className="text-sm font-black text-gray-800 mb-1">Users by Role</h3>
-          <p className="text-[11px] text-gray-400 font-medium mb-4">Platform composition</p>
+          <h3 className="text-sm font-bold text-gray-800 mb-1">Users by Role</h3>
+          <p className="text-xs text-gray-400 font-medium mb-4">Platform composition</p>
           <div className="h-40">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={trends.users_by_role} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                <XAxis dataKey="role" fontSize={9} tick={{ fill: '#bbb' }} tickLine={false} axisLine={false} />
-                <YAxis allowDecimals={false} fontSize={9} tick={{ fill: '#bbb' }} tickLine={false} axisLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#EFE8DD" vertical={false} />
+                <XAxis dataKey="role" fontSize={9} tick={{ fill: '#B0A496' }} tickLine={false} axisLine={false} />
+                <YAxis allowDecimals={false} fontSize={9} tick={{ fill: '#B0A496' }} tickLine={false} axisLine={false} />
                 <Tooltip contentStyle={{ borderRadius: 10, border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', fontSize: 11 }} />
-                <Bar dataKey="total" fill="#ca8a04" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="total" fill="#C99A4A" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-          <h3 className="text-sm font-black text-gray-800 mb-1">Animals Registered (8 Weeks)</h3>
+          <h3 className="text-sm font-bold text-gray-800 mb-1">Animals Registered (8 Weeks)</h3>
           {trends.animals_per_week.length === 0 ? (
             <p className="text-xs text-gray-400 font-medium italic text-center py-10">No new animals in this window yet.</p>
           ) : (
             <div className="h-40 mt-3">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trends.animals_per_week} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
-                  <XAxis dataKey="week" fontSize={9} tick={{ fill: '#bbb' }} tickLine={false} axisLine={false} />
-                  <YAxis allowDecimals={false} fontSize={9} tick={{ fill: '#bbb' }} tickLine={false} axisLine={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#EFE8DD" vertical={false} />
+                  <XAxis dataKey="week" fontSize={9} tick={{ fill: '#B0A496' }} tickLine={false} axisLine={false} />
+                  <YAxis allowDecimals={false} fontSize={9} tick={{ fill: '#B0A496' }} tickLine={false} axisLine={false} />
                   <Tooltip contentStyle={{ borderRadius: 10, border: 'none', boxShadow: '0 4px 15px rgba(0,0,0,0.1)', fontSize: 11 }} />
-                  <Area type="monotone" dataKey="animals" stroke="#1565c0" fill="#1565c022" strokeWidth={2.5} />
+                  <Area type="monotone" dataKey="animals" stroke="#41586C" fill="#41586C22" strokeWidth={2.5} />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -281,7 +281,7 @@ const TrendsTab = ({ currentUser }) => {
         </div>
 
         <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-          <h3 className="text-sm font-black text-gray-800 mb-3">Listings by Category</h3>
+          <h3 className="text-sm font-bold text-gray-800 mb-3">Listings by Category</h3>
           {trends.listings_by_category.length === 0 ? (
             <p className="text-xs text-gray-400 font-medium italic text-center py-10">No listings yet.</p>
           ) : (
@@ -321,11 +321,11 @@ const ListingDetailModal = ({ listingId, currentUser, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-gray-900/80 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white w-full max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden rounded-3xl shadow-2xl" onClick={e => e.stopPropagation()}>
+      <div className="bg-white w-full max-w-2xl max-h-[85vh] overflow-y-auto overflow-x-hidden rounded-2xl shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-4 flex items-center justify-between gap-2 z-10">
           <div className="min-w-0">
-            <h3 className="text-sm font-black text-gray-900 truncate">{data?.listing?.product_name || 'Listing'}</h3>
-            <p className="text-[10px] text-gray-400 font-bold uppercase truncate">Listing #{listingId}{data?.listing ? ` · ${data.listing.status}` : ''}</p>
+            <h3 className="text-sm font-bold text-gray-900 truncate">{data?.listing?.product_name || 'Listing'}</h3>
+            <p className="text-xs text-gray-400 font-bold uppercase truncate">Listing #{listingId}{data?.listing ? ` · ${data.listing.status}` : ''}</p>
           </div>
           <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-700 transition shrink-0"><X size={18} /></button>
         </div>
@@ -348,7 +348,7 @@ const ListingDetailModal = ({ listingId, currentUser, onClose }) => {
               )}
 
               <section>
-                <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Listing</h4>
+                <h4 className="text-xs font-bold text-pfuma-green uppercase tracking-wide mb-1 pb-1 border-b border-gray-100">Listing</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 min-w-0">
                   <DetailRow icon={Tag} label="Category" value={data.listing.category} />
                   <DetailRow icon={DollarSign} label="Price" value={`$${Number(data.listing.price).toLocaleString()} / ${data.listing.unit}`} />
@@ -361,7 +361,7 @@ const ListingDetailModal = ({ listingId, currentUser, onClose }) => {
               </section>
 
               <section>
-                <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Seller</h4>
+                <h4 className="text-xs font-bold text-pfuma-green uppercase tracking-wide mb-1 pb-1 border-b border-gray-100">Seller</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 min-w-0">
                   <DetailRow label="Name" value={data.listing.seller_name} />
                   <DetailRow label="Phone" value={data.listing.seller_phone} />
@@ -373,7 +373,7 @@ const ListingDetailModal = ({ listingId, currentUser, onClose }) => {
 
               {data.animal && (
                 <section>
-                  <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Linked Animal</h4>
+                  <h4 className="text-xs font-bold text-pfuma-green uppercase tracking-wide mb-1 pb-1 border-b border-gray-100">Linked Animal</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 min-w-0">
                     <DetailRow label="Name" value={data.animal.name} />
                     <DetailRow label="Species / Breed" value={[data.animal.species, data.animal.breed].filter(Boolean).join(' — ')} />
@@ -386,7 +386,7 @@ const ListingDetailModal = ({ listingId, currentUser, onClose }) => {
 
               {data.clearance && (
                 <section>
-                  <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Sale Clearance (ZRP Form 392)</h4>
+                  <h4 className="text-xs font-bold text-pfuma-green uppercase tracking-wide mb-1 pb-1 border-b border-gray-100">Sale Clearance (ZRP Form 392)</h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 min-w-0">
                     <DetailRow icon={Shield} label="Status" value={data.clearance.status} />
                     <DetailRow label="Traditional Authority" value={data.clearance.leader_clearance === 'attested' ? `${data.clearance.leader_type} — ${data.clearance.leader_name}` : data.clearance.leader_clearance === 'not_applicable' ? `N/A — ${data.clearance.leader_na_reason}` : 'Not recorded'} />
@@ -462,8 +462,8 @@ const ListingsTab = ({ currentUser }) => {
                   <Package size={14} className="text-gray-500" />
                 </button>
                 <button onClick={() => setViewingListingId(l.id)} className="flex-1 min-w-0 text-left">
-                  <p className="text-xs font-black text-gray-900">{l.product_name} <span className="text-gray-400 font-medium capitalize">· {l.category}</span></p>
-                  <p className="text-[10px] text-gray-500 font-medium">${l.price} · {l.seller_name} · {l.phone} · {l.seller_province || '—'}</p>
+                  <p className="text-xs font-bold text-gray-900">{l.product_name} <span className="text-gray-400 font-medium capitalize">· {l.category}</span></p>
+                  <p className="text-xs text-gray-500 font-medium">${l.price} · {l.seller_name} · {l.phone} · {l.seller_province || '—'}</p>
                 </button>
                 <button onClick={() => setViewingListingId(l.id)} className="p-1.5 bg-gray-50 hover:bg-gray-100 text-gray-500 rounded-lg transition shrink-0" aria-label={`View ${l.product_name}'s full details`} title="View full details">
                   <Eye size={14} />
@@ -499,11 +499,11 @@ const OutbreakDetailModal = ({ outbreakId, currentUser, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-gray-900/80 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white w-full max-w-lg max-h-[85vh] overflow-y-auto overflow-x-hidden rounded-3xl shadow-2xl" onClick={e => e.stopPropagation()}>
+      <div className="bg-white w-full max-w-lg max-h-[85vh] overflow-y-auto overflow-x-hidden rounded-2xl shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-4 flex items-center justify-between gap-2 z-10">
           <div className="min-w-0">
-            <h3 className="text-sm font-black text-gray-900 truncate">{data?.disease_name || 'Outbreak Report'}</h3>
-            <p className="text-[10px] text-gray-400 font-bold uppercase truncate">Outbreak #{outbreakId}{data ? ` · ${data.status}` : ''}</p>
+            <h3 className="text-sm font-bold text-gray-900 truncate">{data?.disease_name || 'Outbreak Report'}</h3>
+            <p className="text-xs text-gray-400 font-bold uppercase truncate">Outbreak #{outbreakId}{data ? ` · ${data.status}` : ''}</p>
           </div>
           <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-700 transition shrink-0"><X size={18} /></button>
         </div>
@@ -515,7 +515,7 @@ const OutbreakDetailModal = ({ outbreakId, currentUser, onClose }) => {
           ) : (
             <>
               <section>
-                <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Report</h4>
+                <h4 className="text-xs font-bold text-pfuma-green uppercase tracking-wide mb-1 pb-1 border-b border-gray-100">Report</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 min-w-0">
                   <DetailRow icon={Shield} label="Status" value={data.status} />
                   <DetailRow icon={MapPin} label="Location" value={[data.district, data.province].filter(Boolean).join(', ')} />
@@ -527,7 +527,7 @@ const OutbreakDetailModal = ({ outbreakId, currentUser, onClose }) => {
                 </div>
               </section>
               <section>
-                <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Reported By</h4>
+                <h4 className="text-xs font-bold text-pfuma-green uppercase tracking-wide mb-1 pb-1 border-b border-gray-100">Reported By</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 min-w-0">
                   <DetailRow label="Name" value={data.reported_by_name} />
                   <DetailRow label="Role" value={data.reported_by_role} />
@@ -559,11 +559,11 @@ const CooperativeDetailModal = ({ coopId, currentUser, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[3000] flex items-center justify-center p-4 bg-gray-900/80 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white w-full max-w-lg max-h-[85vh] overflow-y-auto overflow-x-hidden rounded-3xl shadow-2xl" onClick={e => e.stopPropagation()}>
+      <div className="bg-white w-full max-w-lg max-h-[85vh] overflow-y-auto overflow-x-hidden rounded-2xl shadow-2xl" onClick={e => e.stopPropagation()}>
         <div className="sticky top-0 bg-white border-b border-gray-100 px-4 sm:px-6 py-4 flex items-center justify-between gap-2 z-10">
           <div className="min-w-0">
-            <h3 className="text-sm font-black text-gray-900 truncate">{data?.cooperative?.name || 'Cooperative'}</h3>
-            <p className="text-[10px] text-gray-400 font-bold uppercase truncate">Cooperative #{coopId}{data?.members ? ` · ${data.members.length} member${data.members.length !== 1 ? 's' : ''}` : ''}</p>
+            <h3 className="text-sm font-bold text-gray-900 truncate">{data?.cooperative?.name || 'Cooperative'}</h3>
+            <p className="text-xs text-gray-400 font-bold uppercase truncate">Cooperative #{coopId}{data?.members ? ` · ${data.members.length} member${data.members.length !== 1 ? 's' : ''}` : ''}</p>
           </div>
           <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-700 transition shrink-0"><X size={18} /></button>
         </div>
@@ -575,7 +575,7 @@ const CooperativeDetailModal = ({ coopId, currentUser, onClose }) => {
           ) : (
             <>
               <section>
-                <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Cooperative</h4>
+                <h4 className="text-xs font-bold text-pfuma-green uppercase tracking-wide mb-1 pb-1 border-b border-gray-100">Cooperative</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 min-w-0">
                   <DetailRow icon={MapPin} label="Location" value={[data.cooperative.district, data.cooperative.province].filter(Boolean).join(', ')} />
                   <DetailRow label="Dip Tank" value={data.cooperative.dip_tank_location} />
@@ -586,18 +586,18 @@ const CooperativeDetailModal = ({ coopId, currentUser, onClose }) => {
                 </div>
               </section>
               <section>
-                <h4 className="text-[10px] font-black text-pfuma-green uppercase tracking-widest mb-1 pb-1 border-b border-gray-100">Members ({data.members.length})</h4>
+                <h4 className="text-xs font-bold text-pfuma-green uppercase tracking-wide mb-1 pb-1 border-b border-gray-100">Members ({data.members.length})</h4>
                 {data.members.length === 0 ? (
-                  <p className="text-[11px] text-gray-400 italic font-medium py-2">No members.</p>
+                  <p className="text-xs text-gray-400 italic font-medium py-2">No members.</p>
                 ) : (
                   <div className="space-y-1.5">
                     {data.members.map(m => (
                       <div key={m.user_id} className="flex items-center justify-between gap-2 py-1.5 border-b border-gray-50 last:border-0">
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-gray-800 truncate">{m.full_name}</p>
-                          <p className="text-[10px] text-gray-400 font-medium">{m.phone}</p>
+                          <p className="text-xs text-gray-400 font-medium">{m.phone}</p>
                         </div>
-                        <span className={`shrink-0 text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${m.role === 'admin' ? 'bg-pfuma-green/10 text-pfuma-green' : 'bg-gray-100 text-gray-500'}`}>{m.role}</span>
+                        <span className={`shrink-0 text-xs font-bold px-2 py-0.5 rounded-full uppercase ${m.role === 'admin' ? 'bg-pfuma-green/10 text-pfuma-green' : 'bg-gray-100 text-gray-500'}`}>{m.role}</span>
                       </div>
                     ))}
                   </div>
@@ -651,8 +651,8 @@ const ActivityTab = ({ currentUser }) => {
 
   return (
     <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
-      <h3 className="text-sm font-black text-gray-800 mb-1">Recent Activity — Platform-Wide</h3>
-      <p className="text-[11px] text-gray-400 font-medium mb-4">Everything happening across every account, most recent first. Click any entry to open its full details.</p>
+      <h3 className="text-sm font-bold text-gray-800 mb-1">Recent Activity — Platform-Wide</h3>
+      <p className="text-xs text-gray-400 font-medium mb-4">Everything happening across every account, most recent first. Click any entry to open its full details.</p>
       {loading ? (
         <p className="text-xs text-gray-400 font-medium italic text-center py-10">Loading…</p>
       ) : feed.length === 0 ? (
@@ -670,8 +670,8 @@ const ActivityTab = ({ currentUser }) => {
                   {openingId === item.id ? <RefreshCw size={13} className="text-gray-400 animate-spin" /> : <Icon size={13} className="text-gray-500" />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-bold text-gray-800">{item.text}</p>
-                  <p className="text-[10px] text-gray-400 font-medium">{new Date(item.at).toLocaleString()}</p>
+                  <p className="text-xs font-bold text-gray-800">{item.text}</p>
+                  <p className="text-xs text-gray-400 font-medium">{new Date(item.at).toLocaleString()}</p>
                 </div>
                 {clickable && <Eye size={13} className="text-gray-300 shrink-0" />}
               </Row>
@@ -795,7 +795,7 @@ const IoTControlTab = ({ currentUser }) => {
         body: JSON.stringify({ owner_id: Number(ownerId), name: zoneForm.name, radius_m: Number(zoneForm.radius_m), ...center }),
       });
       const data = await res.json();
-      if (res.ok) { setFeedback('Geofence saved ✅'); loadGeofence(ownerId); }
+      if (res.ok) { setFeedback('Geofence saved'); loadGeofence(ownerId); }
       else setFeedback(data.error || 'Could not save geofence');
     } catch {
       setFeedback('Offline — could not reach the PFUMA API');
@@ -810,8 +810,8 @@ const IoTControlTab = ({ currentUser }) => {
       <div className="bg-gray-900 rounded-2xl p-5 flex items-start gap-3">
         <Satellite size={18} className="text-yellow-400 shrink-0 mt-0.5" />
         <div>
-          <h3 className="text-sm font-black text-white">IoT Demo Control</h3>
-          <p className="text-[11px] text-gray-400 font-medium mt-0.5 leading-relaxed">
+          <h3 className="text-sm font-bold text-white">IoT Demo Control</h3>
+          <p className="text-xs text-gray-400 font-medium mt-0.5 leading-relaxed">
             Drive an animal's collar position and vitals by hand. Every push shows up live on that farmer's own IoT tab — same as a real collar would — for exhibit demos while the physical hardware isn't wired up yet.
           </p>
         </div>
@@ -821,7 +821,7 @@ const IoTControlTab = ({ currentUser }) => {
         {/* Target selector */}
         <div className="bg-white border border-gray-100 rounded-2xl p-5 lg:col-span-3 flex flex-wrap items-end gap-3">
           <div className="flex-1 min-w-[180px]">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Farmer</label>
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block mb-1">Farmer</label>
             <select value={ownerId} onChange={e => { setOwnerId(e.target.value); const f = farmers.find(x => String(x.owner_id) === e.target.value); setAnimalId(f?.animals[0] ? String(f.animals[0].id) : ''); }}
               className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-bold">
               {farmers.length === 0 && <option value="">No farmers with animals yet</option>}
@@ -829,52 +829,52 @@ const IoTControlTab = ({ currentUser }) => {
             </select>
           </div>
           <div className="flex-1 min-w-[180px]">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Animal</label>
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wide block mb-1">Animal</label>
             <select value={animalId} onChange={e => setAnimalId(e.target.value)}
               className="w-full px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-bold">
               {(currentFarmer?.animals || []).map(a => <option key={a.id} value={a.id}>{a.name} ({a.species})</option>)}
             </select>
           </div>
-          {feedback && <span className="text-[11px] font-bold text-pfuma-green">{feedback}</span>}
+          {feedback && <span className="text-xs font-bold text-pfuma-green">{feedback}</span>}
         </div>
 
         {/* Movement */}
         <div className="bg-white border border-gray-100 rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-1">
             <Navigation size={15} className="text-pfuma-green" />
-            <h4 className="text-sm font-black text-gray-800">Move Collar</h4>
+            <h4 className="text-sm font-bold text-gray-800">Move Collar</h4>
           </div>
-          <p className="text-[11px] text-gray-400 font-medium mb-4">Nudge the animal's GPS position — watch it move live on the farmer's dashboard.</p>
+          <p className="text-xs text-gray-400 font-medium mb-4">Nudge the animal's GPS position — watch it move live on the farmer's dashboard.</p>
 
           <div className="grid grid-cols-3 gap-2 w-40 mx-auto mb-4">
             {COMPASS.map(({ dir, row, col }) => (
               <button key={dir} disabled={busy} onClick={() => push({ direction: dir })}
                 style={{ gridRow: row, gridColumn: col }}
-                className="aspect-square flex items-center justify-center bg-gray-50 hover:bg-pfuma-green hover:text-white text-gray-500 rounded-xl text-[10px] font-black uppercase transition disabled:opacity-50">
+                className="aspect-square flex items-center justify-center bg-gray-50 hover:bg-pfuma-green hover:text-white text-gray-500 rounded-xl text-xs font-bold uppercase transition disabled:opacity-50">
                 {dir}
               </button>
             ))}
           </div>
 
           <div className="flex items-center gap-2 mb-3">
-            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest shrink-0">Step (m)</label>
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wide shrink-0">Step (m)</label>
             <input type="number" min="5" max="200" value={stepM} onChange={e => setStepM(Number(e.target.value))}
               className="w-full px-2.5 py-1.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-bold" />
           </div>
 
           <div className="flex gap-2">
             <button disabled={busy} onClick={() => push({ direction: 'reset' })}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl text-[10px] font-black uppercase transition">
+              className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl text-xs font-bold uppercase transition">
               <Crosshair size={12} /> Center
             </button>
             <button disabled={busy} onClick={() => setAutoWalk(p => !p)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-[10px] font-black uppercase transition ${autoWalk ? 'bg-pfuma-green text-white' : 'bg-gray-50 hover:bg-gray-100 text-gray-600'}`}>
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-bold uppercase transition ${autoWalk ? 'bg-pfuma-green text-white' : 'bg-gray-50 hover:bg-gray-100 text-gray-600'}`}>
               {autoWalk ? <Pause size={12} /> : <Play size={12} />} {autoWalk ? 'Stop Walk' : 'Auto-Walk'}
             </button>
           </div>
 
           {lastPush && (
-            <div className={`mt-3 p-2.5 rounded-xl text-[10px] font-bold ${lastPush.in_zone ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+            <div className={`mt-3 p-2.5 rounded-xl text-xs font-bold ${lastPush.in_zone ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
               {lastPush.in_zone ? 'Inside geofence' : 'OUTSIDE geofence'} · {lastPush.distance_from_center_m}m from center
             </div>
           )}
@@ -884,44 +884,44 @@ const IoTControlTab = ({ currentUser }) => {
         <div className="bg-white border border-gray-100 rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-1">
             <Heart size={15} className="text-pfuma-green" />
-            <h4 className="text-sm font-black text-gray-800">Vitals</h4>
+            <h4 className="text-sm font-bold text-gray-800">Vitals</h4>
           </div>
-          <p className="text-[11px] text-gray-400 font-medium mb-4">Push a health reading — trigger a fever or theft alert on demand.</p>
+          <p className="text-xs text-gray-400 font-medium mb-4">Push a health reading — trigger a fever or theft alert on demand.</p>
 
           <div className="space-y-2.5 mb-3">
             <div className="flex items-center gap-2">
               <Thermometer size={13} className="text-gray-400 shrink-0" />
               <input type="number" step="0.1" value={vitals.temp_c} onChange={e => setVitals(v => ({ ...v, temp_c: e.target.value }))}
                 className="w-full px-2.5 py-1.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-bold" />
-              <span className="text-[10px] text-gray-400 font-bold shrink-0">°C</span>
+              <span className="text-xs text-gray-400 font-bold shrink-0">°C</span>
             </div>
             <div className="flex items-center gap-2">
               <Heart size={13} className="text-gray-400 shrink-0" />
               <input type="number" value={vitals.heart_rate} onChange={e => setVitals(v => ({ ...v, heart_rate: e.target.value }))}
                 className="w-full px-2.5 py-1.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-bold" />
-              <span className="text-[10px] text-gray-400 font-bold shrink-0">BPM</span>
+              <span className="text-xs text-gray-400 font-bold shrink-0">BPM</span>
             </div>
             <div className="flex items-center gap-2">
               <BatteryMedium size={13} className="text-gray-400 shrink-0" />
               <input type="number" min="0" max="100" value={vitals.battery_pct} onChange={e => setVitals(v => ({ ...v, battery_pct: e.target.value }))}
                 className="w-full px-2.5 py-1.5 bg-gray-50 rounded-lg border border-gray-200 text-xs font-bold" />
-              <span className="text-[10px] text-gray-400 font-bold shrink-0">%</span>
+              <span className="text-xs text-gray-400 font-bold shrink-0">%</span>
             </div>
           </div>
 
           <button disabled={busy} onClick={() => push({ temp_c: Number(vitals.temp_c), heart_rate: Number(vitals.heart_rate), battery_pct: Number(vitals.battery_pct) })}
-            className="w-full py-2 bg-pfuma-green text-white rounded-xl text-[10px] font-black uppercase mb-2 hover:bg-green-700 transition disabled:opacity-50">
+            className="w-full py-2 bg-pfuma-green text-white rounded-xl text-xs font-bold uppercase mb-2 hover:bg-green-700 transition disabled:opacity-50">
             Push Vitals
           </button>
           <div className="grid grid-cols-2 gap-2">
             <button disabled={busy} onClick={() => push({ temp_c: 38.5, heart_rate: 72, fever: false, theft: false })}
-              className="py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl text-[10px] font-black uppercase transition">Normal</button>
+              className="py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl text-xs font-bold uppercase transition">Normal</button>
             <button disabled={busy} onClick={() => push({ temp_c: 41.0, fever: true })}
-              className="py-2 bg-orange-50 hover:bg-orange-100 text-orange-600 rounded-xl text-[10px] font-black uppercase transition">Fever</button>
+              className="py-2 bg-orange-50 hover:bg-orange-100 text-orange-600 rounded-xl text-xs font-bold uppercase transition">Fever</button>
             <button disabled={busy} onClick={() => push({ battery_pct: 8 })}
-              className="py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-[10px] font-black uppercase transition">Low Battery</button>
+              className="py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-bold uppercase transition">Low Battery</button>
             <button disabled={busy} onClick={() => push({ theft: true, direction: 'random', step_m: 300 })}
-              className="py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-[10px] font-black uppercase transition">Theft / Breach</button>
+              className="py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-xs font-bold uppercase transition">Theft / Breach</button>
           </div>
         </div>
 
@@ -929,14 +929,14 @@ const IoTControlTab = ({ currentUser }) => {
         <div className="bg-gray-900 rounded-2xl p-5">
           <div className="flex items-center gap-2 mb-1">
             <RadioTower size={15} className="text-pfuma-green" />
-            <h4 className="text-sm font-black text-white">Geofence</h4>
+            <h4 className="text-sm font-bold text-white">Geofence</h4>
           </div>
-          <p className="text-[11px] text-gray-500 font-medium mb-4">The safe-zone boundary shown on this farmer's IoT tab.</p>
+          <p className="text-xs text-gray-500 font-medium mb-4">The safe-zone boundary shown on this farmer's IoT tab.</p>
 
           {geofence && (
             <div className="bg-white/5 rounded-xl p-3 mb-4 space-y-1">
-              <p className="text-[11px] font-black text-white">{geofence.name}{geofence.is_default && <span className="text-gray-500 font-medium"> (default)</span>}</p>
-              <p className="text-[10px] text-gray-400 font-medium">{geofence.center_lat.toFixed(5)}, {geofence.center_lon.toFixed(5)} · {geofence.radius_m}m radius</p>
+              <p className="text-xs font-bold text-white">{geofence.name}{geofence.is_default && <span className="text-gray-500 font-medium"> (default)</span>}</p>
+              <p className="text-xs text-gray-400 font-medium">{geofence.center_lat.toFixed(5)}, {geofence.center_lon.toFixed(5)} · {geofence.radius_m}m radius</p>
             </div>
           )}
 
@@ -947,14 +947,14 @@ const IoTControlTab = ({ currentUser }) => {
               <Target size={13} className="text-gray-400 shrink-0" />
               <input type="number" min="10" value={zoneForm.radius_m} onChange={e => setZoneForm(z => ({ ...z, radius_m: e.target.value }))}
                 className="w-full px-2.5 py-1.5 bg-white/5 text-white rounded-lg border border-white/10 text-xs font-bold outline-none" />
-              <span className="text-[10px] text-gray-400 font-bold shrink-0">m radius</span>
+              <span className="text-xs text-gray-400 font-bold shrink-0">m radius</span>
             </div>
           </div>
-          <p className="text-[10px] text-gray-500 font-medium mb-3 leading-relaxed">
+          <p className="text-xs text-gray-500 font-medium mb-3 leading-relaxed">
             Centers on the animal's last pushed position{!lastPush && ' (or the current zone center if it hasn\'t moved yet)'}. Move the collar to where you want the center first, then save.
           </p>
           <button disabled={busy || !ownerId} onClick={saveGeofence}
-            className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-pfuma-green text-white rounded-xl text-[10px] font-black uppercase hover:bg-green-600 transition disabled:opacity-50">
+            className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-pfuma-green text-white rounded-xl text-xs font-bold uppercase hover:bg-green-600 transition disabled:opacity-50">
             <Save size={12} /> Save New Geofence
           </button>
         </div>
@@ -1011,8 +1011,8 @@ const DataImportTab = ({ currentUser }) => {
     <div className="space-y-4">
       <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 space-y-4">
         <div>
-          <h3 className="text-sm font-black text-gray-800">Import & Fuse External Data</h3>
-          <p className="text-[11px] text-gray-400 font-medium mt-0.5">
+          <h3 className="text-sm font-bold text-gray-800">Import & Fuse External Data</h3>
+          <p className="text-xs text-gray-400 font-medium mt-0.5">
             Upload a CSV (e.g. a DVS vet registry export, a ZRP roster) to verify and update matching accounts.
             Rows are matched to existing users by their <code className="bg-gray-100 px-1 rounded">national_id_number</code> column —
             every CSV must include one. Optional columns: <code className="bg-gray-100 px-1 rounded">license_number</code>,{' '}
@@ -1028,30 +1028,30 @@ const DataImportTab = ({ currentUser }) => {
             <input type="file" accept=".csv" className="hidden" onChange={e => { setFile(e.target.files?.[0] || null); setPreview(null); setError(''); }} />
           </label>
         </div>
-        {error && <p className="text-[11px] text-red-500 font-bold">{error}</p>}
+        {error && <p className="text-xs text-red-500 font-bold">{error}</p>}
         <div className="flex gap-3">
           <button onClick={() => runImport(false)} disabled={busy || !file || !sourceLabel.trim()}
-            className="px-5 py-2.5 bg-white border-2 border-gray-200 rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-gray-50 transition disabled:opacity-50">
+            className="px-5 py-2.5 bg-white border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-gray-50 transition disabled:opacity-50">
             {busy ? 'Working…' : 'Preview (Dry Run)'}
           </button>
           <button onClick={() => runImport(true)} disabled={busy || !preview || preview.committed}
-            className="px-5 py-2.5 bg-pfuma-green text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-green-700 transition disabled:opacity-50">
+            className="px-5 py-2.5 bg-pfuma-green text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-green-700 transition disabled:opacity-50">
             {busy ? 'Working…' : 'Confirm & Import'}
           </button>
         </div>
 
         {preview && (
           <div className={`rounded-xl border p-4 ${preview.committed ? 'bg-pfuma-green/5 border-pfuma-green/20' : 'bg-gray-50 border-gray-200'}`}>
-            <p className="text-xs font-black text-gray-800">
-              {preview.committed ? 'Imported ✅' : 'Preview — nothing written yet'}
+            <p className="text-xs font-bold text-gray-800">
+              {preview.committed ? 'Imported' : 'Preview — nothing written yet'}
             </p>
-            <p className="text-[11px] text-gray-500 font-medium mt-1">
+            <p className="text-xs text-gray-500 font-medium mt-1">
               {preview.row_count} row{preview.row_count !== 1 ? 's' : ''} · {preview.matched_count} matched to existing accounts · {preview.unmatched_count} unmatched
             </p>
             {preview.preview?.length > 0 && (
               <div className="mt-3 space-y-1.5">
                 {preview.preview.map(m => (
-                  <p key={m.id} className="text-[11px] text-gray-600 font-medium">— {m.full_name} ({m.role})</p>
+                  <p key={m.id} className="text-xs text-gray-600 font-medium">— {m.full_name} ({m.role})</p>
                 ))}
               </div>
             )}
@@ -1061,7 +1061,7 @@ const DataImportTab = ({ currentUser }) => {
 
       <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
         <div className="p-4 border-b border-gray-50">
-          <h3 className="text-sm font-black text-gray-800 flex items-center gap-2"><Database size={14} className="text-gray-400" /> Import History</h3>
+          <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2"><Database size={14} className="text-gray-400" /> Import History</h3>
         </div>
         {logsLoading ? (
           <p className="text-xs text-gray-400 font-medium italic text-center py-8">Loading…</p>
@@ -1073,8 +1073,8 @@ const DataImportTab = ({ currentUser }) => {
               <div key={l.id} className="flex items-center gap-3 p-4">
                 <FileSpreadsheet size={16} className="text-gray-300 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-black text-gray-800">{l.source_label} <span className="text-gray-400 font-medium">— {l.filename}</span></p>
-                  <p className="text-[10px] text-gray-500 font-medium">{l.matched_count}/{l.row_count} matched · by {l.admin_name} · {new Date(l.created_at).toLocaleString()}</p>
+                  <p className="text-xs font-bold text-gray-800">{l.source_label} <span className="text-gray-400 font-medium">— {l.filename}</span></p>
+                  <p className="text-xs text-gray-500 font-medium">{l.matched_count}/{l.row_count} matched · by {l.admin_name} · {new Date(l.created_at).toLocaleString()}</p>
                 </div>
               </div>
             ))}
@@ -1098,25 +1098,31 @@ const AdminDashboard = ({ currentUser, onLogout }) => {
   const [tab, setTab] = useState('users');
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100 font-sans">
-      <div className="bg-gray-900 px-6 py-4 flex items-center justify-between shrink-0">
+    <div className="flex flex-col h-screen bg-ivory font-sans">
+      {/* Admin keeps its own compact chrome — it bypasses the role shell
+          entirely — but drawn from the same bark/ivory system so it never
+          looks like a different product. */}
+      <div className="bg-bark-900 px-6 py-4 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-pfuma-green rounded-xl flex items-center justify-center"><ShieldCheck size={18} className="text-white" /></div>
+          <div className="w-9 h-9 bg-bark-500 rounded-xl flex items-center justify-center">
+            <ShieldCheck size={18} className="text-amber-300" aria-hidden="true" />
+          </div>
           <div>
-            <p className="text-white font-black text-sm leading-none">PFUMA Admin</p>
-            <p className="text-gray-400 text-[10px] font-medium mt-0.5">Platform oversight</p>
+            <p className="text-white font-extrabold text-[0.9375rem] leading-none tracking-tight">PFUMA Admin</p>
+            <p className="text-white/45 text-xs font-medium mt-1">Platform oversight</p>
           </div>
         </div>
-        <button onClick={onLogout} className="flex items-center gap-1.5 px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl text-[10px] font-black uppercase transition">
-          <LogOut size={12} /> Sign Out
+        <button onClick={onLogout} className="flex items-center gap-2 px-4 py-2 border border-white/12 hover:bg-red-600/25 hover:border-red-400/30 text-white/70 hover:text-white rounded-xl text-xs font-semibold transition">
+          <LogOut size={13} aria-hidden="true" /> Sign out
         </button>
       </div>
 
-      <div className="bg-white border-b border-gray-100 px-6 flex gap-1 shrink-0">
+      <div className="bg-white border-b border-bark-500/10 px-6 flex gap-1 shrink-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            className={`flex items-center gap-2 px-4 py-3 text-xs font-black uppercase tracking-wide border-b-2 transition ${tab === t.id ? 'border-pfuma-green text-pfuma-green' : 'border-transparent text-gray-400 hover:text-gray-600'}`}>
-            <t.icon size={14} /> {t.label}
+            aria-current={tab === t.id ? 'page' : undefined}
+            className={`flex items-center gap-2 px-4 py-3.5 text-[0.8125rem] font-semibold whitespace-nowrap border-b-2 transition-colors ${tab === t.id ? 'border-bark-500 text-bark-500' : 'border-transparent text-gray-500 hover:text-gray-800'}`}>
+            <t.icon size={15} aria-hidden="true" /> {t.label}
           </button>
         ))}
       </div>

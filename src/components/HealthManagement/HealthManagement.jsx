@@ -6,6 +6,8 @@ import {
   HeartPulse, Package, AlertTriangle, Baby, Info, BookOpen,
   CheckCircle, Tag, Calendar, FlaskConical, RefreshCw
 } from 'lucide-react';
+import { Hero } from '../ui';
+import { photo } from '../../theme/imagery';
 import './HealthManagement.css';
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -33,8 +35,8 @@ const SectionHeader = ({ icon: Icon, title, description, color = 'text-pfuma-gre
   <div className="flex items-start gap-3 mb-4">
     <div className={`p-2 rounded-xl bg-gray-50 ${color} shrink-0`}><Icon size={18} /></div>
     <div>
-      <h3 className="text-sm font-black text-gray-800">{title}</h3>
-      <p className="text-[11px] text-gray-400 font-medium leading-snug mt-0.5">{description}</p>
+      <h3 className="text-sm font-bold text-gray-800">{title}</h3>
+      <p className="text-xs text-gray-400 font-medium leading-snug mt-0.5">{description}</p>
     </div>
   </div>
 );
@@ -43,8 +45,8 @@ const InfoRow = ({ label, value, sub }) => (
   <div className="flex justify-between items-center py-2.5 border-b border-gray-50 last:border-0">
     <span className="text-xs font-bold text-gray-500">{label}</span>
     <div className="text-right">
-      <span className="text-xs font-black text-gray-800">{value}</span>
-      {sub && <span className="text-[10px] text-gray-400 block">{sub}</span>}
+      <span className="text-xs font-bold text-gray-800">{value}</span>
+      {sub && <span className="text-xs text-gray-400 block">{sub}</span>}
     </div>
   </div>
 );
@@ -267,51 +269,42 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefre
   const administeredRecs = recommendations.filter(r => r.status === 'administered');
 
   return (
-    <div className="p-6 bg-gray-50 min-h-full space-y-6 text-left">
+    <div className="bg-ivory min-h-full text-left">
 
-      {/* ── PURPOSE BANNER ── */}
-      <div className="bg-gray-900 rounded-3xl p-6 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(circle at 85% 50%, #1b5e20 0%, transparent 60%)' }} aria-hidden="true" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-5">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <HeartPulse size={15} className="text-yellow-400" />
-              <span className="text-[10px] font-black text-yellow-400 uppercase tracking-[3px]">Animal Health Lifecycle Manager</span>
-            </div>
-            <h2 className="text-2xl font-black text-white leading-tight mb-1">Vaccinations, Pregnancy & Medication</h2>
-            <p className="text-gray-400 text-sm font-medium leading-relaxed max-w-lg">
-              Pick an animal from your herd to see its full health schedule — what vaccines are due, when it was last treated, whether it's pregnant, and the exact medicine dose calculated from its body weight.
-            </p>
-          </div>
-          {/* Alert badges */}
-          <div className="flex flex-wrap gap-2 shrink-0">
+      <Hero
+        size="sm"
+        image={photo('cattleCloseup', { w: 1800, q: 74 })}
+        eyebrow="Animal health lifecycle manager"
+        title="Vaccinations, pregnancy & medication"
+        sub="Pick an animal from your herd to see its full health schedule — what vaccines are due, when it was last treated, whether it's pregnant, and the exact medicine dose calculated from its body weight."
+        aside={
+          <div className="flex flex-col gap-2 items-end">
             {overdueCount > 0 && (
-              <div className="flex items-center gap-1.5 bg-red-500/20 border border-red-500/30 px-4 py-2 rounded-full">
-                <AlertTriangle size={13} className="text-red-400 animate-pulse" />
-                <span className="text-xs font-black text-red-400 uppercase">{overdueCount} Overdue</span>
-              </div>
+              <span className="flex items-center gap-2 rounded-xl border border-red-300/40 bg-red-950/40 px-4 py-2.5 text-sm font-bold text-red-50 backdrop-blur-sm">
+                <AlertTriangle size={14} aria-hidden="true" /> {overdueCount} overdue
+              </span>
             )}
             {dueSoonCount > 0 && (
-              <div className="flex items-center gap-1.5 bg-orange-400/20 border border-orange-400/30 px-4 py-2 rounded-full">
-                <AlertCircle size={13} className="text-orange-400" />
-                <span className="text-xs font-black text-orange-400 uppercase">{dueSoonCount} Due Soon</span>
-              </div>
+              <span className="flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-950/40 px-4 py-2.5 text-sm font-bold text-amber-50 backdrop-blur-sm">
+                <AlertCircle size={14} aria-hidden="true" /> {dueSoonCount} due soon
+              </span>
             )}
             {overdueCount === 0 && dueSoonCount === 0 && selectedAnimal && (
-              <div className="flex items-center gap-1.5 bg-green-500/20 border border-green-500/30 px-4 py-2 rounded-full">
-                <CheckCircle size={13} className="text-green-400" />
-                <span className="text-xs font-black text-green-400 uppercase">All Protocols Current</span>
-              </div>
+              <span className="flex items-center gap-2 rounded-xl border border-green-300/40 bg-green-950/40 px-4 py-2.5 text-sm font-bold text-green-50 backdrop-blur-sm">
+                <CheckCircle size={14} aria-hidden="true" /> All protocols current
+              </span>
             )}
           </div>
-        </div>
-      </div>
+        }
+      />
+
+      <div className="p-6 xl:p-8 space-y-6">
 
       {/* ── ANIMAL SELECTOR ── */}
       <div className={`bg-white border-2 rounded-2xl p-5 transition ${selectedAnimal ? 'border-pfuma-green' : 'border-gray-100'}`}>
         <div className="flex items-center gap-2 mb-3">
           <Tag size={14} className="text-pfuma-green" />
-          <h3 className="text-sm font-black text-gray-800">Which animal are you managing?</h3>
+          <h3 className="text-sm font-bold text-gray-800">Which animal are you managing?</h3>
         </div>
         {animals.length === 0 ? (
           <p className="text-xs text-gray-400 font-medium italic">No animals registered. Go to Herd Registry to add animals first.</p>
@@ -333,11 +326,11 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefre
                   }`}
                 >
                   <div>
-                    <p className="text-xs font-black leading-none">{a.name}</p>
-                    <p className={`text-[10px] font-medium leading-none mt-0.5 ${String(selectedAnimalId) === String(a.id) ? 'text-white/70' : 'text-gray-400'}`}>
+                    <p className="text-xs font-bold leading-none">{a.name}</p>
+                    <p className={`text-xs font-medium leading-none mt-0.5 ${String(selectedAnimalId) === String(a.id) ? 'text-white/70' : 'text-gray-400'}`}>
                       {a.species} · {a.age}
-                      {od > 0 && <span className="ml-1 text-red-400 font-black">· {od} overdue</span>}
-                      {od === 0 && ds > 0 && <span className="ml-1 text-orange-400 font-black">· {ds} due soon</span>}
+                      {od > 0 && <span className="ml-1 text-red-400 font-bold">· {od} overdue</span>}
+                      {od === 0 && ds > 0 && <span className="ml-1 text-orange-400 font-bold">· {ds} due soon</span>}
                     </p>
                   </div>
                 </button>
@@ -360,8 +353,8 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefre
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-white border-2 border-dashed border-gray-200 rounded-2xl py-16 flex flex-col items-center text-center">
             <HeartPulse size={40} className="text-gray-200 mb-3" />
-            <p className="text-sm font-black text-gray-400">Select an animal above to view its health schedule</p>
-            <p className="text-[11px] text-gray-300 font-medium mt-1">{animals.length} animal{animals.length !== 1 ? 's' : ''} in your herd</p>
+            <p className="text-sm font-bold text-gray-400">Select an animal above to view its health schedule</p>
+            <p className="text-xs text-gray-300 font-medium mt-1">{animals.length} animal{animals.length !== 1 ? 's' : ''} in your herd</p>
           </div>
           <InventoryCabinet inventory={inventory} />
         </div>
@@ -376,13 +369,13 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefre
               {/* tabs */}
               <div className="flex gap-1 bg-gray-50 rounded-xl p-1 mb-5">
                 {[
-                  { id: 'lifecycle', label: '🗓 Lifecycle',  icon: History },
-                  { id: 'breed',     label: '📖 Breed Info', icon: BookOpen },
+                  { id: 'lifecycle', label: 'Lifecycle',  icon: History },
+                  { id: 'breed',     label: 'Breed Info', icon: BookOpen },
                 ].map(t => (
                   <button
                     key={t.id}
                     onClick={() => setActiveInfoTab(t.id)}
-                    className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wide transition ${activeInfoTab === t.id ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                    className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wide transition ${activeInfoTab === t.id ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
                   >
                     {t.label}
                   </button>
@@ -401,12 +394,12 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefre
                     <>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-gray-50 rounded-xl p-3">
-                          <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Current Age</p>
-                          <p className="text-xl font-black text-gray-900">{lifecycle.ageDisplay}</p>
+                          <p className="text-xs font-bold text-gray-400 uppercase mb-1">Current Age</p>
+                          <p className="text-xl font-bold text-gray-900">{lifecycle.ageDisplay}</p>
                         </div>
                         <div className={`rounded-xl p-3 ${lifecycle.isWeaned ? 'bg-green-50' : 'bg-blue-50'}`}>
-                          <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Weaning</p>
-                          <p className={`text-sm font-black ${lifecycle.isWeaned ? 'text-pfuma-green' : 'text-blue-600'}`}>
+                          <p className="text-xs font-bold text-gray-400 uppercase mb-1">Weaning</p>
+                          <p className={`text-sm font-bold ${lifecycle.isWeaned ? 'text-pfuma-green' : 'text-blue-600'}`}>
                             {lifecycle.isWeaned ? '✓ Complete' : `${lifecycle.daysUntilWeaning}d left`}
                           </p>
                         </div>
@@ -416,8 +409,8 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefre
                         <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 flex items-start gap-2.5">
                           <Baby size={15} className="text-orange-500 mt-0.5 shrink-0" />
                           <div>
-                            <p className="text-xs font-black text-orange-700">⚠ Weaning Due in {lifecycle.daysUntilWeaning} days</p>
-                            <p className="text-[11px] text-orange-600 font-medium mt-0.5">Prepare a separate pen and introduce creep feed now so the transition is gradual.</p>
+                            <p className="text-xs font-bold text-orange-700">⚠ Weaning Due in {lifecycle.daysUntilWeaning} days</p>
+                            <p className="text-xs text-orange-600 font-medium mt-0.5">Prepare a separate pen and introduce creep feed now so the transition is gradual.</p>
                           </div>
                         </div>
                       )}
@@ -431,7 +424,7 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefre
                       title="Pregnancy Tracker"
                       description="Enter the mating date to calculate the expected birth date and get a countdown."
                     />
-                    <label className="text-[10px] font-black text-gray-500 uppercase block mb-1.5" htmlFor="gest-date">
+                    <label className="text-xs font-bold text-gray-500 uppercase block mb-1.5" htmlFor="gest-date">
                       Mating / Insemination Date
                     </label>
                     <div className="flex gap-2">
@@ -447,28 +440,28 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefre
                         type="button"
                         onClick={() => handleSetMatingDate(gestationStart)}
                         disabled={!gestationStart || matingSaving}
-                        className="px-4 rounded-xl bg-pfuma-green text-white text-xs font-black uppercase tracking-wide hover:bg-green-700 transition disabled:opacity-40 shrink-0"
+                        className="px-4 rounded-xl bg-pfuma-green text-white text-xs font-bold uppercase tracking-wide hover:bg-green-700 transition disabled:opacity-40 shrink-0"
                       >
                         {matingSaving ? '…' : 'Save'}
                       </button>
                     </div>
-                    <p className="text-[10px] text-gray-400 font-medium mt-1.5">Saved so it's still here next time you open this animal — not just a one-off calculator.</p>
+                    <p className="text-xs text-gray-400 font-medium mt-1.5">Saved so it's still here next time you open this animal — not just a one-off calculator.</p>
 
                     {gestationInfo && (
                       <div className={`mt-3 p-4 rounded-2xl ${gestationInfo.isOverdue ? 'bg-red-50 border border-red-200' : gestationInfo.isUrgent ? 'bg-orange-50 border border-orange-200' : 'bg-green-50 border border-green-200'}`}>
-                        <p className={`text-[10px] font-black uppercase mb-1 ${gestationInfo.isOverdue ? 'text-red-600' : gestationInfo.isUrgent ? 'text-orange-600' : 'text-pfuma-green'}`}>
-                          {gestationInfo.isOverdue ? '⚠ Overdue — Check Animal Now' : gestationInfo.isUrgent ? '🔔 Birth Imminent' : '🐄 Expected Birth Date'}
+                        <p className={`text-xs font-bold uppercase mb-1 ${gestationInfo.isOverdue ? 'text-red-600' : gestationInfo.isUrgent ? 'text-orange-600' : 'text-pfuma-green'}`}>
+                          {gestationInfo.isOverdue ? '⚠ Overdue — Check Animal Now' : gestationInfo.isUrgent ? 'Birth Imminent' : 'Expected Birth Date'}
                         </p>
                         <div className="flex justify-between items-center">
-                          <p className="text-sm font-black text-gray-800">{gestationInfo.date}</p>
+                          <p className="text-sm font-bold text-gray-800">{gestationInfo.date}</p>
                           <div className="text-right">
-                            <p className={`text-2xl font-black leading-none ${gestationInfo.isOverdue ? 'text-red-600' : gestationInfo.isUrgent ? 'text-orange-600' : 'text-pfuma-green'}`}>
+                            <p className={`text-2xl font-bold leading-none ${gestationInfo.isOverdue ? 'text-red-600' : gestationInfo.isUrgent ? 'text-orange-600' : 'text-pfuma-green'}`}>
                               {Math.abs(gestationInfo.daysRemaining)}
                             </p>
-                            <p className="text-[10px] font-bold text-gray-400">{gestationInfo.isOverdue ? 'days over' : 'days left'}</p>
+                            <p className="text-xs font-bold text-gray-400">{gestationInfo.isOverdue ? 'days over' : 'days left'}</p>
                           </div>
                         </div>
-                        <p className="text-[10px] text-gray-400 font-medium mt-2">{selectedAnimal.species} gestation period: {gestationInfo.period} days</p>
+                        <p className="text-xs text-gray-400 font-medium mt-2">{selectedAnimal.species} gestation period: {gestationInfo.period} days</p>
                       </div>
                     )}
                   </div>
@@ -488,24 +481,24 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefre
                     description="Breed characteristics help you understand feed needs, heat tolerance, and expected growth rate."
                   />
                   <div className="bg-gray-50 rounded-xl p-3">
-                    <p className="text-[10px] font-black text-gray-400 uppercase mb-1">Registered Breed</p>
-                    <p className="text-lg font-black text-gray-900">{selectedAnimal.breed || <span className="text-gray-400 italic text-sm">Not recorded</span>}</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase mb-1">Registered Breed</p>
+                    <p className="text-lg font-bold text-gray-900">{selectedAnimal.breed || <span className="text-gray-400 italic text-sm">Not recorded</span>}</p>
                   </div>
                   {breedInfo ? (
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-gray-50 p-3 rounded-xl">
-                          <p className="text-[9px] font-black text-gray-400 uppercase mb-0.5">Origin</p>
-                          <p className="text-xs font-black text-gray-700">{breedInfo.origin}</p>
+                          <p className="text-xs font-bold text-gray-400 uppercase mb-0.5">Origin</p>
+                          <p className="text-xs font-bold text-gray-700">{breedInfo.origin}</p>
                         </div>
                         <div className="bg-gray-50 p-3 rounded-xl">
-                          <p className="text-[9px] font-black text-gray-400 uppercase mb-0.5">Mature Weight</p>
-                          <p className="text-xs font-black text-gray-700">{breedInfo.mature_weight_kg} kg</p>
+                          <p className="text-xs font-bold text-gray-400 uppercase mb-0.5">Mature Weight</p>
+                          <p className="text-xs font-bold text-gray-700">{breedInfo.mature_weight_kg} kg</p>
                         </div>
                         {breedInfo.heat_tolerance && (
                           <div className="bg-gray-50 p-3 rounded-xl col-span-2">
-                            <p className="text-[9px] font-black text-gray-400 uppercase mb-0.5">Heat Tolerance</p>
-                            <p className={`text-xs font-black ${breedInfo.heat_tolerance === 'Excellent' ? 'text-pfuma-green' : breedInfo.heat_tolerance === 'Moderate' ? 'text-orange-500' : 'text-red-500'}`}>
+                            <p className="text-xs font-bold text-gray-400 uppercase mb-0.5">Heat Tolerance</p>
+                            <p className={`text-xs font-bold ${breedInfo.heat_tolerance === 'Excellent' ? 'text-pfuma-green' : breedInfo.heat_tolerance === 'Moderate' ? 'text-orange-500' : 'text-red-500'}`}>
                               {breedInfo.heat_tolerance}
                             </p>
                           </div>
@@ -513,7 +506,7 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefre
                       </div>
                       <div className="bg-green-50 border border-green-100 rounded-xl p-3 flex gap-2">
                         <Info size={13} className="text-pfuma-green mt-0.5 shrink-0" />
-                        <p className="text-[11px] text-green-800 font-medium leading-relaxed">{breedInfo.notes}</p>
+                        <p className="text-xs text-green-800 font-medium leading-relaxed">{breedInfo.notes}</p>
                       </div>
                     </div>
                   ) : (
@@ -540,8 +533,8 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefre
               ) : recommendations.length === 0 ? (
                 <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-2xl">
                   <FlaskConical size={24} className="mx-auto text-gray-300 mb-2" />
-                  <p className="text-xs font-black text-gray-400">No recommendations yet</p>
-                  <p className="text-[11px] text-gray-400 font-medium mt-1 px-4">Ask your vet on PFUMA Messenger to review {selectedAnimal.name} — anything they prescribe shows up here.</p>
+                  <p className="text-xs font-bold text-gray-400">No recommendations yet</p>
+                  <p className="text-xs text-gray-400 font-medium mt-1 px-4">Ask your vet on PFUMA Messenger to review {selectedAnimal.name} — anything they prescribe shows up here.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -552,26 +545,26 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefre
                       <div key={rec.id} className="bg-blue-50 border border-blue-100 rounded-2xl p-4 space-y-2.5">
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <p className="text-sm font-black text-gray-800">{rec.medicine_name}</p>
-                            <p className="text-[10px] text-gray-500 font-medium">{rec.vet_name} · {new Date(rec.created_at).toLocaleDateString()}</p>
+                            <p className="text-sm font-bold text-gray-800">{rec.medicine_name}</p>
+                            <p className="text-xs text-gray-500 font-medium">{rec.vet_name} · {new Date(rec.created_at).toLocaleDateString()}</p>
                           </div>
                           <div className="text-right shrink-0">
-                            <span className="text-xl font-black text-blue-700">{Number(rec.dose_ml).toFixed(1)}</span>
-                            <span className="text-xs font-black text-blue-500"> ml</span>
+                            <span className="text-xl font-bold text-blue-700">{Number(rec.dose_ml).toFixed(1)}</span>
+                            <span className="text-xs font-bold text-blue-500"> ml</span>
                           </div>
                         </div>
-                        {rec.frequency && <p className="text-[11px] text-gray-600 font-bold">{rec.frequency}</p>}
-                        {rec.notes && <p className="text-[11px] text-gray-600 font-medium italic">"{rec.notes}"</p>}
+                        {rec.frequency && <p className="text-xs text-gray-600 font-bold">{rec.frequency}</p>}
+                        {rec.notes && <p className="text-xs text-gray-600 font-medium italic">"{rec.notes}"</p>}
 
                         {cabinetItem ? (
-                          <div className={`flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] font-bold ${canAdminister ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-orange-50 text-orange-700 border border-orange-100'}`}>
+                          <div className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold ${canAdminister ? 'bg-green-50 text-green-700 border border-green-100' : 'bg-orange-50 text-orange-700 border border-orange-100'}`}>
                             {canAdminister ? <CheckCircle size={13} className="shrink-0" /> : <AlertCircle size={13} className="shrink-0" />}
                             {canAdminister
                               ? `In your cabinet — ${cabinetItem.stock.toFixed(1)}ml available.`
                               : `Only ${cabinetItem.stock.toFixed(1)}ml left — not enough for this ${Number(rec.dose_ml).toFixed(1)}ml dose.`}
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2 bg-gray-100 text-gray-500 border border-gray-200 rounded-xl px-3 py-2 text-[11px] font-bold">
+                          <div className="flex items-center gap-2 bg-gray-100 text-gray-500 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold">
                             <Info size={13} className="shrink-0" />
                             Not in your Medicine Cabinet — order it from a Supplier in the Marketplace first.
                           </div>
@@ -581,7 +574,7 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefre
                           onClick={() => administerRecommendation(rec)}
                           disabled={!canAdminister || administeringId === rec.id}
                           title={!canAdminister ? 'Not enough stock in your cabinet for this dose' : undefined}
-                          className="w-full py-3 bg-blue-600 text-white rounded-xl font-black uppercase text-xs tracking-widest shadow-lg hover:bg-blue-700 active:scale-[0.98] transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
+                          className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold uppercase text-xs tracking-wide shadow-lg hover:bg-blue-700 active:scale-[0.98] transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
                         >
                           <CheckCircle size={15} /> {administeringId === rec.id ? 'Administering…' : 'Administer & Deduct Stock'}
                         </button>
@@ -591,13 +584,13 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefre
 
                   {administeredRecs.length > 0 && (
                     <div className="pt-1">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Administered</p>
+                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Administered</p>
                       <div className="space-y-2">
                         {administeredRecs.map(rec => (
                           <div key={rec.id} className="flex items-center justify-between gap-2 px-3 py-2 bg-gray-50 rounded-xl">
                             <div className="min-w-0">
-                              <p className="text-xs font-black text-gray-700 truncate">{rec.medicine_name} — {Number(rec.dose_ml).toFixed(1)}ml</p>
-                              <p className="text-[10px] text-gray-400 font-medium">{rec.vet_name} · administered {rec.administered_at ? new Date(rec.administered_at).toLocaleDateString() : ''}</p>
+                              <p className="text-xs font-bold text-gray-700 truncate">{rec.medicine_name} — {Number(rec.dose_ml).toFixed(1)}ml</p>
+                              <p className="text-xs text-gray-400 font-medium">{rec.vet_name} · administered {rec.administered_at ? new Date(rec.administered_at).toLocaleDateString() : ''}</p>
                             </div>
                             <CheckCircle size={14} className="text-pfuma-green shrink-0" />
                           </div>
@@ -625,7 +618,7 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefre
               </div>
               {/* Progress summary */}
               {schedule.length > 0 && (
-                <div className="flex gap-3 text-[10px] font-black uppercase shrink-0">
+                <div className="flex gap-3 text-xs font-bold uppercase shrink-0">
                   <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-pfuma-green" />{doneCount} Done</span>
                   {overdueCount > 0 && <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-red-500" />{overdueCount} Overdue</span>}
                   {dueSoonCount > 0 && <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-orange-400" />{dueSoonCount} Due Soon</span>}
@@ -642,17 +635,17 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefre
                     <div className="flex items-start gap-3">
                       <div className="flex flex-col items-center gap-1 pt-0.5 shrink-0">
                         <div className={`w-3 h-3 rounded-full ${statusDot(task.status)}`} />
-                        {task.mandatory && <span className="text-[7px] font-black text-red-500 uppercase">REQ</span>}
+                        {task.mandatory && <span className="text-[7px] font-bold text-red-500 uppercase">REQ</span>}
                       </div>
                       <div>
-                        <p className="text-xs font-black text-gray-800 leading-snug">{task.name}</p>
-                        <p className="text-[10px] text-gray-400 font-medium mt-0.5">
+                        <p className="text-xs font-bold text-gray-800 leading-snug">{task.name}</p>
+                        <p className="text-xs text-gray-400 font-medium mt-0.5">
                           {task.intervalDays ? 'Next due: ' : ''}{task.dueDate}
                         </p>
-                        {task.lastDone && <p className="text-[10px] text-gray-400 font-medium">Last done: {task.lastDone}</p>}
-                        {task.notes && <p className="text-[10px] text-gray-400 italic mt-0.5">{task.notes}</p>}
+                        {task.lastDone && <p className="text-xs text-gray-400 font-medium">Last done: {task.lastDone}</p>}
+                        {task.notes && <p className="text-xs text-gray-400 italic mt-0.5">{task.notes}</p>}
                         {task.status !== 'Completed' && (
-                          <p className={`text-[10px] font-black mt-1 uppercase ${statusLabel(task.status)}`}>
+                          <p className={`text-xs font-bold mt-1 uppercase ${statusLabel(task.status)}`}>
                             {task.status === 'Overdue' ? `${Math.abs(task.daysUntil)}d overdue — act now` :
                              task.status === 'Due Soon' ? `Due in ${task.daysUntil} days` :
                              `Due in ${task.daysUntil} days`}
@@ -665,7 +658,7 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefre
                       : (
                         <button
                           onClick={() => handleCompleteTask(task)}
-                          className={`shrink-0 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide transition ml-2 ${
+                          className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition ml-2 ${
                             task.status === 'Overdue'  ? 'bg-red-600 text-white hover:bg-red-700' :
                             task.status === 'Due Soon' ? 'bg-orange-500 text-white hover:bg-orange-600' :
                             'bg-white text-gray-500 border border-gray-200 hover:border-pfuma-green hover:text-pfuma-green'
@@ -685,43 +678,43 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefre
               {!showLogForm ? (
                 <button
                   onClick={() => setShowLogForm(true)}
-                  className="w-full py-3 rounded-xl border-2 border-dashed border-gray-200 text-xs font-black uppercase tracking-widest text-gray-500 hover:border-pfuma-green hover:text-pfuma-green transition"
+                  className="w-full py-3 rounded-xl border-2 border-dashed border-gray-200 text-xs font-bold uppercase tracking-wide text-gray-500 hover:border-pfuma-green hover:text-pfuma-green transition"
                 >
                   + Log a different treatment or dip
                 </button>
               ) : (
                 <form onSubmit={handleLogCustomEvent} className="bg-gray-50 rounded-2xl p-4 space-y-3">
-                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">
                     Log something not on the schedule above — e.g. an extra dip, a vet visit, an off-cycle booster
                   </p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[9px] font-black text-gray-400 uppercase mb-1">What was done *</label>
+                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1">What was done *</label>
                       <input type="text" required placeholder="e.g. Dipping (Tick Control)" className="w-full p-2.5 bg-white rounded-lg border-2 border-transparent focus:border-pfuma-green outline-none text-xs font-bold"
                         value={logForm.eventType} onChange={e => setLogForm(f => ({ ...f, eventType: e.target.value }))} />
                     </div>
                     <div>
-                      <label className="block text-[9px] font-black text-gray-400 uppercase mb-1">Day it was done</label>
+                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Day it was done</label>
                       <input type="date" max={new Date().toISOString().slice(0, 10)} className="w-full p-2.5 bg-white rounded-lg border-2 border-transparent focus:border-pfuma-green outline-none text-xs font-bold"
                         value={logForm.eventDate} onChange={e => setLogForm(f => ({ ...f, eventDate: e.target.value }))} />
                     </div>
                     <div>
-                      <label className="block text-[9px] font-black text-gray-400 uppercase mb-1">Next due (optional)</label>
+                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Next due (optional)</label>
                       <input type="date" min={new Date().toISOString().slice(0, 10)} className="w-full p-2.5 bg-white rounded-lg border-2 border-transparent focus:border-pfuma-green outline-none text-xs font-bold"
                         value={logForm.nextDueDate} onChange={e => setLogForm(f => ({ ...f, nextDueDate: e.target.value }))} />
                     </div>
                     <div>
-                      <label className="block text-[9px] font-black text-gray-400 uppercase mb-1">Notes</label>
+                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1">Notes</label>
                       <input type="text" placeholder="optional" className="w-full p-2.5 bg-white rounded-lg border-2 border-transparent focus:border-pfuma-green outline-none text-xs font-bold"
                         value={logForm.notes} onChange={e => setLogForm(f => ({ ...f, notes: e.target.value }))} />
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button type="submit" className="flex-1 py-2.5 bg-pfuma-green text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-green-700 transition">
+                    <button type="submit" className="flex-1 py-2.5 bg-pfuma-green text-white rounded-lg text-xs font-bold uppercase tracking-wide hover:bg-green-700 transition">
                       Save Record
                     </button>
                     <button type="button" onClick={() => { setShowLogForm(false); setLogForm({ eventType: '', eventDate: '', nextDueDate: '', notes: '' }); }}
-                      className="px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-gray-700 transition">
+                      className="px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-xs font-bold uppercase tracking-wide text-gray-500 hover:text-gray-700 transition">
                       Cancel
                     </button>
                   </div>
@@ -731,6 +724,7 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefre
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };
@@ -750,23 +744,23 @@ const InventoryCabinet = ({ inventory }) => (
         return (
           <div key={item.id} className={`p-3.5 rounded-xl border transition ${isLow ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-transparent hover:border-gray-200'}`}>
             <div className="flex justify-between items-start mb-1.5">
-              <p className="text-xs font-black text-gray-700 leading-tight">{item.name}</p>
+              <p className="text-xs font-bold text-gray-700 leading-tight">{item.name}</p>
               {isLow && (
-                <span className="flex items-center gap-1 text-[9px] font-black text-red-600 bg-red-100 px-2 py-0.5 rounded-full uppercase animate-pulse">
+                <span className="flex items-center gap-1 text-xs font-bold text-red-600 bg-red-100 px-2 py-0.5 rounded-full uppercase animate-pulse">
                   <AlertTriangle size={8} /> Low Stock
                 </span>
               )}
             </div>
             <div className="flex justify-between items-baseline mb-2">
-              <strong className={`text-lg font-black ${isLow ? 'text-red-600' : 'text-pfuma-green'}`}>
-                {item.stock.toFixed(0)} <small className="text-[10px] uppercase font-bold">{item.unit}</small>
+              <strong className={`text-lg font-bold ${isLow ? 'text-red-600' : 'text-pfuma-green'}`}>
+                {item.stock.toFixed(0)} <small className="text-xs uppercase font-bold">{item.unit}</small>
               </strong>
-              <span className="text-[10px] text-gray-400 font-bold">Min: {item.min} {item.unit}</span>
+              <span className="text-xs text-gray-400 font-bold">Min: {item.min} {item.unit}</span>
             </div>
             <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
               <div className={`h-full rounded-full transition-all duration-500 ${isLow ? 'bg-red-500' : pct > 50 ? 'bg-pfuma-green' : 'bg-orange-400'}`} style={{ width: `${pct}%` }} />
             </div>
-            {isLow && <p className="text-[10px] text-red-500 font-medium mt-1.5">Reorder from {item.supplier}</p>}
+            {isLow && <p className="text-xs text-red-500 font-medium mt-1.5">Reorder from {item.supplier}</p>}
           </div>
         );
       })}

@@ -1,14 +1,14 @@
 .pfuma-iot-dashboard.enterprise {
   padding: 1rem;
   font-family: 'Inter', sans-serif;
-  color: #333;
+  color: #29231E;
 }
 
 .iot-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #1b5e20;
+  background: #7A3F0B;
   color: white;
   padding: 1.5rem 2rem;
   border-radius: 12px;
@@ -25,8 +25,8 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: #fbc02d;
-  color: #1b5e20;
+  background: #C99A4A;
+  color: #7A3F0B;
   padding: 0.3rem 0.8rem;
   border-radius: 50px;
   font-size: 0.65rem;
@@ -34,11 +34,11 @@
 }
 
 .vitality-summary {
-  background: #f8f9fa;
+  background: #F7F3ED;
   padding: 1.5rem;
   border-radius: 12px;
   margin-bottom: 2rem;
-  border: 1px solid #eee;
+  border: 1px solid #E0D6C7;
   text-align: left;
 }
 
@@ -58,35 +58,35 @@
 .vitality-bar-bg {
   flex: 1;
   height: 12px;
-  background: #eee;
+  background: #E0D6C7;
   border-radius: 10px;
   overflow: hidden;
 }
 
 .vitality-fill {
   height: 100%;
-  background: #2e7d32;
+  background: #8E450E;
   transition: width 1s ease-in-out;
 }
 
-.vitality-fill.poor { background: #d32f2f; }
+.vitality-fill.poor { background: #B5342C; }
 
 .vitality-val {
   font-weight: 900;
-  color: #1b5e20;
+  color: #7A3F0B;
   min-width: 50px;
 }
 
 .sensor-fusion-hint {
   font-size: 0.75rem;
-  color: #888;
+  color: #7C7268;
   margin: 0;
 }
 
 .filter-tag {
   font-size: 0.6rem;
-  color: #2e7d32;
-  background: #e8f5e9;
+  color: #8E450E;
+  background: #F6E9CF;
   padding: 0.1rem 0.3rem;
   border-radius: 2px;
   text-transform: uppercase;
@@ -100,10 +100,10 @@
 
 .assurance-item {
   font-size: 0.85rem;
-  color: #2e7d32;
+  color: #8E450E;
   font-weight: 600;
   padding: 0.5rem;
-  background: #f1f8e9;
+  background: #F2F4EB;
   border-radius: 6px;
 }
 
@@ -122,9 +122,9 @@
 .pulse {
   width: 8px;
   height: 8px;
-  background: #ff5252;
+  background: #C75B50;
   border-radius: 50%;
-  box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.7);
+  box-shadow: 0 0 0 0 rgba(199, 91, 80, 0.7);
   animation: pulse 2s infinite;
 }
 
@@ -152,8 +152,8 @@
   display: flex;
   align-items: center;
   gap: 1.2rem;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.03);
-  border: 1px solid #eee;
+  box-shadow: 0 4px 10px rgba(65, 35, 12, 0.04);
+  border: 1px solid #E0D6C7;
 }
 
 .sensor-icon {
@@ -161,13 +161,13 @@
   border-radius: 10px;
 }
 
-.sensor-icon.temp { background: #e8f5e9; color: #2e7d32; }
-.sensor-icon.hr { background: #ffebee; color: #c62828; }
-.sensor-icon.act { background: #e3f2fd; color: #1976d2; }
+.sensor-icon.temp { background: #F6E9CF; color: #8E450E; }
+.sensor-icon.hr { background: #FBEEEC; color: #9A2A23; }
+.sensor-icon.act { background: #F0F3F6; color: #4F6A82; }
 
-.sensor-vals label { display: block; font-size: 0.75rem; color: #888; text-transform: uppercase; }
-.sensor-vals .val { font-size: 1.4rem; font-weight: 800; color: #333; }
-.sensor-vals .val.danger { color: #d32f2f; }
+.sensor-vals label { display: block; font-size: 0.75rem; color: #7C7268; text-transform: uppercase; }
+.sensor-vals .val { font-size: 1.4rem; font-weight: 800; color: #29231E; }
+.sensor-vals .val.danger { color: #B5342C; }
 
 .status-summary-card {
   padding: 1.5rem;
@@ -179,8 +179,8 @@
   color: white;
 }
 
-.status-summary-card.stable { background: #2e7d32; }
-.status-summary-card.alert { background: #d32f2f; }
+.status-summary-card.stable { background: #8E450E; }
+.status-summary-card.alert { background: #B5342C; }
 
 .status-summary-card label { font-size: 0.7rem; text-transform: uppercase; opacity: 0.8; }
 .status-summary-card strong { font-size: 1.1rem; }
@@ -198,14 +198,14 @@
   background: white;
   padding: 1.5rem;
   border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.03);
-  border: 1px solid #eee;
+  box-shadow: 0 4px 10px rgba(65, 35, 12, 0.04);
+  border: 1px solid #E0D6C7;
 }
 
 .chart-container h3, .iot-alerts-panel h3, .geofence-card h3, .iot-hardware-info h3 {
   margin-top: 0;
   font-size: 1rem;
-  color: #1b5e20;
+  color: #7A3F0B;
   margin-bottom: 1.5rem;
 }
 
@@ -218,7 +218,7 @@
 .no-alerts {
   text-align: center;
   padding: 2rem 0;
-  color: #888;
+  color: #7C7268;
 }
 
 .alert-item {
@@ -230,11 +230,11 @@
   font-size: 0.85rem;
 }
 
-.alert-item.health { background: #fffde7; border-left: 4px solid #fbc02d; }
-.alert-item.security { background: #ffebee; border-left: 4px solid #d32f2f; }
+.alert-item.health { background: #FBF5E9; border-left: 4px solid #C99A4A; }
+.alert-item.security { background: #FBEEEC; border-left: 4px solid #B5342C; }
 
 .alert-content { display: flex; flex-direction: column; }
-.alert-content strong { color: #333; }
+.alert-content strong { color: #29231E; }
 
 /* Bottom Row GPS & Hardware */
 .dashboard-bottom-row {
@@ -251,7 +251,7 @@
 }
 
 .coord { display: flex; flex-direction: column; }
-.coord label { font-size: 0.7rem; color: #999; }
+.coord label { font-size: 0.7rem; color: #968C82; }
 .coord strong { font-size: 1.1rem; }
 
 .geo-visual {
@@ -262,17 +262,17 @@
 .safe-zone-circle {
   width: 80px;
   height: 80px;
-  border: 2px dashed #2e7d32;
+  border: 2px dashed #8E450E;
   border-radius: 50%;
   margin: 0 auto 0.5rem;
   position: relative;
-  background: #f1f8e9;
+  background: #F2F4EB;
 }
 
 .animal-marker {
   width: 10px;
   height: 10px;
-  background: #2e7d32;
+  background: #8E450E;
   border-radius: 50%;
   position: absolute;
   top: 50%;
@@ -282,20 +282,20 @@
 }
 
 .animal-marker.outside {
-  background: #d32f2f;
+  background: #B5342C;
   top: 10%;
   left: 90%;
-  box-shadow: 0 0 10px rgba(211, 47, 47, 0.5);
+  box-shadow: 0 0 10px rgba(181, 52, 44, 0.45);
 }
 
-.geo-visual span { font-size: 0.7rem; color: #888; }
+.geo-visual span { font-size: 0.7rem; color: #7C7268; }
 
 .bridge-status {
   display: flex;
   align-items: center;
   gap: 1rem;
   padding: 1rem;
-  background: #f9f9f9;
+  background: #F7F3ED;
   border-radius: 8px;
   margin-bottom: 1rem;
 }
@@ -306,15 +306,15 @@
   border-radius: 50%;
 }
 
-.status-indicator.disconnected { background: #ddd; }
-.status-indicator.connected { background: #4caf50; }
+.status-indicator.disconnected { background: #CBBFAD; }
+.status-indicator.connected { background: #8A9C68; }
 
-.hint { font-size: 0.8rem; color: #999; font-style: italic; }
+.hint { font-size: 0.8rem; color: #968C82; font-style: italic; }
 
 @keyframes pulse {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(255, 82, 82, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 82, 82, 0); }
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(199, 91, 80, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(199, 91, 80, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(199, 91, 80, 0); }
 }
 
 @media (max-width: 900px) {

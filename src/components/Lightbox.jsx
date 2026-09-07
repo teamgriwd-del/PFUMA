@@ -37,7 +37,7 @@ export default function Lightbox({ photos, index, onClose, onIndexChange, alt })
       </button>
 
       {photos.length > 1 && (
-        <span className="absolute top-4 left-4 text-white/70 text-xs font-black uppercase tracking-widest">
+        <span className="absolute top-4 left-4 text-white/70 text-xs font-bold uppercase tracking-wide">
           {index + 1} / {photos.length}
         </span>
       )}

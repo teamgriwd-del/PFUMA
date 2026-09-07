@@ -3,30 +3,567 @@
 /* Self-hosted (no external CDN call — matters for a live demo on unreliable
    wifi). Plus Jakarta Sans: a warm geometric-humanist grotesk, deliberately
    not Inter — Inter is the de-facto "this was AI-generated" signal now that
-   every template/generator defaults to it. */
+   every template/generator defaults to it. Its 800 weight at tight tracking
+   carries the editorial display role too, so the whole product ships on one
+   self-hosted family rather than pulling a second face over the wire. */
 @import "@fontsource/plus-jakarta-sans/400.css";
 @import "@fontsource/plus-jakarta-sans/500.css";
 @import "@fontsource/plus-jakarta-sans/600.css";
 @import "@fontsource/plus-jakarta-sans/700.css";
 @import "@fontsource/plus-jakarta-sans/800.css";
 
+/* ══════════════════════════════════════════════════════════════════════════
+   PFUMA DESIGN SYSTEM — warm agricultural
+   ──────────────────────────────────────────────────────────────────────────
+   The whole product is one earthy palette: deep bark browns, terracotta,
+   ivory paper, olive and gold. Rather than rewrite ~1,600 utility usages
+   across 20 files, the Tailwind ramps themselves are redefined here — the
+   neutral ramp becomes warm taupe, and every saturated ramp is retuned to
+   an earthy equivalent that keeps its SEMANTIC job (red still reads as
+   danger, green as healthy) while abandoning the stock rainbow. One file
+   moves the entire interface.
+   ══════════════════════════════════════════════════════════════════════════ */
+
 @theme {
-  --color-pfuma-green: #1b5e20;
-  --color-pfuma-teal: #008080;
-  --color-pfuma-sprout: #22c55e;
-  --color-pfuma-gold: #ca8a04;
-  --color-pfuma-slate: #0f172a;
-  --color-pfuma-plum: #7c3aed;
-  --color-pfuma-cream: #f6faf6;
-  --font-sans: "Plus Jakarta Sans", system-ui, Avenir, Helvetica, Arial, sans-serif;
+  /* ── Brand: bark ── deep agricultural brown, the primary identity ────── */
+  --color-bark-50:  #FAF6F1;
+  --color-bark-100: #F0E6D9;
+  --color-bark-200: #DEC9AE;
+  --color-bark-300: #C4A47B;
+  --color-bark-400: #A6763C;
+  --color-bark-500: #7A3F0B;
+  --color-bark-600: #6A360A;
+  --color-bark-700: #542706;
+  --color-bark-800: #3E1D05;
+  --color-bark-900: #2B1404;
+  --color-bark-950: #1A0C02;
+
+  /* ── Brand: terracotta ── the warm action/highlight hue ──────────────── */
+  --color-terra-50:  #FCF2EA;
+  --color-terra-100: #F7E1CE;
+  --color-terra-200: #EDBF9C;
+  --color-terra-300: #DE9B68;
+  --color-terra-400: #C87B3F;
+  --color-terra-500: #A65312;
+  --color-terra-600: #8E450E;
+  --color-terra-700: #71360B;
+  --color-terra-800: #542706;
+  --color-terra-900: #3A1B04;
+
+  /* ── Paper ── the warm ground everything sits on ─────────────────────── */
+  --color-ivory: #F7F3ED;
+  --color-cream: #EFE8DD;
+  --color-parchment: #E7DDCE;
+
+  /* ── Neutral ramp override ──
+     Tailwind's cold `gray` is the single biggest reason a UI reads as a
+     generic SaaS dashboard. Remapped to a warm taupe ramp anchored on the
+     brand text colours, so all ~1,600 existing gray-* utilities inherit
+     the agricultural palette without being touched. */
+  --color-gray-50:  #F7F3ED;
+  --color-gray-100: #EFE8DD;
+  --color-gray-200: #E0D6C7;
+  --color-gray-300: #CBBFAD;
+  --color-gray-400: #968C82;
+  --color-gray-500: #7C7268;
+  --color-gray-600: #6F665D;
+  --color-gray-700: #554D45;
+  --color-gray-800: #3B342D;
+  --color-gray-900: #29231E;
+  --color-gray-950: #17120F;
+
+  /* Tailwind's other neutral aliases, kept in step so a stray
+     slate-/stone-/zinc- utility can never reintroduce a cold grey. */
+  --color-slate-50:  #F7F3ED; --color-slate-100: #EFE8DD; --color-slate-200: #E0D6C7;
+  --color-slate-300: #CBBFAD; --color-slate-400: #968C82; --color-slate-500: #7C7268;
+  --color-slate-600: #6F665D; --color-slate-700: #554D45; --color-slate-800: #3B342D;
+  --color-slate-900: #29231E; --color-slate-950: #17120F;
+  --color-stone-50:  #F7F3ED; --color-stone-100: #EFE8DD; --color-stone-200: #E0D6C7;
+  --color-stone-300: #CBBFAD; --color-stone-400: #968C82; --color-stone-500: #7C7268;
+  --color-stone-600: #6F665D; --color-stone-700: #554D45; --color-stone-800: #3B342D;
+  --color-stone-900: #29231E; --color-stone-950: #17120F;
+  --color-zinc-50:   #F7F3ED; --color-zinc-100:  #EFE8DD; --color-zinc-200:  #E0D6C7;
+  --color-zinc-300:  #CBBFAD; --color-zinc-400:  #968C82; --color-zinc-500:  #7C7268;
+  --color-zinc-600:  #6F665D; --color-zinc-700:  #554D45; --color-zinc-800:  #3B342D;
+  --color-zinc-900:  #29231E; --color-zinc-950:  #17120F;
+  --color-neutral-50:  #F7F3ED; --color-neutral-100: #EFE8DD; --color-neutral-200: #E0D6C7;
+  --color-neutral-300: #CBBFAD; --color-neutral-400: #968C82; --color-neutral-500: #7C7268;
+  --color-neutral-600: #6F665D; --color-neutral-700: #554D45; --color-neutral-800: #3B342D;
+  --color-neutral-900: #29231E; --color-neutral-950: #17120F;
+
+  /* ── Semantic: healthy / positive → olive ────────────────────────────── */
+  --color-green-50:  #F2F4EB;
+  --color-green-100: #E3E8D6;
+  --color-green-200: #C9D2B4;
+  --color-green-300: #A8B78C;
+  --color-green-400: #8A9C68;
+  --color-green-500: #66734A;
+  --color-green-600: #57633E;
+  --color-green-700: #465032;
+  --color-green-800: #363D27;
+  --color-green-900: #262B1C;
+  --color-green-950: #171B11;
+  /* emerald/lime ride the same olive so a stray utility stays in-family */
+  --color-emerald-50: #F2F4EB; --color-emerald-100: #E3E8D6; --color-emerald-200: #C9D2B4;
+  --color-emerald-300: #A8B78C; --color-emerald-400: #8A9C68; --color-emerald-500: #66734A;
+  --color-emerald-600: #57633E; --color-emerald-700: #465032; --color-emerald-800: #363D27;
+  --color-emerald-900: #262B1C;
+  --color-lime-50: #F2F4EB; --color-lime-100: #E3E8D6; --color-lime-200: #C9D2B4;
+  --color-lime-300: #A8B78C; --color-lime-400: #8A9C68; --color-lime-500: #66734A;
+  --color-lime-600: #57633E; --color-lime-700: #465032; --color-lime-800: #363D27;
+  --color-lime-900: #262B1C;
+
+  /* ── Semantic: danger → brick red ──
+     Kept genuinely red (not terracotta) so an alert never blends into the
+     brand brown it sits beside. */
+  --color-red-50:  #FBEEEC;
+  --color-red-100: #F6D9D5;
+  --color-red-200: #EAB0A9;
+  --color-red-300: #DA8279;
+  --color-red-400: #C75B50;
+  --color-red-500: #B5342C;
+  --color-red-600: #9A2A23;
+  --color-red-700: #7C221C;
+  --color-red-800: #5C1915;
+  --color-red-900: #40100E;
+  --color-red-950: #260907;
+  --color-rose-50: #FBEEEC; --color-rose-100: #F6D9D5; --color-rose-200: #EAB0A9;
+  --color-rose-300: #DA8279; --color-rose-400: #C75B50; --color-rose-500: #B5342C;
+  --color-rose-600: #9A2A23; --color-rose-700: #7C221C; --color-rose-800: #5C1915;
+  --color-rose-900: #40100E;
+
+  /* ── Semantic: attention / in-progress → terracotta ──────────────────── */
+  --color-orange-50:  #FCF2EA;
+  --color-orange-100: #F7E1CE;
+  --color-orange-200: #EDBF9C;
+  --color-orange-300: #DE9B68;
+  --color-orange-400: #C87B3F;
+  --color-orange-500: #A65312;
+  --color-orange-600: #8E450E;
+  --color-orange-700: #71360B;
+  --color-orange-800: #542706;
+  --color-orange-900: #3A1B04;
+  --color-orange-950: #251103;
+
+  /* ── Semantic: pending / warning → soft gold ─────────────────────────── */
+  --color-amber-50:  #FBF5E9;
+  --color-amber-100: #F6E9CF;
+  --color-amber-200: #EDD5A6;
+  --color-amber-300: #E0BD77;
+  --color-amber-400: #D5A85C;
+  --color-amber-500: #C99A4A;
+  --color-amber-600: #AE7F35;
+  --color-amber-700: #8C632A;
+  --color-amber-800: #6A4A20;
+  --color-amber-900: #4A3316;
+  --color-yellow-50:  #FBF5E9; --color-yellow-100: #F6E9CF; --color-yellow-200: #EDD5A6;
+  --color-yellow-300: #E0BD77; --color-yellow-400: #D5A85C; --color-yellow-500: #C99A4A;
+  --color-yellow-600: #AE7F35; --color-yellow-700: #8C632A; --color-yellow-800: #6A4A20;
+  --color-yellow-900: #4A3316;
+
+  /* ── Semantic: informational → dusk blue ──
+     Desaturated hard so information states read as calm, not corporate. */
+  --color-blue-50:  #F0F3F6;
+  --color-blue-100: #DFE6EC;
+  --color-blue-200: #BFCED9;
+  --color-blue-300: #98AEC0;
+  --color-blue-400: #728CA3;
+  --color-blue-500: #4F6A82;
+  --color-blue-600: #41586C;
+  --color-blue-700: #354657;
+  --color-blue-800: #283542;
+  --color-blue-900: #1C252E;
+  --color-indigo-50: #F0F3F6; --color-indigo-100: #DFE6EC; --color-indigo-200: #BFCED9;
+  --color-indigo-300: #98AEC0; --color-indigo-400: #728CA3; --color-indigo-500: #4F6A82;
+  --color-indigo-600: #41586C; --color-indigo-700: #354657; --color-indigo-800: #283542;
+  --color-indigo-900: #1C252E;
+  --color-sky-50: #F0F3F6; --color-sky-100: #DFE6EC; --color-sky-200: #BFCED9;
+  --color-sky-300: #98AEC0; --color-sky-400: #728CA3; --color-sky-500: #4F6A82;
+  --color-sky-600: #41586C; --color-sky-700: #354657; --color-sky-800: #283542;
+  --color-sky-900: #1C252E;
+
+  /* ── Accent: deep teal (veterinary / clinical) ───────────────────────── */
+  --color-teal-50:  #EEF4F3;
+  --color-teal-100: #DAE7E5;
+  --color-teal-200: #B3CBC8;
+  --color-teal-300: #86AAA6;
+  --color-teal-400: #5D8B86;
+  --color-teal-500: #3F706B;
+  --color-teal-600: #345C58;
+  --color-teal-700: #2A4946;
+  --color-teal-800: #1F3634;
+  --color-teal-900: #162624;
+  --color-cyan-50: #EEF4F3; --color-cyan-100: #DAE7E5; --color-cyan-200: #B3CBC8;
+  --color-cyan-300: #86AAA6; --color-cyan-400: #5D8B86; --color-cyan-500: #3F706B;
+  --color-cyan-600: #345C58; --color-cyan-700: #2A4946; --color-cyan-800: #1F3634;
+  --color-cyan-900: #162624;
+
+  /* ── Accent: aubergine (trade / buyer) ───────────────────────────────── */
+  --color-purple-50:  #F5F0F4;
+  --color-purple-100: #E9DEE7;
+  --color-purple-200: #D2BCCE;
+  --color-purple-300: #B596B0;
+  --color-purple-400: #987591;
+  --color-purple-500: #7B5873;
+  --color-purple-600: #674A61;
+  --color-purple-700: #523B4D;
+  --color-purple-800: #3D2C3A;
+  --color-purple-900: #2A1E28;
+  --color-violet-50: #F5F0F4; --color-violet-100: #E9DEE7; --color-violet-200: #D2BCCE;
+  --color-violet-300: #B596B0; --color-violet-400: #987591; --color-violet-500: #7B5873;
+  --color-violet-600: #674A61; --color-violet-700: #523B4D; --color-violet-800: #3D2C3A;
+  --color-violet-900: #2A1E28;
+  --color-fuchsia-50: #F5F0F4; --color-fuchsia-100: #E9DEE7; --color-fuchsia-200: #D2BCCE;
+  --color-fuchsia-300: #B596B0; --color-fuchsia-400: #987591; --color-fuchsia-500: #7B5873;
+  --color-fuchsia-600: #674A61; --color-fuchsia-700: #523B4D; --color-fuchsia-800: #3D2C3A;
+  --color-fuchsia-900: #2A1E28;
+  --color-pink-50: #F8F0EE; --color-pink-100: #F0DED9; --color-pink-200: #DFBCB3;
+  --color-pink-300: #CB9789; --color-pink-400: #B57667; --color-pink-500: #9B5A4B;
+  --color-pink-600: #834A3D; --color-pink-700: #683A30; --color-pink-800: #4D2A23;
+  --color-pink-900: #351C17;
+
+  /* ── The 950 step ──
+     Easy to forget and expensive to miss: any ramp without one falls back
+     to Tailwind's stock value, and a single `bg-blue-950` was enough to put
+     a navy tile in the middle of the mobile dashboard. Every family that
+     the app touches gets one. */
+  --color-amber-950:   #2E1F0D;
+  --color-yellow-950:  #2E1F0D;
+  --color-blue-950:    #121820;
+  --color-indigo-950:  #121820;
+  --color-sky-950:     #121820;
+  --color-teal-950:    #0E1817;
+  --color-cyan-950:    #0E1817;
+  --color-purple-950:  #1B131A;
+  --color-violet-950:  #1B131A;
+  --color-fuchsia-950: #1B131A;
+  --color-pink-950:    #221210;
+  --color-rose-950:    #260907;
+  --color-emerald-950: #171B11;
+  --color-lime-950:    #171B11;
+
+  /* ── Legacy pfuma-* tokens, remapped ──
+     These names are referenced in hundreds of places. Rather than rename
+     them (mechanical churn with real breakage risk across 20 files), they
+     are repointed at the new palette so every existing usage adopts the
+     agricultural identity instantly. */
+  --color-pfuma-green:  #7A3F0B;  /* primary — deep agricultural brown  */
+  --color-pfuma-teal:   #3F706B;  /* clinical accent                    */
+  --color-pfuma-sprout: #C99A4A;  /* bright-on-dark accent (was neon)   */
+  --color-pfuma-gold:   #C99A4A;
+  --color-pfuma-slate:  #2B1404;  /* deepest bark                       */
+  --color-pfuma-plum:   #7B5873;  /* aubergine — trade                  */
+  --color-pfuma-cream:  #F7F3ED;
+
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+
+  /* ── Elevation ──
+     Warm-tinted and deliberately shallow. Brown shadows on ivory paper;
+     never the black bloom that makes cards look like they are floating
+     off the page. */
+  --shadow-hairline: 0 1px 0 0 rgb(80 45 20 / 0.06);
+  --shadow-xs:  0 1px 2px 0 rgb(65 35 12 / 0.05);
+  --shadow-sm:  0 1px 3px 0 rgb(65 35 12 / 0.06), 0 1px 2px -1px rgb(65 35 12 / 0.05);
+  --shadow-md:  0 4px 12px -3px rgb(65 35 12 / 0.09), 0 2px 4px -2px rgb(65 35 12 / 0.05);
+  --shadow-lg:  0 12px 28px -8px rgb(65 35 12 / 0.13), 0 4px 10px -4px rgb(65 35 12 / 0.06);
+  --shadow-xl:  0 24px 48px -12px rgb(65 35 12 / 0.18);
+  --shadow-2xl: 0 36px 72px -18px rgb(43 20 4 / 0.28);
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   BASE
+   ══════════════════════════════════════════════════════════════════════════ */
+
 :root {
-  font-family: "Plus Jakarta Sans", system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  color-scheme: light;
+
+  /* Section rhythm — 48 → 72 → 96px across the breakpoints, so vertical
+     spacing is a token rather than a per-page guess. */
+  --pf-section-y: 3rem;
+  --pf-gutter: 1.25rem;
 }
+@media (min-width: 768px)  { :root { --pf-section-y: 4.5rem; --pf-gutter: 2rem; } }
+@media (min-width: 1280px) { :root { --pf-section-y: 6rem;   --pf-gutter: 2.5rem; } }
 
 body {
   margin: 0;
   min-height: 100vh;
-  background-color: var(--color-pfuma-cream);
+  background-color: var(--color-ivory);
+  color: var(--color-gray-900);
+}
+
+/* Numerals in tables, tag IDs and stat rows must not jitter as values
+   update — livestock counts and weights change live on several screens. */
+table, .tabular, [data-tabular] { font-variant-numeric: tabular-nums; }
+
+::selection { background: #7A3F0B; color: #F7F3ED; }
+
+/* A single visible focus ring for the whole product. The app is used by
+   Police and DVS officers who work through long forms on the keyboard, so
+   this is functional, not decorative. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-terra-500);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Warm scrollbars — the default cold grey track is visible on every long
+   list in the app and undoes the palette at the edges. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(122 63 11 / 0.28) transparent;
+}
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: rgb(122 63 11 / 0.22);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover { background: rgb(122 63 11 / 0.38); background-clip: content-box; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   UTILITIES
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Hero scrim ──
+   The signature treatment: photography stays visually dominant while the
+   type side stays readable. Horizontal on desktop (animals live on the
+   right, words on the left); vertical on mobile, where a side-weighted
+   gradient would wash the whole frame. */
+@utility pf-scrim {
+  background: linear-gradient(
+    180deg,
+    rgb(54 25 8 / 0.82) 0%,
+    rgb(54 25 8 / 0.62) 55%,
+    rgb(54 25 8 / 0.34) 100%
+  );
+}
+@media (min-width: 768px) {
+  .pf-scrim {
+    background: linear-gradient(
+      90deg,
+      rgb(54 25 8 / 0.86) 0%,
+      rgb(54 25 8 / 0.70) 30%,
+      rgb(54 25 8 / 0.40) 62%,
+      rgb(54 25 8 / 0.12) 100%
+    );
+  }
+}
+
+/* A quieter scrim for narrow banners and card imagery. */
+@utility pf-scrim-soft {
+  background: linear-gradient(180deg, rgb(43 20 4 / 0.05) 0%, rgb(43 20 4 / 0.55) 62%, rgb(43 20 4 / 0.88) 100%);
+}
+
+/* ── Surfaces ── */
+@utility pf-card {
+  background: #fff;
+  border: 1px solid rgb(80 45 20 / 0.10);
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px 0 rgb(65 35 12 / 0.04);
+}
+@utility pf-card-quiet {
+  background: var(--color-ivory);
+  border: 1px solid rgb(80 45 20 / 0.09);
+  border-radius: 1rem;
+}
+@utility pf-hairline { border-color: rgb(80 45 20 / 0.10); }
+
+/* Cards lift 3px and warm their border — the only whole-surface hover the
+   product uses, so a lift always means "this is clickable". */
+@utility pf-lift {
+  transition: transform 220ms var(--ease-out-soft), box-shadow 220ms var(--ease-out-soft), border-color 220ms var(--ease-out-soft);
+}
+.pf-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px -8px rgb(65 35 12 / 0.13), 0 4px 10px -4px rgb(65 35 12 / 0.06);
+  border-color: rgb(122 63 11 / 0.28);
+}
+
+/* ── Type ──
+   Editorial display: heavy, tight tracking, tight leading. Hero and
+   section headings only. */
+@utility pf-display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.03;
+}
+@utility pf-measure { max-width: 46ch; }
+
+/* The replacement for `text-[10px] font-black uppercase tracking-widest`,
+   which the codebase used on nearly every label. Same job — a quiet
+   eyebrow above a heading — at a weight and colour that reads considered
+   rather than shouted. */
+@utility pf-eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-terra-500);
+}
+@utility pf-eyebrow-light {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(247 243 237 / 0.62);
+}
+
+/* ── Photography ──
+   A warm grade so third-party stock imagery reads as one commissioned
+   shoot rather than four unrelated photos. */
+@utility pf-photo {
+  object-fit: cover;
+  filter: saturate(0.94) contrast(1.04) sepia(0.06);
+}
+@utility pf-zoom { overflow: hidden; }
+.pf-zoom img { transition: transform 700ms var(--ease-out-soft); will-change: transform; }
+.pf-zoom:hover img { transform: scale(1.045); }
+
+/* ── Navigation underline ── grows from the left on hover, holds when active */
+@utility pf-navlink { position: relative; }
+.pf-navlink::after {
+  content: "";
+  position: absolute;
+  left: 0; bottom: -6px;
+  height: 2px; width: 100%;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 260ms var(--ease-out-soft);
+}
+.pf-navlink:hover::after, .pf-navlink[aria-current="page"]::after { transform: scaleX(1); }
+
+/* ── Buttons ── */
+@utility pf-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 0.75rem;
+  font-weight: 700;
+  font-size: 0.875rem;
+  padding: 0.75rem 1.375rem;
+  transition: background-color 200ms var(--ease-out-soft), color 200ms var(--ease-out-soft),
+              border-color 200ms var(--ease-out-soft), transform 200ms var(--ease-out-soft),
+              box-shadow 200ms var(--ease-out-soft);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pf-btn:active { transform: translateY(1px); }
+.pf-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+@utility pf-btn-primary {
+  background: var(--color-bark-500);
+  color: #fff;
+  border: 1px solid var(--color-bark-500);
+}
+.pf-btn-primary:hover:not(:disabled) {
+  background: var(--color-bark-700);
+  border-color: var(--color-bark-700);
+  box-shadow: 0 8px 20px -8px rgb(84 39 6 / 0.55);
+}
+
+@utility pf-btn-secondary {
+  background: transparent;
+  color: var(--color-bark-500);
+  border: 1px solid rgb(122 63 11 / 0.32);
+}
+.pf-btn-secondary:hover:not(:disabled) {
+  background: rgb(122 63 11 / 0.06);
+  border-color: var(--color-bark-500);
+}
+
+@utility pf-btn-ghost-light {
+  background: rgb(247 243 237 / 0.12);
+  color: #fff;
+  border: 1px solid rgb(247 243 237 / 0.34);
+  backdrop-filter: blur(6px);
+}
+.pf-btn-ghost-light:hover:not(:disabled) {
+  background: rgb(247 243 237 / 0.20);
+  border-color: rgb(247 243 237 / 0.6);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MOTION
+   ──────────────────────────────────────────────────────────────────────────
+   The codebase already used `animate-in / fade-in / zoom-in /
+   slide-in-from-top-2`, but tailwindcss-animate was never installed — every
+   one of those classes was a silent no-op. They are implemented here so the
+   transitions the components already ask for actually run.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes pf-enter {
+  from {
+    opacity: var(--pf-enter-opacity, 1);
+    transform: translate3d(var(--pf-enter-x, 0), var(--pf-enter-y, 0), 0) scale(var(--pf-enter-scale, 1));
+  }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+.animate-in {
+  animation-name: pf-enter;
+  animation-duration: 300ms;
+  animation-timing-function: var(--ease-out-soft);
+  animation-fill-mode: both;
+}
+.fade-in    { --pf-enter-opacity: 0; }
+.fade-in-0  { --pf-enter-opacity: 0; }
+.zoom-in    { --pf-enter-scale: 0.96; }
+.zoom-in-95 { --pf-enter-scale: 0.95; }
+.slide-in-from-top-2    { --pf-enter-y: -0.5rem; }
+.slide-in-from-top-4    { --pf-enter-y: -1rem; }
+.slide-in-from-bottom-2 { --pf-enter-y: 0.5rem; }
+.slide-in-from-bottom-4 { --pf-enter-y: 1rem; }
+.slide-in-from-left-4   { --pf-enter-x: -1rem; }
+.slide-in-from-right-4  { --pf-enter-x: 1rem; }
+
+/* Hero content: a short staggered rise on load. Applied to at most a
+   handful of elements per screen — over-animating a tool people use all
+   day is worse than not animating it at all. */
+@keyframes pf-rise {
+  from { opacity: 0; transform: translate3d(0, 1.25rem, 0); }
+  to   { opacity: 1; transform: none; }
+}
+@utility pf-rise {
+  animation: pf-rise 700ms var(--ease-out-soft) both;
+  animation-delay: var(--pf-delay, 0ms);
+}
+
+@keyframes pf-shimmer { 100% { transform: translateX(100%); } }
+@utility pf-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-cream);
+}
+.pf-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.65), transparent);
+  animation: pf-shimmer 1.6s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .pf-zoom:hover img { transform: none; }
+  .pf-lift:hover { transform: none; }
 }

@@ -125,7 +125,7 @@ const LifecycleTimeline = ({ animalId, currentUser }) => {
     return (
       <div className="text-center py-12">
         <AlertTriangle size={28} className="mx-auto text-gray-200 mb-2" />
-        <p className="text-xs font-black text-gray-500">{error}</p>
+        <p className="text-xs font-bold text-gray-500">{error}</p>
       </div>
     );
   }
@@ -142,8 +142,8 @@ const LifecycleTimeline = ({ animalId, currentUser }) => {
         ].map(s => (
           <div key={s.label} className="p-3 bg-gray-50 rounded-2xl border border-gray-100">
             <s.icon size={14} className="text-gray-400" />
-            <p className="text-sm font-black text-gray-800 mt-1.5 leading-none">{s.value}</p>
-            <p className="text-[10px] font-black uppercase tracking-wide text-gray-400 mt-1">{s.label}</p>
+            <p className="text-sm font-bold text-gray-800 mt-1.5 leading-none">{s.value}</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mt-1">{s.label}</p>
           </div>
         ))}
       </div>
@@ -155,7 +155,7 @@ const LifecycleTimeline = ({ animalId, currentUser }) => {
           return (
             <button
               key={f.id} onClick={() => setFilter(f.id)}
-              className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition ${
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition ${
                 filter === f.id ? 'bg-pfuma-green text-white' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'
               }`}
             >
@@ -168,8 +168,8 @@ const LifecycleTimeline = ({ animalId, currentUser }) => {
       {shown.length === 0 ? (
         <div className="text-center py-12">
           <Calendar size={28} className="mx-auto text-gray-200 mb-2" />
-          <p className="text-xs font-black text-gray-400">Nothing recorded under this filter yet.</p>
-          <p className="text-[11px] text-gray-300 font-medium mt-1">
+          <p className="text-xs font-bold text-gray-400">Nothing recorded under this filter yet.</p>
+          <p className="text-xs text-gray-300 font-medium mt-1">
             Vaccinations, diagnoses, feed rations and weighings all land here as you record them.
           </p>
         </div>
@@ -177,7 +177,7 @@ const LifecycleTimeline = ({ animalId, currentUser }) => {
         <div className="space-y-6">
           {grouped.map(group => (
             <div key={group.year}>
-              <p className="text-[10px] font-black uppercase tracking-widest text-gray-300 mb-3">{group.year}</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-gray-300 mb-3">{group.year}</p>
               <ol className="relative border-l-2 border-gray-100 ml-4 space-y-4">
                 {group.items.map((e, i) => {
                   const k = KINDS[e.kind] || KINDS.other;
@@ -190,13 +190,13 @@ const LifecycleTimeline = ({ animalId, currentUser }) => {
                       </span>
                       <div className="pb-1">
                         <div className="flex flex-wrap items-baseline gap-x-2">
-                          <p className="font-black text-gray-800 text-sm leading-snug">{e.title}</p>
-                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${k.bg} ${k.color}`}>
+                          <p className="font-bold text-gray-800 text-sm leading-snug">{e.title}</p>
+                          <span className={`px-1.5 py-0.5 rounded text-xs font-bold uppercase tracking-wider ${k.bg} ${k.color}`}>
                             {k.label}
                           </span>
                         </div>
-                        {e.detail && <p className="text-[11px] text-gray-600 font-medium leading-snug mt-0.5">{e.detail}</p>}
-                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wide mt-1">
+                        {e.detail && <p className="text-xs text-gray-600 font-medium leading-snug mt-0.5">{e.detail}</p>}
+                        <p className="text-xs text-gray-400 font-bold uppercase tracking-wide mt-1">
                           {fmtDate(e.at)}
                           {age ? ` · ${age}` : ''}
                           {e.actor ? ` · ${e.actor}` : ''}

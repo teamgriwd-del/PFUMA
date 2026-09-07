@@ -2,11 +2,11 @@
   background: #ffffff;
   padding: 2.5rem;
   border-radius: 16px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 25px rgba(65, 35, 12, 0.05);
   max-width: 800px;
   margin: 2rem auto;
   font-family: 'Inter', sans-serif;
-  color: #333;
+  color: #29231E;
 }
 
 .header-section {
@@ -15,13 +15,13 @@
 }
 
 .header-section h2 {
-  color: #1b5e20;
+  color: #7A3F0B;
   font-size: 1.8rem;
   margin-bottom: 0.5rem;
 }
 
 .description {
-  color: #666;
+  color: #6F665D;
   margin-bottom: 1.5rem;
 }
 
@@ -34,7 +34,7 @@
 .symptom-category h4 {
   margin-top: 0;
   margin-bottom: 1rem;
-  color: #666;
+  color: #6F665D;
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -48,8 +48,8 @@
 
 .symptom-chip {
   padding: 0.6rem 1.2rem;
-  background: #f5f5f5;
-  border: 1px solid #eee;
+  background: #EFE8DD;
+  border: 1px solid #E0D6C7;
   border-radius: 50px;
   cursor: pointer;
   font-size: 0.9rem;
@@ -64,15 +64,15 @@
 }
 
 .symptom-chip:hover {
-  background: #e8f5e9;
-  border-color: #2e7d32;
+  background: #F6E9CF;
+  border-color: #8E450E;
 }
 
 .symptom-chip.checked {
-  background: #2e7d32;
+  background: #8E450E;
   color: white;
-  border-color: #1b5e20;
-  box-shadow: 0 4px 8px rgba(46, 125, 50, 0.2);
+  border-color: #7A3F0B;
+  box-shadow: 0 4px 8px rgba(142, 69, 14, 0.18);
 }
 
 .action-bar {
@@ -83,7 +83,7 @@
 
 .analyze-btn-enterprise {
   flex: 2;
-  background: #1b5e20;
+  background: #7A3F0B;
   color: white;
   border: none;
   padding: 1rem;
@@ -91,13 +91,13 @@
   font-weight: 700;
   font-size: 1rem;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(27, 94, 32, 0.2);
+  box-shadow: 0 4px 12px rgba(122, 63, 11, 0.18);
 }
 
 .reset-btn {
   flex: 1;
-  background: #f5f5f5;
-  border: 1px solid #ddd;
+  background: #EFE8DD;
+  border: 1px solid #CBBFAD;
   padding: 1rem;
   border-radius: 8px;
   cursor: pointer;
@@ -127,7 +127,7 @@
 .save-selector select {
   padding: 0.5rem;
   border-radius: 4px;
-  border: 1px solid #ddd;
+  border: 1px solid #CBBFAD;
 }
 
 .result-actions {
@@ -136,7 +136,7 @@
 }
 
 .save-btn {
-  background: #2e7d32;
+  background: #8E450E;
   color: white;
   border: none;
   padding: 0.5rem 1rem;
@@ -145,11 +145,11 @@
   cursor: pointer;
 }
 
-.save-btn:hover { background: #1b5e20; }
+.save-btn:hover { background: #7A3F0B; }
 
 .result-card {
   background: #fff;
-  border: 1px solid #eee;
+  border: 1px solid #E0D6C7;
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 1rem;
@@ -157,9 +157,9 @@
 }
 
 .result-card.top-match {
-  border: 2px solid #2e7d32;
-  background: #fbfcfa;
-  box-shadow: 0 8px 16px rgba(46, 125, 50, 0.05);
+  border: 2px solid #8E450E;
+  background: #FAF6F1;
+  box-shadow: 0 8px 16px rgba(142, 69, 14, 0.05);
 }
 
 .result-header {
@@ -188,8 +188,8 @@
   text-transform: uppercase;
 }
 
-.severity-badge.critical { background: #ffebee; color: #c62828; }
-.severity-badge.warning { background: #fff3e0; color: #ef6c00; }
+.severity-badge.critical { background: #FBEEEC; color: #9A2A23; }
+.severity-badge.warning { background: #FCF2EA; color: #71360B; }
 
 .confidence-meter {
   text-align: right;
@@ -198,12 +198,12 @@
 
 .confidence-meter label {
   font-size: 0.75rem;
-  color: #888;
+  color: #7C7268;
 }
 
 .progress-bar {
   height: 6px;
-  background: #eee;
+  background: #E0D6C7;
   border-radius: 10px;
   margin: 0.3rem 0;
   overflow: hidden;
@@ -211,11 +211,11 @@
 
 .progress-fill {
   height: 100%;
-  background: #2e7d32;
+  background: #8E450E;
 }
 
 .detailed-plan {
-  border-top: 1px solid #eee;
+  border-top: 1px solid #E0D6C7;
   padding-top: 1.5rem;
   margin-top: 1rem;
 }
@@ -227,7 +227,7 @@
 }
 
 .alert-tag {
-  background: #c62828;
+  background: #9A2A23;
   color: white;
   font-size: 0.7rem;
   font-weight: 900;
@@ -236,7 +236,7 @@
 }
 
 .urgent-vet-btn {
-  background: #d32f2f;
+  background: #B5342C;
   color: white;
   border: none;
   padding: 0.5rem 1rem;
@@ -247,7 +247,7 @@
 
 .detailed-plan h5 {
   margin: 0 0 1rem 0;
-  color: #1b5e20;
+  color: #7A3F0B;
 }
 
 .detailed-plan ul {
@@ -264,9 +264,9 @@
 .no-match {
   margin-top: 2rem;
   padding: 2rem;
-  background: #f5f5f5;
+  background: #EFE8DD;
   border-radius: 8px;
-  color: #666;
+  color: #6F665D;
 }
 
 @keyframes fadeIn {

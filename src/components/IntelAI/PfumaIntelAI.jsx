@@ -319,21 +319,21 @@ const Jinda = ({ setActiveTab, animals, currentUser }) => {
 
   return (
     <>
-      <button onClick={() => setIsOpen(!isOpen)} className={`pfuma-ai-toggle shadow-2xl transition-all duration-300 ${isOpen ? 'scale-0' : 'scale-100'}`} style={{ background: '#1b5e20', border: '4px solid #fbc02d' }}>
+      <button onClick={() => setIsOpen(!isOpen)} aria-label="Open Jinda, the PFUMA farm assistant" aria-expanded={isOpen} className={`pfuma-ai-toggle shadow-2xl transition-all duration-300 ${isOpen ? 'scale-0' : 'scale-100'}`} style={{ background: '#7A3F0B', border: '3px solid #C99A4A' }}>
         <MessageCircle size={28} />
         <span className="ping-online"></span>
       </button>
 
       <div className={`pfuma-ai-panel shadow-2xl transition-all duration-500 ${isOpen ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-20 opacity-0 scale-90 pointer-events-none'}`}>
-        <div className="ai-header" style={{ background: 'linear-gradient(to bottom, #1b5e20, #2e7d32)' }}>
+        <div className="ai-header" style={{ background: '#542706' }}>
           <div className="flex items-center space-x-3 text-left">
-            <div className="ai-avatar bg-yellow-400 text-pfuma-green p-2 rounded-xl shadow-lg"><ShieldCheck size={24} /></div>
+            <div className="ai-avatar bg-amber-400 text-bark-700 p-2 rounded-xl"><ShieldCheck size={22} /></div>
             <div>
-              <h3 className="font-black text-white leading-none text-lg">Jinda</h3>
-              <span className="text-[9px] text-yellow-400 font-black uppercase tracking-[2px]">Farm Assistant</span>
+              <h3 className="font-bold text-white leading-none text-lg">Jinda</h3>
+              <span className="text-[0.625rem] text-amber-300 font-bold uppercase tracking-[0.14em]">Farm Assistant</span>
             </div>
           </div>
-          <button onClick={() => setIsOpen(false)} className="text-white/60 hover:text-white transition"><X size={20} /></button>
+          <button onClick={() => setIsOpen(false)} aria-label="Close Jinda" className="w-9 h-9 -mr-2 flex items-center justify-center rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition"><X size={20} aria-hidden="true" /></button>
         </div>
         <div className="ai-messages scrollbar-hide">
           {messages.map(m => (
@@ -345,7 +345,7 @@ const Jinda = ({ setActiveTab, animals, currentUser }) => {
         </div>
         <form onSubmit={handleSend} className="ai-input-area">
           <input type="text" placeholder="Ask Jinda anything..." value={input} onChange={(e) => setInput(e.target.value)} className="focus:outline-none font-bold text-sm" />
-          <button type="submit" className="bg-pfuma-green text-white p-2.5 rounded-xl hover:bg-green-700 transition shadow-lg"><Send size={18} /></button>
+          <button type="submit" aria-label="Send" className="bg-bark-500 text-white p-2.5 rounded-xl hover:bg-bark-700 transition"><Send size={18} /></button>
         </form>
       </div>
     </>

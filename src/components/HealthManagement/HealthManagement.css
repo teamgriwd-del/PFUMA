@@ -4,7 +4,7 @@
 }
 
 .health-header {
-  background: #1b5e20;
+  background: #7A3F0B;
   color: white;
   padding: 2rem;
   border-radius: 12px;
@@ -36,10 +36,10 @@
 
 .empty-state {
   padding: 4rem;
-  background: #f9f9f9;
-  border: 2px dashed #ddd;
+  background: #F7F3ED;
+  border: 2px dashed #CBBFAD;
   border-radius: 12px;
-  color: #888;
+  color: #7C7268;
 }
 
 .dashboard-grid {
@@ -51,17 +51,17 @@
 
 .health-card {
   background: white;
-  border: 1px solid #eee;
+  border: 1px solid #E0D6C7;
   border-radius: 12px;
   padding: 1.5rem;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+  box-shadow: 0 4px 6px rgba(65, 35, 12, 0.03);
 }
 
 .health-card h3 {
   margin-top: 0;
-  color: #2e7d32;
+  color: #8E450E;
   font-size: 1.1rem;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #EFE8DD;
   padding-bottom: 0.8rem;
   margin-bottom: 1.2rem;
 }
@@ -74,7 +74,7 @@
 .gestation-tool label {
   display: block;
   font-size: 0.85rem;
-  color: #666;
+  color: #6F665D;
   margin-bottom: 0.5rem;
 }
 
@@ -85,36 +85,36 @@
 }
 
 .countdown-box {
-  background: #e8f5e9;
+  background: #F6E9CF;
   padding: 1rem;
   border-radius: 8px;
   text-align: center;
 }
 
 .countdown-box.urgent {
-  background: #fff3e0;
-  border: 1px solid #ffb74d;
+  background: #FCF2EA;
+  border: 1px solid #D5A85C;
 }
 
 .countdown-box .label {
   display: block;
   font-size: 0.75rem;
   text-transform: uppercase;
-  color: #555;
+  color: #554D45;
 }
 
 .countdown-box .date {
   display: block;
   font-size: 1.2rem;
   font-weight: bold;
-  color: #2e7d32;
+  color: #8E450E;
   margin: 0.3rem 0;
 }
 
 .countdown-box .days {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #1b5e20;
+  color: #7A3F0B;
 }
 
 .lifecycle-info {
@@ -137,8 +137,8 @@
   font-size: 0.8rem;
 }
 
-.status-badge.safe { background: #e8f5e9; color: #2e7d32; }
-.status-badge.info { background: #e3f2fd; color: #1976d2; }
+.status-badge.safe { background: #F6E9CF; color: #8E450E; }
+.status-badge.info { background: #F0F3F6; color: #4F6A82; }
 
 /* Timeline Section */
 .task-timeline {
@@ -153,13 +153,13 @@
   align-items: center;
   padding: 1rem;
   border-radius: 8px;
-  border-left: 4px solid #ddd;
-  background: #fcfcfc;
+  border-left: 4px solid #CBBFAD;
+  background: #FAF6F1;
 }
 
-.timeline-item.overdue { border-left-color: #d32f2f; background: #fffde7; }
-.timeline-item.due-today { border-left-color: #f57c00; background: #fff3e0; }
-.timeline-item.completed { border-left-color: #2e7d32; opacity: 0.7; }
+.timeline-item.overdue { border-left-color: #B5342C; background: #FBF5E9; }
+.timeline-item.due-today { border-left-color: #8E450E; background: #FCF2EA; }
+.timeline-item.completed { border-left-color: #8E450E; opacity: 0.7; }
 
 .task-name {
   display: block;
@@ -168,8 +168,8 @@
 }
 
 .req-tag {
-  background: #ffebee;
-  color: #c62828;
+  background: #FBEEEC;
+  color: #9A2A23;
   font-size: 0.6rem;
   padding: 0.1rem 0.3rem;
   border-radius: 2px;
@@ -178,11 +178,11 @@
 
 .task-date {
   font-size: 0.8rem;
-  color: #777;
+  color: #7C7268;
 }
 
 .complete-btn {
-  background: #2e7d32;
+  background: #8E450E;
   color: white;
   border: none;
   padding: 0.5rem 1rem;
@@ -193,7 +193,7 @@
 }
 
 .done-check {
-  color: #2e7d32;
+  color: #8E450E;
   font-weight: bold;
   font-size: 0.85rem;
 }
@@ -203,10 +203,10 @@
   display: flex;
   justify-content: space-between;
   padding: 0.6rem 0;
-  border-bottom: 1px solid #f9f9f9;
+  border-bottom: 1px solid #F7F3ED;
   font-size: 0.85rem;
 }
 
 .log-action { font-weight: 500; }
-.log-date { color: #888; font-size: 0.75rem; }
-.hint { color: #aaa; font-style: italic; font-size: 0.9rem; }
+.log-date { color: #7C7268; font-size: 0.75rem; }
+.hint { color: #968C82; font-style: italic; font-size: 0.9rem; }
