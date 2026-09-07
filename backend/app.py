@@ -3027,6 +3027,14 @@ def _form392_fields(d):
 @require_role('Police', 'Veterinarian')
 @require_verified
 def get_clearances():
+    """Police keep nationwide visibility (stock-theft/fraud tracking is
+    cross-province by nature, and there's no jurisdiction-assignment
+    mechanism to scope them by yet). A Veterinarian, like everywhere else
+    they get a province-wide queue (list_compliance_cases,
+    get_movement_permit_queue), is scoped to their own province — otherwise
+    every verified vet nationwide could pull every seller's national ID
+    number and home address, not just the ones near enough to plausibly
+    witness."""
     db = get_db()
     c = db.cursor()
     status = request.args.get('status')
@@ -3043,6 +3051,8 @@ def get_clearances():
         WHERE 1=1
     """
     params = []
+    if g.current_user['role'] == 'Veterinarian':
+        sql += " AND u.province = %s"; params.append(g.current_user.get('province'))
     if status:
         sql += " AND sc.status = %s"; params.append(status)
     sql += " ORDER BY sc.created_at ASC"
@@ -3251,7 +3261,10 @@ def sign_clearance(clearance_id):
 
     db = get_db()
     c = db.cursor()
-    c.execute("SELECT seller_id, status, animal_id FROM sale_clearances WHERE id=%s", (clearance_id,))
+    c.execute("""
+        SELECT sc.seller_id, sc.status, sc.animal_id, u.province AS seller_province
+        FROM sale_clearances sc JOIN users u ON sc.seller_id = u.id WHERE sc.id=%s
+    """, (clearance_id,))
     row = c.fetchone()
     if not row:
         db.close(); return jsonify({"error": "Clearance not found"}), 404
@@ -3264,6 +3277,11 @@ def sign_clearance(clearance_id):
         db.close(); return jsonify({"error": "The buyer's signature is captured by the seller, in person"}), 403
     if role == 'vet' and not (g.current_user['role'] == 'Veterinarian' and g.current_user['verification_status'] == 'verified'):
         db.close(); return jsonify({"error": "Only a verified Veterinarian can witness this line"}), 403
+    # Matches get_clearances' queue scoping — a vet outside the seller's
+    # province was never shown this clearance, and shouldn't be able to
+    # witness it just by knowing/guessing its id either.
+    if role == 'vet' and row['seller_province'] != g.current_user.get('province'):
+        db.close(); return jsonify({"error": "This clearance is outside your province"}), 403
 
     try:
         rel_path = save_photo(signature, 'signatures', clearance_id, suffix=role)
@@ -3363,18 +3381,24 @@ def get_my_movement_permits():
 @require_role('Veterinarian')
 @require_verified
 def get_movement_permit_queue():
+    """Scoped to the requesting vet's own province — same rule the
+    compliance-case follow-up queue already applies (list_compliance_cases).
+    Without this, every verified vet nationwide saw every farmer's phone
+    number, national ID-linked address and movement details, not just the
+    ones they could plausibly be asked to sign for."""
     db = get_db()
     c = db.cursor()
     status = request.args.get('status', 'pending')
+    province = g.current_user.get('province')
     sql = """
         SELECT mp.*, a.name AS animal_name, a.species, a.tag_id, a.brand_id,
                u.full_name AS owner_name, u.phone AS owner_phone, u.province AS owner_province
         FROM movement_permits mp
         JOIN animals a ON mp.animal_id = a.id
         JOIN users u ON mp.owner_id = u.id
-        WHERE 1=1
+        WHERE u.province = %s
     """
-    params = []
+    params = [province]
     if status:
         sql += " AND mp.status = %s"; params.append(status)
     sql += " ORDER BY mp.created_at ASC"
@@ -3401,12 +3425,17 @@ def issue_movement_permit(permit_id):
 
     db = get_db()
     c = db.cursor()
-    c.execute("SELECT status, period_days, owner_id, animal_id FROM movement_permits WHERE id=%s", (permit_id,))
+    c.execute("""
+        SELECT mp.status, mp.period_days, mp.owner_id, mp.animal_id, u.province AS owner_province
+        FROM movement_permits mp JOIN users u ON mp.owner_id = u.id WHERE mp.id=%s
+    """, (permit_id,))
     row = c.fetchone()
     if not row:
         db.close(); return jsonify({"error": "Permit request not found"}), 404
     if row['status'] != 'pending':
         db.close(); return jsonify({"error": "This request has already been resolved"}), 409
+    if row['owner_province'] != g.current_user.get('province'):
+        db.close(); return jsonify({"error": "This permit is outside your province"}), 403
 
     try:
         rel_path = save_photo(signature, 'signatures', permit_id, suffix='vet-permit')
@@ -3445,12 +3474,17 @@ def reject_movement_permit(permit_id):
     d = request.json or {}
     db = get_db()
     c = db.cursor()
-    c.execute("SELECT status, owner_id, animal_id FROM movement_permits WHERE id=%s", (permit_id,))
+    c.execute("""
+        SELECT mp.status, mp.owner_id, mp.animal_id, u.province AS owner_province
+        FROM movement_permits mp JOIN users u ON mp.owner_id = u.id WHERE mp.id=%s
+    """, (permit_id,))
     row = c.fetchone()
     if not row:
         db.close(); return jsonify({"error": "Permit request not found"}), 404
     if row['status'] != 'pending':
         db.close(); return jsonify({"error": "This request has already been resolved"}), 409
+    if row['owner_province'] != g.current_user.get('province'):
+        db.close(); return jsonify({"error": "This permit is outside your province"}), 403
     reason = (d.get('reason') or '').strip() or None
     c.execute("UPDATE movement_permits SET status='rejected', vet_id=%s, rejection_reason=%s WHERE id=%s",
               (g.current_user['id'], reason, permit_id))
