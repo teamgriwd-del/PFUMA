@@ -66,8 +66,8 @@ const passportHtml = (animal, healthEvents) => {
   return `<!DOCTYPE html><html><head><meta charset="utf-8" />
     <style>
       * { box-sizing: border-box; }
-      body { font-family: -apple-system, Roboto, Arial, sans-serif; margin: 0; background: #fdfcf9; color: #1a1a1a; }
-      .header { background: #1b5e20; color: #fff; padding: 24px 28px; }
+      body { font-family: -apple-system, Roboto, Arial, sans-serif; margin: 0; background: #F7F3ED; color: #29231E; }
+      .header { background: #7A3F0B; color: #fff; padding: 24px 28px; }
       .header h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: 1px; }
       .header p { margin: 0; font-size: 11px; opacity: 0.7; text-transform: uppercase; letter-spacing: 2px; }
       .body { padding: 20px 28px 32px; }
@@ -75,9 +75,9 @@ const passportHtml = (animal, healthEvents) => {
       .value-card { background: #fff; border-radius: 14px; padding: 16px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
       .value-label { font-size: 10px; font-weight: 800; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
       .value { font-size: 22px; font-weight: 900; }
-      .section-title { font-size: 11px; font-weight: 800; color: #888; text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 1px solid #e5e5e5; padding-bottom: 8px; margin: 0 0 14px; }
+      .section-title { font-size: 11px; font-weight: 800; color: #888; text-transform: uppercase; letter-spacing: 1.5px; border-bottom: 1px solid #E0D6C7; padding-bottom: 8px; margin: 0 0 14px; }
       .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px; margin-bottom: 28px; }
-      .field-label { font-size: 10px; font-weight: 800; color: #1b5e20; text-transform: uppercase; margin-bottom: 2px; }
+      .field-label { font-size: 10px; font-weight: 800; color: #7A3F0B; text-transform: uppercase; margin-bottom: 2px; }
       .field-value { font-size: 16px; font-weight: 900; }
       .empty { font-size: 13px; color: #999; font-style: italic; }
       .log-row { display: flex; justify-content: space-between; align-items: center; background: #fff; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
@@ -478,7 +478,7 @@ export default function HerdScreen({ currentUser }) {
           the web app's Health Passport modal. */}
       <Modal visible={!!passportAnimal} animationType="slide" onRequestClose={() => { setPassportAnimal(null); setLightboxIndex(null); }}>
         {passportAnimal && (
-          <SafeAreaView style={{ flex: 1, backgroundColor: '#fdfcf9' }}>
+          <SafeAreaView style={{ flex: 1, backgroundColor: '#F7F3ED' }}>
             <View style={styles.passportHeader}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <ShieldCheck size={22} color={COLORS.yellow} />
@@ -591,9 +591,9 @@ export default function HerdScreen({ currentUser }) {
 
 const styles = StyleSheet.create({
   header:         { backgroundColor: COLORS.primary, padding: 24, paddingTop: 56, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-  headerSub:      { color: '#a5d6a7', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
+  headerSub:      { color: '#DEC9AE', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
   headerTitle:    { color: '#fff', fontSize: 24, fontWeight: '900', marginTop: 2 },
-  headerDesc:     { color: '#a5d6a7', fontSize: 12, fontWeight: '600', marginTop: 2 },
+  headerDesc:     { color: '#DEC9AE', fontSize: 12, fontWeight: '600', marginTop: 2 },
   addBtn:         { backgroundColor: COLORS.yellow, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 20, elevation: 4 },
   addBtnText:     { color: COLORS.primary, fontWeight: '900', fontSize: 14 },
   searchBox:      { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', margin: 16, borderRadius: 14, paddingHorizontal: 14, elevation: 2 },
@@ -610,10 +610,10 @@ const styles = StyleSheet.create({
   cardSub:        { fontSize: 13, color: COLORS.muted, marginTop: 2, marginBottom: 12 },
   cardActions:    { flexDirection: 'row', gap: 10 },
   saleBtn:        { flex: 1, borderWidth: 1.5, borderColor: COLORS.primary, borderRadius: 10, paddingVertical: 8, alignItems: 'center' },
-  saleBtnActive:  { backgroundColor: '#fbc02d', borderColor: '#fbc02d' },
+  saleBtnActive:  { backgroundColor: '#C99A4A', borderColor: '#C99A4A' },
   saleBtnText:    { color: COLORS.primary, fontSize: 12, fontWeight: '800' },
   saleBtnTextActive: { color: COLORS.primary },
-  passportBtn:    { borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, alignItems: 'center' },
+  passportBtn:    { borderWidth: 1.5, borderColor: '#E0D6C7', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, alignItems: 'center' },
   passportText:   { color: COLORS.muted, fontSize: 12, fontWeight: '700' },
   emptyState:     { alignItems: 'center', paddingVertical: 60 },
   emptyTitle:     { fontSize: 18, fontWeight: '800', color: COLORS.text, marginTop: 12 },
@@ -624,19 +624,19 @@ const styles = StyleSheet.create({
   modalTitle:     { fontSize: 20, fontWeight: '900', color: COLORS.text },
   modalClose:     { fontSize: 20, color: COLORS.muted },
   photoPicker:    { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
-  photoPreview:   { width: 56, height: 56, borderRadius: 14, backgroundColor: '#f5f5f5' },
-  photoPlaceholder: { alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#e0e0e0', borderStyle: 'dashed' },
+  photoPreview:   { width: 56, height: 56, borderRadius: 14, backgroundColor: '#EFE8DD' },
+  photoPlaceholder: { alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#E0D6C7', borderStyle: 'dashed' },
   photoPickerText:{ fontSize: 13, fontWeight: '800', color: COLORS.primary },
   photoThumbWrap: { marginRight: 10 },
-  photoThumb:     { width: 72, height: 72, borderRadius: 14, backgroundColor: '#f5f5f5', marginRight: 10 },
+  photoThumb:     { width: 72, height: 72, borderRadius: 14, backgroundColor: '#EFE8DD', marginRight: 10 },
   coverBadge:     { position: 'absolute', bottom: 4, left: 4, right: 4, backgroundColor: 'rgba(27,94,32,0.85)', borderRadius: 6, paddingVertical: 2, alignItems: 'center' },
   coverBadgeText: { color: '#fff', fontSize: 8, fontWeight: '900', letterSpacing: 0.5 },
-  photoRemoveBtn: { position: 'absolute', top: -4, right: 6, width: 18, height: 18, borderRadius: 9, backgroundColor: COLORS.danger || '#d32f2f', alignItems: 'center', justifyContent: 'center' },
+  photoRemoveBtn: { position: 'absolute', top: -4, right: 6, width: 18, height: 18, borderRadius: 9, backgroundColor: COLORS.danger || '#B5342C', alignItems: 'center', justifyContent: 'center' },
   formField:      { marginBottom: 14 },
   formLabel:      { fontSize: 11, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
-  formInput:      { backgroundColor: '#f5f5f5', borderRadius: 12, padding: 14, fontSize: 14, color: COLORS.text },
+  formInput:      { backgroundColor: '#EFE8DD', borderRadius: 12, padding: 14, fontSize: 14, color: COLORS.text },
   speciesRow:     { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  speciesChip:    { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: '#e0e0e0', backgroundColor: '#f9f9f9' },
+  speciesChip:    { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: '#E0D6C7', backgroundColor: '#F7F3ED' },
   speciesChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   speciesChipText:{ fontSize: 12, fontWeight: '700', color: COLORS.muted },
   submitBtn:      { backgroundColor: COLORS.primary, borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginTop: 10, elevation: 4 },
@@ -648,13 +648,13 @@ const styles = StyleSheet.create({
   passportCloseBtn:    { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
   passportImage:       { width: '100%', height: 220, borderRadius: 20, marginBottom: 14 },
   galleryThumb:        { width: 84, height: 84, borderRadius: 14, backgroundColor: COLORS.light, marginRight: 10 },
-  galleryAddThumb:      { alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#e0e0e0', borderStyle: 'dashed', marginRight: 0 },
+  galleryAddThumb:      { alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#E0D6C7', borderStyle: 'dashed', marginRight: 0 },
   galleryAddText:       { fontSize: 10, fontWeight: '800', color: COLORS.primary, marginTop: 4 },
   passportValueCard:   { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 20, elevation: 2 },
   passportSectionLabel:{ fontSize: 10, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
   passportValue:       { fontSize: 24, fontWeight: '900', color: COLORS.text },
   passportValueSub:    { fontSize: 11, color: COLORS.muted, marginTop: 2 },
-  passportSectionTitle:{ fontSize: 11, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#e5e5e5', paddingBottom: 8 },
+  passportSectionTitle:{ fontSize: 11, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#E0D6C7', paddingBottom: 8 },
   passportGrid:        { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 24 },
   passportGridItem:    { width: '50%', marginBottom: 16 },
   passportFieldLabel:  { fontSize: 10, fontWeight: '800', color: COLORS.primary, textTransform: 'uppercase', marginBottom: 2 },

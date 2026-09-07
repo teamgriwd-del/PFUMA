@@ -39,19 +39,19 @@ const greet = () => {
 // ── Per-role gradient & accent tokens (mirrors LoginScreen hero treatment) ──
 const ROLE_GRADIENT = {
   Farmer:       [COLORS.primary, COLORS.medium],
-  Veterinarian: ['#0f172a', '#334155'],
-  Supplier:     [COLORS.gold, '#f59e0b'],
-  Buyer:     [COLORS.purple, '#a78bfa'],
+  Veterinarian: [COLORS.teal, '#5D8B86'],
+  Supplier:     [COLORS.gold, '#C99A4A'],
+  Buyer:     [COLORS.purple, '#987591'],
 };
 const ROLE_ACCENT = {
-  Farmer: '#fbc02d', Veterinarian: '#86efac', Supplier: '#fef9c3', Buyer: '#ede9fe',
+  Farmer: '#C99A4A', Veterinarian: '#B3CBC8', Supplier: '#F6E9CF', Buyer: '#E9DEE7',
 };
 
 // ── Shared UI primitives ────────────────────────────────────────────────────
 const SectionLabel = ({ children, light, icon: Icon, right }) => (
   <View style={s.sectionLabelRow}>
     <View style={s.sectionLabelLeft}>
-      {Icon && <Icon size={12} color={light ? 'rgba(255,255,255,0.4)' : '#9ca3af'} strokeWidth={2.5} />}
+      {Icon && <Icon size={12} color={light ? 'rgba(255,255,255,0.4)' : '#968C82'} strokeWidth={2.5} />}
       <Text style={[s.sectionLabel, light && { color: 'rgba(255,255,255,0.4)' }]}>{children}</Text>
     </View>
     {right}
@@ -63,8 +63,8 @@ const KpiCard = ({ label, value, sub, accent, textColor, borderColor, icon: Icon
     <View style={s.kpiHeaderRow}>
       <Text style={s.kpiLabel}>{label}</Text>
       {Icon && (
-        <View style={[s.kpiIconBadge, { backgroundColor: iconBg || '#f3f4f6' }]}>
-          <Icon size={13} color={iconColor || '#9ca3af'} />
+        <View style={[s.kpiIconBadge, { backgroundColor: iconBg || '#EFE8DD' }]}>
+          <Icon size={13} color={iconColor || '#968C82'} />
         </View>
       )}
     </View>
@@ -116,7 +116,7 @@ const PillBar = ({ color, actions }) => (
 
 const AlertCard = ({ title, msg, type, time }) => (
   <View style={[s.alertCard, type === 'Critical' ? s.alertCritical : s.alertInfo]}>
-    <View style={[s.alertDot, { backgroundColor: type === 'Critical' ? '#ef4444' : '#3b82f6' }]} />
+    <View style={[s.alertDot, { backgroundColor: type === 'Critical' ? '#B5342C' : '#4F6A82' }]} />
     <View style={{ flex: 1 }}>
       <Text style={s.alertTitle}>{title}</Text>
       <Text style={s.alertMsg}>{msg}</Text>
@@ -135,7 +135,7 @@ const MiniBarChart = ({ data, labelKey, valueKey, color, light }) => {
           <View style={[s.miniChartTrack, light && { backgroundColor: 'rgba(255,255,255,0.06)' }]}>
             <View style={[s.miniChartBar, { height: `${Math.max(6, (d[valueKey] / maxVal) * 100)}%`, backgroundColor: color }]} />
           </View>
-          <Text style={[s.miniChartLabel, light && { color: '#64748b' }]}>{d[labelKey]}</Text>
+          <Text style={[s.miniChartLabel, light && { color: '#7C7268' }]}>{d[labelKey]}</Text>
         </View>
       ))}
     </View>
@@ -154,9 +154,9 @@ const StakeholderMap = () => (
     </Text>
     {[
       { icon: Sprout,      role: 'Farmer',       color: COLORS.light,  text: COLORS.primary, desc: 'Registers animals, tracks health, orders medicines, lists livestock for sale.' },
-      { icon: Pill,        role: 'Supplier',      color: COLORS.goldBg, text: '#92400e',      desc: 'Distributes vaccines, medicines, and feed to farmers.' },
+      { icon: Pill,        role: 'Supplier',      color: COLORS.goldBg, text: '#6A4A20',      desc: 'Distributes vaccines, medicines, and feed to farmers.' },
       { icon: Store,       role: 'Buyer',      color: COLORS.purpleBg, text: COLORS.purple, desc: 'Browses certified livestock, places bids, receives DVS certificates.' },
-      { icon: Stethoscope, role: 'Veterinarian',  color: '#e3f2fd', text: '#0d47a1', desc: 'Certifies animal health, issues movement permits, manages outbreaks.' },
+      { icon: Stethoscope, role: 'Veterinarian',  color: '#DFE6EC', text: '#1C252E', desc: 'Certifies animal health, issues movement permits, manages outbreaks.' },
     ].map(r => (
       <View key={r.role} style={[s.smRow, { backgroundColor: r.color }]}>
         <View style={s.smRowIcon}>
@@ -178,10 +178,10 @@ const StakeholderMap = () => (
         { fromIcon: Stethoscope, from: 'Vet',      toIcon: Store,       to: 'Buyer', desc: 'issues DVS movement certificate' },
       ].map((f, i) => (
         <View key={i} style={s.smFlowRow}>
-          <f.fromIcon size={12} color="#374151" />
+          <f.fromIcon size={12} color="#554D45" />
           <Text style={s.smFlowName}>{f.from}</Text>
-          <ArrowRight size={11} color="#9ca3af" />
-          <f.toIcon size={12} color="#374151" />
+          <ArrowRight size={11} color="#968C82" />
+          <f.toIcon size={12} color="#554D45" />
           <Text style={s.smFlowName}>{f.to}</Text>
           <Text style={s.smFlowDesc}>— {f.desc}</Text>
         </View>
@@ -242,15 +242,15 @@ function FarmerDashboard({ currentUser, navigation }) {
 
   const priorityRows = [
     ...overdueVaccines.map(v => ({
-      icon: Syringe, bg: '#fee2e2', color: '#dc2626', tag: 'Overdue',
+      icon: Syringe, bg: '#F6D9D5', color: '#9A2A23', tag: 'Overdue',
       title: v.vaccine, sub: `${v.animal} — vaccine due`,
     })),
     ...lowStock.map(item => ({
-      icon: Package, bg: '#ffedd5', color: '#ea580c', tag: 'Low Stock',
+      icon: Package, bg: '#F7E1CE', color: '#8E450E', tag: 'Low Stock',
       title: item.name, sub: `${item.stock}${item.unit} remaining`,
     })),
     ...critAlerts.map(n => ({
-      icon: AlertTriangle, bg: '#fef3c7', color: '#b45309', tag: 'Alert',
+      icon: AlertTriangle, bg: '#F6E9CF', color: '#8C632A', tag: 'Alert',
       title: n.title, sub: n.msg,
     })),
   ];
@@ -293,7 +293,7 @@ function FarmerDashboard({ currentUser, navigation }) {
       <PillBar color={COLORS.primary} actions={[
         { icon: Plus,           label: 'Register',  onPress: () => navigation.navigate('Herd') },
         { icon: ShoppingCart,   label: 'Sell',       onPress: () => navigation.navigate('Market') },
-        { icon: Stethoscope,    label: 'Diagnose',   onPress: () => navigation.navigate('Herd') },
+        { icon: Stethoscope,    label: 'Diagnose',   onPress: () => navigation.navigate('Disease') },
         { icon: MessageSquare,  label: 'Messenger',  onPress: () => navigation.navigate('Vet') },
       ]} />
 
@@ -321,21 +321,21 @@ function FarmerDashboard({ currentUser, navigation }) {
         <KpiCard label="Total Animals" value={localAnimals.length} sub="In your herd registry"
           icon={Users} iconColor={COLORS.primary} iconBg={COLORS.light} />
         <KpiCard label="Herd Value" value={`$${totalValue.toLocaleString()}`} sub="Estimated market value"
-          icon={Wallet} iconColor="#b45309" iconBg={COLORS.goldBg} />
+          icon={Wallet} iconColor="#8C632A" iconBg={COLORS.goldBg} />
       </View>
       <View style={s.kpiRow}>
         <KpiCard
           label="Overdue Vaccines" value={overdueVaccines.length}
           sub={overdueVaccines.length ? 'Need immediate attention' : 'All vaccinations current'}
           accent={overdueVaccines.length ? 'rgba(198,40,40,0.12)' : undefined}
-          textColor={overdueVaccines.length ? '#f87171' : undefined}
+          textColor={overdueVaccines.length ? '#C75B50' : undefined}
           borderColor={overdueVaccines.length ? 'rgba(198,40,40,0.4)' : undefined}
           icon={Syringe}
-          iconColor={overdueVaccines.length ? '#f87171' : COLORS.sprout}
+          iconColor={overdueVaccines.length ? '#C75B50' : COLORS.sprout}
           iconBg={overdueVaccines.length ? 'rgba(198,40,40,0.15)' : 'rgba(34,197,94,0.15)'}
         />
         <KpiCard label="Listed for Sale" value={forSale} sub={forSale ? 'Visible on marketplace' : 'None listed yet'}
-          icon={ShoppingCart} iconColor="#0d9488" iconBg="#ccfbf1" />
+          icon={ShoppingCart} iconColor="#345C58" iconBg="#DAE7E5" />
       </View>
 
       {/* Priority Actions */}
@@ -373,11 +373,11 @@ function FarmerDashboard({ currentUser, navigation }) {
       <SectionLabel icon={Compass}>QUICK ACTIONS</SectionLabel>
       <ActionGrid actions={[
         { icon: Users,         label: 'Herd Registry', color: COLORS.primary, onPress: () => navigation.navigate('Herd') },
-        { icon: ShieldCheck,   label: 'Follow-Ups',    color: '#dc2626', badge: overdueVaccines.length || null, onPress: () => navigation.navigate('Herd') },
-        { icon: Package,       label: 'Medicine',      color: '#ea580c', badge: lowStock.length || null, onPress: () => navigation.navigate('Vet') },
+        { icon: ShieldCheck,   label: 'Follow-Ups',    color: '#9A2A23', badge: overdueVaccines.length || null, onPress: () => navigation.navigate('Compliance') },
+        { icon: Package,       label: 'Medicine',      color: '#8E450E', badge: lowStock.length || null, onPress: () => navigation.navigate('Vet') },
         { icon: ShoppingCart,  label: 'Sell',          color: COLORS.purple, badge: forSale || null, onPress: () => navigation.navigate('Market') },
-        { icon: HeartPulse,    label: 'Lifecycle',     color: '#2563eb', onPress: () => navigation.navigate('Herd') },
-        { icon: MessageSquare, label: 'Messenger',     color: '#ec4899', onPress: () => navigation.navigate('Vet') },
+        { icon: HeartPulse,    label: 'Lifecycle',     color: '#41586C', onPress: () => navigation.navigate('Health') },
+        { icon: MessageSquare, label: 'Messenger',     color: '#9B5A4B', onPress: () => navigation.navigate('Vet') },
       ]} />
 
       {/* Sell Your Animals */}
@@ -398,7 +398,7 @@ function FarmerDashboard({ currentUser, navigation }) {
               <Text style={s.animalSub}>{a.species} · {a.currentWeight}kg</Text>
               {a.forSale && (
                 <View style={s.animalListedRow}>
-                  <Check size={11} color="#92400e" />
+                  <Check size={11} color="#6A4A20" />
                   <Text style={s.animalListed}>Visible to buyers now</Text>
                 </View>
               )}
@@ -433,7 +433,7 @@ function FarmerDashboard({ currentUser, navigation }) {
               <View style={s.progressBar}>
                 <View style={[s.progressFill, {
                   width: `${pct}%`,
-                  backgroundColor: isLow ? COLORS.danger : pct > 50 ? COLORS.primary : '#f97316',
+                  backgroundColor: isLow ? COLORS.danger : pct > 50 ? COLORS.primary : '#A65312',
                 }]} />
               </View>
             </View>
@@ -441,9 +441,9 @@ function FarmerDashboard({ currentUser, navigation }) {
         })}
       </View>
 
-      <TouchableOpacity style={[s.primaryBtn, { backgroundColor: COLORS.goldBg, borderWidth: 1, borderColor: '#fde68a', marginTop: -4 }]} onPress={() => navigation.navigate('Vet')} activeOpacity={0.8}>
-        <MessageSquare size={14} color="#b45309" />
-        <Text style={[s.primaryBtnText, { color: '#b45309' }]}>Order from a Supplier</Text>
+      <TouchableOpacity style={[s.primaryBtn, { backgroundColor: COLORS.goldBg, borderWidth: 1, borderColor: '#EDD5A6', marginTop: -4 }]} onPress={() => navigation.navigate('Vet')} activeOpacity={0.8}>
+        <MessageSquare size={14} color="#8C632A" />
+        <Text style={[s.primaryBtnText, { color: '#8C632A' }]}>Order from a Supplier</Text>
       </TouchableOpacity>
 
       {/* Disease Alerts */}
@@ -530,9 +530,9 @@ function VeterinarianDashboard({ currentUser, navigation }) {
             </View>
           )}
         </View>
-        <Text style={[s.bannerEyebrow, { color: '#86efac' }]}>Authority Dashboard · {province}</Text>
+        <Text style={[s.bannerEyebrow, { color: '#A8B78C' }]}>Authority Dashboard · {province}</Text>
         <Text style={s.bannerTitle}>{greet()}, Dr. {lastName}</Text>
-        <Text style={[s.bannerSub, { color: '#cbd5e1' }]}>Provincial veterinary oversight — outbreaks, certifications, and farmer case management</Text>
+        <Text style={[s.bannerSub, { color: '#CBBFAD' }]}>Provincial veterinary oversight — outbreaks, certifications, and farmer case management</Text>
       </GradientBanner>
 
       {/* Quick actions pill bar */}
@@ -545,29 +545,29 @@ function VeterinarianDashboard({ currentUser, navigation }) {
       {/* KPIs */}
       <View style={s.kpiRow}>
         <KpiCard label="Active Outbreaks"  value={String(outbreaks.length)} sub={activeOutbreak ? `${activeOutbreak.disease_name} — ${activeOutbreak.district || activeOutbreak.province}` : 'None reported'}
-          accent={outbreaks.length ? '#1a0a0a' : '#1e293b'} textColor={outbreaks.length ? '#f87171' : '#f8fafc'} borderColor={outbreaks.length ? '#7f1d1d' : '#334155'}
-          icon={AlertTriangle} iconColor="#f87171" iconBg="rgba(248,113,113,0.12)" />
-        <KpiCard label="Cert. Queue"       value={String(certQueue)}  sub="Unread trade certification requests"        accent="#1e293b" textColor="#f8fafc" borderColor="#334155"
-          icon={ShieldCheck} iconColor="#4ade80" iconBg="rgba(74,222,128,0.12)" />
+          accent={outbreaks.length ? '#260907' : '#3B342D'} textColor={outbreaks.length ? '#C75B50' : '#F7F3ED'} borderColor={outbreaks.length ? '#40100E' : '#554D45'}
+          icon={AlertTriangle} iconColor="#C75B50" iconBg="rgba(248,113,113,0.12)" />
+        <KpiCard label="Cert. Queue"       value={String(certQueue)}  sub="Unread trade certification requests"        accent="#3B342D" textColor="#F7F3ED" borderColor="#554D45"
+          icon={ShieldCheck} iconColor="#8A9C68" iconBg="rgba(74,222,128,0.12)" />
       </View>
       <View style={s.kpiRow}>
-        <KpiCard label="Farms Under Watch" value={String(farms.length)}   sub={`${province} registry`}     accent="#1e293b" textColor="#f8fafc" borderColor="#334155"
-          icon={Users} iconColor="#7dd3fc" iconBg="rgba(125,211,252,0.12)" />
-        <KpiCard label="Reporting Rate"    value={reportingHealth.length ? `${reportingHealth[reportingHealth.length - 1].sync}%` : '—'} sub="Farms with a health event today"   accent="#1e293b" textColor="#4ade80" borderColor="#334155"
-          icon={Wifi} iconColor="#4ade80" iconBg="rgba(74,222,128,0.12)" />
+        <KpiCard label="Farms Under Watch" value={String(farms.length)}   sub={`${province} registry`}     accent="#3B342D" textColor="#F7F3ED" borderColor="#554D45"
+          icon={Users} iconColor="#98AEC0" iconBg="rgba(125,211,252,0.12)" />
+        <KpiCard label="Reporting Rate"    value={reportingHealth.length ? `${reportingHealth[reportingHealth.length - 1].sync}%` : '—'} sub="Farms with a health event today"   accent="#3B342D" textColor="#8A9C68" borderColor="#554D45"
+          icon={Wifi} iconColor="#8A9C68" iconBg="rgba(74,222,128,0.12)" />
       </View>
 
       {/* Active Outbreak */}
       <SectionLabel light icon={AlertTriangle}>ACTIVE OUTBREAK</SectionLabel>
-      <View style={[s.panel, activeOutbreak ? { backgroundColor: '#1a0a0a', borderColor: '#7f1d1d', borderWidth: 1 } : { backgroundColor: '#1e293b', borderColor: '#334155', borderWidth: 1 }]}>
+      <View style={[s.panel, activeOutbreak ? { backgroundColor: '#260907', borderColor: '#40100E', borderWidth: 1 } : { backgroundColor: '#3B342D', borderColor: '#554D45', borderWidth: 1 }]}>
         {activeOutbreak ? (
           <>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-              <AlertTriangle size={14} color="#f87171" />
-              <Text style={{ color: '#f87171', fontSize: 13, fontWeight: '700' }}>{activeOutbreak.status.toUpperCase()}</Text>
+              <AlertTriangle size={14} color="#C75B50" />
+              <Text style={{ color: '#C75B50', fontSize: 13, fontWeight: '700' }}>{activeOutbreak.status.toUpperCase()}</Text>
             </View>
             <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900', marginBottom: 4 }}>{activeOutbreak.disease_name}</Text>
-            <Text style={{ color: '#94a3b8', fontSize: 12, marginBottom: 14, lineHeight: 18 }}>
+            <Text style={{ color: '#968C82', fontSize: 12, marginBottom: 14, lineHeight: 18 }}>
               Confirmed in {activeOutbreak.district ? `${activeOutbreak.district}, ` : ''}{activeOutbreak.province}. {activeOutbreak.details}
             </Text>
             {[
@@ -577,13 +577,13 @@ function VeterinarianDashboard({ currentUser, navigation }) {
               ['Reported by',     activeOutbreak.reported_by_name],
             ].map(([k, v]) => (
               <View key={k} style={s.infoRow}>
-                <Text style={{ color: '#64748b', fontSize: 12, fontWeight: '600' }}>{k}</Text>
-                <Text style={{ color: '#e2e8f0', fontSize: 12, fontWeight: '800' }}>{v}</Text>
+                <Text style={{ color: '#7C7268', fontSize: 12, fontWeight: '600' }}>{k}</Text>
+                <Text style={{ color: '#E0D6C7', fontSize: 12, fontWeight: '800' }}>{v}</Text>
               </View>
             ))}
           </>
         ) : (
-          <Text style={{ color: '#64748b', fontSize: 12, lineHeight: 18 }}>No active outbreaks reported in {province}.</Text>
+          <Text style={{ color: '#7C7268', fontSize: 12, lineHeight: 18 }}>No active outbreaks reported in {province}.</Text>
         )}
       </View>
 
@@ -593,25 +593,25 @@ function VeterinarianDashboard({ currentUser, navigation }) {
         { icon: MessageSquare, label: 'Messenger',      color: COLORS.primary, onPress: () => navigation.navigate('Vet') },
         { icon: Users,         label: 'Herd Registry',  color: COLORS.gold,    onPress: () => navigation.navigate('Herd') },
         { icon: ShieldCheck,   label: 'Certify',        color: COLORS.sprout,  onPress: () => navigation.navigate('Vet') },
-        { icon: Stethoscope,   label: 'Diagnostics',    color: '#7c3aed',      onPress: () => navigation.navigate('Herd') },
+        { icon: Stethoscope,   label: 'Diagnostics',    color: '#674A61',      onPress: () => navigation.navigate('Herd') },
       ]} />
 
       {/* Farm Registry */}
       <SectionLabel light icon={Users}>FARMER REGISTRY — {province.toUpperCase()}</SectionLabel>
-      <View style={[s.panel, { backgroundColor: '#1e293b', borderColor: '#334155', borderWidth: 1 }]}>
-        <Text style={{ color: '#64748b', fontSize: 11, marginBottom: 12, lineHeight: 16 }}>
+      <View style={[s.panel, { backgroundColor: '#3B342D', borderColor: '#554D45', borderWidth: 1 }]}>
+        <Text style={{ color: '#7C7268', fontSize: 11, marginBottom: 12, lineHeight: 16 }}>
           Farms under your provincial oversight. Tap to open a consultation.
         </Text>
         {farms.length === 0 ? (
-          <Text style={{ color: '#64748b', fontSize: 12, fontStyle: 'italic', textAlign: 'center', paddingVertical: 12 }}>No registered farmers in {province} yet.</Text>
+          <Text style={{ color: '#7C7268', fontSize: 12, fontStyle: 'italic', textAlign: 'center', paddingVertical: 12 }}>No registered farmers in {province} yet.</Text>
         ) : farms.map(farm => (
           <View key={farm.id} style={s.farmRow}>
             <View style={s.farmAvatar}>
               <Text style={s.farmAvatarText}>{(farm.full_name || '?')[0]}</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[s.farmName, { color: '#f8fafc' }]}>{farm.full_name}</Text>
-              <Text style={[s.farmSub, { color: '#64748b' }]}>{farm.org_name} · {farm.animal_count} animal{farm.animal_count !== 1 ? 's' : ''}</Text>
+              <Text style={[s.farmName, { color: '#F7F3ED' }]}>{farm.full_name}</Text>
+              <Text style={[s.farmSub, { color: '#7C7268' }]}>{farm.org_name} · {farm.animal_count} animal{farm.animal_count !== 1 ? 's' : ''}</Text>
             </View>
             <Text style={[s.statusBadge, farm.verification_status === 'verified' ? s.statusVerified : s.statusPending]}>
               {farm.verification_status}
@@ -622,8 +622,8 @@ function VeterinarianDashboard({ currentUser, navigation }) {
 
       {/* Provincial Reporting Health */}
       <SectionLabel light icon={Wifi}>PROVINCIAL REPORTING HEALTH</SectionLabel>
-      <View style={[s.panel, { backgroundColor: '#1e293b', borderColor: '#334155', borderWidth: 1 }]}>
-        <Text style={{ color: '#64748b', fontSize: 11, marginBottom: 4, lineHeight: 16 }}>
+      <View style={[s.panel, { backgroundColor: '#3B342D', borderColor: '#554D45', borderWidth: 1 }]}>
+        <Text style={{ color: '#7C7268', fontSize: 11, marginBottom: 4, lineHeight: 16 }}>
           Share of {province}'s farmers who logged a health event — last 7 days
         </Text>
         <MiniBarChart data={reportingHealth} labelKey="day" valueKey="sync" color={COLORS.sprout} light />
@@ -688,7 +688,7 @@ function SupplierDashboard({ currentUser, navigation }) {
         </View>
         <Text style={s.bannerEyebrow}>{greet()}, Supplier</Text>
         <Text style={s.bannerTitle}>Supply Distribution Hub</Text>
-        <Text style={[s.bannerSub, { color: '#fef3c7' }]}>
+        <Text style={[s.bannerSub, { color: '#F6E9CF' }]}>
           {pending} pending · {dispatched} in transit · {delivered} delivered
         </Text>
       </GradientBanner>
@@ -705,9 +705,9 @@ function SupplierDashboard({ currentUser, navigation }) {
       <SectionLabel icon={Compass}>QUICK ACTIONS</SectionLabel>
       <ActionGrid actions={[
         { icon: Store,         label: 'Marketplace',   color: COLORS.gold, onPress: () => navigation.navigate('Market') },
-        { icon: Package,       label: 'My Stock',      color: '#ea580c', badge: pending || null, onPress: () => navigation.navigate('Market') },
-        { icon: Wheat,         label: 'Feed Database', color: '#16a34a', onPress: () => navigation.navigate('Feed') },
-        { icon: MessageSquare, label: 'Messenger',     color: '#ec4899', onPress: () => navigation.navigate('Vet') },
+        { icon: Package,       label: 'My Stock',      color: '#8E450E', badge: pending || null, onPress: () => navigation.navigate('Market') },
+        { icon: Wheat,         label: 'Feed Database', color: '#57633E', onPress: () => navigation.navigate('Feed') },
+        { icon: MessageSquare, label: 'Messenger',     color: '#9B5A4B', onPress: () => navigation.navigate('Vet') },
       ]} />
 
       {/* Role explanation */}
@@ -731,14 +731,14 @@ function SupplierDashboard({ currentUser, navigation }) {
 
       {/* KPIs */}
       <View style={s.kpiRow}>
-        <KpiCard label="Pending Orders" value={pending}    sub="Need dispatch today"       accent={pending ? COLORS.goldBg : undefined} textColor={pending ? '#b45309' : undefined} borderColor={pending ? '#fde68a' : undefined}
-          icon={Package} iconColor="#b45309" iconBg={COLORS.goldBg} />
+        <KpiCard label="Pending Orders" value={pending}    sub="Need dispatch today"       accent={pending ? COLORS.goldBg : undefined} textColor={pending ? '#8C632A' : undefined} borderColor={pending ? '#EDD5A6' : undefined}
+          icon={Package} iconColor="#8C632A" iconBg={COLORS.goldBg} />
         <KpiCard label="In Transit"     value={dispatched} sub="On the way to farmers"
-          icon={Truck} iconColor="#2563eb" iconBg="#eff6ff" />
+          icon={Truck} iconColor="#41586C" iconBg="#F0F3F6" />
       </View>
       <View style={s.kpiRow}>
         <KpiCard label="Delivered"       value={delivered} sub="Completed this week"
-          icon={CheckCircle} iconColor="#16a34a" iconBg="#f0fdf4" />
+          icon={CheckCircle} iconColor="#57633E" iconBg="#F2F4EB" />
         <KpiCard label="Fulfillment Rate" value={fulfillmentRate === null ? '—' : `${fulfillmentRate}%`}     sub={fulfillmentRate === null ? 'No resolved orders yet' : 'Delivered vs. resolved orders'}
           icon={TrendingUp} iconColor={COLORS.gold} iconBg={COLORS.goldBg} />
       </View>
@@ -760,9 +760,9 @@ function SupplierDashboard({ currentUser, navigation }) {
               <Text style={s.orderDetail}>{o.product_name} · {Number(o.quantity)} · #{o.id}</Text>
             </View>
             <Text style={[s.orderStatus,
-              o.status === 'pending'    ? { color: '#b45309', backgroundColor: COLORS.goldBg } :
-              o.status === 'dispatched' ? { color: '#1d4ed8', backgroundColor: '#eff6ff' } :
-              { color: '#15803d', backgroundColor: '#f0fdf4' },
+              o.status === 'pending'    ? { color: '#8C632A', backgroundColor: COLORS.goldBg } :
+              o.status === 'dispatched' ? { color: '#354657', backgroundColor: '#F0F3F6' } :
+              { color: '#465032', backgroundColor: '#F2F4EB' },
             ]}>{o.status}</Text>
             {o.status === 'pending' && (
               <TouchableOpacity onPress={() => advanceOrder(o, 'dispatch')} disabled={busyOrderId === o.id} style={s.orderActionBtn} activeOpacity={0.8}>
@@ -770,7 +770,7 @@ function SupplierDashboard({ currentUser, navigation }) {
               </TouchableOpacity>
             )}
             {o.status === 'dispatched' && (
-              <TouchableOpacity onPress={() => advanceOrder(o, 'deliver')} disabled={busyOrderId === o.id} style={[s.orderActionBtn, { backgroundColor: '#16a34a' }]} activeOpacity={0.8}>
+              <TouchableOpacity onPress={() => advanceOrder(o, 'deliver')} disabled={busyOrderId === o.id} style={[s.orderActionBtn, { backgroundColor: '#57633E' }]} activeOpacity={0.8}>
                 <Text style={s.orderActionBtnText}>Deliver</Text>
               </TouchableOpacity>
             )}
@@ -843,7 +843,7 @@ function BuyerDashboard({ currentUser, navigation }) {
         </View>
         <Text style={s.bannerEyebrow}>{greet()}, Buyer</Text>
         <Text style={s.bannerTitle}>Livestock Marketplace</Text>
-        <Text style={[s.bannerSub, { color: '#ede9fe' }]}>
+        <Text style={[s.bannerSub, { color: '#E9DEE7' }]}>
           {listings.length} active listing{listings.length !== 1 ? 's' : ''} · Market sentiment: Bullish
         </Text>
       </GradientBanner>
@@ -859,9 +859,9 @@ function BuyerDashboard({ currentUser, navigation }) {
       <SectionLabel icon={Compass}>QUICK ACTIONS</SectionLabel>
       <ActionGrid actions={[
         { icon: Store,         label: 'Marketplace',    color: COLORS.purple, onPress: () => navigation.navigate('Market') },
-        { icon: ShoppingCart,  label: 'Verified Stock', color: '#16a34a', onPress: () => navigation.navigate('Market') },
-        { icon: Wheat,         label: 'Feed Analyzer',  color: '#ea580c', onPress: () => navigation.navigate('Feed') },
-        { icon: MessageSquare, label: 'Messenger',      color: '#ec4899', onPress: () => navigation.navigate('Vet') },
+        { icon: ShoppingCart,  label: 'Verified Stock', color: '#57633E', onPress: () => navigation.navigate('Market') },
+        { icon: Wheat,         label: 'Feed Analyzer',  color: '#8E450E', onPress: () => navigation.navigate('Feed') },
+        { icon: MessageSquare, label: 'Messenger',      color: '#9B5A4B', onPress: () => navigation.navigate('Vet') },
       ]} />
 
       {/* Role explanation */}
@@ -896,8 +896,8 @@ function BuyerDashboard({ currentUser, navigation }) {
       <View style={s.kpiRow}>
         <KpiCard label="Total Listing Value" value={`$${totalValue.toLocaleString()}`}  sub="Combined asking price on market"
           icon={Tag} iconColor={COLORS.purple} iconBg={COLORS.purpleBg} />
-        <KpiCard label="Sales, Last 6mo"     value={priceTrend.reduce((a, m) => a + Number(m.sales), 0)} sub="Livestock listings marked sold"  accent="#f5f3ff" textColor={COLORS.purple} borderColor="#c4b5fd"
-          icon={TrendingUp} iconColor={COLORS.purple} iconBg="#ede9fe" />
+        <KpiCard label="Sales, Last 6mo"     value={priceTrend.reduce((a, m) => a + Number(m.sales), 0)} sub="Livestock listings marked sold"  accent="#F5F0F4" textColor={COLORS.purple} borderColor="#B596B0"
+          icon={TrendingUp} iconColor={COLORS.purple} iconBg="#E9DEE7" />
       </View>
 
       {/* Listings */}
@@ -1059,7 +1059,7 @@ const s = StyleSheet.create({
   logoName:        { color: '#fff', fontSize: 14, fontFamily: FONTS.extrabold },
   logoTagline:     { color: 'rgba(255,255,255,0.65)', fontSize: 9, fontFamily: FONTS.semibold },
   userName:        { color: '#fff', fontSize: 13, fontWeight: '800', maxWidth: 120 },
-  userRole:        { color: '#fbc02d', fontSize: 9, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
+  userRole:        { color: '#C99A4A', fontSize: 9, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
 
   banner:          { borderRadius: 24, padding: 20, marginBottom: 16, overflow: 'hidden' },
   bannerGlow1:     { position: 'absolute', width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.08)', top: -60, right: -40 },
@@ -1088,7 +1088,7 @@ const s = StyleSheet.create({
   panelDesc:       { fontSize: 12, color: COLORS.mutedDark, marginBottom: 12, lineHeight: 18 },
 
   emptyInner:      { alignItems: 'center', paddingVertical: 24 },
-  emptyInnerText:  { fontSize: 13, fontWeight: '700', color: '#9ca3af', marginTop: 8, textAlign: 'center' },
+  emptyInnerText:  { fontSize: 13, fontWeight: '700', color: '#968C82', marginTop: 8, textAlign: 'center' },
 
   priorityRow:        { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: COLORS.borderDark, gap: 12 },
   priorityIconBadge:  { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
@@ -1096,12 +1096,12 @@ const s = StyleSheet.create({
   prioritySub:        { fontSize: 11, color: COLORS.mutedDark, marginTop: 2 },
   priorityTag:        { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   priorityTagText:    { fontSize: 9, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.3 },
-  priorityCountBadge: { minWidth: 20, height: 20, borderRadius: 10, backgroundColor: '#ef4444', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
+  priorityCountBadge: { minWidth: 20, height: 20, borderRadius: 10, backgroundColor: '#B5342C', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
   priorityCountText:  { fontSize: 10, fontWeight: '900', color: '#fff' },
 
   alertCard:       { flexDirection: 'row', borderRadius: 12, padding: 12, marginBottom: 10, borderLeftWidth: 3, gap: 10 },
-  alertCritical:   { backgroundColor: 'rgba(239,68,68,0.1)', borderLeftColor: '#ef4444' },
-  alertInfo:       { backgroundColor: 'rgba(59,130,246,0.1)', borderLeftColor: '#3b82f6' },
+  alertCritical:   { backgroundColor: 'rgba(239,68,68,0.1)', borderLeftColor: '#B5342C' },
+  alertInfo:       { backgroundColor: 'rgba(59,130,246,0.1)', borderLeftColor: '#4F6A82' },
   alertDot:        { width: 10, height: 10, borderRadius: 5, marginTop: 3, flexShrink: 0 },
   alertTitle:      { fontSize: 12, fontWeight: '800', color: COLORS.textDark },
   alertMsg:        { fontSize: 11, color: COLORS.mutedDark, marginTop: 2 },
@@ -1112,38 +1112,38 @@ const s = StyleSheet.create({
   animalName:      { fontSize: 14, fontWeight: '900', color: COLORS.textDark },
   animalSub:       { fontSize: 11, color: COLORS.mutedDark, marginTop: 2 },
   animalListedRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
-  animalListed:    { fontSize: 10, fontWeight: '800', color: '#fbc02d' },
+  animalListed:    { fontSize: 10, fontWeight: '800', color: '#C99A4A' },
   listBtn:         { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, borderWidth: 1.5, borderColor: COLORS.primary },
-  listBtnActive:   { backgroundColor: '#fbc02d', borderColor: '#fbc02d' },
+  listBtnActive:   { backgroundColor: '#C99A4A', borderColor: '#C99A4A' },
   listBtnText:     { fontSize: 11, fontWeight: '800', color: COLORS.sprout },
-  listBtnTextActive: { color: '#1a1a1a' },
+  listBtnTextActive: { color: '#29231E' },
 
   medicineRow:     { backgroundColor: COLORS.cardDark2, borderRadius: 12, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: COLORS.borderDark },
   medicineName:    { fontSize: 12, fontWeight: '800', color: COLORS.textDark },
-  medicineLow:     { fontSize: 10, fontWeight: '800', color: '#f87171' },
+  medicineLow:     { fontSize: 10, fontWeight: '800', color: '#C75B50' },
   medicineDetail:  { fontSize: 10, color: COLORS.mutedDark, marginBottom: 8 },
   progressBar:     { height: 5, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden' },
   progressFill:    { height: '100%', borderRadius: 99 },
 
   infoRow:         { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
 
-  farmRow:         { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#1e293b', gap: 12 },
-  farmAvatar:      { width: 40, height: 40, backgroundColor: '#334155', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  farmAvatarText:  { color: '#86efac', fontSize: 16, fontWeight: '900' },
+  farmRow:         { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#3B342D', gap: 12 },
+  farmAvatar:      { width: 40, height: 40, backgroundColor: '#554D45', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  farmAvatarText:  { color: '#A8B78C', fontSize: 16, fontWeight: '900' },
   farmName:        { fontSize: 13, fontWeight: '900' },
   farmSub:         { fontSize: 10, marginTop: 2 },
-  farmAlertBadge:  { backgroundColor: 'rgba(220,38,38,0.2)', color: '#f87171', fontSize: 9, fontWeight: '800', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20, textTransform: 'uppercase' },
+  farmAlertBadge:  { backgroundColor: 'rgba(220,38,38,0.2)', color: '#C75B50', fontSize: 9, fontWeight: '800', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20, textTransform: 'uppercase' },
   statusBadge:     { fontSize: 9, fontWeight: '800', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, textTransform: 'uppercase', overflow: 'hidden' },
-  statusVerified:  { backgroundColor: 'rgba(134,239,172,0.15)', color: '#4ade80' },
-  statusPending:   { backgroundColor: 'rgba(251,146,60,0.15)',  color: '#fb923c' },
+  statusVerified:  { backgroundColor: 'rgba(134,239,172,0.15)', color: '#8A9C68' },
+  statusPending:   { backgroundColor: 'rgba(251,146,60,0.15)',  color: '#C87B3F' },
 
   orderRow:        { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 14, marginBottom: 10, backgroundColor: COLORS.cardDark2, borderWidth: 1.5, borderColor: COLORS.borderDark },
   orderIconWrap:   { width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
   orderFarm:       { fontSize: 13, fontWeight: '800', color: COLORS.textDark },
   orderDetail:     { fontSize: 11, color: COLORS.mutedDark, marginTop: 2 },
-  urgentBadge:     { fontSize: 9, fontWeight: '800', color: '#b45309', backgroundColor: COLORS.goldBg, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20, textTransform: 'uppercase', overflow: 'hidden' },
+  urgentBadge:     { fontSize: 9, fontWeight: '800', color: '#8C632A', backgroundColor: COLORS.goldBg, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20, textTransform: 'uppercase', overflow: 'hidden' },
   orderStatus:     { fontSize: 10, fontWeight: '800', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, textTransform: 'uppercase', overflow: 'hidden' },
-  orderActionBtn:     { marginLeft: 8, backgroundColor: '#2563eb', paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10 },
+  orderActionBtn:     { marginLeft: 8, backgroundColor: '#41586C', paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10 },
   orderActionBtnText: { color: '#fff', fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
 
   listingRow:      { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 14, marginBottom: 12, backgroundColor: COLORS.cardDark2, borderWidth: 1.5, borderColor: COLORS.borderDark, gap: 10 },
@@ -1214,6 +1214,6 @@ const s = StyleSheet.create({
   actionTile:      { width: '31%', backgroundColor: COLORS.cardDark, borderRadius: 16, borderWidth: 1, borderColor: COLORS.borderDark, paddingVertical: 14, alignItems: 'center', gap: 8 },
   actionTileIcon:  { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   actionTileLabel: { color: 'rgba(255,255,255,0.75)', fontSize: 9, fontWeight: '700', textAlign: 'center' },
-  actionTileBadge: { position: 'absolute', top: 6, right: 6, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: '#ef4444', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  actionTileBadge: { position: 'absolute', top: 6, right: 6, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: '#B5342C', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
   actionTileBadgeText: { color: '#fff', fontSize: 8, fontWeight: '900' },
 });

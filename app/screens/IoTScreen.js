@@ -55,7 +55,7 @@ function PairingPanel({ currentUser, animals, devices, onPaired }) {
             const TypeIcon = dv.device_type === 'base_station' ? RadioTower : Tag;
             return (
               <View key={dv.id} style={p.deviceRow}>
-                <View style={p.deviceIconBox}><TypeIcon size={13} color="#6b7280" /></View>
+                <View style={p.deviceIconBox}><TypeIcon size={13} color="#7C7268" /></View>
                 <View style={{ flex: 1 }}>
                   <Text style={p.deviceSerial}>{dv.device_serial}</Text>
                   <Text style={p.deviceMeta}>
@@ -78,7 +78,7 @@ function PairingPanel({ currentUser, animals, devices, onPaired }) {
             <TouchableOpacity key={t.id} activeOpacity={0.8}
               onPress={() => { setDeviceType(t.id); setAnimalId(''); }}
               style={[p.typeBtn, active && { backgroundColor: COLORS.primary }]}>
-              <t.icon size={13} color={active ? '#fff' : '#6b7280'} />
+              <t.icon size={13} color={active ? '#fff' : '#7C7268'} />
               <Text style={[p.typeBtnText, active && { color: '#fff' }]}>{t.label}</Text>
             </TouchableOpacity>
           );
@@ -118,19 +118,19 @@ function PairingPanel({ currentUser, animals, devices, onPaired }) {
 
 const p = StyleSheet.create({
   card:        { backgroundColor: '#fff', borderRadius: 16, padding: 16, elevation: 2, marginBottom: 16 },
-  title:       { fontSize: 14, fontWeight: '900', color: '#111827' },
-  subtitle:    { fontSize: 11, color: '#9ca3af', fontWeight: '500', marginBottom: 12 },
-  deviceRow:   { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#f9fafb', borderRadius: 12, padding: 10 },
-  deviceIconBox:{ width: 26, height: 26, borderRadius: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e5e7eb', alignItems: 'center', justifyContent: 'center' },
-  deviceSerial:{ fontSize: 11, fontWeight: '900', color: '#111827' },
-  deviceMeta:  { fontSize: 10, color: '#9ca3af', fontWeight: '600', marginTop: 1 },
-  feedback:    { fontSize: 11, fontWeight: '700', color: COLORS.primary, backgroundColor: '#f0fdf4', borderWidth: 1, borderColor: '#bbf7d0', borderRadius: 10, padding: 8, marginBottom: 10 },
-  typeBtn:     { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderRadius: 12, backgroundColor: '#f9fafb' },
-  typeBtnText: { fontSize: 10, fontWeight: '900', color: '#6b7280', textTransform: 'uppercase' },
-  hint:        { fontSize: 10, color: '#9ca3af', fontWeight: '500', marginBottom: 10, lineHeight: 15 },
-  input:       { backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, fontSize: 13, fontWeight: '600', color: '#111827', marginBottom: 10 },
-  animalChip:  { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: '#e5e7eb' },
-  animalChipText:{ fontSize: 11, fontWeight: '700', color: '#6b7280' },
+  title:       { fontSize: 14, fontWeight: '900', color: '#29231E' },
+  subtitle:    { fontSize: 11, color: '#968C82', fontWeight: '500', marginBottom: 12 },
+  deviceRow:   { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F7F3ED', borderRadius: 12, padding: 10 },
+  deviceIconBox:{ width: 26, height: 26, borderRadius: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#E0D6C7', alignItems: 'center', justifyContent: 'center' },
+  deviceSerial:{ fontSize: 11, fontWeight: '900', color: '#29231E' },
+  deviceMeta:  { fontSize: 10, color: '#968C82', fontWeight: '600', marginTop: 1 },
+  feedback:    { fontSize: 11, fontWeight: '700', color: COLORS.primary, backgroundColor: '#F2F4EB', borderWidth: 1, borderColor: '#C9D2B4', borderRadius: 10, padding: 8, marginBottom: 10 },
+  typeBtn:     { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderRadius: 12, backgroundColor: '#F7F3ED' },
+  typeBtnText: { fontSize: 10, fontWeight: '900', color: '#7C7268', textTransform: 'uppercase' },
+  hint:        { fontSize: 10, color: '#968C82', fontWeight: '500', marginBottom: 10, lineHeight: 15 },
+  input:       { backgroundColor: '#F7F3ED', borderRadius: 12, padding: 12, fontSize: 13, fontWeight: '600', color: '#29231E', marginBottom: 10 },
+  animalChip:  { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: '#E0D6C7' },
+  animalChipText:{ fontSize: 11, fontWeight: '700', color: '#7C7268' },
   pairBtn:     { backgroundColor: COLORS.primary, borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
   pairBtnText: { color: '#fff', fontSize: 13, fontWeight: '900' },
 });
@@ -148,7 +148,7 @@ function jitter(base, range) {
 }
 
 function BatteryBar({ pct }) {
-  const color = pct > 60 ? COLORS.primary : pct > 25 ? '#f59e0b' : '#ef4444';
+  const color = pct > 60 ? COLORS.primary : pct > 25 ? '#C99A4A' : '#B5342C';
   return (
     <View style={bat.wrap}>
       <View style={bat.body}>
@@ -162,7 +162,7 @@ function BatteryBar({ pct }) {
 
 const bat = StyleSheet.create({
   wrap:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  body:  { width: 40, height: 16, borderRadius: 4, borderWidth: 1.5, borderColor: '#ccc', overflow: 'hidden', backgroundColor: '#f3f4f6' },
+  body:  { width: 40, height: 16, borderRadius: 4, borderWidth: 1.5, borderColor: '#ccc', overflow: 'hidden', backgroundColor: '#EFE8DD' },
   fill:  { height: '100%', borderRadius: 2 },
   tip:   { width: 4, height: 8, backgroundColor: '#ccc', borderTopRightRadius: 2, borderBottomRightRadius: 2, marginLeft: -1 },
   label: { fontSize: 11, fontWeight: '800' },
@@ -178,7 +178,7 @@ function SignalDots({ level }) {
             width: 4,
             height: 4 + i * 3,
             borderRadius: 1,
-            backgroundColor: i <= level ? COLORS.primary : '#e5e7eb',
+            backgroundColor: i <= level ? COLORS.primary : '#E0D6C7',
           }}
         />
       ))}
@@ -312,8 +312,8 @@ export default function IoTScreen({ currentUser }) {
   const battery = isLive ? latest.battery_pct : null;
   const signalBars = isLive ? rssiToBars(latest.rssi) : 0;
 
-  const tempColor = v.temp >= 39.5 ? '#ef4444' : v.temp >= 39.0 ? '#f59e0b' : COLORS.primary;
-  const hrColor   = v.hr   >= 90   ? '#ef4444' : v.hr   >= 80   ? '#f59e0b' : COLORS.primary;
+  const tempColor = v.temp >= 39.5 ? '#B5342C' : v.temp >= 39.0 ? '#C99A4A' : COLORS.primary;
+  const hrColor   = v.hr   >= 90   ? '#B5342C' : v.hr   >= 80   ? '#C99A4A' : COLORS.primary;
 
   const trendPoints = isLive
     ? [...readings].reverse().map(r => parseFloat(r.temp_c))
@@ -360,7 +360,7 @@ export default function IoTScreen({ currentUser }) {
               activeOpacity={0.8}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <View style={[s.animalDot, { backgroundColor: devices.some(d => d.animal_id === a.id) ? '#4ade80' : '#d1d5db' }]} />
+                <View style={[s.animalDot, { backgroundColor: devices.some(d => d.animal_id === a.id) ? '#8A9C68' : '#CBBFAD' }]} />
                 <Text style={[s.animalTabName, selectedId === a.id && { color: '#fff' }]}>{a.name}</Text>
               </View>
               <Text style={[s.animalTabSub, selectedId === a.id && { color: 'rgba(255,255,255,0.7)' }]}>
@@ -416,10 +416,10 @@ export default function IoTScreen({ currentUser }) {
             <Text style={s.actValue}>{v.activity}</Text>
           </View>
           <View style={[s.actBadge,
-            { backgroundColor: v.activity === 'Running' ? '#fff5f5' : v.activity === 'Grazing' ? '#f0fdf4' : '#eff6ff' }
+            { backgroundColor: v.activity === 'Running' ? '#FBEEEC' : v.activity === 'Grazing' ? '#F2F4EB' : '#F0F3F6' }
           ]}>
             <Text style={[s.actBadgeText,
-              { color: v.activity === 'Running' ? '#ef4444' : v.activity === 'Grazing' ? '#16a34a' : '#2563eb' }
+              { color: v.activity === 'Running' ? '#B5342C' : v.activity === 'Grazing' ? '#57633E' : '#41586C' }
             ]}>{v.activity}</Text>
           </View>
         </View>
@@ -428,7 +428,7 @@ export default function IoTScreen({ currentUser }) {
         <Text style={s.sectionLabel}>GPS & ZONE STATUS</Text>
         <View style={[s.zoneCard, inZone ? s.zoneCardSafe : s.zoneCardAlert]}>
           <View style={{ flex: 1 }}>
-            <Text style={[s.zoneStatus, { color: inZone ? '#15803d' : '#dc2626' }]}>
+            <Text style={[s.zoneStatus, { color: inZone ? '#465032' : '#9A2A23' }]}>
               {isLive ? (inZone ? 'In Safe Zone' : 'OUTSIDE SAFE ZONE') : 'No live GPS'}
             </Text>
             <Text style={s.zoneName}>{isLive ? (inZone ? 'Within registered boundary' : 'Boundary breach') : 'Pair a collar for real location data'}</Text>
@@ -438,9 +438,9 @@ export default function IoTScreen({ currentUser }) {
                 : 'This animal has no paired collar reporting recently.'}
             </Text>
           </View>
-          <View style={[s.zoneIcon, { backgroundColor: isLive ? (inZone ? '#dcfce7' : '#fee2e2') : '#f3f4f6' }]}>
+          <View style={[s.zoneIcon, { backgroundColor: isLive ? (inZone ? '#E3E8D6' : '#F6D9D5') : '#EFE8DD' }]}>
             {isLive
-              ? (inZone ? <Check size={26} color="#15803d" strokeWidth={2.5} /> : <AlertTriangle size={24} color="#dc2626" strokeWidth={2.2} />)
+              ? (inZone ? <Check size={26} color="#465032" strokeWidth={2.5} /> : <AlertTriangle size={24} color="#9A2A23" strokeWidth={2.2} />)
               : <Radio size={22} color={COLORS.muted} strokeWidth={2} />}
           </View>
         </View>
@@ -452,7 +452,7 @@ export default function IoTScreen({ currentUser }) {
           <View style={s.trendBars}>
             {trendPoints.map((t, i) => {
               const h = Math.max(10, ((t - 37.5) / 2) * 60);
-              const c = t >= 39.5 ? '#ef4444' : t >= 39.0 ? '#f59e0b' : COLORS.primary;
+              const c = t >= 39.5 ? '#B5342C' : t >= 39.0 ? '#C99A4A' : COLORS.primary;
               const isLast = i === trendPoints.length - 1;
               return (
                 <View key={i} style={s.trendBarCol}>
@@ -474,7 +474,7 @@ export default function IoTScreen({ currentUser }) {
         ) : (
           liveAlerts.map(al => (
             <View key={al.id} style={[s.alertCard, al.type === 'Security' ? s.alertCritical : s.alertWarning]}>
-              <View style={[s.alertDot, { backgroundColor: al.type === 'Security' ? '#ef4444' : '#f59e0b' }]} />
+              <View style={[s.alertDot, { backgroundColor: al.type === 'Security' ? '#B5342C' : '#C99A4A' }]} />
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2 }}>
                   <Text style={s.alertAnimal}>{animal.name}</Text>
@@ -491,8 +491,8 @@ export default function IoTScreen({ currentUser }) {
         <View style={[s.fleetCard, { marginBottom: 16 }]}>
           {[
             { label: 'Animals',        value: animals.length,                                   color: COLORS.primary },
-            { label: 'Collars Paired', value: devices.filter(d => d.device_type === 'collar').length, color: '#2563eb' },
-            { label: 'This Animal',    value: isLive ? 'Live' : 'Demo',                           color: isLive ? '#16a34a' : '#9ca3af' },
+            { label: 'Collars Paired', value: devices.filter(d => d.device_type === 'collar').length, color: '#41586C' },
+            { label: 'This Animal',    value: isLive ? 'Live' : 'Demo',                           color: isLive ? '#57633E' : '#968C82' },
           ].map(stat => (
             <View key={stat.label} style={s.fleetStat}>
               <Text style={[s.fleetStatValue, { color: stat.color }]}>{stat.value}</Text>
@@ -510,68 +510,68 @@ export default function IoTScreen({ currentUser }) {
 
 const s = StyleSheet.create({
   header:        { backgroundColor: COLORS.primary, padding: 24, paddingTop: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-  headerSub:     { color: '#a5d6a7', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
+  headerSub:     { color: '#DEC9AE', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
   headerTitle:   { color: '#fff', fontSize: 24, fontWeight: '900', marginTop: 2 },
-  headerDesc:    { color: '#a5d6a7', fontSize: 11, marginTop: 2 },
+  headerDesc:    { color: '#DEC9AE', fontSize: 11, marginTop: 2 },
   liveChip:      { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, gap: 6 },
-  liveDot:       { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4ade80' },
+  liveDot:       { width: 8, height: 8, borderRadius: 4, backgroundColor: '#8A9C68' },
   liveText:      { color: '#fff', fontSize: 11, fontWeight: '900', letterSpacing: 1 },
 
-  sectionLabel:  { fontSize: 9, fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, marginTop: 8 },
+  sectionLabel:  { fontSize: 9, fontWeight: '800', color: '#968C82', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, marginTop: 8 },
 
   animalSelector:{ flexDirection: 'row', gap: 10, marginBottom: 12 },
-  animalTab:     { flex: 1, backgroundColor: '#fff', borderRadius: 14, padding: 12, borderWidth: 2, borderColor: '#e5e7eb', elevation: 2 },
+  animalTab:     { flex: 1, backgroundColor: '#fff', borderRadius: 14, padding: 12, borderWidth: 2, borderColor: '#E0D6C7', elevation: 2 },
   animalTabActive:{ backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   animalDot:     { width: 8, height: 8, borderRadius: 4 },
-  animalTabName: { fontSize: 14, fontWeight: '900', color: '#111827', marginBottom: 2 },
-  animalTabSub:  { fontSize: 10, color: '#9ca3af', fontWeight: '600' },
+  animalTabName: { fontSize: 14, fontWeight: '900', color: '#29231E', marginBottom: 2 },
+  animalTabSub:  { fontSize: 10, color: '#968C82', fontWeight: '600' },
 
   collarCard:    { backgroundColor: '#fff', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 4, elevation: 2 },
-  collarName:    { fontSize: 18, fontWeight: '900', color: '#111827' },
-  collarSub:     { fontSize: 11, color: '#9ca3af', marginTop: 2 },
+  collarName:    { fontSize: 18, fontWeight: '900', color: '#29231E' },
+  collarSub:     { fontSize: 11, color: '#968C82', marginTop: 2 },
 
   vitalsRow:     { flexDirection: 'row', gap: 10, marginBottom: 12 },
   vitalCard:     { flex: 1, backgroundColor: '#fff', borderRadius: 16, padding: 16, borderTopWidth: 4, elevation: 2, alignItems: 'center' },
   vitalValue:    { fontSize: 24, fontWeight: '900', marginBottom: 2 },
-  vitalLabel:    { fontSize: 10, color: '#9ca3af', fontWeight: '700', textTransform: 'uppercase', marginBottom: 4 },
+  vitalLabel:    { fontSize: 10, color: '#968C82', fontWeight: '700', textTransform: 'uppercase', marginBottom: 4 },
   vitalStatus:   { fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
-  vitalRef:      { fontSize: 9, color: '#d1d5db', marginTop: 4 },
+  vitalRef:      { fontSize: 9, color: '#CBBFAD', marginTop: 4 },
 
   activityCard:  { backgroundColor: '#fff', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 4, elevation: 2 },
-  actLabel:      { fontSize: 10, fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', marginBottom: 4 },
-  actValue:      { fontSize: 16, fontWeight: '900', color: '#111827' },
+  actLabel:      { fontSize: 10, fontWeight: '700', color: '#968C82', textTransform: 'uppercase', marginBottom: 4 },
+  actValue:      { fontSize: 16, fontWeight: '900', color: '#29231E' },
   actBadge:      { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 },
   actBadgeText:  { fontSize: 13, fontWeight: '900' },
 
   zoneCard:      { borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4, elevation: 2 },
-  zoneCardSafe:  { backgroundColor: '#f0fdf4', borderWidth: 1.5, borderColor: '#bbf7d0' },
-  zoneCardAlert: { backgroundColor: '#fff5f5', borderWidth: 1.5, borderColor: '#fca5a5' },
+  zoneCardSafe:  { backgroundColor: '#F2F4EB', borderWidth: 1.5, borderColor: '#C9D2B4' },
+  zoneCardAlert: { backgroundColor: '#FBEEEC', borderWidth: 1.5, borderColor: '#DA8279' },
   zoneStatus:    { fontSize: 12, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
-  zoneName:      { fontSize: 16, fontWeight: '900', color: '#111827', marginBottom: 4 },
-  zoneCoord:     { fontSize: 11, color: '#6b7280', lineHeight: 16 },
+  zoneName:      { fontSize: 16, fontWeight: '900', color: '#29231E', marginBottom: 4 },
+  zoneCoord:     { fontSize: 11, color: '#7C7268', lineHeight: 16 },
   zoneIcon:      { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
 
   trendCard:     { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 4, elevation: 2 },
-  trendTitle:    { fontSize: 11, fontWeight: '700', color: '#6b7280', marginBottom: 14 },
+  trendTitle:    { fontSize: 11, fontWeight: '700', color: '#7C7268', marginBottom: 14 },
   trendBars:     { flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 90 },
   trendBarCol:   { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
   trendBarVal:   { fontSize: 9, fontWeight: '800', marginBottom: 3 },
   trendBar:      { width: '100%', borderRadius: 4, minHeight: 10 },
-  trendBarX:     { fontSize: 8, color: '#9ca3af', marginTop: 4, fontWeight: '600' },
+  trendBarX:     { fontSize: 8, color: '#968C82', marginTop: 4, fontWeight: '600' },
 
   alertCard:     { flexDirection: 'row', borderRadius: 14, padding: 14, marginBottom: 10, borderLeftWidth: 3, gap: 12, alignItems: 'flex-start' },
-  alertCritical: { backgroundColor: '#fff5f5', borderLeftColor: '#ef4444' },
-  alertWarning:  { backgroundColor: '#fffbeb', borderLeftColor: '#f59e0b' },
+  alertCritical: { backgroundColor: '#FBEEEC', borderLeftColor: '#B5342C' },
+  alertWarning:  { backgroundColor: '#FBF5E9', borderLeftColor: '#C99A4A' },
   alertDot:      { width: 10, height: 10, borderRadius: 5, marginTop: 3, flexShrink: 0 },
-  alertAnimal:   { fontSize: 12, fontWeight: '900', color: '#111827' },
-  alertTime:     { fontSize: 10, fontWeight: '700', color: '#9ca3af' },
-  alertMsg:      { fontSize: 11, color: '#6b7280', marginTop: 2, lineHeight: 16 },
+  alertAnimal:   { fontSize: 12, fontWeight: '900', color: '#29231E' },
+  alertTime:     { fontSize: 10, fontWeight: '700', color: '#968C82' },
+  alertMsg:      { fontSize: 11, color: '#7C7268', marginTop: 2, lineHeight: 16 },
 
-  noAlerts:      { backgroundColor: '#f0fdf4', borderRadius: 16, padding: 20, alignItems: 'center', marginBottom: 12 },
-  noAlertsText:  { fontSize: 13, fontWeight: '700', color: '#16a34a' },
+  noAlerts:      { backgroundColor: '#F2F4EB', borderRadius: 16, padding: 20, alignItems: 'center', marginBottom: 12 },
+  noAlertsText:  { fontSize: 13, fontWeight: '700', color: '#57633E' },
 
   fleetCard:     { backgroundColor: '#fff', borderRadius: 16, padding: 16, flexDirection: 'row', justifyContent: 'space-between', elevation: 2 },
   fleetStat:     { alignItems: 'center' },
   fleetStatValue:{ fontSize: 22, fontWeight: '900', marginBottom: 2 },
-  fleetStatLabel:{ fontSize: 9, fontWeight: '700', color: '#9ca3af', textTransform: 'uppercase', textAlign: 'center' },
+  fleetStatLabel:{ fontSize: 9, fontWeight: '700', color: '#968C82', textTransform: 'uppercase', textAlign: 'center' },
 });

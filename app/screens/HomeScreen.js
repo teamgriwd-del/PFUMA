@@ -81,9 +81,9 @@ export default function HomeScreen({ navigation, currentUser }) {
         <Text style={styles.sectionTitle}>Your Farm Today</Text>
         <View style={styles.statsRow}>
           <StatCard emoji="🐄" label="Animals"   value={stats.animals}   color={COLORS.primary} bg={COLORS.light} />
-          <StatCard emoji="🏷" label="Listed"     value={stats.listings}  color="#e65100"       bg="#fff3e0" />
-          <StatCard emoji="💬" label="Messages"   value={stats.messages}  color="#1565c0"       bg="#e3f2fd" />
-          <StatCard emoji="💵" label="Est. Value" value={`$${Number(stats.total_value || 0).toLocaleString()}`} color="#4a148c" bg="#f3e5f5" />
+          <StatCard emoji="🏷" label="Listed"     value={stats.listings}  color="#8E450E"       bg="#F7E1CE" />
+          <StatCard emoji="💬" label="Messages"   value={stats.messages}  color="#41586C"       bg="#DFE6EC" />
+          <StatCard emoji="💵" label="Est. Value" value={`$${Number(stats.total_value || 0).toLocaleString()}`} color="#2A1E28" bg="#E9DEE7" />
         </View>
       </View>
 
@@ -92,9 +92,9 @@ export default function HomeScreen({ navigation, currentUser }) {
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.quickRow}>
           <QuickBtn emoji="🐄" label="Register Animal"  color={COLORS.primary} onPress={() => navigation.navigate('Herd')} />
-          <QuickBtn emoji="🛒" label="List for Sale"    color="#e65100"        onPress={() => navigation.navigate('Market')} />
-          <QuickBtn emoji="🌾" label="Check Feed"       color="#558b2f"        onPress={() => navigation.navigate('Feed')} />
-          <QuickBtn emoji="💬" label="Contact Vet"      color="#1565c0"        onPress={() => navigation.navigate('Profile')} />
+          <QuickBtn emoji="🛒" label="List for Sale"    color="#8E450E"        onPress={() => navigation.navigate('Market')} />
+          <QuickBtn emoji="🌾" label="Check Feed"       color="#57633E"        onPress={() => navigation.navigate('Feed')} />
+          <QuickBtn emoji="💬" label="Contact Vet"      color="#41586C"        onPress={() => navigation.navigate('Profile')} />
         </View>
       </View>
 
@@ -102,8 +102,8 @@ export default function HomeScreen({ navigation, currentUser }) {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>⚠ Disease Alerts Near You</Text>
         {ALERTS.map(a => (
-          <View key={a.id} style={[styles.alertCard, { borderLeftColor: a.type === 'Critical' ? COLORS.danger : '#1565c0' }]}>
-            <View style={[styles.alertDot, { backgroundColor: a.type === 'Critical' ? COLORS.danger : '#1565c0' }]} />
+          <View key={a.id} style={[styles.alertCard, { borderLeftColor: a.type === 'Critical' ? COLORS.danger : '#41586C' }]}>
+            <View style={[styles.alertDot, { backgroundColor: a.type === 'Critical' ? COLORS.danger : '#41586C' }]} />
             <View style={{ flex: 1 }}>
               <Text style={styles.alertTitle}>{a.title}</Text>
               <Text style={styles.alertMsg}>{a.msg}</Text>
@@ -134,9 +134,9 @@ export default function HomeScreen({ navigation, currentUser }) {
 const styles = StyleSheet.create({
   container:     { flex: 1, backgroundColor: COLORS.bg },
   header:        { backgroundColor: COLORS.primary, padding: 24, paddingTop: 56, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  greet:         { color: '#a5d6a7', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
+  greet:         { color: '#DEC9AE', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
   appName:       { color: '#fff', fontSize: 26, fontFamily: FONTS.extrabold, marginTop: 4, letterSpacing: -0.5 },
-  tagline:       { color: '#a5d6a7', fontSize: 11, fontWeight: '600', marginTop: 2 },
+  tagline:       { color: '#DEC9AE', fontSize: 11, fontWeight: '600', marginTop: 2 },
   logoBox:       { width: 44, height: 44, borderRadius: 14, elevation: 4 },
   section:       { marginHorizontal: 16, marginTop: 20 },
   sectionTitle:  { fontSize: 14, fontWeight: '800', color: COLORS.text, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },

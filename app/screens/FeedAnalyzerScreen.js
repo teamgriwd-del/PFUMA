@@ -24,14 +24,14 @@ const DEMO_FEEDS = [
   { id:8, name:'Commercial Grower', category:'mixed',    protein_percent:18.0, energy_mj:12.5, fibre_percent:7.0,  calcium_percent:0.90, phosphorus_percent:0.70, description:'Ready-mixed ration for growing cattle 6-18 months.',                        suitable_for:'Cattle' },
 ];
 
-const CAT_COLOR = { protein:'#1565c0', energy:'#e65100', roughage:'#2e7d32', mineral:'#6a1b9a', mixed:'#555' };
-const CAT_BG    = { protein:'#e3f2fd', energy:'#fff3e0', roughage:'#e8f5e9', mineral:'#f3e5f5', mixed:'#f5f5f5' };
+const CAT_COLOR = { protein:'#41586C', energy:'#8E450E', roughage:'#A6763C', mineral:'#674A61', mixed:'#555' };
+const CAT_BG    = { protein:'#DFE6EC', energy:'#F7E1CE', roughage:'#F0E6D9', mineral:'#E9DEE7', mixed:'#EFE8DD' };
 const RATION_SPECIES = ['Cattle', 'Goat'];
 
 const STATUS_STYLE = {
-  deficient: { label: 'Deficient', color: '#c62828', bg: '#ffebee' },
-  balanced:  { label: 'Balanced',  color: '#2e7d32', bg: '#e8f5e9' },
-  excess:    { label: 'Excess',    color: '#e65100', bg: '#fff3e0' },
+  deficient: { label: 'Deficient', color: '#B5342C', bg: '#FBEEEC' },
+  balanced:  { label: 'Balanced',  color: '#A6763C', bg: '#F0E6D9' },
+  excess:    { label: 'Excess',    color: '#8E450E', bg: '#F7E1CE' },
 };
 
 const statusOf = (total, target) => {
@@ -195,17 +195,17 @@ function RationBuilder({ currentUser, feeds }) {
         <>
           <View style={styles.statRow}>
             <View style={styles.statBox}>
-              <Scale size={14} color="#9ca3af" />
+              <Scale size={14} color="#968C82" />
               <Text style={styles.statLabel}>Weight</Text>
               <Text style={styles.statVal}>{requirement.weight_kg} kg</Text>
             </View>
             <View style={styles.statBox}>
-              <Clock size={14} color="#9ca3af" />
+              <Clock size={14} color="#968C82" />
               <Text style={styles.statLabel}>Life Stage</Text>
               <Text style={[styles.statVal, { textTransform: 'capitalize' }]}>{requirement.life_stage}</Text>
             </View>
             <View style={styles.statBox}>
-              <ShieldCheck size={14} color="#9ca3af" />
+              <ShieldCheck size={14} color="#968C82" />
               <Text style={styles.statLabel}>Daily Target</Text>
               <Text style={styles.statVal}>{requirement.target_protein_g}g CP</Text>
             </View>
@@ -238,9 +238,9 @@ function RationBuilder({ currentUser, feeds }) {
                       onChangeText={v => updateQty(r.feedId, v)}
                       placeholder="kg/day"
                     />
-                    {!feed.market_price && <AlertTriangle size={13} color="#f59e0b" style={{ marginHorizontal: 4 }} />}
+                    {!feed.market_price && <AlertTriangle size={13} color="#C99A4A" style={{ marginHorizontal: 4 }} />}
                     <TouchableOpacity onPress={() => removeRow(r.feedId)}>
-                      <Trash2 size={16} color="#d32f2f" />
+                      <Trash2 size={16} color="#B5342C" />
                     </TouchableOpacity>
                   </View>
                 );
@@ -257,7 +257,7 @@ function RationBuilder({ currentUser, feeds }) {
                       return (
                         <View key={n.label} style={[styles.verdictBox, { backgroundColor: s.bg }]}>
                           <Text style={[styles.verdictLabel, { color: s.color }]}>{n.label} — {s.label}</Text>
-                          <Text style={styles.verdictVal}>{n.total.toFixed(1)}{n.unit} <Text style={{ color: '#9ca3af', fontWeight: '600' }}>/ {n.target}{n.unit}</Text></Text>
+                          <Text style={styles.verdictVal}>{n.total.toFixed(1)}{n.unit} <Text style={{ color: '#968C82', fontWeight: '600' }}>/ {n.target}{n.unit}</Text></Text>
                         </View>
                       );
                     })}
@@ -265,7 +265,7 @@ function RationBuilder({ currentUser, feeds }) {
 
                   <View style={styles.costBanner}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <DollarSign size={15} color="#a5d6a7" />
+                      <DollarSign size={15} color="#DEC9AE" />
                       <Text style={styles.costLabel}>Estimated Daily Cost</Text>
                     </View>
                     <Text style={styles.costVal}>USD {preview.cost.toFixed(2)}</Text>
@@ -285,7 +285,7 @@ function RationBuilder({ currentUser, feeds }) {
 
                   {savedPlan && (
                     <View style={styles.savedBox}>
-                      <CheckCircle size={14} color="#2e7d32" />
+                      <CheckCircle size={14} color="#A6763C" />
                       <Text style={styles.savedText}>Saved — added USD {savedPlan.total_cost_usd.toFixed(2)} to {selectedAnimal?.name}'s cost-to-date.</Text>
                     </View>
                   )}
@@ -339,7 +339,7 @@ export default function FeedAnalyzerScreen({ currentUser }) {
     const isOpen = expandedId === item.id;
     const speciesList = (item.suitable_for || '').split(',').filter(Boolean);
     const color = CAT_COLOR[item.category] || '#555';
-    const bg    = CAT_BG[item.category]   || '#f5f5f5';
+    const bg    = CAT_BG[item.category]   || '#EFE8DD';
     const CatIcon = CATEGORY_ICON[item.category] || Wheat;
     return (
       <TouchableOpacity style={styles.card} onPress={() => setExpandedId(isOpen ? null : item.id)} activeOpacity={0.9}>
@@ -354,15 +354,15 @@ export default function FeedAnalyzerScreen({ currentUser }) {
                 <Text style={[styles.catBadgeText, { color }]}>{item.category}</Text>
               </View>
               {item.market_price && (
-                <View style={[styles.catBadge, { backgroundColor: '#e8f5e9' }]}>
-                  <Text style={[styles.catBadgeText, { color: '#2e7d32' }]}>${Number(item.market_price.price).toFixed(2)}/{item.market_price.unit} live</Text>
+                <View style={[styles.catBadge, { backgroundColor: '#F0E6D9' }]}>
+                  <Text style={[styles.catBadgeText, { color: '#A6763C' }]}>${Number(item.market_price.price).toFixed(2)}/{item.market_price.unit} live</Text>
                 </View>
               )}
             </View>
             <View style={styles.inlineStats}>
-              <Text style={styles.inlineStat}>Protein <Text style={{ color: '#1565c0', fontWeight:'800' }}>{item.protein_percent}%</Text></Text>
-              <Text style={styles.inlineStat}>Energy <Text style={{ color:'#e65100', fontWeight:'800' }}>{item.energy_mj}MJ</Text></Text>
-              <Text style={styles.inlineStat}>Fibre <Text style={{ color:'#2e7d32', fontWeight:'800' }}>{item.fibre_percent}%</Text></Text>
+              <Text style={styles.inlineStat}>Protein <Text style={{ color: '#41586C', fontWeight:'800' }}>{item.protein_percent}%</Text></Text>
+              <Text style={styles.inlineStat}>Energy <Text style={{ color:'#8E450E', fontWeight:'800' }}>{item.energy_mj}MJ</Text></Text>
+              <Text style={styles.inlineStat}>Fibre <Text style={{ color:'#A6763C', fontWeight:'800' }}>{item.fibre_percent}%</Text></Text>
             </View>
           </View>
           <Text style={{ fontSize: 16, color: COLORS.muted }}>{isOpen ? '▲' : '▼'}</Text>
@@ -372,11 +372,11 @@ export default function FeedAnalyzerScreen({ currentUser }) {
           <View style={styles.expanded}>
             {item.description ? <Text style={styles.desc}>{item.description}</Text> : null}
             <Text style={styles.nutriTitle}>Nutritional Breakdown</Text>
-            <NutrientBar label="Protein"    value={item.protein_percent}    display={`${item.protein_percent}%`}       max={50}  color="#1565c0" />
-            <NutrientBar label="Energy"     value={item.energy_mj}          display={`${item.energy_mj} MJ/kg`}       max={16}  color="#e65100" />
-            <NutrientBar label="Fibre"      value={item.fibre_percent}      display={`${item.fibre_percent}%`}        max={35}  color="#2e7d32" />
-            <NutrientBar label="Calcium"    value={item.calcium_percent}    display={`${item.calcium_percent}%`}      max={30}  color="#6a1b9a" />
-            <NutrientBar label="Phosphorus" value={item.phosphorus_percent} display={`${item.phosphorus_percent}%`}  max={20}  color="#c62828" />
+            <NutrientBar label="Protein"    value={item.protein_percent}    display={`${item.protein_percent}%`}       max={50}  color="#41586C" />
+            <NutrientBar label="Energy"     value={item.energy_mj}          display={`${item.energy_mj} MJ/kg`}       max={16}  color="#8E450E" />
+            <NutrientBar label="Fibre"      value={item.fibre_percent}      display={`${item.fibre_percent}%`}        max={35}  color="#A6763C" />
+            <NutrientBar label="Calcium"    value={item.calcium_percent}    display={`${item.calcium_percent}%`}      max={30}  color="#674A61" />
+            <NutrientBar label="Phosphorus" value={item.phosphorus_percent} display={`${item.phosphorus_percent}%`}  max={20}  color="#B5342C" />
             {speciesList.length > 0 && (
               <View style={styles.speciesRow}>
                 <Text style={styles.speciesTitle}>Suitable for: </Text>
@@ -450,9 +450,9 @@ export default function FeedAnalyzerScreen({ currentUser }) {
 
 const styles = StyleSheet.create({
   header:        { backgroundColor: COLORS.primary, padding: 24, paddingTop: 56, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-  headerSub:     { color: '#a5d6a7', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
+  headerSub:     { color: '#DEC9AE', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
   headerTitle:   { color: '#fff', fontSize: 24, fontWeight: '900', marginTop: 2 },
-  headerDesc:    { color: '#a5d6a7', fontSize: 11, marginTop: 2, maxWidth: 220 },
+  headerDesc:    { color: '#DEC9AE', fontSize: 11, marginTop: 2, maxWidth: 220 },
 
   tabBar2:       { flexDirection: 'row', gap: 8, padding: 16, paddingBottom: 4 },
   tabBtn:        { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, backgroundColor: '#fff', elevation: 1 },
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
   pitchBox:      { flexDirection: 'row', gap: 10, backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 16, elevation: 1 },
   pitchText:     { flex: 1, fontSize: 12, color: COLORS.muted, lineHeight: 18, fontWeight: '600' },
 
-  filterLabel:      { fontSize: 9, fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, marginTop: 4 },
+  filterLabel:      { fontSize: 9, fontWeight: '800', color: '#968C82', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, marginTop: 4 },
   filterGrid:       { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
   filterChip:       { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 22, borderWidth: 2 },
   filterChipText:   { fontSize: 12, fontWeight: '800' },
@@ -473,32 +473,32 @@ const styles = StyleSheet.create({
 
   statRow:       { flexDirection: 'row', gap: 8, marginVertical: 12 },
   statBox:       { flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 10, alignItems: 'center', elevation: 1 },
-  statLabel:     { fontSize: 9, fontWeight: '800', color: '#9ca3af', textTransform: 'uppercase', marginTop: 4 },
+  statLabel:     { fontSize: 9, fontWeight: '800', color: '#968C82', textTransform: 'uppercase', marginTop: 4 },
   statVal:       { fontSize: 13, fontWeight: '900', color: COLORS.text, marginTop: 2 },
 
   addFeedChip:      { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#fff', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8, elevation: 1 },
   addFeedChipText:  { fontSize: 11, fontWeight: '700', color: COLORS.text },
-  addFeedChipPrice: { fontSize: 10, fontWeight: '800', color: '#2e7d32' },
+  addFeedChipPrice: { fontSize: 10, fontWeight: '800', color: '#A6763C' },
 
   rationRow:        { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 10, marginBottom: 8, elevation: 1 },
   rationRowName:    { flex: 1, fontSize: 12, fontWeight: '700', color: COLORS.text },
-  rationQtyInput:   { width: 64, backgroundColor: '#f5f5f5', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6, fontSize: 12, fontWeight: '700', marginRight: 8, textAlign: 'center' },
+  rationQtyInput:   { width: 64, backgroundColor: '#EFE8DD', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6, fontSize: 12, fontWeight: '700', marginRight: 8, textAlign: 'center' },
 
   verdictRow:    { flexDirection: 'row', gap: 8, marginTop: 8 },
   verdictBox:    { flex: 1, borderRadius: 12, padding: 10 },
   verdictLabel:  { fontSize: 10, fontWeight: '800', textTransform: 'uppercase', marginBottom: 4 },
   verdictVal:    { fontSize: 13, fontWeight: '900', color: COLORS.text },
 
-  costBanner:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#1b1b1b', borderRadius: 12, padding: 14, marginTop: 12 },
+  costBanner:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#29231E', borderRadius: 12, padding: 14, marginTop: 12 },
   costLabel:     { fontSize: 11, fontWeight: '800', color: '#fff', textTransform: 'uppercase' },
   costVal:       { fontSize: 16, fontWeight: '900', color: '#fff' },
-  warnText:      { fontSize: 10, color: '#e65100', fontWeight: '700', marginTop: 8 },
-  errorText:     { fontSize: 11, color: '#c62828', fontWeight: '700', backgroundColor: '#ffebee', borderRadius: 10, padding: 10, marginTop: 10 },
+  warnText:      { fontSize: 10, color: '#8E450E', fontWeight: '700', marginTop: 8 },
+  errorText:     { fontSize: 11, color: '#B5342C', fontWeight: '700', backgroundColor: '#FBEEEC', borderRadius: 10, padding: 10, marginTop: 10 },
 
   saveBtn:       { backgroundColor: COLORS.primary, borderRadius: 12, paddingVertical: 13, alignItems: 'center', marginTop: 12 },
   saveBtnText:   { color: '#fff', fontSize: 12, fontWeight: '900', textTransform: 'uppercase' },
-  savedBox:      { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#e8f5e9', borderRadius: 12, padding: 10, marginTop: 10 },
-  savedText:     { flex: 1, fontSize: 11, fontWeight: '700', color: '#2e7d32' },
+  savedBox:      { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F0E6D9', borderRadius: 12, padding: 10, marginTop: 10 },
+  savedText:     { flex: 1, fontSize: 11, fontWeight: '700', color: '#A6763C' },
 
   historyRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', borderRadius: 10, padding: 10, marginBottom: 6, elevation: 1 },
   historyDate:   { fontSize: 11, color: COLORS.muted, fontWeight: '600' },
@@ -515,12 +515,12 @@ const styles = StyleSheet.create({
   catBadgeText:  { fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
   inlineStats:   { flexDirection: 'row', gap: 10 },
   inlineStat:    { fontSize: 11, color: COLORS.muted },
-  expanded:      { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
-  desc:          { fontSize: 12, color: COLORS.muted, lineHeight: 18, marginBottom: 12, backgroundColor: '#fffde7', padding: 10, borderRadius: 10 },
+  expanded:      { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#EFE8DD' },
+  desc:          { fontSize: 12, color: COLORS.muted, lineHeight: 18, marginBottom: 12, backgroundColor: '#FBF5E9', padding: 10, borderRadius: 10 },
   nutriTitle:    { fontSize: 12, fontWeight: '800', color: COLORS.text, textTransform: 'uppercase', marginBottom: 10 },
   nutriLabel:    { fontSize: 12, color: COLORS.muted, fontWeight: '600' },
   nutriVal:      { fontSize: 12, fontWeight: '900' },
-  barBg:         { height: 6, backgroundColor: '#f0f0f0', borderRadius: 4, overflow: 'hidden' },
+  barBg:         { height: 6, backgroundColor: '#EFE8DD', borderRadius: 4, overflow: 'hidden' },
   barFill:       { height: '100%', borderRadius: 4 },
   speciesRow:    { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 12 },
   speciesTitle:  { fontSize: 11, fontWeight: '700', color: COLORS.muted },

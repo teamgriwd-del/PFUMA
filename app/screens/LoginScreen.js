@@ -15,10 +15,10 @@ import pfumaMark from '../assets/pfuma-mark.png';
 
 const ROLES = [
   { name: 'Farmer',       icon: Sprout,      color: COLORS.primary, desc: 'Register animals, track health, list for sale' },
-  { name: 'Veterinarian', icon: Stethoscope, color: '#1565c0',      desc: 'Certify animals, manage outbreaks, consult farmers' },
-  { name: 'Supplier',     icon: Pill,        color: '#e65100',      desc: 'Supply medicines and feed to farmers' },
-  { name: 'Buyer',     icon: Store,       color: '#6a1b9a',      desc: 'Browse verified livestock and place bids' },
-  { name: 'Police',       icon: Shield,      color: '#c62828',      desc: 'Verify papers and clear livestock sales' },
+  { name: 'Veterinarian', icon: Stethoscope, color: '#41586C',      desc: 'Certify animals, manage outbreaks, consult farmers' },
+  { name: 'Supplier',     icon: Pill,        color: '#8E450E',      desc: 'Supply medicines and feed to farmers' },
+  { name: 'Buyer',     icon: Store,       color: '#674A61',      desc: 'Browse verified livestock and place bids' },
+  { name: 'Police',       icon: Shield,      color: '#B5342C',      desc: 'Verify papers and clear livestock sales' },
 ];
 
 const PROVINCES = [
@@ -28,7 +28,7 @@ const PROVINCES = [
 ];
 
 const STEPS = ['Role','Personal','Organisation','Details','Confirm'];
-const inp = { backgroundColor: '#f4f6f5', borderRadius: 14, padding: 14, fontSize: 14, color: '#1a1a1a', marginBottom: 12 };
+const inp = { backgroundColor: '#F7F3ED', borderRadius: 14, padding: 14, fontSize: 14, color: '#29231E', marginBottom: 12 };
 
 // ── Zimbabwe-specific format validation (mirrors backend/app.py and the web
 // app's src/components/IntelAI/AuthPortal.jsx) ──
@@ -287,7 +287,7 @@ export default function LoginScreen({ onLogin }) {
         <View style={styles.chipRow}>
           {['General Practice','Tick-borne Diseases','Reproductive Health','FMD Specialist','Emergency Response'].map(s => (
             <TouchableOpacity key={s} activeOpacity={0.8} onPress={() => set('speciality',s)}
-              style={[styles.chip, form.speciality===s && { backgroundColor:'#1565c0', borderColor:'#1565c0' }]}>
+              style={[styles.chip, form.speciality===s && { backgroundColor:'#41586C', borderColor:'#41586C' }]}>
               <Text style={[styles.chipText, form.speciality===s && { color:'#fff' }]}>{s}</Text>
             </TouchableOpacity>
           ))}
@@ -306,7 +306,7 @@ export default function LoginScreen({ onLogin }) {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom:12 }}>
           {PROVINCES.map(p => (
             <TouchableOpacity key={p} activeOpacity={0.8} onPress={() => set('jurisdictionProvince',p)}
-              style={[styles.chip, form.jurisdictionProvince===p && { backgroundColor:'#c62828', borderColor:'#c62828' }]}>
+              style={[styles.chip, form.jurisdictionProvince===p && { backgroundColor:'#B5342C', borderColor:'#B5342C' }]}>
               <Text style={[styles.chipText, form.jurisdictionProvince===p && { color:'#fff' }]}>{p}</Text>
             </TouchableOpacity>
           ))}
@@ -453,18 +453,18 @@ const styles = StyleSheet.create({
   headerTop:     { flexDirection:'row', alignItems:'center', gap:14, marginBottom:16 },
   logoBox:       { width:48, height:48, borderRadius:14, elevation:4 },
   appName:       { color:'#fff', fontSize:20, fontFamily:FONTS.extrabold },
-  appTagline:    { color:'#a5d6a7', fontSize:11, fontFamily:FONTS.semibold, marginTop:1 },
+  appTagline:    { color:'#DEC9AE', fontSize:11, fontFamily:FONTS.semibold, marginTop:1 },
   ecosystemRow:    { flexDirection:'row', justifyContent:'space-between', paddingHorizontal:2 },
   ecosystemItem:   { alignItems:'center', gap:5, width:64 },
   ecosystemIconBox:{ width:36, height:36, borderRadius:12, backgroundColor:'rgba(255,255,255,0.14)', borderWidth:1, borderColor:'rgba(255,255,255,0.2)', alignItems:'center', justifyContent:'center' },
   ecosystemLabel:  { fontSize:9, fontWeight:'700', color:'rgba(255,255,255,0.85)', textAlign:'center' },
   card:          { flex:1, backgroundColor:'#fff', borderTopLeftRadius:28, borderTopRightRadius:28, padding:24, paddingBottom:40 },
-  cardTitle:     { fontSize:24, fontWeight:'900', color:'#1a1a1a', marginBottom:4 },
+  cardTitle:     { fontSize:24, fontWeight:'900', color:'#29231E', marginBottom:4 },
   cardSub:       { fontSize:13, color:'#888', marginBottom:20 },
   roleGrid:      { flexDirection:'row', flexWrap:'wrap', gap:10, marginBottom:20 },
-  roleCard:      { width:'47%', borderWidth:1.5, borderColor:'#e0e0e0', borderRadius:16, padding:14, alignItems:'center', backgroundColor:'#fafafa' },
+  roleCard:      { width:'47%', borderWidth:1.5, borderColor:'#E0D6C7', borderRadius:16, padding:14, alignItems:'center', backgroundColor:'#F7F3ED' },
   roleIconBox:   { width:44, height:44, borderRadius:14, alignItems:'center', justifyContent:'center', marginBottom:8 },
-  roleName:      { fontSize:13, fontWeight:'900', color:'#1a1a1a', marginBottom:4 },
+  roleName:      { fontSize:13, fontWeight:'900', color:'#29231E', marginBottom:4 },
   roleDesc:      { fontSize:10, color:'#888', textAlign:'center', lineHeight:14 },
   label:         { fontSize:11, fontWeight:'800', color:'#888', textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 },
   inputWrap:     { justifyContent:'center', marginBottom:12 },
@@ -472,25 +472,25 @@ const styles = StyleSheet.create({
   inputWithIcon: { paddingLeft:42, marginBottom:0 },
   inputWithToggle: { paddingRight:42 },
   inputToggle:   { position:'absolute', right:14, zIndex:1 },
-  infoBox:       { backgroundColor:'#e8f5e9', borderRadius:12, padding:12, marginTop:4, marginBottom:12 },
+  infoBox:       { backgroundColor:'#F0E6D9', borderRadius:12, padding:12, marginTop:4, marginBottom:12 },
   infoText:      { fontSize:12, color:COLORS.primary, fontWeight:'600', lineHeight:18 },
   progress:      { flexDirection:'row', alignItems:'center', marginBottom:24 },
   progDot:       { width:28, height:28, borderRadius:14, backgroundColor:'#eee', alignItems:'center', justifyContent:'center' },
   progDotText:   { fontSize:11, fontWeight:'800', color:'#999' },
   progLine:      { flex:1, height:2, backgroundColor:'#eee' },
-  stepTitle:     { fontSize:20, fontWeight:'900', color:'#1a1a1a', marginBottom:4 },
+  stepTitle:     { fontSize:20, fontWeight:'900', color:'#29231E', marginBottom:4 },
   stepSub:       { fontSize:13, color:'#888', marginBottom:20, lineHeight:18 },
-  chip:          { paddingHorizontal:14, paddingVertical:8, borderRadius:20, borderWidth:1.5, borderColor:'#e0e0e0', backgroundColor:'#f9f9f9', marginRight:8, marginBottom:8 },
+  chip:          { paddingHorizontal:14, paddingVertical:8, borderRadius:20, borderWidth:1.5, borderColor:'#E0D6C7', backgroundColor:'#F7F3ED', marginRight:8, marginBottom:8 },
   chipText:      { fontSize:12, fontWeight:'700', color:'#555' },
   chipRow:       { flexDirection:'row', flexWrap:'wrap', marginBottom:12 },
-  confirmCard:   { backgroundColor:'#f9f9f9', borderRadius:16, padding:16, marginBottom:14, borderLeftWidth:4 },
+  confirmCard:   { backgroundColor:'#F7F3ED', borderRadius:16, padding:16, marginBottom:14, borderLeftWidth:4 },
   roleBadge:     { flexDirection:'row', alignItems:'center', gap:6, alignSelf:'flex-start', paddingHorizontal:12, paddingVertical:5, borderRadius:20, marginBottom:12 },
   roleBadgeText: { color:'#fff', fontSize:12, fontWeight:'800' },
-  confirmRow:    { flexDirection:'row', justifyContent:'space-between', paddingVertical:6, borderBottomWidth:1, borderBottomColor:'#ececec' },
+  confirmRow:    { flexDirection:'row', justifyContent:'space-between', paddingVertical:6, borderBottomWidth:1, borderBottomColor:'#EFE8DD' },
   confirmLabel:  { fontSize:12, color:'#888', fontWeight:'600' },
-  confirmVal:    { fontSize:12, fontWeight:'800', color:'#1a1a1a', maxWidth:'55%', textAlign:'right' },
+  confirmVal:    { fontSize:12, fontWeight:'800', color:'#29231E', maxWidth:'55%', textAlign:'right' },
   navRow:        { flexDirection:'row', gap:12, marginTop:20, marginBottom:8 },
-  backBtn:       { flexDirection:'row', alignItems:'center', gap:6, paddingHorizontal:20, paddingVertical:15, backgroundColor:'#f0f0f0', borderRadius:16, justifyContent:'center' },
+  backBtn:       { flexDirection:'row', alignItems:'center', gap:6, paddingHorizontal:20, paddingVertical:15, backgroundColor:'#EFE8DD', borderRadius:16, justifyContent:'center' },
   backBtnText:   { fontWeight:'800', color:'#555', fontSize:14 },
   primaryBtn:    { flexDirection:'row', alignItems:'center', justifyContent:'center', gap:8, backgroundColor:COLORS.primary, borderRadius:16, paddingVertical:16, elevation:4 },
   primaryBtnText:{ color:'#fff', fontWeight:'900', fontSize:15 },

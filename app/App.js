@@ -27,6 +27,10 @@ import FeedAnalyzerScreen from './screens/FeedAnalyzerScreen';
 import VetMessengerScreen from './screens/VetMessengerScreen';
 import ProfileScreen      from './screens/ProfileScreen';
 import IoTScreen          from './screens/IoTScreen';
+import HealthManagementScreen  from './screens/HealthManagementScreen';
+import ComplianceScreen        from './screens/ComplianceScreen';
+import DiseaseDetectionScreen  from './screens/DiseaseDetectionScreen';
+import CooperativeScreen       from './screens/CooperativeScreen';
 import JindaFAB    from './components/JindaFAB';
 
 const Tab = createBottomTabNavigator();
@@ -77,17 +81,33 @@ const ROLE_TABS = {
   ],
 };
 
+// Screens that exist and are fully wired, but don't get their own bottom-tab
+// slot — reached instead via a menu item (see ProfileScreen's "My Farm"
+// section, which navigates to these by name like it already does for the
+// visible tabs). Kept role-scoped since each of these is currently built for
+// one role's view of the feature (e.g. ComplianceScreen is the farmer-facing
+// case list, not the vet follow-up queue) — added to other roles as their
+// own passes land.
+const HIDDEN_TABS = {
+  Farmer: [
+    { name: 'Health',      screen: HealthManagementScreen },
+    { name: 'Compliance',  screen: ComplianceScreen },
+    { name: 'Disease',     screen: DiseaseDetectionScreen },
+    { name: 'Cooperative', screen: CooperativeScreen },
+  ],
+};
+
 const ROLE_COLORS = {
-  Farmer: COLORS.primary, Veterinarian: '#1565c0',
-  Supplier: '#e65100',    Buyer: '#6a1b9a',
-  Police: '#c62828',
+  Farmer: COLORS.primary, Veterinarian: COLORS.teal,
+  Supplier: '#8E450E',    Buyer: COLORS.purple,
+  Police: COLORS.danger,
 };
 
 // ── Tab icon: pill highlight on active, clean spacing ──────────────────────
 const TabIcon = ({ icon: Icon, label, focused, roleColor }) => (
   <View style={styles.tabIconWrap}>
     <View style={[styles.tabPill, focused && { backgroundColor: roleColor + '1a' }]}>
-      <Icon size={focused ? 21 : 19} color={focused ? roleColor : '#9aa0a6'} strokeWidth={focused ? 2.4 : 2} />
+      <Icon size={focused ? 21 : 19} color={focused ? roleColor : '#968C82'} strokeWidth={focused ? 2.4 : 2} />
     </View>
     <Text style={[styles.tabLabel, { color: focused ? roleColor : '#aaa' }]}>{label}</Text>
     {focused && <View style={[styles.tabDot, { backgroundColor: roleColor }]} />}
@@ -97,6 +117,7 @@ const TabIcon = ({ icon: Icon, label, focused, roleColor }) => (
 function RoleTabNavigator({ currentUser, onLogout, onUserUpdate }) {
   const role  = currentUser?.role || 'Farmer';
   const tabs  = ROLE_TABS[role] || ROLE_TABS.Farmer;
+  const hiddenTabs = HIDDEN_TABS[role] || [];
   const color = ROLE_COLORS[role] || COLORS.primary;
 
   return (
@@ -120,6 +141,15 @@ function RoleTabNavigator({ currentUser, onLogout, onUserUpdate }) {
               <TabIcon icon={t.icon} label={t.label} focused={focused} roleColor={color} />
             ),
           }}
+        >
+          {props => <t.screen {...props} currentUser={currentUser} onLogout={onLogout} onUserUpdate={onUserUpdate} />}
+        </Tab.Screen>
+      ))}
+      {hiddenTabs.map(t => (
+        <Tab.Screen
+          key={t.name}
+          name={t.name}
+          options={{ tabBarButton: () => null }}
         >
           {props => <t.screen {...props} currentUser={currentUser} onLogout={onLogout} onUserUpdate={onUserUpdate} />}
         </Tab.Screen>

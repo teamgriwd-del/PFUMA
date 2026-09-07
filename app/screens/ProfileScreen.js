@@ -3,7 +3,7 @@ import { View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, Linking, A
 import * as ImagePicker from 'expo-image-picker';
 import {
   Users, ShoppingCart, Wheat, Stethoscope, Pill, AlertTriangle,
-  Store, Sprout, LogOut, ChevronRight, Camera,
+  Store, Sprout, LogOut, ChevronRight, Camera, HeartPulse, ShieldAlert, Handshake,
 } from 'lucide-react-native';
 import { COLORS, API } from '../config';
 import { authFetch, assetToFormFile } from '../api';
@@ -23,7 +23,7 @@ const MenuItem = ({ icon: Icon, label, desc, color, onPress }) => (
 );
 
 const ROLE_ICON  = { Farmer: Sprout, Veterinarian: Stethoscope, Supplier: Pill, Buyer: Store };
-const ROLE_COLOR = { Farmer: COLORS.primary, Veterinarian: '#1e293b', Supplier: '#ea580c', Buyer: '#6d28d9' };
+const ROLE_COLOR = { Farmer: COLORS.primary, Veterinarian: '#3B342D', Supplier: '#8E450E', Buyer: '#523B4D' };
 
 export default function ProfileScreen({ navigation, currentUser, onLogout, onUserUpdate }) {
   const role      = currentUser?.role || 'Farmer';
@@ -90,8 +90,16 @@ export default function ProfileScreen({ navigation, currentUser, onLogout, onUse
         <Text style={styles.sectionTitle}>My Farm</Text>
         <View style={styles.menuCard}>
           <MenuItem icon={Users}        label="Herd Registry"   desc="View and manage your animals"     color={COLORS.primary} onPress={() => navigation.navigate('Herd')} />
-          <MenuItem icon={ShoppingCart} label="My Listings"     desc="Animals and products for sale"     color="#e65100"       onPress={() => navigation.navigate('Market')} />
-          <MenuItem icon={Wheat}        label="Feed Analyzer"   desc="Check livestock nutrition"          color="#558b2f"       onPress={() => navigation.navigate('Feed')} />
+          <MenuItem icon={ShoppingCart} label="My Listings"     desc="Animals and products for sale"     color="#8E450E"       onPress={() => navigation.navigate('Market')} />
+          <MenuItem icon={Wheat}        label="Feed Analyzer"   desc="Check livestock nutrition"          color="#57633E"       onPress={() => navigation.navigate('Feed')} />
+          {role === 'Farmer' && (
+            <>
+              <MenuItem icon={HeartPulse}   label="Lifecycle"      desc="Vaccines, pregnancy & medication" color="#674A61"       onPress={() => navigation.navigate('Health')} />
+              <MenuItem icon={ShieldAlert}  label="Follow-Ups"     desc="Overdue vaccinations & what to do" color="#8C632A"       onPress={() => navigation.navigate('Compliance')} />
+              <MenuItem icon={Stethoscope}  label="Diagnostics"    desc="AI disease checker"                color="#B5342C"       onPress={() => navigation.navigate('Disease')} />
+              <MenuItem icon={Handshake}    label="Cooperative"    desc="Shared dip tank & group vet requests" color="#C99A4A"    onPress={() => navigation.navigate('Cooperative')} />
+            </>
+          )}
         </View>
       </View>
 
@@ -99,8 +107,8 @@ export default function ProfileScreen({ navigation, currentUser, onLogout, onUse
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Connect</Text>
         <View style={styles.menuCard}>
-          <MenuItem icon={Stethoscope} label="Contact a Vet"   desc="DVS Duty Officer — Dr T. Moyo"     color="#1565c0"       onPress={() => Linking.openURL('tel:+263242706331')} />
-          <MenuItem icon={Pill}        label="Order Medicines" desc="AgroChem Zim · VetDirect"           color="#6a1b9a"       onPress={() => Linking.openURL('tel:+263774000004')} />
+          <MenuItem icon={Stethoscope} label="Contact a Vet"   desc="DVS Duty Officer — Dr T. Moyo"     color="#41586C"       onPress={() => Linking.openURL('tel:+263242706331')} />
+          <MenuItem icon={Pill}        label="Order Medicines" desc="AgroChem Zim · VetDirect"           color="#674A61"       onPress={() => Linking.openURL('tel:+263774000004')} />
           <MenuItem icon={AlertTriangle} label="DVS Emergency" desc="+263 242 706331 · Harare HQ"        color={COLORS.danger} onPress={() => Linking.openURL('tel:+263242706331')} />
         </View>
       </View>
@@ -123,13 +131,13 @@ export default function ProfileScreen({ navigation, currentUser, onLogout, onUse
       {onLogout && (
         <View style={[styles.section, { marginTop: 8 }]}>
           <TouchableOpacity
-            style={[styles.menuCard, { backgroundColor: '#fff5f5', borderWidth: 1.5, borderColor: '#fca5a5', padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }]}
+            style={[styles.menuCard, { backgroundColor: '#FBEEEC', borderWidth: 1.5, borderColor: '#DA8279', padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }]}
             onPress={onLogout}
             activeOpacity={0.8}
           >
-            <LogOut size={20} color="#dc2626" strokeWidth={2.2} />
-            <Text style={{ fontSize: 14, fontWeight: '800', color: '#dc2626', flex: 1 }}>Sign Out</Text>
-            <ChevronRight size={18} color="#fca5a5" />
+            <LogOut size={20} color="#9A2A23" strokeWidth={2.2} />
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#9A2A23', flex: 1 }}>Sign Out</Text>
+            <ChevronRight size={18} color="#DA8279" />
           </TouchableOpacity>
         </View>
       )}
@@ -159,30 +167,30 @@ const styles = StyleSheet.create({
   avatarImg:      { width: '100%', height: '100%' },
   avatarBadge:    { position: 'absolute', bottom: -2, right: -2, width: 26, height: 26, borderRadius: 13, backgroundColor: COLORS.primary, borderWidth: 2, borderColor: '#fff', alignItems: 'center', justifyContent: 'center' },
   userName:       { color: '#fff', fontSize: 22, fontWeight: '900' },
-  userRole:       { color: '#a5d6a7', fontSize: 13, fontWeight: '600', marginTop: 4 },
-  userOrg:        { color: '#a5d6a7', fontSize: 12, fontWeight: '600', marginTop: 2 },
+  userRole:       { color: '#DEC9AE', fontSize: 13, fontWeight: '600', marginTop: 4 },
+  userOrg:        { color: '#DEC9AE', fontSize: 12, fontWeight: '600', marginTop: 2 },
   userStats:      { flexDirection: 'row', marginTop: 20, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 16, padding: 16, gap: 24 },
   userStat:       { alignItems: 'center', flex: 1 },
   userStatVal:    { color: '#fff', fontSize: 22, fontWeight: '900' },
-  userStatLabel:  { color: '#a5d6a7', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', marginTop: 2 },
+  userStatLabel:  { color: '#DEC9AE', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', marginTop: 2 },
   statDivider:    { width: 1, backgroundColor: 'rgba(255,255,255,0.2)' },
   section:        { marginHorizontal: 16, marginTop: 20 },
   sectionTitle:   { fontSize: 12, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 },
   menuCard:       { backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden', elevation: 2 },
-  menuItem:       { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#f5f5f5', gap: 14 },
+  menuItem:       { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#EFE8DD', gap: 14 },
   menuIcon:       { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   menuLabel:      { fontSize: 14, fontWeight: '800', color: COLORS.text },
   menuDesc:       { fontSize: 11, color: COLORS.muted, marginTop: 2 },
   apiStatus:      { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12 },
-  apiDot:         { width: 10, height: 10, borderRadius: 5, backgroundColor: '#4caf50' },
+  apiDot:         { width: 10, height: 10, borderRadius: 5, backgroundColor: '#66734A' },
   apiLabel:       { fontSize: 14, fontWeight: '800', color: COLORS.text },
   apiUrl:         { fontSize: 11, color: COLORS.muted, marginTop: 2 },
   aboutCard:      { backgroundColor: COLORS.primary, borderRadius: 20, padding: 24, alignItems: 'center' },
   aboutLogo:      { width: 52, height: 52, backgroundColor: '#fff', borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginBottom: 12, elevation: 4, padding: 8 },
   aboutLogoImg:   { width: '100%', height: '100%', resizeMode: 'contain' },
   aboutName:      { color: '#fff', fontSize: 20, fontWeight: '900' },
-  aboutTagline:   { color: '#a5d6a7', fontSize: 12, marginTop: 4, marginBottom: 8 },
-  aboutDesc:      { color: '#a5d6a7', fontSize: 11, textAlign: 'center', lineHeight: 18, marginBottom: 16 },
+  aboutTagline:   { color: '#DEC9AE', fontSize: 12, marginTop: 4, marginBottom: 8 },
+  aboutDesc:      { color: '#DEC9AE', fontSize: 11, textAlign: 'center', lineHeight: 18, marginBottom: 16 },
   stakeholderRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
   stakeholderChip:{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 },
   stakeholderText:{ color: '#fff', fontSize: 11, fontWeight: '700' },
