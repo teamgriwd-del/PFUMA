@@ -2873,6 +2873,7 @@ def list_animal_transfers():
 
 @app.route('/listings', methods=['POST'])
 @require_auth
+@require_role('Farmer', 'Supplier')
 @require_verified
 def add_listing():
     d = request.form if request.form else (request.json or {})

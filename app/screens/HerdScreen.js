@@ -8,7 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Search, Beef, X, Camera, Check, ShieldCheck, Tag, Printer, Download } from 'lucide-react-native';
-import { API, COLORS } from '../config';
+import { API, COLORS, FONTS } from '../config';
 import { authFetch, authJson, assetToFormFile } from '../api';
 import PhotoLightbox from '../components/PhotoLightbox';
 
@@ -344,7 +344,7 @@ export default function HerdScreen({ currentUser }) {
         ) : filtered.map(a => (
           <View key={a.id} style={styles.card}>
             {a.image_url ? (
-              <Image source={{ uri: resolveImageUrl(a.image_url) }} style={styles.cardImage} />
+              <Image source={{ uri: resolveImageUrl(a.image_url) }} style={styles.cardImage} resizeMode="contain" />
             ) : (
               <View style={[styles.cardImage, { backgroundColor: COLORS.light, alignItems: 'center', justifyContent: 'center' }]}>
                 <Beef size={32} color={COLORS.primary} strokeWidth={1.5} />
@@ -503,7 +503,7 @@ export default function HerdScreen({ currentUser }) {
             <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
               {passportAnimal.image_url ? (
                 <TouchableOpacity activeOpacity={0.9} onPress={() => setLightboxIndex(0)}>
-                  <Image source={{ uri: resolveImageUrl(passportAnimal.image_url) }} style={styles.passportImage} />
+                  <Image source={{ uri: resolveImageUrl(passportAnimal.image_url) }} style={styles.passportImage} resizeMode="contain" />
                 </TouchableOpacity>
               ) : (
                 <View style={[styles.passportImage, { backgroundColor: COLORS.light, alignItems: 'center', justifyContent: 'center' }]}>
@@ -591,79 +591,79 @@ export default function HerdScreen({ currentUser }) {
 
 const styles = StyleSheet.create({
   header:         { backgroundColor: COLORS.primary, padding: 24, paddingTop: 56, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-  headerSub:      { color: '#DEC9AE', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
-  headerTitle:    { color: '#fff', fontSize: 24, fontWeight: '900', marginTop: 2 },
-  headerDesc:     { color: '#DEC9AE', fontSize: 12, fontWeight: '600', marginTop: 2 },
+  headerSub:      { color: '#DEC9AE', fontSize: 10, fontFamily: FONTS.bold, textTransform: 'uppercase', letterSpacing: 1 },
+  headerTitle:    { color: '#fff', fontSize: 24, fontFamily: FONTS.extrabold, marginTop: 2 },
+  headerDesc:     { color: '#DEC9AE', fontSize: 12, fontFamily: FONTS.semibold, marginTop: 2 },
   addBtn:         { backgroundColor: COLORS.yellow, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 20, elevation: 4 },
-  addBtnText:     { color: COLORS.primary, fontWeight: '900', fontSize: 14 },
+  addBtnText:     { color: COLORS.primary, fontFamily: FONTS.extrabold, fontSize: 14 },
   searchBox:      { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', margin: 16, borderRadius: 14, paddingHorizontal: 14, elevation: 2 },
   searchIcon:     { fontSize: 16, marginRight: 8 },
   searchInput:    { flex: 1, paddingVertical: 12, fontSize: 14, color: COLORS.text },
   card:           { backgroundColor: '#fff', borderRadius: 20, marginBottom: 14, overflow: 'hidden', elevation: 3 },
-  cardImage:      { width: '100%', height: 160 },
+  cardImage:      { width: '100%', height: 160, backgroundColor: '#EFE8DD' },
   cardBody:       { padding: 16 },
   cardTop:        { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   tagBadge:       { backgroundColor: COLORS.light, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
-  tagText:        { color: COLORS.primary, fontSize: 10, fontWeight: '800' },
-  speciesBadge:   { color: COLORS.muted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },
-  cardName:       { fontSize: 20, fontWeight: '900', color: COLORS.text },
+  tagText:        { color: COLORS.primary, fontSize: 10, fontFamily: FONTS.extrabold },
+  speciesBadge:   { color: COLORS.muted, fontSize: 11, fontFamily: FONTS.bold, textTransform: 'uppercase' },
+  cardName:       { fontSize: 20, fontFamily: FONTS.extrabold, color: COLORS.text },
   cardSub:        { fontSize: 13, color: COLORS.muted, marginTop: 2, marginBottom: 12 },
   cardActions:    { flexDirection: 'row', gap: 10 },
   saleBtn:        { flex: 1, borderWidth: 1.5, borderColor: COLORS.primary, borderRadius: 10, paddingVertical: 8, alignItems: 'center' },
   saleBtnActive:  { backgroundColor: '#C99A4A', borderColor: '#C99A4A' },
-  saleBtnText:    { color: COLORS.primary, fontSize: 12, fontWeight: '800' },
+  saleBtnText:    { color: COLORS.primary, fontSize: 12, fontFamily: FONTS.extrabold },
   saleBtnTextActive: { color: COLORS.primary },
   passportBtn:    { borderWidth: 1.5, borderColor: '#E0D6C7', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, alignItems: 'center' },
-  passportText:   { color: COLORS.muted, fontSize: 12, fontWeight: '700' },
+  passportText:   { color: COLORS.muted, fontSize: 12, fontFamily: FONTS.bold },
   emptyState:     { alignItems: 'center', paddingVertical: 60 },
-  emptyTitle:     { fontSize: 18, fontWeight: '800', color: COLORS.text, marginTop: 12 },
+  emptyTitle:     { fontSize: 18, fontFamily: FONTS.extrabold, color: COLORS.text, marginTop: 12 },
   emptyDesc:      { fontSize: 13, color: COLORS.muted, marginTop: 6 },
   modalOverlay:   { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalCard:      { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40 },
   modalHeader:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  modalTitle:     { fontSize: 20, fontWeight: '900', color: COLORS.text },
+  modalTitle:     { fontSize: 20, fontFamily: FONTS.extrabold, color: COLORS.text },
   modalClose:     { fontSize: 20, color: COLORS.muted },
   photoPicker:    { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
   photoPreview:   { width: 56, height: 56, borderRadius: 14, backgroundColor: '#EFE8DD' },
   photoPlaceholder: { alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#E0D6C7', borderStyle: 'dashed' },
-  photoPickerText:{ fontSize: 13, fontWeight: '800', color: COLORS.primary },
+  photoPickerText:{ fontSize: 13, fontFamily: FONTS.extrabold, color: COLORS.primary },
   photoThumbWrap: { marginRight: 10 },
   photoThumb:     { width: 72, height: 72, borderRadius: 14, backgroundColor: '#EFE8DD', marginRight: 10 },
   coverBadge:     { position: 'absolute', bottom: 4, left: 4, right: 4, backgroundColor: 'rgba(27,94,32,0.85)', borderRadius: 6, paddingVertical: 2, alignItems: 'center' },
-  coverBadgeText: { color: '#fff', fontSize: 8, fontWeight: '900', letterSpacing: 0.5 },
+  coverBadgeText: { color: '#fff', fontSize: 8, fontFamily: FONTS.extrabold, letterSpacing: 0.5 },
   photoRemoveBtn: { position: 'absolute', top: -4, right: 6, width: 18, height: 18, borderRadius: 9, backgroundColor: COLORS.danger || '#B5342C', alignItems: 'center', justifyContent: 'center' },
   formField:      { marginBottom: 14 },
-  formLabel:      { fontSize: 11, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
+  formLabel:      { fontSize: 11, fontFamily: FONTS.extrabold, color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 },
   formInput:      { backgroundColor: '#EFE8DD', borderRadius: 12, padding: 14, fontSize: 14, color: COLORS.text },
   speciesRow:     { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   speciesChip:    { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: '#E0D6C7', backgroundColor: '#F7F3ED' },
   speciesChipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  speciesChipText:{ fontSize: 12, fontWeight: '700', color: COLORS.muted },
+  speciesChipText:{ fontSize: 12, fontFamily: FONTS.bold, color: COLORS.muted },
   submitBtn:      { backgroundColor: COLORS.primary, borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginTop: 10, elevation: 4 },
-  submitText:     { color: '#fff', fontWeight: '900', fontSize: 15 },
+  submitText:     { color: '#fff', fontFamily: FONTS.extrabold, fontSize: 15 },
 
   passportHeader:      { backgroundColor: COLORS.primary, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16 },
-  passportHeaderTitle: { color: '#fff', fontSize: 17, fontWeight: '900', textTransform: 'uppercase' },
-  passportHeaderSub:   { color: 'rgba(255,255,255,0.6)', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginTop: 2 },
+  passportHeaderTitle: { color: '#fff', fontSize: 17, fontFamily: FONTS.extrabold, textTransform: 'uppercase' },
+  passportHeaderSub:   { color: 'rgba(255,255,255,0.6)', fontSize: 10, fontFamily: FONTS.bold, textTransform: 'uppercase', letterSpacing: 1, marginTop: 2 },
   passportCloseBtn:    { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
-  passportImage:       { width: '100%', height: 220, borderRadius: 20, marginBottom: 14 },
+  passportImage:       { width: '100%', height: 220, borderRadius: 20, marginBottom: 14, backgroundColor: COLORS.light },
   galleryThumb:        { width: 84, height: 84, borderRadius: 14, backgroundColor: COLORS.light, marginRight: 10 },
   galleryAddThumb:      { alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#E0D6C7', borderStyle: 'dashed', marginRight: 0 },
-  galleryAddText:       { fontSize: 10, fontWeight: '800', color: COLORS.primary, marginTop: 4 },
+  galleryAddText:       { fontSize: 10, fontFamily: FONTS.extrabold, color: COLORS.primary, marginTop: 4 },
   passportValueCard:   { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 20, elevation: 2 },
-  passportSectionLabel:{ fontSize: 10, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
-  passportValue:       { fontSize: 24, fontWeight: '900', color: COLORS.text },
+  passportSectionLabel:{ fontSize: 10, fontFamily: FONTS.extrabold, color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+  passportValue:       { fontSize: 24, fontFamily: FONTS.extrabold, color: COLORS.text },
   passportValueSub:    { fontSize: 11, color: COLORS.muted, marginTop: 2 },
-  passportSectionTitle:{ fontSize: 11, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#E0D6C7', paddingBottom: 8 },
+  passportSectionTitle:{ fontSize: 11, fontFamily: FONTS.extrabold, color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#E0D6C7', paddingBottom: 8 },
   passportGrid:        { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 24 },
   passportGridItem:    { width: '50%', marginBottom: 16 },
-  passportFieldLabel:  { fontSize: 10, fontWeight: '800', color: COLORS.primary, textTransform: 'uppercase', marginBottom: 2 },
-  passportFieldValue:  { fontSize: 16, fontWeight: '900', color: COLORS.text },
+  passportFieldLabel:  { fontSize: 10, fontFamily: FONTS.extrabold, color: COLORS.primary, textTransform: 'uppercase', marginBottom: 2 },
+  passportFieldValue:  { fontSize: 16, fontFamily: FONTS.extrabold, color: COLORS.text },
   passportEmptyLog:    { fontSize: 13, color: COLORS.muted, fontStyle: 'italic' },
   passportLogRow:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, elevation: 1 },
   passportLogDot:       { width: 7, height: 7, borderRadius: 3.5, backgroundColor: COLORS.primary },
-  passportLogText:      { flex: 1, fontSize: 13, fontWeight: '700', color: COLORS.text },
-  passportLogDate:      { fontSize: 10, fontWeight: '700', color: COLORS.muted, textTransform: 'uppercase', marginLeft: 10 },
+  passportLogText:      { flex: 1, fontSize: 13, fontFamily: FONTS.bold, color: COLORS.text },
+  passportLogDate:      { fontSize: 10, fontFamily: FONTS.bold, color: COLORS.muted, textTransform: 'uppercase', marginLeft: 10 },
   passportFooter:       { flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center', marginTop: 20 },
-  passportFooterText:   { fontSize: 10, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
+  passportFooterText:   { fontSize: 10, fontFamily: FONTS.extrabold, color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
 });

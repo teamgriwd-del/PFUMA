@@ -8,7 +8,7 @@ import {
   LayoutGrid, Beef, Wheat, Carrot, Pill, Wrench, X, Camera, Search,
   Package, MapPin, User, PhoneCall, ShoppingCart, Check,
 } from 'lucide-react-native';
-import { API, COLORS } from '../config';
+import { API, COLORS, FONTS } from '../config';
 import { authFetch, authJson, assetToFormFile } from '../api';
 import PhotoLightbox from '../components/PhotoLightbox';
 
@@ -290,7 +290,7 @@ const ListingGallery = ({ photos }) => {
     return (
       <>
         <TouchableOpacity activeOpacity={0.9} onPress={() => setLightboxOpen(true)}>
-          <Image source={{ uri: resolved[0] }} style={styles.cardImage} />
+          <Image source={{ uri: resolved[0] }} style={styles.cardImage} resizeMode="contain" />
         </TouchableOpacity>
         <PhotoLightbox visible={lightboxOpen} photos={resolved} startIndex={0} onClose={() => setLightboxOpen(false)} />
       </>
@@ -310,7 +310,7 @@ const ListingGallery = ({ photos }) => {
         >
           {resolved.map((url, i) => (
             <TouchableOpacity key={url + i} activeOpacity={0.9} onPress={() => setLightboxOpen(true)}>
-              <Image source={{ uri: url }} style={[styles.cardImage, { width, marginBottom: 0 }]} />
+              <Image source={{ uri: url }} style={[styles.cardImage, { width, marginBottom: 0 }]} resizeMode="contain" />
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -338,6 +338,8 @@ export default function MarketplaceScreen({ currentUser }) {
   const [bidAmount,  setBidAmount]  = useState('');
   const [orderTarget, setOrderTarget] = useState(null); // medicine/equipment listing being ordered
   const [orderQty,    setOrderQty]    = useState('');
+  // Matches web's canPost — Vets are oversight/reviewers here, not sellers.
+  const canPost = ['Farmer', 'Supplier'].includes(currentUser?.role);
 
   useEffect(() => {
     if (currentUser?.role !== 'Farmer') return;
@@ -473,9 +475,11 @@ export default function MarketplaceScreen({ currentUser }) {
           <Text style={styles.headerTitle}>Agri Marketplace</Text>
           <Text style={styles.headerDesc}>Livestock · Feed · Medicine · Equipment</Text>
         </View>
-        <TouchableOpacity style={styles.postBtn} onPress={() => setShowPost(true)} activeOpacity={0.8}>
-          <Text style={styles.postBtnText}>+ Post</Text>
-        </TouchableOpacity>
+        {canPost && (
+          <TouchableOpacity style={styles.postBtn} onPress={() => setShowPost(true)} activeOpacity={0.8}>
+            <Text style={styles.postBtnText}>+ Post</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Search */}
@@ -573,27 +577,27 @@ export default function MarketplaceScreen({ currentUser }) {
 
 const styles = StyleSheet.create({
   header:      { backgroundColor: COLORS.primary, padding: 24, paddingTop: 56, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-  headerSub:   { color: '#DEC9AE', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
-  headerTitle: { color: '#fff', fontSize: 24, fontWeight: '900', marginTop: 2 },
+  headerSub:   { color: '#DEC9AE', fontSize: 10, fontFamily: FONTS.bold, textTransform: 'uppercase', letterSpacing: 1 },
+  headerTitle: { color: '#fff', fontSize: 24, fontFamily: FONTS.extrabold, marginTop: 2 },
   headerDesc:  { color: '#DEC9AE', fontSize: 11, marginTop: 2 },
   postBtn:     { backgroundColor: COLORS.yellow, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20, elevation: 4 },
-  postBtnText: { color: COLORS.primary, fontWeight: '900', fontSize: 13 },
+  postBtnText: { color: COLORS.primary, fontFamily: FONTS.extrabold, fontSize: 13 },
   searchBox:   { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', margin: 16, marginBottom: 8, borderRadius: 14, paddingHorizontal: 14, elevation: 2 },
   searchInput: { flex: 1, paddingVertical: 12, fontSize: 14, color: COLORS.text },
   catScroll:   { flexGrow: 0 },
   catContent:  { paddingHorizontal: 16, paddingBottom: 10, gap: 8 },
   catTab:      { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#fff', borderWidth: 1, borderColor: '#E0D6C7' },
-  catTabText:  { fontSize: 12, fontWeight: '700', color: COLORS.text },
+  catTabText:  { fontSize: 12, fontFamily: FONTS.bold, color: COLORS.text },
   card:        { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 14, elevation: 3, overflow: 'hidden' },
-  cardImage:   { width: '100%', height: 140, borderRadius: 12, marginBottom: 10 },
+  cardImage:   { width: '100%', height: 140, borderRadius: 12, marginBottom: 10, backgroundColor: '#EFE8DD' },
   galleryDots: { flexDirection: 'row', justifyContent: 'center', gap: 5, marginTop: 6 },
   galleryDot:  { width: 5, height: 5, borderRadius: 3, backgroundColor: '#E0D6C7' },
   galleryDotActive: { backgroundColor: COLORS.primary, width: 14 },
   cardHeader:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
-  catBadge:    { fontSize: 10, fontWeight: '700', color: COLORS.muted, textTransform: 'uppercase' },
-  cardName:    { fontSize: 16, fontWeight: '900', color: COLORS.text, maxWidth: 200 },
+  catBadge:    { fontSize: 10, fontFamily: FONTS.bold, color: COLORS.muted, textTransform: 'uppercase' },
+  cardName:    { fontSize: 16, fontFamily: FONTS.extrabold, color: COLORS.text, maxWidth: 200 },
   priceBox:    { alignItems: 'flex-end' },
-  priceVal:    { fontSize: 18, fontWeight: '900' },
+  priceVal:    { fontSize: 18, fontFamily: FONTS.extrabold },
   priceUnit:   { fontSize: 10, color: COLORS.muted },
   cardDesc:    { fontSize: 12, color: COLORS.muted, marginBottom: 10, lineHeight: 18 },
   cardMeta:    { gap: 5, marginBottom: 12 },
@@ -601,39 +605,39 @@ const styles = StyleSheet.create({
   metaText:    { fontSize: 12, color: COLORS.muted },
   cardActions: { flexDirection: 'row', gap: 10 },
   callBtn:     { flex: 1, borderWidth: 1.5, borderColor: '#E0D6C7', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
-  callBtnText: { fontSize: 13, fontWeight: '700', color: COLORS.text },
+  callBtnText: { fontSize: 13, fontFamily: FONTS.bold, color: COLORS.text },
   bidBtn:      { flex: 2, borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
-  bidBtnText:  { color: '#fff', fontSize: 13, fontWeight: '800' },
+  bidBtnText:  { color: '#fff', fontSize: 13, fontFamily: FONTS.extrabold },
   bidsToggleBtn:  { marginTop: 10, alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: '#3B342D' },
-  bidsToggleText: { color: '#fff', fontSize: 11, fontWeight: '800' },
+  bidsToggleText: { color: '#fff', fontSize: 11, fontFamily: FONTS.extrabold },
   bidsPanel:      { marginTop: 8, gap: 8 },
   bidsEmpty:      { fontSize: 12, color: COLORS.muted, fontStyle: 'italic', paddingVertical: 8 },
   bidRow:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F7F3ED', borderRadius: 10, padding: 10 },
-  bidderName:     { fontSize: 12, fontWeight: '800', color: COLORS.text },
-  bidStatus:      { fontSize: 10, fontWeight: '700', color: COLORS.muted, textTransform: 'uppercase', marginTop: 2 },
+  bidderName:     { fontSize: 12, fontFamily: FONTS.extrabold, color: COLORS.text },
+  bidStatus:      { fontSize: 10, fontFamily: FONTS.bold, color: COLORS.muted, textTransform: 'uppercase', marginTop: 2 },
   acceptBtn:      { backgroundColor: COLORS.primary, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
-  acceptBtnText:  { color: '#fff', fontSize: 11, fontWeight: '800' },
+  acceptBtnText:  { color: '#fff', fontSize: 11, fontFamily: FONTS.extrabold },
   emptyState:  { alignItems: 'center', paddingVertical: 60 },
-  emptyTitle:  { fontSize: 18, fontWeight: '800', color: COLORS.text, marginTop: 12 },
+  emptyTitle:  { fontSize: 18, fontFamily: FONTS.extrabold, color: COLORS.text, marginTop: 12 },
   emptyDesc:   { fontSize: 13, color: COLORS.muted, marginTop: 6 },
   modalOverlay:{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalCard:   { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, paddingBottom: 40, maxHeight: '90%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
-  modalTitle:  { fontSize: 20, fontWeight: '900', color: COLORS.text },
-  errorBanner: { backgroundColor: '#FBEEEC', color: COLORS.danger, fontSize: 12, fontWeight: '700', padding: 12, borderRadius: 10, marginBottom: 14 },
+  modalTitle:  { fontSize: 20, fontFamily: FONTS.extrabold, color: COLORS.text },
+  errorBanner: { backgroundColor: '#FBEEEC', color: COLORS.danger, fontSize: 12, fontFamily: FONTS.bold, padding: 12, borderRadius: 10, marginBottom: 14 },
   photoPicker: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
   photoPreview:{ width: 52, height: 52, borderRadius: 12, backgroundColor: '#EFE8DD' },
   photoPlaceholder: { alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#E0D6C7', borderStyle: 'dashed' },
-  photoPickerText: { fontSize: 13, fontWeight: '800', color: COLORS.primary },
+  photoPickerText: { fontSize: 13, fontFamily: FONTS.extrabold, color: COLORS.primary },
   formField:   { marginBottom: 14 },
-  formLabel:   { fontSize: 11, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase', marginBottom: 6 },
+  formLabel:   { fontSize: 11, fontFamily: FONTS.extrabold, color: COLORS.muted, textTransform: 'uppercase', marginBottom: 6 },
   formInput:   { backgroundColor: '#EFE8DD', borderRadius: 12, padding: 14, fontSize: 14, color: COLORS.text },
   catRow:      { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   catChip:     { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1.5, borderColor: '#E0D6C7' },
-  catChipText: { fontSize: 12, fontWeight: '700', color: COLORS.muted },
+  catChipText: { fontSize: 12, fontFamily: FONTS.bold, color: COLORS.muted },
   submitBtn:   { backgroundColor: COLORS.primary, borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginTop: 10 },
-  submitText:  { color: '#fff', fontWeight: '900', fontSize: 15 },
+  submitText:  { color: '#fff', fontFamily: FONTS.extrabold, fontSize: 15 },
   helpText:    { fontSize: 11, color: COLORS.muted, lineHeight: 16, marginTop: 6 },
   clearBox:    { borderWidth: 1, borderColor: '#E0D6C7', borderRadius: 14, padding: 14, marginBottom: 16, gap: 4 },
-  clearTitle:  { fontSize: 11, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase' },
+  clearTitle:  { fontSize: 11, fontFamily: FONTS.extrabold, color: COLORS.muted, textTransform: 'uppercase' },
 });
