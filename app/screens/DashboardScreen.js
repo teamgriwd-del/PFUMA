@@ -234,6 +234,7 @@ function FarmerDashboard({ currentUser, navigation }) {
           id: a.id, name: a.name, species: a.species, breed: a.breed, age: a.age,
           tagId: a.tag_id, birthDate: a.birth_date, currentWeight: a.current_weight,
           forSale: !!a.for_sale, imageUrl: resolveImageUrl(a.image_url),
+          marketplaceStatus: a.marketplace_status,
         })));
       } catch { /* offline — leave empty, no fake fallback */ }
       try {
@@ -258,7 +259,11 @@ function FarmerDashboard({ currentUser, navigation }) {
   // checked September 2026) — replaces a flat +$500 that used to apply to
   // every animal regardless of species. Still a rough estimate.
   const marketRates = getMarketRates();
-  const totalValue = localAnimals.reduce((acc, a) => acc + a.currentWeight * (marketRates[a.species] ?? marketRates.Cattle ?? FALLBACK_PRICE_PER_KG.Cattle), 0);
+  // Herd Value means the herd currently owned — a sold animal's value
+  // belongs to its buyer now, not to this total.
+  const totalValue = localAnimals
+    .filter(a => a.marketplaceStatus !== 'sold')
+    .reduce((acc, a) => acc + a.currentWeight * (marketRates[a.species] ?? marketRates.Cattle ?? FALLBACK_PRICE_PER_KG.Cattle), 0);
 
   const overdueVaccines = useMemo(() => {
     const rows = [];

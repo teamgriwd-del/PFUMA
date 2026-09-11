@@ -510,7 +510,13 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
   // below), refreshed from AMA Zimbabwe's real weekly market bulletin.
   const PRICE_PER_KG_USD = { Cattle: 1.79, Goat: 1.02, Sheep: 1.25, Pig: 1.66 };
   const marketRates = getMarketRates();
-  const totalValue  = animals.reduce((acc, a) => acc + a.currentWeight * (marketRates[a.species] ?? marketRates.Cattle ?? PRICE_PER_KG_USD.Cattle), 0);
+  // Herd Value means the herd you currently have, not everything you've
+  // ever owned — a sold animal's value belongs to whoever bought it, not
+  // to this total, even though it still appears (correctly) in the animal
+  // list below as sale history.
+  const totalValue  = animals
+    .filter(a => a.marketplaceStatus !== 'sold')
+    .reduce((acc, a) => acc + a.currentWeight * (marketRates[a.species] ?? marketRates.Cattle ?? PRICE_PER_KG_USD.Cattle), 0);
   const forSale     = animals.filter(a => a.marketplaceStatus === 'pending_clearance' || a.marketplaceStatus === 'available').length;
   const lowStock    = inventory.filter(i => i.stock <= i.min);
   // Real outbreak reports in the farmer's own province (filed by a Vet/Police

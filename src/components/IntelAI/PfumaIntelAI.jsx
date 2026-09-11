@@ -292,7 +292,8 @@ const Jinda = ({ setActiveTab, animals, currentUser }) => {
     // fixes that.
     if (lowerText.includes('worth') || lowerText.includes('value') || lowerText.includes('price') || lowerText.includes('money') || lowerText.includes('mari') || lowerText.includes('mutengo')) {
         const rates = getMarketRates();
-        const totalValue = animals.reduce((acc, a) => {
+        // A sold animal's value belongs to its buyer now, not to this herd.
+        const totalValue = animals.filter(a => a.marketplaceStatus !== 'sold').reduce((acc, a) => {
             const pricePerKg = rates[a.species] ?? rates.Cattle ?? LIVESTOCK_PRICE_PER_KG_USD.Cattle;
             return acc + a.currentWeight * pricePerKg;
         }, 0);

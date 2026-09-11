@@ -5267,7 +5267,13 @@ def get_dashboard(user_id):
         return jsonify({"error": "Not authorized to view this dashboard"}), 403
     db = get_db()
     c = db.cursor()
-    c.execute("SELECT COUNT(*) as total FROM animals WHERE owner_id = %s", (user_id,))
+    # Herd Value/count means the herd currently owned — an animal with a
+    # 'sold' marketplace listing has already changed hands and shouldn't
+    # count toward this owner's stats, even if owner_id hasn't caught up.
+    c.execute("""
+        SELECT COUNT(*) as total FROM animals a WHERE a.owner_id = %s
+          AND a.id NOT IN (SELECT animal_id FROM marketplace_listings WHERE status = 'sold' AND animal_id IS NOT NULL)
+    """, (user_id,))
     animals_count = c.fetchone()['total']
     c.execute("SELECT COUNT(*) as total FROM marketplace_listings WHERE user_id = %s AND status = 'available'", (user_id,))
     listings_count = c.fetchone()['total']
@@ -5281,6 +5287,7 @@ def get_dashboard(user_id):
             WHEN 'Sheep'  THEN {rates.get('Sheep', cattle_rate)} WHEN 'Pig'  THEN {rates.get('Pig', cattle_rate)}
             ELSE {cattle_rate} END) as total_value
         FROM animals WHERE owner_id = %s
+          AND id NOT IN (SELECT animal_id FROM marketplace_listings WHERE status = 'sold' AND animal_id IS NOT NULL)
     """, (user_id,))
     row = c.fetchone()
     total_value = float(row['total_value'] or 0)

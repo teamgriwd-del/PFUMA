@@ -278,7 +278,8 @@ export default function JindaFAB({ currentUser, navRef }) {
     // navigation keyword and would otherwise just jump to the Herd tab.
     if (lowerText.includes('worth') || lowerText.includes('value') || lowerText.includes('price') || lowerText.includes('money') || lowerText.includes('mari') || lowerText.includes('mutengo') || lowerText.includes('imali')) {
       const rates = getMarketRates();
-      const totalValue = animals.reduce((acc, a) => {
+      // A sold animal's value belongs to its buyer now, not to this herd.
+      const totalValue = animals.filter(a => a.marketplace_status !== 'sold').reduce((acc, a) => {
         const pricePerKg = rates[a.species] ?? rates.Cattle ?? LIVESTOCK_PRICE_PER_KG_USD.Cattle;
         return acc + (a.current_weight || 0) * pricePerKg;
       }, 0);

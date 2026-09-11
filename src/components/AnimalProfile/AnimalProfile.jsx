@@ -936,7 +936,12 @@ const AnimalProfile = ({ animals, onAddAnimal, onAddAnimalPhotos, auditLog, onLi
 
   // ── LIST VIEW ─────────────────────────────────────────────────────────────
   const marketRates  = getMarketRates();
-  const totalValue   = animals.reduce((acc, a) => acc + a.currentWeight * (marketRates[a.species] ?? marketRates.Cattle ?? LIVESTOCK_PRICE_PER_KG_USD.Cattle), 0);
+  // Herd Value means the herd you currently have — a sold animal's value
+  // belongs to its buyer now, even though it still appears (correctly) in
+  // the list below, split into its own "sold" section for record-keeping.
+  const totalValue   = animals
+    .filter(a => a.marketplaceStatus !== 'sold')
+    .reduce((acc, a) => acc + a.currentWeight * (marketRates[a.species] ?? marketRates.Cattle ?? LIVESTOCK_PRICE_PER_KG_USD.Cattle), 0);
   const forSaleCount = animals.filter(a => a.marketplaceStatus === 'pending_clearance' || a.marketplaceStatus === 'available').length;
   const soldCount    = animals.filter(a => a.marketplaceStatus === 'sold').length;
   const speciesCounts = ['Cattle', 'Goat', 'Sheep', 'Pig'].map(s => ({ s, n: animals.filter(a => a.species === s).length })).filter(x => x.n > 0);
