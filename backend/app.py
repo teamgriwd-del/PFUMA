@@ -5416,10 +5416,14 @@ def dry_season_budget():
 
     db = get_db()
     c = db.cursor()
+    # Only the herd this farmer still has to feed — an animal with a
+    # 'sold' marketplace listing already belongs to its buyer and doesn't
+    # belong in a survival budget for THIS herd.
     c.execute("""
         SELECT species, current_weight FROM animals
         WHERE owner_id = %s AND species IN ('Cattle','Goat','Sheep')
           AND current_weight IS NOT NULL AND current_weight > 0
+          AND id NOT IN (SELECT animal_id FROM marketplace_listings WHERE status = 'sold' AND animal_id IS NOT NULL)
     """, (g.current_user['id'],))
     by_species = {}
     for r in c.fetchall():
