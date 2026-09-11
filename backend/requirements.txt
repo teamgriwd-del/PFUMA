@@ -5,3 +5,6 @@ pymysql
 bcrypt
 pyjwt
 waitress
+requests
+beautifulsoup4
+pypdf

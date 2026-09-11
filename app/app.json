@@ -14,7 +14,7 @@
     },
     "android": {
       "package": "com.griwd.pfuma",
-      "versionCode": 7,
+      "versionCode": 8,
       "adaptiveIcon": {
         "backgroundColor": "#7A3F0B",
         "foregroundImage": "./assets/android-icon-foreground.png",

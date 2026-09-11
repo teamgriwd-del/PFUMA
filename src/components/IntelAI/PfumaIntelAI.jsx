@@ -4,6 +4,7 @@ import { diseaseDatabase } from '../DiseaseDetection/diseaseData';
 import { HEALTH_PROTOCOLS } from '../HealthManagement/healthData';
 import { ZIMBABWE_REGIONS, LOCAL_ADVISORY } from '../VetCommunication/vetData';
 import { SPECIES_COMPLIANCE, SIGNUP_REQUIREMENTS } from './complianceData';
+import { API } from '../../config';
 import './PfumaIntelAI.css';
 
 const SPECIES_ALIASES = {
@@ -13,13 +14,26 @@ const SPECIES_ALIASES = {
   Goat:   ['goat', 'goats', 'kid', 'kids'],
 };
 
-// Rough per-kg live-weight benchmarks for the Zimbabwean market (wholesale
-// range midpoints from Selina Wamucii's Zimbabwe livestock price data,
-// checked September 2026) — same table used in AnimalProfile.jsx's
-// calculateValue() and the backend's valuation-certificate endpoint, so
-// Jinda's answer always matches what the app itself shows. Still a rough
-// estimate, not a certified appraisal.
-const LIVESTOCK_PRICE_PER_KG_USD = { Cattle: 3.40, Goat: 5.15, Sheep: 6.90, Pig: 1.40 };
+// Offline/first-paint fallback only — the live rate comes from the
+// backend's market_rates table (see getMarketRates below), refreshed from
+// AMA Zimbabwe's real weekly market bulletin, and is the same source the
+// app's own Estimated Market Value figures and valuation certificates use,
+// so Jinda's answer always matches what the app itself shows.
+const LIVESTOCK_PRICE_PER_KG_USD = { Cattle: 1.79, Goat: 1.02, Sheep: 1.25, Pig: 1.66 };
+
+let _marketRatesCache = null;
+let _marketRatesFetching = false;
+function getMarketRates() {
+  if (!_marketRatesCache && !_marketRatesFetching) {
+    _marketRatesFetching = true;
+    fetch(`${API}/market-rates`)
+      .then(r => r.json())
+      .then(data => { if (data?.rates) _marketRatesCache = data.rates; })
+      .catch(() => { /* offline — falls back to LIVESTOCK_PRICE_PER_KG_USD */ })
+      .finally(() => { _marketRatesFetching = false; });
+  }
+  return _marketRatesCache || LIVESTOCK_PRICE_PER_KG_USD;
+}
 // Plain .includes() matches substrings anywhere — 'hi' inside 'think', 'ship',
 // 'chicken' — so keyword checks that should mean "this whole word" need a
 // word-boundary match instead.
@@ -277,8 +291,9 @@ const Jinda = ({ setActiveTab, animals, currentUser }) => {
     // first and falling back to navigation only when none of them match
     // fixes that.
     if (lowerText.includes('worth') || lowerText.includes('value') || lowerText.includes('price') || lowerText.includes('money') || lowerText.includes('mari') || lowerText.includes('mutengo')) {
+        const rates = getMarketRates();
         const totalValue = animals.reduce((acc, a) => {
-            const pricePerKg = LIVESTOCK_PRICE_PER_KG_USD[a.species] ?? LIVESTOCK_PRICE_PER_KG_USD.Cattle;
+            const pricePerKg = rates[a.species] ?? rates.Cattle ?? LIVESTOCK_PRICE_PER_KG_USD.Cattle;
             return acc + a.currentWeight * pricePerKg;
         }, 0);
         return {

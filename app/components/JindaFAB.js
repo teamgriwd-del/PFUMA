@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bot, X, Send } from 'lucide-react-native';
-import { COLORS, FONTS } from '../config';
+import { COLORS, FONTS, API } from '../config';
 import { authFetch } from '../api';
 import { SPECIES_COMPLIANCE, SIGNUP_REQUIREMENTS } from '../data/complianceData';
 
@@ -60,12 +60,25 @@ const isNdebele = (t) => NDEBELE_MARKERS.some(w => hasWord(t, w));
 // Screens that aren't a top-level tab for any role (Health, Diagnostics,
 // Compliance, etc.) are deliberately left out: they aren't safely reachable
 // from here, so those questions get answered in text instead of a jump.
-// Rough per-kg live-weight benchmarks for the Zimbabwean market (wholesale
-// range midpoints from Selina Wamucii's Zimbabwe livestock price data,
-// checked September 2026) — same table used across the web app and the
-// backend's valuation-certificate endpoint. Still a rough estimate, not a
-// certified appraisal.
-const LIVESTOCK_PRICE_PER_KG_USD = { Cattle: 3.40, Goat: 5.15, Sheep: 6.90, Pig: 1.40 };
+// Offline/first-paint fallback only — the live rate comes from the
+// backend's market_rates table (see getMarketRates below), refreshed from
+// AMA Zimbabwe's real weekly market bulletin, and is the same source the
+// app's own Estimated Market Value figures and valuation certificates use.
+const LIVESTOCK_PRICE_PER_KG_USD = { Cattle: 1.79, Goat: 1.02, Sheep: 1.25, Pig: 1.66 };
+
+let _marketRatesCache = null;
+let _marketRatesFetching = false;
+function getMarketRates() {
+  if (!_marketRatesCache && !_marketRatesFetching) {
+    _marketRatesFetching = true;
+    fetch(`${API}/market-rates`)
+      .then(r => r.json())
+      .then(data => { if (data?.rates) _marketRatesCache = data.rates; })
+      .catch(() => { /* offline — falls back to LIVESTOCK_PRICE_PER_KG_USD */ })
+      .finally(() => { _marketRatesFetching = false; });
+  }
+  return _marketRatesCache || LIVESTOCK_PRICE_PER_KG_USD;
+}
 
 const NAV_TARGETS = {
   Dashboard: ['home', 'dashboard', 'overview', 'main', 'start'],
@@ -264,8 +277,9 @@ export default function JindaFAB({ currentUser, navRef }) {
     // navigation since "how much is my HERD worth" overlaps with the 'herd'
     // navigation keyword and would otherwise just jump to the Herd tab.
     if (lowerText.includes('worth') || lowerText.includes('value') || lowerText.includes('price') || lowerText.includes('money') || lowerText.includes('mari') || lowerText.includes('mutengo') || lowerText.includes('imali')) {
+      const rates = getMarketRates();
       const totalValue = animals.reduce((acc, a) => {
-        const pricePerKg = LIVESTOCK_PRICE_PER_KG_USD[a.species] ?? LIVESTOCK_PRICE_PER_KG_USD.Cattle;
+        const pricePerKg = rates[a.species] ?? rates.Cattle ?? LIVESTOCK_PRICE_PER_KG_USD.Cattle;
         return acc + (a.current_weight || 0) * pricePerKg;
       }, 0);
       return sn

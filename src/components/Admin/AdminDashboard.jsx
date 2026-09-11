@@ -968,6 +968,165 @@ const IoTControlTab = ({ currentUser }) => {
 // a DVS/CVSZ vet list, a ZRP roster — into existing accounts, matched by
 // national_id_number. Every write goes through POST /admin/import, which
 // is audit-logged server-side; this tab is a thin UI over that one endpoint.
+// Every livestock valuation shown anywhere in PFUMA/INGCEBO (Estimated
+// Market Value, Jinda's answers, the bank/insurer-facing certificates)
+// reads from the same market_rates table this tab manages. It's refreshed
+// automatically twice a month from AMA Zimbabwe's real weekly market
+// bulletin (ama.co.zw/bulletins/) — Cattle from the Mount Hampden live
+// auction, Goat/Sheep/Pig from AMA's carcass producer-price tables
+// converted to a live-weight estimate. "Scan Now" runs that same scan on
+// demand instead of waiting for the next scheduled one.
+const SPECIES_ORDER = ['Cattle', 'Goat', 'Sheep', 'Pig'];
+
+const MarketRatesTab = ({ currentUser }) => {
+  const [rates, setRates] = useState([]);
+  const [scanLog, setScanLog] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [scanning, setScanning] = useState(false);
+  const [scanResult, setScanResult] = useState(null);
+  const [editing, setEditing] = useState(null); // species being edited, or null
+  const [editValue, setEditValue] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/admin/market-rates`, { headers: { Authorization: `Bearer ${currentUser.token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setRates(data.rates || []);
+        setScanLog(data.scan_log || []);
+      }
+    } catch { /* offline — leave empty, no fake fallback */ }
+    setLoading(false);
+  }, [currentUser.token]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const runScan = async () => {
+    setScanning(true); setScanResult(null);
+    try {
+      const res = await fetch(`${API}/admin/market-rates/scan`, {
+        method: 'POST', headers: { Authorization: `Bearer ${currentUser.token}` },
+      });
+      const data = await res.json();
+      setScanResult(data);
+      await load();
+    } catch {
+      setScanResult({ success: false, details: ['Could not reach the PFUMA/INGCEBO API.'] });
+    }
+    setScanning(false);
+  };
+
+  const startEdit = (species, current) => { setEditing(species); setEditValue(String(current)); };
+
+  const saveEdit = async (species) => {
+    const price = parseFloat(editValue);
+    if (!(price > 0)) return;
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`${API}/admin/market-rates/${species}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${currentUser.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ price_per_kg_usd: price }),
+      });
+      if (res.ok) { setEditing(null); await load(); }
+    } catch { /* offline */ }
+    setSavingEdit(false);
+  };
+
+  const byspecies = Object.fromEntries(rates.map(r => [r.species, r]));
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h3 className="text-sm font-bold text-gray-800">Livestock Market Rates</h3>
+            <p className="text-xs text-gray-400 font-medium mt-0.5 max-w-xl">
+              Per-kg live-weight rate used for every "Estimated Market Value" in the app, sourced from AMA Zimbabwe's
+              real weekly market bulletin — not a certified appraisal, refreshed automatically roughly twice a month.
+            </p>
+          </div>
+          <button onClick={runScan} disabled={scanning}
+            className="flex items-center gap-2 px-4 py-2.5 bg-pfuma-green text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-green-700 transition disabled:opacity-50 shrink-0">
+            <RefreshCw size={14} className={scanning ? 'animate-spin' : ''} />
+            {scanning ? 'Scanning…' : 'Scan Market Now'}
+          </button>
+        </div>
+
+        {scanResult && (
+          <div className={`mt-4 rounded-xl border p-3.5 text-xs font-medium ${scanResult.success ? 'bg-pfuma-green/5 border-pfuma-green/20 text-gray-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+            <p className="font-bold">{scanResult.success ? 'Scan complete' : 'Scan did not apply any changes'}</p>
+            {scanResult.details?.map((d, i) => <p key={i} className="mt-0.5">{d}</p>)}
+          </div>
+        )}
+
+        {loading ? (
+          <p className="text-xs text-gray-400 font-medium italic text-center py-8">Loading…</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
+            {SPECIES_ORDER.map(species => {
+              const r = byspecies[species];
+              const isEditing = editing === species;
+              return (
+                <div key={species} className="border border-gray-100 rounded-xl p-4">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">{species}</p>
+                  {isEditing ? (
+                    <div className="mt-1.5 flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-gray-400">$</span>
+                      <input autoFocus type="number" step="0.01" value={editValue} onChange={e => setEditValue(e.target.value)}
+                        className="w-20 px-2 py-1 bg-gray-50 rounded-lg border border-gray-200 text-sm font-bold outline-none focus:ring-2 focus:ring-pfuma-green/30" />
+                      <span className="text-xs text-gray-400 font-medium">/kg</span>
+                    </div>
+                  ) : (
+                    <p className="text-2xl font-bold text-gray-900 mt-1">${r ? Number(r.price_per_kg_usd).toFixed(2) : '—'}<span className="text-xs text-gray-400 font-medium">/kg</span></p>
+                  )}
+                  <p className="text-[0.6875rem] text-gray-400 font-medium mt-1.5 leading-relaxed line-clamp-2" title={r?.source}>
+                    {r ? `${r.updated_by} · ${new Date(r.updated_at).toLocaleDateString()}` : 'Not set yet'}
+                  </p>
+                  <div className="mt-2">
+                    {isEditing ? (
+                      <div className="flex gap-2">
+                        <button onClick={() => saveEdit(species)} disabled={savingEdit}
+                          className="text-[0.6875rem] font-bold text-pfuma-green uppercase hover:underline disabled:opacity-50">Save</button>
+                        <button onClick={() => setEditing(null)} className="text-[0.6875rem] font-bold text-gray-400 uppercase hover:underline">Cancel</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => startEdit(species, r?.price_per_kg_usd ?? '')} className="text-[0.6875rem] font-bold text-gray-400 uppercase hover:text-pfuma-green hover:underline">Edit manually</button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-gray-50">
+          <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2"><RefreshCw size={14} className="text-gray-400" /> Scan History</h3>
+        </div>
+        {scanLog.length === 0 ? (
+          <p className="text-xs text-gray-400 font-medium italic text-center py-8">No scans yet — click "Scan Market Now" above to run the first one.</p>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {scanLog.map(l => (
+              <div key={l.id} className="flex items-start gap-3 p-4">
+                {l.success ? <CheckCircle size={16} className="text-pfuma-green shrink-0 mt-0.5" /> : <XCircle size={16} className="text-red-400 shrink-0 mt-0.5" />}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-gray-800">{new Date(l.scanned_at).toLocaleString()} <span className="text-gray-400 font-medium">— {l.triggered_by}</span></p>
+                  <p className="text-xs text-gray-500 font-medium mt-0.5 break-words">{l.details}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const DataImportTab = ({ currentUser }) => {
   const [sourceLabel, setSourceLabel] = useState('');
   const [file, setFile] = useState(null);
@@ -1091,6 +1250,7 @@ const TABS = [
   { id: 'trends', label: 'Trends', icon: TrendingUp },
   { id: 'activity', label: 'Activity', icon: Activity },
   { id: 'import', label: 'Data Import', icon: Database },
+  { id: 'market-rates', label: 'Market Rates', icon: DollarSign },
 ];
 
 const AdminDashboard = ({ currentUser, onLogout }) => {
@@ -1132,6 +1292,7 @@ const AdminDashboard = ({ currentUser, onLogout }) => {
         {tab === 'trends' && <TrendsTab currentUser={currentUser} />}
         {tab === 'activity' && <ActivityTab currentUser={currentUser} />}
         {tab === 'import' && <DataImportTab currentUser={currentUser} />}
+        {tab === 'market-rates' && <MarketRatesTab currentUser={currentUser} />}
       </div>
     </div>
   );

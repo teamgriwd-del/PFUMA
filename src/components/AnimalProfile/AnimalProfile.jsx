@@ -27,19 +27,38 @@ export const calculateAge = (dob) => {
   return `${years}y ${months}m`;
 };
 
-// Rough per-kg live-weight benchmarks for the Zimbabwean market (wholesale
-// range midpoints from Selina Wamucii's Zimbabwe livestock price data,
-// checked September 2026) — replaces a flat $500-for-cattle/$100-for-
-// everything-else "base" that wasn't grounded in any real market reference
-// and, worse, didn't distinguish Goat/Sheep/Pig from each other at all
-// despite them trading at very different rates. Still a rough estimate, not
-// a certified appraisal — surfaced as such everywhere it's shown, since this
-// number also backs the valuation certificates farmers use as loan
-// collateral evidence.
-const LIVESTOCK_PRICE_PER_KG_USD = { Cattle: 3.40, Goat: 5.15, Sheep: 6.90, Pig: 1.40 };
+// Offline/first-paint fallback only — real per-kg live-weight rates live in
+// the backend's market_rates table (see getMarketRates() below), refreshed
+// from AMA Zimbabwe's real weekly market bulletin. These numbers are AMA's
+// own live-cattle-auction average and carcass-producer-price-converted-to-
+// live-weight figures for goat/sheep/pig, checked September 2026 — not a
+// certified appraisal, and not meant to go stale silently the way the old
+// flat $500/$100 placeholder did, which is the whole point of the scanner.
+const LIVESTOCK_PRICE_PER_KG_USD = { Cattle: 1.79, Goat: 1.02, Sheep: 1.25, Pig: 1.66 };
+
+// Fetched once per page load and cached at module scope — every
+// calculateValue() call below is synchronous (called inline during render
+// in several components in this file), so this fetch can't block them; it
+// just means the very first render or two may show the fallback numbers
+// above until the fetch resolves, after which every subsequent render
+// (any state change, navigation, etc.) picks up the live rate.
+let _marketRatesCache = null;
+let _marketRatesFetching = false;
+function getMarketRates() {
+  if (!_marketRatesCache && !_marketRatesFetching) {
+    _marketRatesFetching = true;
+    fetch(`${API}/market-rates`)
+      .then(r => r.json())
+      .then(data => { if (data?.rates) _marketRatesCache = data.rates; })
+      .catch(() => { /* offline — keep using the fallback defaults */ })
+      .finally(() => { _marketRatesFetching = false; });
+  }
+  return _marketRatesCache || LIVESTOCK_PRICE_PER_KG_USD;
+}
 
 const calculateValue = (animal, auditLog) => {
-  const pricePerKg  = LIVESTOCK_PRICE_PER_KG_USD[animal.species] ?? LIVESTOCK_PRICE_PER_KG_USD.Cattle;
+  const rates = getMarketRates();
+  const pricePerKg  = rates[animal.species] ?? rates.Cattle ?? LIVESTOCK_PRICE_PER_KG_USD.Cattle;
   const healthBonus = auditLog.filter(l => l.animalId === animal.id).length * 10;
   return Math.round(animal.currentWeight * pricePerKg + healthBonus).toLocaleString();
 };
@@ -916,7 +935,8 @@ const AnimalProfile = ({ animals, onAddAnimal, onAddAnimalPhotos, auditLog, onLi
   }
 
   // ── LIST VIEW ─────────────────────────────────────────────────────────────
-  const totalValue   = animals.reduce((acc, a) => acc + a.currentWeight * (LIVESTOCK_PRICE_PER_KG_USD[a.species] ?? LIVESTOCK_PRICE_PER_KG_USD.Cattle), 0);
+  const marketRates  = getMarketRates();
+  const totalValue   = animals.reduce((acc, a) => acc + a.currentWeight * (marketRates[a.species] ?? marketRates.Cattle ?? LIVESTOCK_PRICE_PER_KG_USD.Cattle), 0);
   const forSaleCount = animals.filter(a => a.marketplaceStatus === 'pending_clearance' || a.marketplaceStatus === 'available').length;
   const soldCount    = animals.filter(a => a.marketplaceStatus === 'sold').length;
   const speciesCounts = ['Cattle', 'Goat', 'Sheep', 'Pig'].map(s => ({ s, n: animals.filter(a => a.species === s).length })).filter(x => x.n > 0);

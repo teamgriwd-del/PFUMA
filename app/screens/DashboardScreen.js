@@ -18,6 +18,24 @@ import { roleHero } from '../imagery';
 // fallback (assigned server-side) is already a full URL.
 const resolveImageUrl = (url) => (url && url.startsWith('/uploads/')) ? `${API}${url}` : url;
 
+// Offline/first-paint fallback only — the live per-kg rate comes from the
+// backend's market_rates table, refreshed from AMA Zimbabwe's real weekly
+// market bulletin (see the Admin panel's Market Rates tab).
+const FALLBACK_PRICE_PER_KG = { Cattle: 1.79, Goat: 1.02, Sheep: 1.25, Pig: 1.66 };
+let _marketRatesCache = null;
+let _marketRatesFetching = false;
+function getMarketRates() {
+  if (!_marketRatesCache && !_marketRatesFetching) {
+    _marketRatesFetching = true;
+    fetch(`${API}/market-rates`)
+      .then(r => r.json())
+      .then(data => { if (data?.rates) _marketRatesCache = data.rates; })
+      .catch(() => { /* offline — falls back to FALLBACK_PRICE_PER_KG */ })
+      .finally(() => { _marketRatesFetching = false; });
+  }
+  return _marketRatesCache || FALLBACK_PRICE_PER_KG;
+}
+
 // Regional disease-alert bulletin content — not per-user/animal data, left
 // as static informational content (same treatment as the web app).
 const NOTIFICATIONS = [
@@ -239,8 +257,8 @@ function FarmerDashboard({ currentUser, navigation }) {
   // range midpoints from Selina Wamucii's Zimbabwe livestock price data,
   // checked September 2026) — replaces a flat +$500 that used to apply to
   // every animal regardless of species. Still a rough estimate.
-  const PRICE_PER_KG = { Cattle: 3.40, Goat: 5.15, Sheep: 6.90, Pig: 1.40 };
-  const totalValue = localAnimals.reduce((acc, a) => acc + a.currentWeight * (PRICE_PER_KG[a.species] ?? PRICE_PER_KG.Cattle), 0);
+  const marketRates = getMarketRates();
+  const totalValue = localAnimals.reduce((acc, a) => acc + a.currentWeight * (marketRates[a.species] ?? marketRates.Cattle ?? FALLBACK_PRICE_PER_KG.Cattle), 0);
 
   const overdueVaccines = useMemo(() => {
     const rows = [];

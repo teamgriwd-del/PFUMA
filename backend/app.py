@@ -9,6 +9,8 @@ import random
 import secrets
 import functools
 import datetime
+import threading
+import time as time_mod
 
 from flask import Flask, jsonify, request, g, send_from_directory
 from flask_cors import CORS
@@ -18,6 +20,9 @@ from werkzeug.utils import secure_filename
 import pymysql
 import bcrypt
 import jwt
+import requests
+from bs4 import BeautifulSoup
+from pypdf import PdfReader
 
 import protocols
 
@@ -30,16 +35,33 @@ app = Flask(__name__)
 # every check to the safe (locked-down) behaviour, not the convenient one.
 IS_PRODUCTION = os.environ.get('PFUMA_ENV', 'development').lower() == 'production'
 
-# Rough per-kg live-weight benchmarks for the Zimbabwean market (wholesale
-# range midpoints from Selina Wamucii's Zimbabwe livestock price data,
-# checked September 2026) — replaces a flat $500-for-cattle/$100-for-
-# everything-else "base" that wasn't grounded in any real market reference
-# and, worse, didn't distinguish Goat/Sheep/Pig from each other at all
-# despite them trading at very different rates. Still a rough estimate, not
-# a certified appraisal — surfaced as such everywhere it's shown, since this
-# number also backs the valuation certificates farmers use as loan
-# collateral evidence.
-LIVESTOCK_PRICE_PER_KG_USD = {'Cattle': 3.40, 'Goat': 5.15, 'Sheep': 6.90, 'Pig': 1.40}
+# Per-kg live-weight seed values for the `market_rates` table (see
+# ensure_schema and scan_livestock_market_rates below) — only used to seed
+# the table on first run and as an absolute last-resort fallback if the DB
+# read itself fails. The live values in `market_rates` are what every
+# valuation actually uses, and get refreshed by scan_livestock_market_rates()
+# from AMA Zimbabwe's real weekly market bulletin (ama.co.zw/bulletins/).
+#
+# These particular numbers replace an earlier pass that used Selina
+# Wamucii's aggregator-published "wholesale" ranges (Cattle $3.40/kg etc) —
+# cross-checking against AMA's actual weekly auction/producer-price data
+# (Bulletin 21 of 2025) showed that source's numbers were roughly double
+# real live-weight prices, most likely because it was reporting a dressed/
+# retail meat price rather than a true live-animal price. Corrected here to:
+#   Cattle: straight average of live grades at the Mount Hampden cattle
+#            auction (breeding cow, feeder/weaner steer & heifer, etc.) —
+#            a direct live-weight figure, no conversion needed.
+#   Goat/Sheep/Pig: AMA only publishes a carcass/producer price for these
+#            (graded Super/Choice/Standard/Inferior) — converted to a live-
+#            weight estimate via standard dressing percentages (~47% for
+#            goat/sheep, ~72% for pig), so these three carry more estimation
+#            uncertainty than the cattle figure.
+DEFAULT_LIVESTOCK_PRICE_PER_KG_USD = {'Cattle': 1.79, 'Goat': 1.02, 'Sheep': 1.25, 'Pig': 1.66}
+
+# Standard live-to-carcass dressing percentages, used only to convert AMA's
+# carcass/producer prices into a live-weight estimate for species that don't
+# have a live-auction table of their own (see scan_livestock_market_rates).
+DRESSING_PERCENTAGE = {'Goat': 0.47, 'Sheep': 0.47, 'Pig': 0.72}
 
 SECRET_KEY = os.environ.get('PFUMA_SECRET_KEY')
 if not SECRET_KEY:
@@ -435,6 +457,33 @@ def ensure_schema():
         )
     """)
 
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS market_rates (
+          species          VARCHAR(20) PRIMARY KEY,
+          price_per_kg_usd DECIMAL(6,2) NOT NULL,
+          source           VARCHAR(300),
+          updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          updated_by       VARCHAR(40) NOT NULL DEFAULT 'seed'
+        )
+    """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS market_rate_scan_log (
+          id           INT AUTO_INCREMENT PRIMARY KEY,
+          scanned_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          success      BOOLEAN NOT NULL,
+          source_url   VARCHAR(300),
+          details      TEXT,
+          triggered_by VARCHAR(20) NOT NULL DEFAULT 'scheduler'
+        )
+    """)
+    c.execute("SELECT COUNT(*) AS n FROM market_rates")
+    if c.fetchone()['n'] == 0:
+        for species, price in DEFAULT_LIVESTOCK_PRICE_PER_KG_USD.items():
+            c.execute(
+                "INSERT INTO market_rates (species, price_per_kg_usd, source, updated_by) VALUES (%s,%s,%s,'seed')",
+                (species, price, "Seed value — AMA Zimbabwe Weekly Commodity Market Bulletin 21/2025 (cattle: live auction; goat/sheep/pig: producer price converted from carcass to live weight)")
+            )
+
     db.commit()
     db.close()
 
@@ -446,6 +495,238 @@ except Exception as e:
     # still useful for everything that doesn't touch these two new tables,
     # and this is loud in the logs either way.
     print(f"[WARNING] ensure_schema() failed: {e}")
+
+
+# ── LIVESTOCK MARKET RATE SCANNER ────────────────────────────────────
+# Refreshes market_rates from AMA Zimbabwe's real weekly market bulletin
+# (ama.co.zw/bulletins/) instead of a number nobody ever looks at again.
+# Runs automatically twice a month (see the scheduler thread below) and can
+# also be triggered on demand from the Admin panel.
+AMA_BULLETINS_URL = "https://ama.co.zw/bulletins/"
+
+
+def get_market_rates():
+    """Current per-kg live-weight rate for every species, read from the DB
+    (falls back to the hardcoded defaults if the table is somehow empty or
+    unreachable — should only happen before the first ensure_schema() run
+    or during a DB outage)."""
+    try:
+        db = get_db(); c = db.cursor()
+        c.execute("SELECT species, price_per_kg_usd FROM market_rates")
+        rows = {r['species']: float(r['price_per_kg_usd']) for r in c.fetchall()}
+        db.close()
+        if rows:
+            return rows
+    except Exception as e:
+        print(f"[WARNING] get_market_rates() DB read failed, using defaults: {e}")
+    return dict(DEFAULT_LIVESTOCK_PRICE_PER_KG_USD)
+
+
+def _pdf_text(pdf_bytes):
+    reader = PdfReader(io.BytesIO(pdf_bytes))
+    return "\n".join(page.extract_text() or "" for page in reader.pages)
+
+
+def _find_latest_bulletin_url():
+    """Scrapes the bulletins listing page rather than guessing a URL — the
+    PDF's upload-date path segment (e.g. /2025/07/) doesn't reliably match
+    its actual date-of-issue, so there's no way to predict next week's URL
+    without reading the listing page itself."""
+    resp = requests.get(AMA_BULLETINS_URL, timeout=20, headers={'User-Agent': 'Mozilla/5.0'})
+    resp.raise_for_status()
+    soup = BeautifulSoup(resp.text, 'html.parser')
+    links = [a['href'] for a in soup.find_all('a', href=True)
+             if 'bulletin-number-' in a['href'].lower() and a['href'].lower().endswith('.pdf')]
+    if not links:
+        return None
+
+    def bulletin_key(url):
+        m = re.search(r'[Bb]ulletin-number-(\d+)-of-(\d+)', url)
+        return (int(m.group(2)), int(m.group(1))) if m else (0, 0)
+
+    links.sort(key=bulletin_key, reverse=True)
+    return links[0]
+
+
+def _section(text, start_marker, end_marker=None):
+    """Slices out the text between one table's heading and the next one's —
+    several grade labels (Commercial, Economy, Manufacturing...) are reused
+    across unrelated tables in the same bulletin (a carcass-price table and
+    the live-auction table both use 'Commercial'/'Economy'), so parsing
+    without first scoping to one table's own section silently blends prices
+    from different tables into the same average. Caught this for real while
+    building this scanner — Table 7's carcass prices and Table 12's live
+    auction prices were merging under the shared 'Commercial' label until
+    this scoping was added."""
+    i = text.lower().find(start_marker.lower())
+    if i == -1:
+        return ""
+    j = text.lower().find(end_marker.lower(), i) if end_marker else -1
+    return text[i: j if j != -1 else len(text)]
+
+
+def _parse_table_rows(text, known_labels):
+    """Scans extracted PDF text line by line for any line starting with one
+    of known_labels, and pulls out the decimal numbers on that line. Tolerant
+    of the exact table layout/column-count shifting between bulletin issues
+    (a blank '-' cell just yields one fewer number) — only breaks if AMA
+    renames the row labels themselves, which is rare and self-evident in the
+    scan log when it happens. Always call this on one table's own section
+    (see _section above), never the whole document."""
+    rows = {}
+    for line in text.split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+        for label in known_labels:
+            if line.lower().startswith(label.lower()):
+                nums = re.findall(r'\d+\.\d+', line[len(label):])
+                if nums:
+                    rows.setdefault(label, []).extend(float(n) for n in nums)
+                break
+    return rows
+
+
+def _avg(values, lo=0.1, hi=20.0):
+    """Average of values that look like plausible USD/kg livestock prices —
+    filters out obvious parsing noise (a stray year, a page number) rather
+    than trusting every number a regex happens to find."""
+    plausible = [v for v in values if lo <= v <= hi]
+    return round(sum(plausible) / len(plausible), 2) if plausible else None
+
+
+def scan_livestock_market_rates(triggered_by='scheduler'):
+    """Fetches AMA's latest bulletin and refreshes market_rates from it.
+    Cattle comes from the Mount Hampden live-cattle auction table (Table 12
+    — already a live-weight price). Goat/Sheep/Pig only have a carcass/
+    producer-price table in the bulletin, so those are converted to a
+    live-weight estimate via DRESSING_PERCENTAGE — flagged in the stored
+    `source` note so that extra estimation step is never hidden.
+
+    Never applies a parsed price outside a plausible USD/kg band, or more
+    than 3x the currently-stored rate — those get logged as skipped instead
+    of silently overwriting a number that backs loan-collateral
+    certificates. A parse failure of any kind leaves market_rates completely
+    untouched and just logs the failure."""
+    db = get_db()
+    c = db.cursor()
+    details = []
+    source_url = None
+    success = False
+    try:
+        bulletin_url = _find_latest_bulletin_url()
+        if not bulletin_url:
+            raise RuntimeError("no bulletin PDF link found on ama.co.zw/bulletins/")
+        source_url = bulletin_url
+
+        pdf_resp = requests.get(bulletin_url, timeout=30, headers={'User-Agent': 'Mozilla/5.0'})
+        pdf_resp.raise_for_status()
+        text = _pdf_text(pdf_resp.content)
+
+        c.execute("SELECT species, price_per_kg_usd FROM market_rates")
+        current = {r['species']: float(r['price_per_kg_usd']) for r in c.fetchall()}
+
+        # Cattle — live auction table (Table 12), already a live-weight
+        # price. Scoped to that table's own section: several of these grade
+        # labels (Commercial, Economy, Manufacturing) are reused in Table
+        # 7's unrelated carcass-price table, so parsing the whole document
+        # would blend two different tables' prices under the same label.
+        cattle_section = _section(text, "Table 12:", None)
+        cattle_labels = ['Breeding cow', 'Cow & calf', 'Bulling heifer', 'Commercial',
+                          'Economy', 'Feeder Steer', 'Manufacturing', 'Weaner Heifer', 'Weaner Steer']
+        cattle_rows = _parse_table_rows(cattle_section, cattle_labels)
+        cattle_rate = _avg([v for vals in cattle_rows.values() for v in vals])
+
+        # Goat/Sheep — Table 8's carcass producer-price table, grade rows
+        # shaped like "<Grade> goatMC goatSurrey lambMC lambSurrey muttonMC
+        # muttonSurrey". Scoped to end before Table 9 so 'Super'/'Choice'
+        # don't also pick up Table 9's "Super Pork" row.
+        goat_sheep_section = _section(text, "Table 8:", "Table 9:")
+        grade_rows = _parse_table_rows(goat_sheep_section, ['Super', 'Choice', 'Standard', 'Inferior'])
+        goat_values, sheep_values = [], []
+        for vals in grade_rows.values():
+            if len(vals) >= 2:
+                goat_values += vals[0:2]
+            if len(vals) >= 6:
+                sheep_values += vals[2:6]
+        goat_carcass = _avg(goat_values)
+        sheep_carcass = _avg(sheep_values)
+
+        # Pig — Table 9's producer price, both published grades averaged
+        # (same approach as the other species) then converted from carcass
+        # to live weight, same as goat/sheep.
+        pork_section = _section(text, "Table 9:", "Table 10:")
+        pork_rows = _parse_table_rows(pork_section, ['Super Pork', 'Manufacturing'])
+        pork_carcass = _avg([v for vals in pork_rows.values() for v in vals])
+
+        candidates = {}
+        if cattle_rate:
+            candidates['Cattle'] = cattle_rate
+        if goat_carcass:
+            candidates['Goat'] = round(goat_carcass * DRESSING_PERCENTAGE['Goat'], 2)
+        if sheep_carcass:
+            candidates['Sheep'] = round(sheep_carcass * DRESSING_PERCENTAGE['Sheep'], 2)
+        if pork_carcass:
+            candidates['Pig'] = round(pork_carcass * DRESSING_PERCENTAGE['Pig'], 2)
+
+        if not candidates:
+            raise RuntimeError("parsed the bulletin but found no usable livestock prices in it")
+
+        applied = []
+        for species, new_rate in candidates.items():
+            old_rate = current.get(species)
+            if old_rate and not (old_rate / 3 <= new_rate <= old_rate * 3):
+                details.append(f"{species}: parsed {new_rate}/kg but that's >3x the current {old_rate}/kg — skipped, needs a manual look")
+                continue
+            note = ("Live cattle auction average, AMA Weekly Bulletin" if species == 'Cattle'
+                    else f"AMA producer price x {DRESSING_PERCENTAGE[species]} dressing % (carcass->live estimate)")
+            c.execute("""
+                INSERT INTO market_rates (species, price_per_kg_usd, source, updated_by)
+                VALUES (%s,%s,%s,%s)
+                ON DUPLICATE KEY UPDATE price_per_kg_usd=%s, source=%s, updated_by=%s
+            """, (species, new_rate, f"{note} — {bulletin_url}", triggered_by,
+                  new_rate, f"{note} — {bulletin_url}", triggered_by))
+            applied.append(f"{species}: {old_rate} -> {new_rate}")
+
+        success = bool(applied)
+        details.insert(0, f"Applied: {', '.join(applied) if applied else 'none'}")
+        db.commit()
+    except Exception as e:
+        details.append(f"Scan failed: {e}")
+    finally:
+        try:
+            c.execute(
+                "INSERT INTO market_rate_scan_log (success, source_url, details, triggered_by) VALUES (%s,%s,%s,%s)",
+                (success, source_url, "; ".join(details)[:60000], triggered_by)
+            )
+            db.commit()
+        finally:
+            db.close()
+    return {"success": success, "source_url": source_url, "details": details}
+
+
+def _market_rate_scheduler():
+    """Background loop inside the same process as the API (waitress runs
+    this as a single process on the VPS, so this only ever starts once) —
+    checks once a day whether >=14 days have passed since the last scan
+    attempt, and if so, runs one. Restart-safe (reads the real last-scan
+    timestamp from the DB rather than an in-memory counter) and gives a
+    twice-a-month cadence without needing a separate Windows Scheduled Task."""
+    while True:
+        try:
+            db = get_db(); c = db.cursor()
+            c.execute("SELECT MAX(scanned_at) AS last FROM market_rate_scan_log")
+            last = c.fetchone()['last']
+            db.close()
+            due = last is None or (datetime.datetime.utcnow() - last) >= datetime.timedelta(days=14)
+            if due:
+                scan_livestock_market_rates(triggered_by='scheduler')
+        except Exception as e:
+            print(f"[WARNING] market rate scheduler tick failed: {e}")
+        time_mod.sleep(24 * 60 * 60)
+
+
+threading.Thread(target=_market_rate_scheduler, daemon=True).start()
 
 
 # ── AUTH HELPERS ─────────────────────────────────────────────────
@@ -3754,7 +4035,8 @@ def issue_valuation_certificate(animal_id):
     # a client-supplied number isn't trustworthy evidence for a bank/insurer.
     c.execute("SELECT COUNT(*) AS n FROM health_events WHERE animal_id=%s", (animal_id,))
     health_bonus = c.fetchone()['n'] * 10
-    price_per_kg = LIVESTOCK_PRICE_PER_KG_USD.get(animal['species'], LIVESTOCK_PRICE_PER_KG_USD['Cattle'])
+    rates = get_market_rates()
+    price_per_kg = rates.get(animal['species'], rates.get('Cattle', DEFAULT_LIVESTOCK_PRICE_PER_KG_USD['Cattle']))
     value = round(float(animal['current_weight'] or 0) * price_per_kg + health_bonus, 2)
 
     code = secrets.token_hex(6)
@@ -4991,11 +5273,13 @@ def get_dashboard(user_id):
     listings_count = c.fetchone()['total']
     c.execute("SELECT COUNT(*) as total FROM messages WHERE case_id IN (SELECT id FROM vet_cases WHERE farmer_id = %s)", (user_id,))
     messages_count = c.fetchone()['total']
-    c.execute("""
+    rates = get_market_rates()
+    cattle_rate = rates.get('Cattle', DEFAULT_LIVESTOCK_PRICE_PER_KG_USD['Cattle'])
+    c.execute(f"""
         SELECT SUM(current_weight * CASE species
-            WHEN 'Cattle' THEN 3.40 WHEN 'Goat' THEN 5.15
-            WHEN 'Sheep'  THEN 6.90 WHEN 'Pig'  THEN 1.40
-            ELSE 3.40 END) as total_value
+            WHEN 'Cattle' THEN {cattle_rate} WHEN 'Goat' THEN {rates.get('Goat', cattle_rate)}
+            WHEN 'Sheep'  THEN {rates.get('Sheep', cattle_rate)} WHEN 'Pig'  THEN {rates.get('Pig', cattle_rate)}
+            ELSE {cattle_rate} END) as total_value
         FROM animals WHERE owner_id = %s
     """, (user_id,))
     row = c.fetchone()
@@ -5527,6 +5811,72 @@ def admin_iot_simulate():
         "in_zone": in_zone, "temp_c": round(temp, 1), "heart_rate": hr, "battery_pct": battery,
         "fever_alert": fever_alert, "theft_alert": theft_alert,
     })
+
+
+# ── MARKET RATES (public read, admin-managed) ────────────────────────
+@app.route('/market-rates', methods=['GET'])
+def public_market_rates():
+    """Read-only, no auth required — every valuation shown anywhere in the
+    app (web, mobile, Jinda) reads the live per-kg rate from here instead of
+    each client carrying its own hardcoded copy."""
+    db = get_db(); c = db.cursor()
+    c.execute("SELECT species, price_per_kg_usd, source, updated_at FROM market_rates")
+    rates = c.fetchall()
+    c.execute("SELECT MAX(scanned_at) AS last_scan FROM market_rate_scan_log WHERE success = TRUE")
+    last_scan = c.fetchone()['last_scan']
+    db.close()
+    return jsonify({
+        "rates": {r['species']: float(r['price_per_kg_usd']) for r in rates},
+        "details": rates,
+        "last_successful_scan": last_scan.isoformat() if last_scan else None,
+    })
+
+
+@app.route('/admin/market-rates', methods=['GET'])
+@require_auth
+@require_admin
+def admin_market_rates():
+    db = get_db(); c = db.cursor()
+    c.execute("SELECT species, price_per_kg_usd, source, updated_at, updated_by FROM market_rates ORDER BY species")
+    rates = c.fetchall()
+    c.execute("SELECT id, scanned_at, success, source_url, details, triggered_by FROM market_rate_scan_log ORDER BY scanned_at DESC LIMIT 20")
+    log = c.fetchall()
+    db.close()
+    return jsonify({"rates": rates, "scan_log": log})
+
+
+@app.route('/admin/market-rates/scan', methods=['POST'])
+@require_auth
+@require_admin
+def admin_market_rates_scan():
+    """Manual 'Scan Market Now' trigger from the Admin panel — runs the same
+    scan the twice-a-month scheduler runs, synchronously, so the admin sees
+    the result immediately instead of polling."""
+    result = scan_livestock_market_rates(triggered_by=f"admin:{g.current_user['id']}")
+    return jsonify(result), (200 if result['success'] else 502)
+
+
+@app.route('/admin/market-rates/<species>', methods=['PATCH'])
+@require_auth
+@require_admin
+def admin_market_rates_update(species):
+    if species not in DEFAULT_LIVESTOCK_PRICE_PER_KG_USD:
+        return jsonify({"error": f"Unknown species '{species}'"}), 404
+    d = request.json or {}
+    try:
+        price = float(d.get('price_per_kg_usd'))
+        assert price > 0
+    except (TypeError, ValueError, AssertionError):
+        return jsonify({"error": "price_per_kg_usd must be a positive number"}), 400
+    db = get_db(); c = db.cursor()
+    c.execute("""
+        INSERT INTO market_rates (species, price_per_kg_usd, source, updated_by)
+        VALUES (%s,%s,%s,%s)
+        ON DUPLICATE KEY UPDATE price_per_kg_usd=%s, source=%s, updated_by=%s
+    """, (species, price, "Manual admin override", f"admin:{g.current_user['id']}",
+          price, "Manual admin override", f"admin:{g.current_user['id']}"))
+    db.commit(); db.close()
+    return jsonify({"species": species, "price_per_kg_usd": price})
 
 
 if __name__ == '__main__':

@@ -31,17 +31,31 @@ const calculateAge = (dob) => {
   return `${years}y ${months}m`;
 };
 
-// Rough per-kg live-weight benchmarks for the Zimbabwean market (wholesale
-// range midpoints from Selina Wamucii's Zimbabwe livestock price data,
-// checked September 2026). Still a rough estimate, not a certified
-// appraisal — surfaced as such everywhere it's shown.
-const LIVESTOCK_PRICE_PER_KG_USD = { Cattle: 3.40, Goat: 5.15, Sheep: 6.90, Pig: 1.40 };
+// Offline/first-paint fallback only — the live rate comes from the
+// backend's market_rates table (see getMarketRates below), refreshed from
+// AMA Zimbabwe's real weekly market bulletin.
+const LIVESTOCK_PRICE_PER_KG_USD = { Cattle: 1.79, Goat: 1.02, Sheep: 1.25, Pig: 1.66 };
+
+let _marketRatesCache = null;
+let _marketRatesFetching = false;
+function getMarketRates() {
+  if (!_marketRatesCache && !_marketRatesFetching) {
+    _marketRatesFetching = true;
+    fetch(`${API}/market-rates`)
+      .then(r => r.json())
+      .then(data => { if (data?.rates) _marketRatesCache = data.rates; })
+      .catch(() => { /* offline — falls back to LIVESTOCK_PRICE_PER_KG_USD */ })
+      .finally(() => { _marketRatesFetching = false; });
+  }
+  return _marketRatesCache || LIVESTOCK_PRICE_PER_KG_USD;
+}
 
 // Mirrors the web app's src/components/AnimalProfile/AnimalProfile.jsx
 // calculateValue() so the same animal shows the same estimated value on
 // both platforms.
 const calculateValue = (animal, healthEvents) => {
-  const pricePerKg = LIVESTOCK_PRICE_PER_KG_USD[animal.species] ?? LIVESTOCK_PRICE_PER_KG_USD.Cattle;
+  const rates = getMarketRates();
+  const pricePerKg = rates[animal.species] ?? rates.Cattle ?? LIVESTOCK_PRICE_PER_KG_USD.Cattle;
   return Math.round((animal.current_weight || 0) * pricePerKg + healthEvents.length * 10).toLocaleString();
 };
 

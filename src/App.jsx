@@ -35,6 +35,26 @@ import { API } from './config';
 
 
 // ── shared helpers ─────────────────────────────────────────────────────────
+
+// Fetched once per page load and cached at module scope, used by every
+// per-kg livestock valuation on this page (herd totals, Jinda's valuation
+// answer). Real rates live in the backend's market_rates table, refreshed
+// from AMA Zimbabwe's real weekly market bulletin — this is just a client
+// cache of that, not a second source of truth.
+let _marketRatesCache = null;
+let _marketRatesFetching = false;
+function getMarketRates() {
+  if (!_marketRatesCache && !_marketRatesFetching) {
+    _marketRatesFetching = true;
+    fetch(`${API}/market-rates`)
+      .then(r => r.json())
+      .then(data => { if (data?.rates) _marketRatesCache = data.rates; })
+      .catch(() => { /* offline — callers fall back to their own defaults */ })
+      .finally(() => { _marketRatesFetching = false; });
+  }
+  return _marketRatesCache || {};
+}
+
 // Matches backend ANIMAL_COUNT_FIELDS — DVS Form V27's own "Number and
 // Description of Animals" layout (Cattle: Bulls/Calves/Cows/Oxen/Steers;
 // Other: Pigs/Sheep/Goats).
@@ -485,13 +505,12 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
     })();
   }, [currentUser?.token]);
 
-  // Rough per-kg live-weight benchmarks for the Zimbabwean market (wholesale
-  // range midpoints from Selina Wamucii's Zimbabwe livestock price data,
-  // checked September 2026) — replaces a flat +$500 that used to apply to
-  // every animal regardless of species. Still a rough estimate, not a
-  // certified appraisal.
-  const PRICE_PER_KG_USD = { Cattle: 3.40, Goat: 5.15, Sheep: 6.90, Pig: 1.40 };
-  const totalValue  = animals.reduce((acc, a) => acc + a.currentWeight * (PRICE_PER_KG_USD[a.species] ?? PRICE_PER_KG_USD.Cattle), 0);
+  // Offline/first-paint fallback only — the live rate comes from the
+  // backend's market_rates table via getMarketRates() (module scope, see
+  // below), refreshed from AMA Zimbabwe's real weekly market bulletin.
+  const PRICE_PER_KG_USD = { Cattle: 1.79, Goat: 1.02, Sheep: 1.25, Pig: 1.66 };
+  const marketRates = getMarketRates();
+  const totalValue  = animals.reduce((acc, a) => acc + a.currentWeight * (marketRates[a.species] ?? marketRates.Cattle ?? PRICE_PER_KG_USD.Cattle), 0);
   const forSale     = animals.filter(a => a.marketplaceStatus === 'pending_clearance' || a.marketplaceStatus === 'available').length;
   const lowStock    = inventory.filter(i => i.stock <= i.min);
   // Real outbreak reports in the farmer's own province (filed by a Vet/Police
