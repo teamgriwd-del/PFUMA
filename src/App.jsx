@@ -2504,6 +2504,10 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
   const [clearances,    setClearances]    = useState([]);
   const [transfers,     setTransfers]     = useState([]);
   const [apiOnline,     setApiOnline]     = useState(false);
+  // Distinct from apiOnline — an officer who lands here mid-fetch must
+  // never see "0 pending" and a genuine empty queue rendered identically.
+  // Starts true (loadQueues hasn't resolved yet on first mount).
+  const [queuesLoading, setQueuesLoading] = useState(true);
   const [busyId,        setBusyId]        = useState(null);
   const [feedback,      setFeedback]      = useState(null);
   const [photoUploadingId, setPhotoUploadingId] = useState(null);
@@ -2547,20 +2551,39 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
     }
   };
 
+  const fetchQueuesOnce = async () => {
+    const [vRes, cRes] = await Promise.all([
+      fetch(`${API}/verifications?status=pending`, { headers: authHeaders }),
+      fetch(`${API}/clearances?status=pending`, { headers: authHeaders }),
+    ]);
+    if (!vRes.ok || !cRes.ok) throw new Error();
+    return [await vRes.json(), await cRes.json()];
+  };
+
   const loadQueues = useCallback(async () => {
+    setQueuesLoading(true);
     try {
-      const [vRes, cRes] = await Promise.all([
-        fetch(`${API}/verifications?status=pending`, { headers: authHeaders }),
-        fetch(`${API}/clearances?status=pending`, { headers: authHeaders }),
-      ]);
-      if (!vRes.ok || !cRes.ok) throw new Error();
-      setVerifications(await vRes.json());
-      setClearances(await cRes.json());
+      let result;
+      try {
+        result = await fetchQueuesOnce();
+      } catch {
+        // One retry before concluding the API is actually down — a single
+        // slow/dropped request (common on a show-day network, or under
+        // concurrent load) must not silently present a compliance officer
+        // with a fabricated "0 pending" queue indistinguishable from a
+        // genuinely empty one.
+        result = await fetchQueuesOnce();
+      }
+      const [v, c] = result;
+      setVerifications(v);
+      setClearances(c);
       setApiOnline(true);
     } catch {
       setVerifications(DEMO_PENDING_VERIFICATIONS);
       setClearances(DEMO_PENDING_CLEARANCES);
       setApiOnline(false);
+    } finally {
+      setQueuesLoading(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.token]);
@@ -2665,7 +2688,7 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
                 <h2 className="text-white text-base font-bold truncate">{currentUser?.name || 'Officer'}</h2>
               </div>
             </div>
-            {!apiOnline && (
+            {!queuesLoading && !apiOnline && (
               <div className="flex items-center gap-1.5 bg-yellow-400/15 border border-yellow-400/30 rounded-full px-3 py-1.5 shrink-0">
                 <AlertTriangle size={12} className="text-yellow-400" />
                 <span className="text-xs font-bold text-yellow-300 uppercase">Demo</span>
@@ -2695,7 +2718,7 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
               <div className="flex-1 min-w-0">
                 <p className="text-white text-xs font-bold">{theftAlerts.length ? `${theftAlerts.length} Theft Alert${theftAlerts.length !== 1 ? 's' : ''}` : 'No theft alerts'}</p>
                 <p className={`text-xs font-medium truncate ${theftAlerts.length ? 'text-red-300/70' : 'text-white/40'}`}>
-                  {verifications.length} signup{verifications.length !== 1 ? 's' : ''} and {clearances.length} clearance{clearances.length !== 1 ? 's' : ''} awaiting your review
+                  {queuesLoading ? 'Loading your queue…' : `${verifications.length} signup${verifications.length !== 1 ? 's' : ''} and ${clearances.length} clearance${clearances.length !== 1 ? 's' : ''} awaiting your review`}
                 </p>
               </div>
             </div>
@@ -2727,10 +2750,11 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
             {showAddOfficer ? 'Cancel' : 'Add officer'}
           </Button>
         }
-        alert={!apiOnline && (
+        alert={!queuesLoading && !apiOnline && (
           <div className="flex items-center gap-2.5 rounded-xl border border-amber-300/40 bg-amber-950/40 px-5 py-3 backdrop-blur-sm">
             <AlertTriangle size={15} className="text-amber-300 shrink-0" aria-hidden="true" />
-            <span className="text-sm font-bold text-amber-50">Demo mode — start the Flask API to go live</span>
+            <span className="text-sm font-bold text-amber-50">Couldn't reach the PFUMA/INGCEBO API — showing demo data. </span>
+            <button onClick={loadQueues} className="text-sm font-bold text-amber-50 underline underline-offset-2 hover:text-white shrink-0">Retry</button>
           </div>
         )}
       />
@@ -2837,12 +2861,12 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
           <div className="flex justify-between items-start mb-2"><p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Pending Signups</p><ShieldCheck size={16} className="text-yellow-400" /></div>
-          <p className="text-3xl font-bold text-white">{verifications.length}</p>
+          <p className="text-3xl font-bold text-white">{queuesLoading ? '—' : verifications.length}</p>
           <p className="text-xs text-gray-500 font-medium mt-1">Farmer / Buyer / Supplier applications awaiting review</p>
         </div>
         <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
           <div className="flex justify-between items-start mb-2"><p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Pending Clearances</p><Tag size={16} className="text-orange-400" /></div>
-          <p className="text-3xl font-bold text-white">{clearances.length}</p>
+          <p className="text-3xl font-bold text-white">{queuesLoading ? '—' : clearances.length}</p>
           <p className="text-xs text-gray-500 font-medium mt-1">Livestock listings awaiting sale clearance</p>
         </div>
         <div className={`${theftAlerts.length ? 'bg-red-500/10 border-red-500/20' : 'bg-white/5 border-white/10'} border rounded-2xl p-5`}>

@@ -2,6 +2,14 @@
 -- PFUMA — Unified Database Schema
 -- Covers: Web App (Arnold) + Mobile App (Addy) + Flask API
 -- ============================================================
+-- Load with a UTF-8 client charset, e.g.:
+--   mysql --default-character-set=utf8mb4 -u <user> -p < schema.sql
+-- Loading this without it silently corrupts every non-ASCII byte in the
+-- seed data below (em dashes, accents, etc.) even though the columns
+-- and connection are correctly utf8mb4 — the app's own runtime queries
+-- are unaffected (backend/app.py's get_db() sets charset='utf8mb4'),
+-- only a raw SQL-client load of this file is at risk. Found and fixed
+-- 2026-09-11 (9 seed rows had this exact corruption in production).
 
 CREATE DATABASE IF NOT EXISTS pfuma;
 USE pfuma;
