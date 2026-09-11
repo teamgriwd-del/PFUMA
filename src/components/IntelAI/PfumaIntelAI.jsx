@@ -12,6 +12,14 @@ const SPECIES_ALIASES = {
   Sheep:  ['sheep', 'lamb', 'lambs', 'ewe'],
   Goat:   ['goat', 'goats', 'kid', 'kids'],
 };
+
+// Rough per-kg live-weight benchmarks for the Zimbabwean market (wholesale
+// range midpoints from Selina Wamucii's Zimbabwe livestock price data,
+// checked September 2026) — same table used in AnimalProfile.jsx's
+// calculateValue() and the backend's valuation-certificate endpoint, so
+// Jinda's answer always matches what the app itself shows. Still a rough
+// estimate, not a certified appraisal.
+const LIVESTOCK_PRICE_PER_KG_USD = { Cattle: 3.40, Goat: 5.15, Sheep: 6.90, Pig: 1.40 };
 // Plain .includes() matches substrings anywhere — 'hi' inside 'think', 'ship',
 // 'chicken' — so keyword checks that should mean "this whole word" need a
 // word-boundary match instead.
@@ -200,7 +208,7 @@ const Jinda = ({ setActiveTab, animals, currentUser }) => {
 
     // 5. Compliance / legal-requirements knowledge (per species), sourced from
     // /compliance research — what you need to legally keep & sell each species.
-    const asksCompliance = /(requirement|legal|law|compliance|regulation|allowed to keep|need to keep|papers|permit|licen[cs]e|movement permit)/i.test(lowerText);
+    const asksCompliance = /(requirement|rule|legal|law|compliance|regulation|allowed to keep|need to keep|papers|permit|licen[cs]e|movement permit)/i.test(lowerText);
     if (asksCompliance) {
       const species = detectSpecies(lowerText);
       if (species && SPECIES_COMPLIANCE[species]) {
@@ -270,8 +278,8 @@ const Jinda = ({ setActiveTab, animals, currentUser }) => {
     // fixes that.
     if (lowerText.includes('worth') || lowerText.includes('value') || lowerText.includes('price') || lowerText.includes('money') || lowerText.includes('mari') || lowerText.includes('mutengo')) {
         const totalValue = animals.reduce((acc, a) => {
-            const base = a.species === 'Cattle' ? 500 : 100;
-            return acc + base + (a.currentWeight * 1.5);
+            const pricePerKg = LIVESTOCK_PRICE_PER_KG_USD[a.species] ?? LIVESTOCK_PRICE_PER_KG_USD.Cattle;
+            return acc + a.currentWeight * pricePerKg;
         }, 0);
         return {
           text: sn

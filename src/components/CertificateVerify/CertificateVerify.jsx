@@ -56,8 +56,9 @@ const CertificateVerify = ({ code }) => {
                   </div>
                 )}
                 <div className="bg-gray-50 rounded-2xl p-5 text-center">
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Certified Estimated Value</p>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Platform-Estimated Value</p>
                   <p className="text-3xl font-bold text-gray-900">USD {Number(result.estimated_value).toLocaleString()}</p>
+                  <p className="text-xs text-gray-400 font-medium mt-1.5">A rough estimate from live weight and current Zimbabwe livestock market rates — not a professional appraisal. What's certified is the animal's identity and ownership record, not this dollar figure.</p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   {[

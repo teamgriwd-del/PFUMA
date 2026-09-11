@@ -56,11 +56,44 @@ export default function DiseaseDetectionScreen({ currentUser, navigation }) {
 
   const analyzeSymptoms = () => {
     if (!selectedSymptoms.length) return;
-    const results = diseaseDatabase.map(d => {
+
+    // "General Check" (no animal picked) considers every disease. Picking a
+    // specific animal narrows the candidate list to diseases that actually
+    // affect its species — a Goat's symptoms should never be able to surface
+    // a Cattle-only disease like Theileriosis.
+    const animal = animals.find(a => a.id === parseInt(targetAnimalId, 10));
+    const candidates = animal
+      ? diseaseDatabase.filter(d => d.affectedSpecies.includes(animal.species))
+      : diseaseDatabase;
+
+    // Symptoms that show up on almost every disease (fever, loss of
+    // appetite, nasal discharge...) are weak evidence on their own and were
+    // drowning out genuinely distinctive symptoms (blisters, cyanosis, mouth
+    // ulcers) that only ever appear on one or two diseases — the checker
+    // kept landing on whichever disease had the smallest total symptom
+    // list, which is exactly why it kept saying Foot and Mouth Disease.
+    // Down-weight each symptom by how many candidate diseases share it
+    // (inverse document frequency), so a rare, specific symptom counts for
+    // far more than a common one, and a full match for a disease still
+    // reaches exactly 100% since maxScore is built from the same weights.
+    const df = {};
+    candidates.forEach(d => {
+      [...d.symptoms.primary, ...d.symptoms.secondary].forEach(s => { df[s] = (df[s] || 0) + 1; });
+    });
+
+    const results = candidates.map(d => {
       let score = 0, maxScore = 0, matchedCount = 0;
       const totalSymptoms = d.symptoms.primary.length + d.symptoms.secondary.length;
-      d.symptoms.primary.forEach(s => { maxScore += 10; if (selectedSymptoms.includes(s)) { score += 10; matchedCount++; } });
-      d.symptoms.secondary.forEach(s => { maxScore += 5; if (selectedSymptoms.includes(s)) { score += 5; matchedCount++; } });
+      d.symptoms.primary.forEach(s => {
+        const w = 10 / df[s];
+        maxScore += w;
+        if (selectedSymptoms.includes(s)) { score += w; matchedCount++; }
+      });
+      d.symptoms.secondary.forEach(s => {
+        const w = 5 / df[s];
+        maxScore += w;
+        if (selectedSymptoms.includes(s)) { score += w; matchedCount++; }
+      });
       const confidence = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
       return { ...d, confidence, matchedCount, totalSymptoms };
     }).filter(r => r.confidence > 20).sort((a, b) => b.confidence - a.confidence);

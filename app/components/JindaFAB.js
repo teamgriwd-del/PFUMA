@@ -60,6 +60,13 @@ const isNdebele = (t) => NDEBELE_MARKERS.some(w => hasWord(t, w));
 // Screens that aren't a top-level tab for any role (Health, Diagnostics,
 // Compliance, etc.) are deliberately left out: they aren't safely reachable
 // from here, so those questions get answered in text instead of a jump.
+// Rough per-kg live-weight benchmarks for the Zimbabwean market (wholesale
+// range midpoints from Selina Wamucii's Zimbabwe livestock price data,
+// checked September 2026) — same table used across the web app and the
+// backend's valuation-certificate endpoint. Still a rough estimate, not a
+// certified appraisal.
+const LIVESTOCK_PRICE_PER_KG_USD = { Cattle: 3.40, Goat: 5.15, Sheep: 6.90, Pig: 1.40 };
+
 const NAV_TARGETS = {
   Dashboard: ['home', 'dashboard', 'overview', 'main', 'start'],
   Herd:      ['herd', 'animals', 'my cattle', 'my goats', 'register'],
@@ -215,7 +222,7 @@ export default function JindaFAB({ currentUser, navRef }) {
     }
 
     // 5. Compliance / legal-requirements knowledge (per species).
-    const asksCompliance = /(requirement|legal|law|compliance|regulation|allowed to keep|need to keep|papers|permit|licen[cs]e|movement permit)/i.test(lowerText);
+    const asksCompliance = /(requirement|rule|legal|law|compliance|regulation|allowed to keep|need to keep|papers|permit|licen[cs]e|movement permit)/i.test(lowerText);
     if (asksCompliance) {
       const species = detectSpecies(lowerText);
       if (species && SPECIES_COMPLIANCE[species]) {
@@ -258,8 +265,8 @@ export default function JindaFAB({ currentUser, navRef }) {
     // navigation keyword and would otherwise just jump to the Herd tab.
     if (lowerText.includes('worth') || lowerText.includes('value') || lowerText.includes('price') || lowerText.includes('money') || lowerText.includes('mari') || lowerText.includes('mutengo') || lowerText.includes('imali')) {
       const totalValue = animals.reduce((acc, a) => {
-        const base = a.species === 'Cattle' ? 500 : 100;
-        return acc + base + ((a.current_weight || 0) * 1.5);
+        const pricePerKg = LIVESTOCK_PRICE_PER_KG_USD[a.species] ?? LIVESTOCK_PRICE_PER_KG_USD.Cattle;
+        return acc + (a.current_weight || 0) * pricePerKg;
       }, 0);
       return sn
         ? `Mhuka dzenyu dzinoverengwa kuva nemutengo weUSD $${totalValue.toLocaleString()} pari zvino. Izvi zvinoenderana nehuremu hwadzo pari zvino.`

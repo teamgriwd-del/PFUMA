@@ -30,6 +30,17 @@ app = Flask(__name__)
 # every check to the safe (locked-down) behaviour, not the convenient one.
 IS_PRODUCTION = os.environ.get('PFUMA_ENV', 'development').lower() == 'production'
 
+# Rough per-kg live-weight benchmarks for the Zimbabwean market (wholesale
+# range midpoints from Selina Wamucii's Zimbabwe livestock price data,
+# checked September 2026) — replaces a flat $500-for-cattle/$100-for-
+# everything-else "base" that wasn't grounded in any real market reference
+# and, worse, didn't distinguish Goat/Sheep/Pig from each other at all
+# despite them trading at very different rates. Still a rough estimate, not
+# a certified appraisal — surfaced as such everywhere it's shown, since this
+# number also backs the valuation certificates farmers use as loan
+# collateral evidence.
+LIVESTOCK_PRICE_PER_KG_USD = {'Cattle': 3.40, 'Goat': 5.15, 'Sheep': 6.90, 'Pig': 1.40}
+
 SECRET_KEY = os.environ.get('PFUMA_SECRET_KEY')
 if not SECRET_KEY:
     if IS_PRODUCTION:
@@ -3743,8 +3754,8 @@ def issue_valuation_certificate(animal_id):
     # a client-supplied number isn't trustworthy evidence for a bank/insurer.
     c.execute("SELECT COUNT(*) AS n FROM health_events WHERE animal_id=%s", (animal_id,))
     health_bonus = c.fetchone()['n'] * 10
-    base = 500 if animal['species'] == 'Cattle' else 100
-    value = round(base + float(animal['current_weight'] or 0) * 1.5 + health_bonus, 2)
+    price_per_kg = LIVESTOCK_PRICE_PER_KG_USD.get(animal['species'], LIVESTOCK_PRICE_PER_KG_USD['Cattle'])
+    value = round(float(animal['current_weight'] or 0) * price_per_kg + health_bonus, 2)
 
     code = secrets.token_hex(6)
     c.execute("""
@@ -4980,7 +4991,13 @@ def get_dashboard(user_id):
     listings_count = c.fetchone()['total']
     c.execute("SELECT COUNT(*) as total FROM messages WHERE case_id IN (SELECT id FROM vet_cases WHERE farmer_id = %s)", (user_id,))
     messages_count = c.fetchone()['total']
-    c.execute("SELECT SUM(current_weight * 1.5 + 500) as total_value FROM animals WHERE owner_id = %s", (user_id,))
+    c.execute("""
+        SELECT SUM(current_weight * CASE species
+            WHEN 'Cattle' THEN 3.40 WHEN 'Goat' THEN 5.15
+            WHEN 'Sheep'  THEN 6.90 WHEN 'Pig'  THEN 1.40
+            ELSE 3.40 END) as total_value
+        FROM animals WHERE owner_id = %s
+    """, (user_id,))
     row = c.fetchone()
     total_value = float(row['total_value'] or 0)
     db.close()

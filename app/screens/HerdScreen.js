@@ -31,12 +31,18 @@ const calculateAge = (dob) => {
   return `${years}y ${months}m`;
 };
 
+// Rough per-kg live-weight benchmarks for the Zimbabwean market (wholesale
+// range midpoints from Selina Wamucii's Zimbabwe livestock price data,
+// checked September 2026). Still a rough estimate, not a certified
+// appraisal — surfaced as such everywhere it's shown.
+const LIVESTOCK_PRICE_PER_KG_USD = { Cattle: 3.40, Goat: 5.15, Sheep: 6.90, Pig: 1.40 };
+
 // Mirrors the web app's src/components/AnimalProfile/AnimalProfile.jsx
 // calculateValue() so the same animal shows the same estimated value on
 // both platforms.
 const calculateValue = (animal, healthEvents) => {
-  const base = animal.species === 'Cattle' ? 500 : 100;
-  return Math.round(base + (animal.current_weight || 0) * 1.5 + healthEvents.length * 10).toLocaleString();
+  const pricePerKg = LIVESTOCK_PRICE_PER_KG_USD[animal.species] ?? LIVESTOCK_PRICE_PER_KG_USD.Cattle;
+  return Math.round((animal.current_weight || 0) * pricePerKg + healthEvents.length * 10).toLocaleString();
 };
 
 // Print/export render an actual PDF (via expo-print's HTML-to-PDF engine),

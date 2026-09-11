@@ -110,13 +110,14 @@ export default function InstitutionScreen({ currentUser }) {
                 ['Animal', result.name],
                 ['Species / Breed', `${result.species}${result.breed ? ' — ' + result.breed : ''}`],
                 ['Owner', result.owner_name],
-                ['Certified Value', `USD ${Number(result.estimated_value).toLocaleString()}`],
+                ['Platform-Estimated Value', `USD ${Number(result.estimated_value).toLocaleString()}`],
               ].map(([label, value]) => (
                 <View key={label} style={styles.resultRow}>
                   <Text style={styles.resultLabel}>{label}</Text>
                   <Text style={styles.resultValue}>{value}</Text>
                 </View>
               ))}
+              <Text style={styles.valueDisclaimer}>A rough estimate from live weight and current Zimbabwe livestock market rates — not a professional appraisal. What's certified is the animal's identity and ownership record, not this dollar figure.</Text>
               <TouchableOpacity
                 style={[styles.flagBtn, result.flagged_by_me && { opacity: 0.6 }]}
                 onPress={flagCollateral} disabled={flagBusy || result.flagged_by_me} activeOpacity={0.8}
@@ -182,6 +183,7 @@ const styles = StyleSheet.create({
   resultRow:   { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
   resultLabel: { fontSize: 11, fontFamily: FONTS.bold, color: COLORS.mutedDark },
   resultValue: { fontSize: 12, fontFamily: FONTS.extrabold, color: '#fff' },
+  valueDisclaimer: { fontSize: 10.5, color: COLORS.mutedDark, lineHeight: 15, marginTop: 8 },
   flagBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#554D45', borderRadius: 12, paddingVertical: 12, marginTop: 12 },
   flagBtnText: { color: '#fff', fontSize: 11, fontFamily: FONTS.extrabold, textTransform: 'uppercase' },
 

@@ -235,7 +235,12 @@ function FarmerDashboard({ currentUser, navigation }) {
   const forSale    = localAnimals.filter(a => a.forSale).length;
   const critAlerts = NOTIFICATIONS.filter(n => n.type === 'Critical');
   const lowStock   = inventory.filter(i => i.stock <= i.min);
-  const totalValue = localAnimals.reduce((acc, a) => acc + 500 + a.currentWeight * 1.5, 0);
+  // Rough per-kg live-weight benchmarks for the Zimbabwean market (wholesale
+  // range midpoints from Selina Wamucii's Zimbabwe livestock price data,
+  // checked September 2026) — replaces a flat +$500 that used to apply to
+  // every animal regardless of species. Still a rough estimate.
+  const PRICE_PER_KG = { Cattle: 3.40, Goat: 5.15, Sheep: 6.90, Pig: 1.40 };
+  const totalValue = localAnimals.reduce((acc, a) => acc + a.currentWeight * (PRICE_PER_KG[a.species] ?? PRICE_PER_KG.Cattle), 0);
 
   const overdueVaccines = useMemo(() => {
     const rows = [];

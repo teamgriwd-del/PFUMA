@@ -27,10 +27,21 @@ export const calculateAge = (dob) => {
   return `${years}y ${months}m`;
 };
 
+// Rough per-kg live-weight benchmarks for the Zimbabwean market (wholesale
+// range midpoints from Selina Wamucii's Zimbabwe livestock price data,
+// checked September 2026) — replaces a flat $500-for-cattle/$100-for-
+// everything-else "base" that wasn't grounded in any real market reference
+// and, worse, didn't distinguish Goat/Sheep/Pig from each other at all
+// despite them trading at very different rates. Still a rough estimate, not
+// a certified appraisal — surfaced as such everywhere it's shown, since this
+// number also backs the valuation certificates farmers use as loan
+// collateral evidence.
+const LIVESTOCK_PRICE_PER_KG_USD = { Cattle: 3.40, Goat: 5.15, Sheep: 6.90, Pig: 1.40 };
+
 const calculateValue = (animal, auditLog) => {
-  const base        = animal.species === 'Cattle' ? 500 : 100;
+  const pricePerKg  = LIVESTOCK_PRICE_PER_KG_USD[animal.species] ?? LIVESTOCK_PRICE_PER_KG_USD.Cattle;
   const healthBonus = auditLog.filter(l => l.animalId === animal.id).length * 10;
-  return (base + (animal.currentWeight * 1.5) + healthBonus).toLocaleString();
+  return Math.round(animal.currentWeight * pricePerKg + healthBonus).toLocaleString();
 };
 
 const SPECIES_COLORS = { Cattle: 'bg-green-100 text-green-700', Goat: 'bg-orange-100 text-orange-700', Sheep: 'bg-blue-100 text-blue-700', Pig: 'bg-pink-100 text-pink-700' };
@@ -905,7 +916,7 @@ const AnimalProfile = ({ animals, onAddAnimal, onAddAnimalPhotos, auditLog, onLi
   }
 
   // ── LIST VIEW ─────────────────────────────────────────────────────────────
-  const totalValue   = animals.reduce((acc, a) => acc + (500 + a.currentWeight * 1.5), 0);
+  const totalValue   = animals.reduce((acc, a) => acc + a.currentWeight * (LIVESTOCK_PRICE_PER_KG_USD[a.species] ?? LIVESTOCK_PRICE_PER_KG_USD.Cattle), 0);
   const forSaleCount = animals.filter(a => a.marketplaceStatus === 'pending_clearance' || a.marketplaceStatus === 'available').length;
   const soldCount    = animals.filter(a => a.marketplaceStatus === 'sold').length;
   const speciesCounts = ['Cattle', 'Goat', 'Sheep', 'Pig'].map(s => ({ s, n: animals.filter(a => a.species === s).length })).filter(x => x.n > 0);
