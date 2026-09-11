@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Search, ChevronDown, ChevronUp, AlertTriangle, CheckCircle,
   RefreshCw, Wheat, Calculator, PlusCircle, Trash2, DollarSign,
-  Scale, Clock, BookOpen, ShieldCheck
+  Scale, Clock, BookOpen, ShieldCheck, Zap, CloudRain, Users, Package
 } from 'lucide-react';
 
 import { API } from '../../config';
@@ -73,6 +73,8 @@ const RationBuilder = ({ currentUser, animals, feeds, onUpdateAnimal }) => {
   const [savedPlan, setSavedPlan] = useState(null);
   const [error, setError] = useState('');
   const [history, setHistory] = useState([]);
+  const [formulating, setFormulating] = useState(false);
+  const [formulateNote, setFormulateNote] = useState('');
 
   const selectedAnimal = eligibleAnimals.find(a => String(a.id) === String(animalId));
 
@@ -107,6 +109,7 @@ const RationBuilder = ({ currentUser, animals, feeds, onUpdateAnimal }) => {
       fetchRequirement(animalId);
       fetchHistory(animalId);
       setRows([{ feedTypeId: '', qtyKg: '' }]);
+      setFormulateNote('');
     } else {
       setRequirement(null);
       setHistory([]);
@@ -116,6 +119,33 @@ const RationBuilder = ({ currentUser, animals, feeds, onUpdateAnimal }) => {
   const updateRow = (idx, patch) => setRows(prev => prev.map((r, i) => i === idx ? { ...r, ...patch } : r));
   const addRow = () => setRows(prev => [...prev, { feedTypeId: '', qtyKg: '' }]);
   const removeRow = (idx) => setRows(prev => prev.filter((_, i) => i !== idx));
+
+  // Auto-Formulate — the real differentiator over a static balance-checker:
+  // instead of the farmer guessing quantities and finding out afterward
+  // whether it's balanced, this computes the actual cheapest combination
+  // of real, currently-priced feeds that meets the target, and drops it
+  // straight into the rows so it flows through the same preview/save path.
+  const autoFormulate = async () => {
+    if (!animalId) return;
+    setFormulating(true);
+    setFormulateNote('');
+    setError('');
+    try {
+      const res = await fetch(`${API}/feed/formulate?animal_id=${animalId}`, { headers: authHeaders(currentUser) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not auto-formulate a ration');
+      if (!data.feasible) {
+        setFormulateNote(data.message || 'No feasible least-cost ration found from currently-priced feeds.');
+        return;
+      }
+      setRows(data.items.map(it => ({ feedTypeId: String(it.feed_type_id), qtyKg: String(it.qty_kg) })));
+      setFormulateNote(`Cheapest feasible ration at real PFUMA/INGCEBO supplier prices — USD ${data.total_cost_usd.toFixed(2)}/day.`);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setFormulating(false);
+    }
+  };
 
   // Live client-side preview so the farmer sees the effect of each change
   // instantly — the server recomputes authoritatively on save.
@@ -236,7 +266,20 @@ const RationBuilder = ({ currentUser, animals, feeds, onUpdateAnimal }) => {
       {/* Ration rows */}
       {requirement && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
-          <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block">Today's Ration</label>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block">Today's Ration</label>
+            <button
+              onClick={autoFormulate}
+              disabled={formulating}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-gray-900 text-white rounded-xl text-xs font-bold uppercase tracking-wide hover:bg-gray-800 disabled:opacity-50 transition"
+            >
+              {formulating ? <RefreshCw size={13} className="animate-spin" /> : <Zap size={13} className="text-amber-300" />}
+              {formulating ? 'Calculating...' : 'Auto-Formulate Cheapest Ration'}
+            </button>
+          </div>
+          {formulateNote && (
+            <p className="text-xs font-bold text-gray-600 bg-gray-50 border border-gray-200 rounded-xl p-3">{formulateNote}</p>
+          )}
 
           <div className="space-y-2.5">
             {rows.map((row, idx) => {
@@ -350,6 +393,137 @@ const RationBuilder = ({ currentUser, animals, feeds, onUpdateAnimal }) => {
               );
             })}
           </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── DRY-SEASON FEED BUDGET ────────────────────────────────────
+// The real, recurring pain point for Zimbabwean farmers — especially
+// communal/peasant herders with no year-round purchased ration — isn't
+// "is today's ration balanced", it's "will my herd survive the dry
+// season before the rains come back". This sizes the whole registered
+// herd's dry-matter tonnage need for N months and prices it at real
+// PFUMA/INGCEBO listings, so a farmer can start sourcing before the veld
+// runs out instead of after animals start losing condition.
+const MONTH_PRESETS = [2, 3, 4, 6];
+
+const DrySeasonBudget = ({ currentUser }) => {
+  const [months, setMonths] = useState(3);
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const run = useCallback(async (m) => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch(`${API}/feed/dry-season-budget?months=${m}`, { headers: authHeaders(currentUser) });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not compute the feed budget');
+      setResult(data);
+    } catch (e) {
+      setError(e.message);
+      setResult(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentUser]);
+
+  useEffect(() => { if (currentUser?.token) run(months); }, [currentUser?.token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div className="space-y-5">
+      <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex items-start gap-3">
+        <CloudRain size={16} className="text-pfuma-green mt-0.5 shrink-0" />
+        <p className="text-xs text-gray-600 font-medium leading-relaxed">
+          <span className="font-bold text-gray-800">The question that actually matters in a drought:</span> not what's in your feed bag, but whether you have enough of it. This totals the dry-matter tonnage your <em>whole registered herd</em> needs to survive the dry season, and what that costs at real PFUMA/INGCEBO listings — so you can start sourcing before the veld runs out.
+        </p>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
+        <label className="text-xs font-bold text-gray-500 uppercase tracking-wide block">Months until the rains return</label>
+        <div className="flex gap-2 flex-wrap items-center">
+          {MONTH_PRESETS.map(m => (
+            <button
+              key={m}
+              onClick={() => { setMonths(m); run(m); }}
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wide transition border ${months === m ? 'bg-pfuma-green text-white border-pfuma-green shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-pfuma-green'}`}
+            >
+              {m} months
+            </button>
+          ))}
+          <div className="flex items-center gap-2 ml-1">
+            <input
+              type="number" min="1" max="12" step="0.5" value={months}
+              onChange={e => setMonths(parseFloat(e.target.value) || 1)}
+              className="w-20 px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-bold outline-none focus:ring-2 focus:ring-pfuma-green/30"
+            />
+            <button
+              onClick={() => run(months)}
+              disabled={loading}
+              className="px-4 py-2.5 bg-gray-900 text-white rounded-xl text-xs font-bold uppercase tracking-wide hover:bg-gray-800 disabled:opacity-50 transition"
+            >
+              {loading ? 'Calculating...' : 'Calculate'}
+            </button>
+          </div>
+        </div>
+        {error && <p className="text-xs text-red-600 font-bold bg-red-50 border border-red-200 rounded-xl p-3">{error}</p>}
+      </div>
+
+      {result && !result.herd_empty && (
+        <>
+          <div className="bg-gray-900 rounded-2xl p-5 flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <Package size={20} className="text-amber-300 shrink-0" />
+              <div>
+                <p className="text-xs font-bold text-white/60 uppercase tracking-wide">Total dry matter needed · {result.days} days</p>
+                <p className="text-lg font-bold text-white">{result.total_dm_kg.toLocaleString()} kg</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-xs font-bold text-white/60 uppercase tracking-wide">Estimated cost</p>
+              <p className="text-lg font-bold text-white">
+                {result.total_estimated_cost_usd > 0 ? `USD ${result.total_estimated_cost_usd.toLocaleString()}` : 'No live prices'}
+              </p>
+            </div>
+          </div>
+
+          {result.any_species_unpriced && (
+            <p className="text-xs text-amber-600 font-bold bg-amber-50 border border-amber-200 rounded-xl p-3">⚠ One or more species has no live roughage/energy feed listed on the Marketplace — its tonnage is shown but not costed. Ask a Supplier to list hay/stover pricing for a full estimate.</p>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {result.species_breakdown.map(s => (
+              <div key={s.species} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                <div className="flex items-center gap-2 mb-3">
+                  <Users size={14} className="text-gray-400" />
+                  <p className="text-sm font-bold text-gray-900">{s.species}</p>
+                  <span className="text-xs font-bold text-gray-400">· {s.animal_count} head</span>
+                </div>
+                <p className="text-xl font-bold text-gray-900">{s.total_dm_kg.toLocaleString()} kg</p>
+                <p className="text-xs text-gray-400 font-medium mb-3">dry matter needed</p>
+                {s.cheapest_feed ? (
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-xs text-gray-500 font-medium">Cheapest live listing: <span className="font-bold text-gray-800">{s.cheapest_feed.name}</span></p>
+                    <p className="text-xs text-gray-500 font-medium">${s.cheapest_feed.price_per_kg_usd.toFixed(2)}/kg from {s.cheapest_feed.supplier_name}</p>
+                    <p className="text-sm font-bold text-pfuma-green mt-1">≈ USD {s.estimated_cost_usd.toLocaleString()}</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-amber-600 font-bold bg-amber-50 border border-amber-200 rounded-xl p-3">No live roughage/energy listing for {s.species} yet</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {result && result.herd_empty && (
+        <div className="bg-white border-2 border-dashed border-gray-200 rounded-2xl py-12 text-center">
+          <CloudRain size={32} className="mx-auto text-gray-300 mb-3" />
+          <p className="text-sm font-bold text-gray-400">No Cattle, Goat or Sheep registered with a weight yet</p>
+          <p className="text-xs text-gray-300 font-medium mt-1">Add your herd in Herd Management first — this needs real weights to size the budget.</p>
         </div>
       )}
     </div>
@@ -548,6 +722,12 @@ const FeedAnalyzer = ({ currentUser, animals = [], onUpdateAnimal }) => {
           <Calculator size={14} /> Ration Builder
         </button>
         <button
+          onClick={() => setTab('drought')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wide transition ${tab === 'drought' ? 'bg-pfuma-green text-white shadow' : 'text-gray-500 hover:text-gray-700'}`}
+        >
+          <CloudRain size={14} /> Dry Season Budget
+        </button>
+        <button
           onClick={() => setTab('reference')}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wide transition ${tab === 'reference' ? 'bg-pfuma-green text-white shadow' : 'text-gray-500 hover:text-gray-700'}`}
         >
@@ -555,7 +735,7 @@ const FeedAnalyzer = ({ currentUser, animals = [], onUpdateAnimal }) => {
         </button>
       </div>
 
-      {tab === 'ration' ? (
+      {tab === 'ration' && (
         currentUser?.token ? (
           <RationBuilder currentUser={currentUser} animals={animals} feeds={feeds} onUpdateAnimal={onUpdateAnimal} />
         ) : (
@@ -563,7 +743,17 @@ const FeedAnalyzer = ({ currentUser, animals = [], onUpdateAnimal }) => {
             <p className="text-sm font-bold text-gray-400">Log in to build a ration for your animals.</p>
           </div>
         )
-      ) : (
+      )}
+      {tab === 'drought' && (
+        currentUser?.token ? (
+          <DrySeasonBudget currentUser={currentUser} />
+        ) : (
+          <div className="bg-white border border-gray-100 rounded-2xl p-6 text-center">
+            <p className="text-sm font-bold text-gray-400">Log in to budget feed for your herd.</p>
+          </div>
+        )
+      )}
+      {tab === 'reference' && (
         <ReferenceBrowser feeds={feeds} loading={loading} apiOnline={apiOnline} />
       )}
       </div>

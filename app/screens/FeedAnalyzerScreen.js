@@ -6,7 +6,7 @@ import {
 import {
   Calculator, BookOpen, Scale, Clock, ShieldCheck,
   PlusCircle, Trash2, DollarSign, CheckCircle, AlertTriangle,
-  Drumstick, Zap, Leaf, Bone, Wheat,
+  Drumstick, Zap, Leaf, Bone, Wheat, CloudRain, Users, Package,
 } from 'lucide-react-native';
 
 const CATEGORY_ICON = { protein: Drumstick, energy: Zap, roughage: Leaf, mineral: Bone };
@@ -69,6 +69,8 @@ function RationBuilder({ currentUser, feeds }) {
   const [savedPlan, setSavedPlan]     = useState(null);
   const [error, setError]             = useState('');
   const [history, setHistory]         = useState([]);
+  const [formulating, setFormulating] = useState(false);
+  const [formulateNote, setFormulateNote] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -88,6 +90,7 @@ function RationBuilder({ currentUser, feeds }) {
     setRows([]);
     setSavedPlan(null);
     setError('');
+    setFormulateNote('');
     setReqLoading(true);
     try {
       const { ok, data } = await authJson(currentUser, `/feed/requirements?animal_id=${id}`);
@@ -111,6 +114,30 @@ function RationBuilder({ currentUser, feeds }) {
   };
   const updateQty = (feedId, qtyKg) => setRows(prev => prev.map(r => r.feedId === feedId ? { ...r, qtyKg } : r));
   const removeRow = (feedId) => setRows(prev => prev.filter(r => r.feedId !== feedId));
+
+  // Auto-Formulate — computes the actual cheapest combination of real,
+  // currently-priced feeds that meets this animal's target, instead of
+  // the farmer guessing quantities and finding out afterward.
+  const autoFormulate = async () => {
+    if (!animalId) return;
+    setFormulating(true);
+    setFormulateNote('');
+    setError('');
+    try {
+      const { ok, data } = await authJson(currentUser, `/feed/formulate?animal_id=${animalId}`);
+      if (!ok) throw new Error(data.error || 'Could not auto-formulate a ration');
+      if (!data.feasible) {
+        setFormulateNote(data.message || 'No feasible least-cost ration found from currently-priced feeds.');
+        return;
+      }
+      setRows(data.items.map(it => ({ feedId: it.feed_type_id, qtyKg: String(it.qty_kg) })));
+      setFormulateNote(`Cheapest feasible ration at real PFUMA/INGCEBO supplier prices — USD ${data.total_cost_usd.toFixed(2)}/day.`);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setFormulating(false);
+    }
+  };
 
   const preview = useMemo(() => {
     let protein = 0, energy = 0, cost = 0, anyUnpriced = false;
@@ -210,6 +237,12 @@ function RationBuilder({ currentUser, feeds }) {
               <Text style={styles.statVal}>{requirement.target_protein_g}g CP</Text>
             </View>
           </View>
+
+          <TouchableOpacity style={styles.formulateBtn} onPress={autoFormulate} disabled={formulating} activeOpacity={0.85}>
+            <Zap size={14} color="#FFD98A" />
+            <Text style={styles.formulateBtnText}>{formulating ? 'Calculating...' : 'Auto-Formulate Cheapest Ration'}</Text>
+          </TouchableOpacity>
+          {formulateNote ? <Text style={styles.formulateNote}>{formulateNote}</Text> : null}
 
           <Text style={styles.filterLabel}>Add Feed</Text>
           <View style={styles.filterGrid}>
@@ -317,6 +350,124 @@ function RationBuilder({ currentUser, feeds }) {
   );
 }
 
+// ── DRY-SEASON FEED BUDGET ────────────────────────────────────
+// The real, recurring pain point for Zimbabwean farmers — especially
+// communal/peasant herders with no year-round purchased ration — isn't
+// "is today's ration balanced", it's "will my herd survive the dry
+// season before the rains come back". Totals the whole registered
+// herd's dry-matter tonnage need for N months and prices it at real
+// PFUMA/INGCEBO listings.
+const MONTH_PRESETS = [2, 3, 4, 6];
+
+function DrySeasonBudget({ currentUser }) {
+  const [months, setMonths] = useState(3);
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const run = async (m) => {
+    setLoading(true);
+    setError('');
+    try {
+      const { ok, data } = await authJson(currentUser, `/feed/dry-season-budget?months=${m}`);
+      if (!ok) throw new Error(data.error || 'Could not compute the feed budget');
+      setResult(data);
+    } catch (e) {
+      setError(e.message);
+      setResult(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { run(3); }, [currentUser?.token]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <View>
+      <View style={styles.pitchBox}>
+        <CloudRain size={16} color={COLORS.primary} />
+        <Text style={styles.pitchText}>
+          The question that actually matters in a drought isn't what's in your feed bag — it's whether you have enough of it. This totals the dry-matter tonnage your <Text style={{ fontFamily: FONTS.extrabold }}>whole registered herd</Text> needs to survive the dry season, and what that costs at real PFUMA/INGCEBO listings.
+        </Text>
+      </View>
+
+      <Text style={styles.filterLabel}>Months until the rains return</Text>
+      <View style={styles.filterGrid}>
+        {MONTH_PRESETS.map(m => {
+          const active = months === m;
+          return (
+            <TouchableOpacity
+              key={m}
+              activeOpacity={0.8}
+              style={[styles.filterChip, { backgroundColor: active ? COLORS.primary : COLORS.light, borderColor: COLORS.primary }]}
+              onPress={() => { setMonths(m); run(m); }}
+            >
+              <Text style={[styles.filterChipText, { color: active ? '#fff' : COLORS.primary }]}>{m} months</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {loading && <ActivityIndicator color={COLORS.primary} style={{ marginVertical: 12 }} />}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+      {result && !result.herd_empty && (
+        <>
+          <View style={styles.budgetBanner}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Package size={18} color="#DEC9AE" />
+              <View>
+                <Text style={styles.budgetBannerLabel}>Total dry matter · {result.days} days</Text>
+                <Text style={styles.budgetBannerVal}>{result.total_dm_kg.toLocaleString()} kg</Text>
+              </View>
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={styles.budgetBannerLabel}>Estimated cost</Text>
+              <Text style={styles.budgetBannerVal}>
+                {result.total_estimated_cost_usd > 0 ? `USD ${result.total_estimated_cost_usd.toLocaleString()}` : 'No live prices'}
+              </Text>
+            </View>
+          </View>
+
+          {result.any_species_unpriced && (
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 8 }}>
+              <AlertTriangle size={13} color={COLORS.gold} style={{ marginTop: 1 }} />
+              <Text style={[styles.warnText, { flex: 1 }]}>One or more species has no live roughage/energy listing — its tonnage is shown but not costed.</Text>
+            </View>
+          )}
+
+          <View style={{ marginTop: 12, gap: 10 }}>
+            {result.species_breakdown.map(s => (
+              <View key={s.species} style={styles.speciesBudgetCard}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                  <Users size={13} color="#968C82" />
+                  <Text style={styles.speciesBudgetName}>{s.species}</Text>
+                  <Text style={styles.speciesBudgetCount}>· {s.animal_count} head</Text>
+                </View>
+                <Text style={styles.speciesBudgetKg}>{s.total_dm_kg.toLocaleString()} kg needed</Text>
+                {s.cheapest_feed ? (
+                  <View style={styles.speciesBudgetPriceBox}>
+                    <Text style={styles.speciesBudgetPriceText}>{s.cheapest_feed.name} · ${s.cheapest_feed.price_per_kg_usd.toFixed(2)}/kg</Text>
+                    <Text style={styles.speciesBudgetCostText}>≈ USD {s.estimated_cost_usd.toLocaleString()}</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.warnText}>No live listing for {s.species} yet</Text>
+                )}
+              </View>
+            ))}
+          </View>
+        </>
+      )}
+
+      {result && result.herd_empty && (
+        <View style={styles.emptyBox}>
+          <Text style={styles.emptyBoxText}>No Cattle, Goat or Sheep registered with a weight yet — add your herd in the Herd tab first.</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
 export default function FeedAnalyzerScreen({ currentUser }) {
   const [feeds,      setFeeds]      = useState(DEMO_FEEDS);
   const [expandedId, setExpandedId] = useState(null);
@@ -411,6 +562,14 @@ export default function FeedAnalyzerScreen({ currentUser }) {
           <Text style={[styles.tabBtnText, tab === 'ration' && styles.tabBtnTextActive]}>Ration Builder</Text>
         </TouchableOpacity>
         <TouchableOpacity
+          style={[styles.tabBtn, tab === 'drought' && styles.tabBtnActive]}
+          onPress={() => setTab('drought')}
+          activeOpacity={0.85}
+        >
+          <CloudRain size={14} color={tab === 'drought' ? '#fff' : COLORS.muted} />
+          <Text style={[styles.tabBtnText, tab === 'drought' && styles.tabBtnTextActive]}>Dry Season</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
           style={[styles.tabBtn, tab === 'reference' && styles.tabBtnActive]}
           onPress={() => setTab('reference')}
           activeOpacity={0.85}
@@ -422,7 +581,7 @@ export default function FeedAnalyzerScreen({ currentUser }) {
 
       {loading ? <ActivityIndicator color={COLORS.primary} style={{ margin: 12 }} /> : null}
 
-      {tab === 'ration' ? (
+      {tab === 'ration' && (
         currentUser?.token ? (
           <FlatList
             data={[{ key: 'ration-builder' }]}
@@ -434,7 +593,20 @@ export default function FeedAnalyzerScreen({ currentUser }) {
         ) : (
           <Text style={styles.emptyBoxText}>Log in to build a ration.</Text>
         )
-      ) : (
+      )}
+      {tab === 'drought' && (
+        currentUser?.token ? (
+          <FlatList
+            data={[{ key: 'drought-budget' }]}
+            keyExtractor={i => i.key}
+            renderItem={() => <DrySeasonBudget currentUser={currentUser} />}
+            contentContainerStyle={{ padding: 16, paddingBottom: 110 }}
+          />
+        ) : (
+          <Text style={styles.emptyBoxText}>Log in to budget feed for your herd.</Text>
+        )
+      )}
+      {tab === 'reference' && (
         <FlatList
           data={feeds}
           keyExtractor={i => String(i.id)}
@@ -476,6 +648,10 @@ const styles = StyleSheet.create({
   statLabel:     { fontSize: 9, fontFamily: FONTS.extrabold, color: '#968C82', textTransform: 'uppercase', marginTop: 4 },
   statVal:       { fontSize: 13, fontFamily: FONTS.extrabold, color: COLORS.text, marginTop: 2 },
 
+  formulateBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#29231E', borderRadius: 12, paddingVertical: 12, marginBottom: 10 },
+  formulateBtnText: { color: '#fff', fontSize: 12, fontFamily: FONTS.extrabold, textTransform: 'uppercase' },
+  formulateNote:    { fontSize: 11, fontFamily: FONTS.bold, color: COLORS.text, backgroundColor: '#fff', borderRadius: 10, padding: 10, marginBottom: 12 },
+
   addFeedChip:      { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#fff', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8, elevation: 1 },
   addFeedChipText:  { fontSize: 11, fontFamily: FONTS.bold, color: COLORS.text },
   addFeedChipPrice: { fontSize: 10, fontFamily: FONTS.extrabold, color: '#A6763C' },
@@ -504,6 +680,17 @@ const styles = StyleSheet.create({
   historyDate:   { fontSize: 11, color: COLORS.muted, fontFamily: FONTS.semibold },
   historyStatus: { fontSize: 11, fontFamily: FONTS.extrabold },
   historyCost:   { fontSize: 11, fontFamily: FONTS.extrabold, color: COLORS.text },
+
+  budgetBanner:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#29231E', borderRadius: 14, padding: 16, marginTop: 12 },
+  budgetBannerLabel: { fontSize: 9, fontFamily: FONTS.extrabold, color: '#DEC9AE', textTransform: 'uppercase' },
+  budgetBannerVal:   { fontSize: 15, fontFamily: FONTS.extrabold, color: '#fff', marginTop: 2 },
+  speciesBudgetCard:     { backgroundColor: '#fff', borderRadius: 14, padding: 14, elevation: 1 },
+  speciesBudgetName:     { fontSize: 13, fontFamily: FONTS.extrabold, color: COLORS.text },
+  speciesBudgetCount:    { fontSize: 11, fontFamily: FONTS.bold, color: '#968C82' },
+  speciesBudgetKg:       { fontSize: 17, fontFamily: FONTS.extrabold, color: COLORS.text, marginBottom: 8 },
+  speciesBudgetPriceBox: { backgroundColor: '#EFE8DD', borderRadius: 10, padding: 10 },
+  speciesBudgetPriceText:{ fontSize: 11, color: COLORS.muted, fontFamily: FONTS.semibold },
+  speciesBudgetCostText: { fontSize: 13, fontFamily: FONTS.extrabold, color: COLORS.primary, marginTop: 2 },
 
   resultCount:   { fontSize: 11, color: COLORS.muted, fontFamily: FONTS.bold, textTransform: 'uppercase', marginBottom: 10, letterSpacing: 0.5 },
   card:          { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2 },

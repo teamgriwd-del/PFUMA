@@ -5259,6 +5259,218 @@ def list_feed_plans():
     return jsonify(plans)
 
 
+# ── AUTO-FORMULATE (least-cost ration) ──────────────────────────
+# Until now the Ration Builder only told a farmer whether the ration THEY
+# guessed was balanced — it never told them what to actually feed. This
+# answers that: search every currently live-priced feed and find the
+# cheapest combination that hits this animal's real protein+energy target,
+# using the same two-feed blending maths ("Pearson Square") an animal
+# nutritionist works out by hand — just run across every real priced feed
+# instead of two guessed ones, and picking the cheapest feasible result.
+def _least_cost_formulate(species, target_protein_g, target_energy_mj, priced_feeds):
+    candidates = [f for f in priced_feeds if species in (f['suitable_for'] or '').split(',')]
+    best = None
+
+    def consider(items, total_protein, total_energy, cost):
+        nonlocal best
+        if best is None or cost < best['cost']:
+            best = {"items": items, "protein": total_protein, "energy": total_energy, "cost": cost}
+
+    # Single-feed fallback — enough of ONE feed alone to clear whichever
+    # nutrient is the binding constraint. Rejected if that overshoots the
+    # OTHER nutrient too far past target — a cheap feed that happens to
+    # dump 2x the protein an animal needs isn't a real recommendation,
+    # it's just wasted feed money dressed up as a low daily total.
+    for f in candidates:
+        gp = float(f['protein_percent'] or 0) * 10   # g protein / kg
+        ge = float(f['energy_mj'] or 0)               # MJ / kg
+        if gp <= 0 and ge <= 0:
+            continue
+        need_kg = 0.0
+        if gp > 0:
+            need_kg = max(need_kg, target_protein_g / gp)
+        if ge > 0:
+            need_kg = max(need_kg, target_energy_mj / ge)
+        if need_kg <= 0:
+            continue
+        protein_total, energy_total = gp * need_kg, ge * need_kg
+        if target_protein_g > 0 and protein_total / target_protein_g > 1.3:
+            continue
+        if target_energy_mj > 0 and energy_total / target_energy_mj > 1.3:
+            continue
+        price = float(f['market_price']['price'])
+        consider([{"feed": f, "qty_kg": need_kg}], protein_total, energy_total, price * need_kg)
+
+    # Two-feed blends — exact solve for the quantities of each that hit
+    # BOTH targets simultaneously (Cramer's rule on the 2x2 system), kept
+    # only when both quantities come out non-negative.
+    for i in range(len(candidates)):
+        for j in range(i + 1, len(candidates)):
+            fa, fb = candidates[i], candidates[j]
+            gpa, gea = float(fa['protein_percent'] or 0) * 10, float(fa['energy_mj'] or 0)
+            gpb, geb = float(fb['protein_percent'] or 0) * 10, float(fb['energy_mj'] or 0)
+            det = gpa * geb - gpb * gea
+            if abs(det) < 1e-9:
+                continue
+            xa = (target_protein_g * geb - target_energy_mj * gpb) / det
+            xb = (gpa * target_energy_mj - gea * target_protein_g) / det
+            if xa < -1e-6 or xb < -1e-6:
+                continue
+            xa, xb = max(xa, 0), max(xb, 0)
+            items = []
+            if xa > 0.01:
+                items.append({"feed": fa, "qty_kg": xa})
+            if xb > 0.01:
+                items.append({"feed": fb, "qty_kg": xb})
+            if not items:
+                continue
+            price_a, price_b = float(fa['market_price']['price']), float(fb['market_price']['price'])
+            consider(items, gpa * xa + gpb * xb, gea * xa + geb * xb, price_a * xa + price_b * xb)
+
+    return best
+
+
+@app.route('/feed/formulate', methods=['GET'])
+@require_auth
+def feed_formulate():
+    animal_id = request.args.get('animal_id')
+    if not animal_id:
+        return jsonify({"error": "animal_id is required"}), 400
+    db = get_db()
+    c = db.cursor()
+    animal, error = _load_animal_for_ration(c, animal_id)
+    if error:
+        db.close()
+        return error
+
+    life_stage, stage_mult = _life_stage(animal['birth_date'])
+    energy_mj, protein_g = _compute_requirement(animal['species'], animal['current_weight'])
+    target_energy_mj = round(energy_mj * stage_mult, 2)
+    target_protein_g = round(protein_g * stage_mult, 2)
+
+    c.execute("SELECT * FROM feed_types")
+    priced = []
+    for f in c.fetchall():
+        listing = _best_market_price(c, f['name'])
+        if listing:
+            f['market_price'] = listing
+            priced.append(f)
+    db.close()
+
+    base = {
+        "animal_id": animal['id'], "animal_name": animal['name'], "species": animal['species'],
+        "life_stage": life_stage, "target_protein_g": target_protein_g, "target_energy_mj": target_energy_mj,
+    }
+
+    if not priced:
+        return jsonify({**base, "feasible": False,
+            "message": "No feeds have a live PFUMA/INGCEBO supplier price right now — ask a Supplier to list one, or build the ration manually below."})
+
+    best = _least_cost_formulate(animal['species'], target_protein_g, target_energy_mj, priced)
+    if not best:
+        return jsonify({**base, "feasible": False,
+            "message": "None of the currently-priced feeds can reach this animal's target together — a higher-protein feed needs listing on the Marketplace, or build the ration manually below."})
+
+    items = [{
+        "feed_type_id": it['feed']['id'], "name": it['feed']['name'],
+        "qty_kg": round(it['qty_kg'], 2),
+        "unit_cost_usd": float(it['feed']['market_price']['price']),
+        "line_cost_usd": round(it['qty_kg'] * float(it['feed']['market_price']['price']), 2),
+        "supplier_name": it['feed']['market_price']['supplier_name'],
+    } for it in best['items']]
+
+    return jsonify({
+        **base, "feasible": True, "items": items,
+        "total_protein_g": round(best['protein'], 1),
+        "total_energy_mj": round(best['energy'], 1),
+        "total_cost_usd": round(best['cost'], 2),
+        "protein_status": _nutrient_status(best['protein'], target_protein_g),
+        "energy_status": _nutrient_status(best['energy'], target_energy_mj),
+    })
+
+
+# ── DRY-SEASON FEED BUDGET ───────────────────────────────────────
+# The real, recurring crisis for Zimbabwean farmers — especially communal/
+# peasant herders with no purchased ration year-round — isn't "is today's
+# feed balanced", it's "will my herd survive the dry season before the
+# rains come back". This sizes that: total dry-matter tonnage the whole
+# herd needs to get through N months, and what that costs at real
+# PFUMA/INGCEBO feed listings, so a farmer can start sourcing before the
+# veld runs out rather than after animals start losing condition.
+# %BW/day dry-matter intake standard for grazing ruminants on
+# maintenance rations (small ruminants eat proportionally more per kg
+# bodyweight than cattle).
+_DRY_SEASON_DMI_PCT = {'Cattle': 0.025, 'Goat': 0.03, 'Sheep': 0.03}
+
+
+@app.route('/feed/dry-season-budget', methods=['GET'])
+@require_auth
+def dry_season_budget():
+    try:
+        months = float(request.args.get('months', 3))
+    except ValueError:
+        return jsonify({"error": "months must be a number"}), 400
+    if months <= 0 or months > 12:
+        return jsonify({"error": "months must be between 0 and 12"}), 400
+    days = months * 30.44
+
+    db = get_db()
+    c = db.cursor()
+    c.execute("""
+        SELECT species, current_weight FROM animals
+        WHERE owner_id = %s AND species IN ('Cattle','Goat','Sheep')
+          AND current_weight IS NOT NULL AND current_weight > 0
+    """, (g.current_user['id'],))
+    by_species = {}
+    for r in c.fetchall():
+        by_species.setdefault(r['species'], []).append(float(r['current_weight']))
+
+    breakdown, total_dm_kg, total_cost, any_unpriced = [], 0.0, 0.0, False
+    for species, dmi_pct in _DRY_SEASON_DMI_PCT.items():
+        weights = by_species.get(species)
+        if not weights:
+            continue
+        species_dm_kg = sum(w * dmi_pct * days for w in weights)
+        total_dm_kg += species_dm_kg
+        c.execute("""
+            SELECT ft.name, ml.price, u.full_name AS supplier_name
+            FROM feed_types ft
+            JOIN marketplace_listings ml ON ml.category = 'feed' AND ml.status = 'available'
+               AND ml.product_name LIKE CONCAT('%%', ft.name, '%%')
+            JOIN users u ON u.id = ml.user_id
+            WHERE ft.category IN ('roughage','energy') AND ft.suitable_for LIKE %s
+            ORDER BY ml.price ASC LIMIT 1
+        """, (f'%{species}%',))
+        cheapest = c.fetchone()
+        species_cost = None
+        if cheapest:
+            species_cost = round(species_dm_kg * float(cheapest['price']), 2)
+            total_cost += species_cost
+        else:
+            any_unpriced = True
+        breakdown.append({
+            "species": species,
+            "animal_count": len(weights),
+            "total_dm_kg": round(species_dm_kg, 1),
+            "cheapest_feed": {
+                "name": cheapest['name'], "price_per_kg_usd": float(cheapest['price']),
+                "supplier_name": cheapest['supplier_name'],
+            } if cheapest else None,
+            "estimated_cost_usd": species_cost,
+        })
+    db.close()
+
+    return jsonify({
+        "months": months,
+        "days": round(days),
+        "herd_empty": len(breakdown) == 0,
+        "species_breakdown": breakdown,
+        "total_dm_kg": round(total_dm_kg, 1),
+        "total_estimated_cost_usd": round(total_cost, 2),
+        "any_species_unpriced": any_unpriced,
+    })
+
+
 # ── DASHBOARD ─────────────────────────────────────────────────
 @app.route('/dashboard/<int:user_id>', methods=['GET'])
 @require_auth
