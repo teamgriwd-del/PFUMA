@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
-  View, Text, Image, ScrollView, TouchableOpacity, StyleSheet, StatusBar,
+  View, Text, Image, ImageBackground, ScrollView, TouchableOpacity, StyleSheet, StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,6 +12,7 @@ import {
 import { COLORS, FONTS, API } from '../config';
 import { authFetch } from '../api';
 import pfumaMark from '../assets/pfuma-mark.png';
+import { roleHero } from '../imagery';
 
 // A real uploaded photo is a relative /uploads/... path; a species stock
 // fallback (assigned server-side) is already a full URL.
@@ -73,13 +74,23 @@ const KpiCard = ({ label, value, sub, accent, textColor, borderColor, icon: Icon
   </View>
 );
 
-// Gradient hero banner with soft decorative glow circles
-const GradientBanner = ({ colors, children }) => (
-  <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={s.banner}>
-    <View style={s.bannerGlow1} />
-    <View style={s.bannerGlow2} />
-    {children}
-  </LinearGradient>
+// Full-bleed role photograph under a warm scrim — same treatment (and same
+// photo library) as the web app's DashboardHero, so the two are in sync.
+// `colors` still tints the scrim per role instead of a flat gradient fill.
+const GradientBanner = ({ role, colors, children }) => (
+  <ImageBackground
+    source={{ uri: roleHero(role, { w: 900, q: 70 }) }}
+    style={s.banner}
+    imageStyle={s.bannerImage}
+  >
+    <LinearGradient
+      colors={[colors[0] + 'E6', colors[0] + 'B3', colors[1] + '73']}
+      start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+      style={s.bannerScrim}
+    >
+      {children}
+    </LinearGradient>
+  </ImageBackground>
 );
 
 // 2x3 (or n-up) colored action grid — the mobile-first "quick actions" tile
@@ -93,7 +104,7 @@ const ActionGrid = ({ actions }) => (
           <View style={s.actionTileBadge}><Text style={s.actionTileBadgeText}>{a.badge}</Text></View>
         ) : null}
         <View style={[s.actionTileIcon, { backgroundColor: a.color }]}>
-          <a.icon size={18} color="#fff" />
+          <a.icon size={24} color="#fff" />
         </View>
         <Text style={s.actionTileLabel} numberOfLines={1}>{a.label}</Text>
       </TouchableOpacity>
@@ -147,10 +158,10 @@ const StakeholderMap = () => (
   <View style={s.smCard}>
     <View style={s.smTitleRow}>
       <Globe size={15} color={COLORS.primary} />
-      <Text style={s.smTitle}>How PFUMA Connects Everyone</Text>
+      <Text style={s.smTitle}>How PFUMA/INGCEBO Connects Everyone</Text>
     </View>
     <Text style={s.smDesc}>
-      PFUMA is a four-stakeholder ecosystem. Every role plays a specific part — here's how they all connect.
+      PFUMA/INGCEBO is a four-stakeholder ecosystem. Every role plays a specific part — here's how they all connect.
     </Text>
     {[
       { icon: Sprout,      role: 'Farmer',       color: COLORS.light,  text: COLORS.primary, desc: 'Registers animals, tracks health, orders medicines, lists livestock for sale.' },
@@ -270,7 +281,7 @@ function FarmerDashboard({ currentUser, navigation }) {
     <ScrollView style={s.bg} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
 
       {/* Greeting banner */}
-      <GradientBanner colors={ROLE_GRADIENT.Farmer}>
+      <GradientBanner role="Farmer" colors={ROLE_GRADIENT.Farmer}>
         <View style={s.bannerTopRow}>
           <View style={s.bannerIconBadge}>
             <Sprout size={22} color="#fff" />
@@ -299,8 +310,8 @@ function FarmerDashboard({ currentUser, navigation }) {
 
       {/* Role explanation */}
       <View style={s.panel}>
-        <Text style={{ fontSize: 10, fontWeight: '800', color: COLORS.sprout, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Your Role on PFUMA</Text>
-        <Text style={{ fontSize: 14, fontWeight: '900', color: COLORS.textDark, marginBottom: 6 }}>You are the heart of the herd</Text>
+        <Text style={{ fontSize: 10, fontFamily: FONTS.extrabold, color: COLORS.sprout, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Your Role on PFUMA/INGCEBO</Text>
+        <Text style={{ fontSize: 14, fontFamily: FONTS.extrabold, color: COLORS.textDark, marginBottom: 6 }}>You are the heart of the herd</Text>
         <Text style={{ fontSize: 12, color: COLORS.mutedDark, lineHeight: 18, marginBottom: 10 }}>
           Register your animals, track their health, and reorder medicine before stocks run low. When ready, list animals on the Marketplace — a DVS vet certifies them so buyers across Zimbabwe can bid with confidence.
         </Text>
@@ -384,7 +395,7 @@ function FarmerDashboard({ currentUser, navigation }) {
       <SectionLabel icon={Tag}>SELL YOUR ANIMALS</SectionLabel>
       <View style={s.panel}>
         <Text style={s.panelDesc}>
-          Toggle any animal to list it on the PFUMA Marketplace. Buyers and livestock buyers will immediately see it.
+          Toggle any animal to list it on the PFUMA/INGCEBO Marketplace. Buyers and livestock buyers will immediately see it.
         </Text>
         {localAnimals.length === 0 ? (
           <View style={s.emptyInner}>
@@ -455,7 +466,7 @@ function FarmerDashboard({ currentUser, navigation }) {
       {/* Farmers Near You */}
       <SectionLabel icon={Users}>FARMERS NEAR YOU</SectionLabel>
       <View style={s.panel}>
-        <Text style={s.panelDesc}>Connect with other PFUMA farmers to swap tips, feed, or breeding stock.</Text>
+        <Text style={s.panelDesc}>Connect with other PFUMA/INGCEBO farmers to swap tips, feed, or breeding stock.</Text>
         {nearbyFarmers.length === 0 ? (
           <View style={s.emptyInner}>
             <Text style={s.emptyInnerText}>No other registered farmers nearby yet</Text>
@@ -518,7 +529,7 @@ function VeterinarianDashboard({ currentUser, navigation }) {
     <ScrollView style={[s.bg, { backgroundColor: COLORS.slate }]} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
 
       {/* Greeting banner */}
-      <GradientBanner colors={ROLE_GRADIENT.Veterinarian}>
+      <GradientBanner role="Veterinarian" colors={ROLE_GRADIENT.Veterinarian}>
         <View style={s.bannerTopRow}>
           <View style={s.bannerIconBadge}>
             <Stethoscope size={22} color="#fff" />
@@ -564,9 +575,9 @@ function VeterinarianDashboard({ currentUser, navigation }) {
           <>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
               <AlertTriangle size={14} color="#C75B50" />
-              <Text style={{ color: '#C75B50', fontSize: 13, fontWeight: '700' }}>{activeOutbreak.status.toUpperCase()}</Text>
+              <Text style={{ color: '#C75B50', fontSize: 13, fontFamily: FONTS.bold }}>{activeOutbreak.status.toUpperCase()}</Text>
             </View>
-            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900', marginBottom: 4 }}>{activeOutbreak.disease_name}</Text>
+            <Text style={{ color: '#fff', fontSize: 18, fontFamily: FONTS.extrabold, marginBottom: 4 }}>{activeOutbreak.disease_name}</Text>
             <Text style={{ color: '#968C82', fontSize: 12, marginBottom: 14, lineHeight: 18 }}>
               Confirmed in {activeOutbreak.district ? `${activeOutbreak.district}, ` : ''}{activeOutbreak.province}. {activeOutbreak.details}
             </Text>
@@ -577,8 +588,8 @@ function VeterinarianDashboard({ currentUser, navigation }) {
               ['Reported by',     activeOutbreak.reported_by_name],
             ].map(([k, v]) => (
               <View key={k} style={s.infoRow}>
-                <Text style={{ color: '#7C7268', fontSize: 12, fontWeight: '600' }}>{k}</Text>
-                <Text style={{ color: '#E0D6C7', fontSize: 12, fontWeight: '800' }}>{v}</Text>
+                <Text style={{ color: '#7C7268', fontSize: 12, fontFamily: FONTS.semibold }}>{k}</Text>
+                <Text style={{ color: '#E0D6C7', fontSize: 12, fontFamily: FONTS.extrabold }}>{v}</Text>
               </View>
             ))}
           </>
@@ -674,7 +685,7 @@ function SupplierDashboard({ currentUser, navigation }) {
     <ScrollView style={s.bg} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
 
       {/* Banner */}
-      <GradientBanner colors={ROLE_GRADIENT.Supplier}>
+      <GradientBanner role="Supplier" colors={ROLE_GRADIENT.Supplier}>
         <View style={s.bannerTopRow}>
           <View style={s.bannerIconBadge}>
             <Pill size={22} color="#fff" />
@@ -713,10 +724,10 @@ function SupplierDashboard({ currentUser, navigation }) {
 
       {/* Role explanation */}
       <View style={s.panel}>
-        <Text style={{ fontSize: 10, fontWeight: '800', color: COLORS.gold, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Your Role on PFUMA</Text>
-        <Text style={{ fontSize: 14, fontWeight: '900', color: COLORS.textDark, marginBottom: 6 }}>You are a veterinary medicine & vaccine distributor</Text>
+        <Text style={{ fontSize: 10, fontFamily: FONTS.extrabold, color: COLORS.gold, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Your Role on PFUMA/INGCEBO</Text>
+        <Text style={{ fontSize: 14, fontFamily: FONTS.extrabold, color: COLORS.textDark, marginBottom: 6 }}>You are a veterinary medicine & vaccine distributor</Text>
         <Text style={{ fontSize: 12, color: COLORS.mutedDark, lineHeight: 18, marginBottom: 10 }}>
-          Farmers across Zimbabwe register on PFUMA to manage herd health. When they run low on vaccines or medicines, they contact you through the platform. You fulfill the order and dispatch to the farm.
+          Farmers across Zimbabwe register on PFUMA/INGCEBO to manage herd health. When they run low on vaccines or medicines, they contact you through the platform. You fulfill the order and dispatch to the farm.
         </Text>
         <View style={s.flowRow}>
           <Sprout size={16} color={COLORS.gold} />
@@ -832,7 +843,7 @@ function BuyerDashboard({ currentUser, navigation }) {
     <ScrollView style={s.bg} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
 
       {/* Banner */}
-      <GradientBanner colors={ROLE_GRADIENT.Buyer}>
+      <GradientBanner role="Buyer" colors={ROLE_GRADIENT.Buyer}>
         <View style={s.bannerTopRow}>
           <View style={s.bannerIconBadge}>
             <Store size={22} color="#fff" />
@@ -868,10 +879,10 @@ function BuyerDashboard({ currentUser, navigation }) {
 
       {/* Role explanation */}
       <View style={s.panel}>
-        <Text style={{ fontSize: 10, fontWeight: '800', color: COLORS.purple, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Your Role on PFUMA</Text>
-        <Text style={{ fontSize: 14, fontWeight: '900', color: COLORS.textDark, marginBottom: 6 }}>You are a livestock buyer & trader</Text>
+        <Text style={{ fontSize: 10, fontFamily: FONTS.extrabold, color: COLORS.purple, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Your Role on PFUMA/INGCEBO</Text>
+        <Text style={{ fontSize: 14, fontFamily: FONTS.extrabold, color: COLORS.textDark, marginBottom: 6 }}>You are a livestock buyer & trader</Text>
         <Text style={{ fontSize: 12, color: COLORS.mutedDark, lineHeight: 18, marginBottom: 10 }}>
-          Farmers list their animals for sale on PFUMA. Each animal comes with a certified Health Passport. You place a bid, the farmer accepts, and a DVS Vet issues an official movement certificate so you can legally transport the animal.
+          Farmers list their animals for sale on PFUMA/INGCEBO. Each animal comes with a certified Health Passport. You place a bid, the farmer accepts, and a DVS Vet issues an official movement certificate so you can legally transport the animal.
         </Text>
         <View style={s.flowRow}>
           <Sprout size={16} color={COLORS.purple} />
@@ -905,7 +916,7 @@ function BuyerDashboard({ currentUser, navigation }) {
       {/* Listings */}
       <SectionLabel icon={ShoppingCart}>VERIFIED MARKETPLACE LISTINGS</SectionLabel>
       <View style={s.panel}>
-        <Text style={s.panelDesc}>All animals have a certified PFUMA Health Passport — safe to bid</Text>
+        <Text style={s.panelDesc}>All animals have a certified PFUMA/INGCEBO Health Passport — safe to bid</Text>
         {listings.length === 0 ? (
           <View style={s.emptyInner}>
             <ShoppingCart size={36} color={COLORS.purple} />
@@ -916,18 +927,18 @@ function BuyerDashboard({ currentUser, navigation }) {
           <View key={l.id} style={s.listingRow}>
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                <Text style={{ fontSize: 15, fontWeight: '900', color: COLORS.textDark }}>{l.product_name}</Text>
+                <Text style={{ fontSize: 15, fontFamily: FONTS.extrabold, color: COLORS.textDark }}>{l.product_name}</Text>
                 <Text style={s.certBadge}>Certified</Text>
               </View>
               <Text style={{ fontSize: 12, color: COLORS.mutedDark, marginBottom: 4 }}>{l.seller_name} · {l.location || l.seller_province}</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                 <ShieldCheck size={12} color={COLORS.mutedDark} />
-                <Text style={{ fontSize: 11, color: COLORS.mutedDark, fontWeight: '700' }}>Verified Health Passport</Text>
+                <Text style={{ fontSize: 11, color: COLORS.mutedDark, fontFamily: FONTS.bold }}>Verified Health Passport</Text>
               </View>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={{ fontSize: 10, color: COLORS.mutedDark, fontWeight: '700', textTransform: 'uppercase' }}>Asking Price</Text>
-              <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.purple }}>${Number(l.price).toLocaleString()}</Text>
+              <Text style={{ fontSize: 10, color: COLORS.mutedDark, fontFamily: FONTS.bold, textTransform: 'uppercase' }}>Asking Price</Text>
+              <Text style={{ fontSize: 18, fontFamily: FONTS.extrabold, color: COLORS.purple }}>${Number(l.price).toLocaleString()}</Text>
               <TouchableOpacity style={s.bidBtn} activeOpacity={0.8} onPress={() => navigation.navigate('Market')}>
                 <Text style={s.bidBtnText}>Bid on Market</Text>
               </TouchableOpacity>
@@ -939,7 +950,7 @@ function BuyerDashboard({ currentUser, navigation }) {
       {/* Livestock Price Trend */}
       <SectionLabel icon={TrendingUp}>LIVESTOCK PRICE TREND</SectionLabel>
       <View style={s.panel}>
-        <Text style={s.panelDesc}>Average price of livestock sales actually completed on PFUMA, last 6 months</Text>
+        <Text style={s.panelDesc}>Average price of livestock sales actually completed on PFUMA/INGCEBO, last 6 months</Text>
         {priceTrend.length === 0 ? (
           <View style={s.emptyInner}>
             <Text style={s.emptyInnerText}>No completed sales yet</Text>
@@ -959,12 +970,12 @@ function BuyerDashboard({ currentUser, navigation }) {
         ) : myBids.map(b => (
           <View key={b.id} style={s.bidRow}>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 13, fontWeight: '900', color: COLORS.textDark }}>{b.product_name}</Text>
-              <Text style={{ fontSize: 10, color: COLORS.mutedDark2, fontWeight: '700', textTransform: 'uppercase', marginTop: 2 }}>
+              <Text style={{ fontSize: 13, fontFamily: FONTS.extrabold, color: COLORS.textDark }}>{b.product_name}</Text>
+              <Text style={{ fontSize: 10, color: COLORS.mutedDark2, fontFamily: FONTS.bold, textTransform: 'uppercase', marginTop: 2 }}>
                 {b.status === 'accepted' ? 'Accepted ✓' : b.status === 'declined' ? 'Declined' : 'Pending'} · {new Date(b.created_at).toLocaleDateString()}
               </Text>
             </View>
-            <Text style={{ fontSize: 16, fontWeight: '900', color: COLORS.purple }}>${Number(b.amount).toLocaleString()}</Text>
+            <Text style={{ fontSize: 16, fontFamily: FONTS.extrabold, color: COLORS.purple }}>${Number(b.amount).toLocaleString()}</Text>
           </View>
         ))}
       </View>
@@ -973,7 +984,7 @@ function BuyerDashboard({ currentUser, navigation }) {
       <SectionLabel icon={ListChecks}>HOW TO BUY</SectionLabel>
       <View style={s.panel}>
         {[
-          { n: '1', t: 'Browse Listings',   d: 'All animals carry a certified PFUMA Health Passport' },
+          { n: '1', t: 'Browse Listings',   d: 'All animals carry a certified PFUMA/INGCEBO Health Passport' },
           { n: '2', t: 'Check the Passport',d: 'View vaccination history and breed details before bidding' },
           { n: '3', t: 'Place a Bid',        d: 'Your offer goes directly to the farmer via the platform' },
           { n: '4', t: 'Receive Certificate',d: 'DVS movement permit issued on confirmed sale' },
@@ -981,7 +992,7 @@ function BuyerDashboard({ currentUser, navigation }) {
           <View key={step.n} style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 14 }}>
             <View style={s.stepNum}><Text style={s.stepNumText}>{step.n}</Text></View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 13, fontWeight: '800', color: COLORS.textDark }}>{step.t}</Text>
+              <Text style={{ fontSize: 13, fontFamily: FONTS.extrabold, color: COLORS.textDark }}>{step.t}</Text>
               <Text style={{ fontSize: 11, color: COLORS.mutedDark, marginTop: 2 }}>{step.d}</Text>
             </View>
           </View>
@@ -1014,7 +1025,7 @@ export default function DashboardScreen({ currentUser, onLogout, navigation }) {
         <View style={s.logoRow}>
           <Image source={pfumaMark} style={s.logoBox} />
           <View>
-            <Text style={s.logoName}>PFUMA</Text>
+            <Text style={s.logoName}>PFUMA/INGCEBO</Text>
             <Text style={s.logoTagline}>Zimbabwe's Livestock Platform</Text>
           </View>
         </View>
@@ -1037,15 +1048,15 @@ export default function DashboardScreen({ currentUser, onLogout, navigation }) {
       {role === 'Admin' && (
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, backgroundColor: COLORS.bgDark }}>
           <ShieldCheck size={40} color={COLORS.mutedDark} />
-          <Text style={{ fontSize: 15, fontWeight: '800', color: COLORS.textDark, marginTop: 14, textAlign: 'center' }}>
+          <Text style={{ fontSize: 15, fontFamily: FONTS.extrabold, color: COLORS.textDark, marginTop: 14, textAlign: 'center' }}>
             Admin tools are web-only
           </Text>
           <Text style={{ fontSize: 12, color: COLORS.mutedDark, marginTop: 6, textAlign: 'center', lineHeight: 18 }}>
-            Platform moderation (users, listings, trends) lives in the PFUMA web app, not this mobile app.
+            Platform moderation (users, listings, trends) lives in the PFUMA/INGCEBO web app, not this mobile app.
           </Text>
           <TouchableOpacity onPress={onLogout} activeOpacity={0.8}
             style={{ marginTop: 20, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 12, backgroundColor: COLORS.cardDark }}>
-            <Text style={{ fontSize: 12, fontWeight: '800', color: COLORS.sprout }}>Sign Out</Text>
+            <Text style={{ fontSize: 12, fontFamily: FONTS.extrabold, color: COLORS.sprout }}>Sign Out</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -1061,69 +1072,69 @@ const s = StyleSheet.create({
   logoBox:         { width: 38, height: 38, borderRadius: 12 },
   logoName:        { color: '#fff', fontSize: 14, fontFamily: FONTS.extrabold },
   logoTagline:     { color: 'rgba(255,255,255,0.65)', fontSize: 9, fontFamily: FONTS.semibold },
-  userName:        { color: '#fff', fontSize: 13, fontWeight: '800', maxWidth: 120 },
-  userRole:        { color: '#C99A4A', fontSize: 9, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
+  userName:        { color: '#fff', fontSize: 13, fontFamily: FONTS.extrabold, maxWidth: 120 },
+  userRole:        { color: '#C99A4A', fontSize: 9, fontFamily: FONTS.extrabold, textTransform: 'uppercase', letterSpacing: 1 },
 
-  banner:          { borderRadius: 24, padding: 20, marginBottom: 16, overflow: 'hidden' },
-  bannerGlow1:     { position: 'absolute', width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255,255,255,0.08)', top: -60, right: -40 },
-  bannerGlow2:     { position: 'absolute', width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.06)', bottom: -30, left: -20 },
+  banner:          { borderRadius: 24, marginBottom: 16, overflow: 'hidden' },
+  bannerImage:     { borderRadius: 24 },
+  bannerScrim:     { padding: 20, minHeight: 190, justifyContent: 'flex-end' },
   bannerTopRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
   bannerIconBadge: { width: 44, height: 44, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
-  bannerEyebrow:   { color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 },
-  bannerTitle:     { color: '#fff', fontSize: 22, fontWeight: '900', marginBottom: 4 },
-  bannerSub:       { color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: '600' },
+  bannerEyebrow:   { color: 'rgba(255,255,255,0.7)', fontSize: 10, fontFamily: FONTS.extrabold, textTransform: 'uppercase', letterSpacing: 2, marginBottom: 4 },
+  bannerTitle:     { color: '#fff', fontSize: 22, fontFamily: FONTS.extrabold, marginBottom: 4 },
+  bannerSub:       { color: 'rgba(255,255,255,0.7)', fontSize: 12, fontFamily: FONTS.semibold },
   bannerAlert:     { backgroundColor: 'rgba(220,38,38,0.3)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 7, alignSelf: 'flex-start' },
   bannerAlertRow:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  bannerAlertText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  bannerAlertText: { color: '#fff', fontSize: 12, fontFamily: FONTS.extrabold },
 
   kpiRow:          { flexDirection: 'row', gap: 10, marginBottom: 10 },
   kpiCard:         { flex: 1, backgroundColor: COLORS.cardDark, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: COLORS.borderDark },
   kpiHeaderRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 },
-  kpiLabel:        { flex: 1, fontSize: 9, fontWeight: '800', color: COLORS.mutedDark, textTransform: 'uppercase', letterSpacing: 0.5 },
+  kpiLabel:        { flex: 1, fontSize: 9, fontFamily: FONTS.extrabold, color: COLORS.mutedDark, textTransform: 'uppercase', letterSpacing: 0.5 },
   kpiIconBadge:    { width: 24, height: 24, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginLeft: 6 },
-  kpiValue:        { fontSize: 26, fontWeight: '900', color: COLORS.textDark, marginBottom: 4 },
-  kpiSub:          { fontSize: 10, fontWeight: '500', color: COLORS.mutedDark, lineHeight: 14 },
+  kpiValue:        { fontSize: 26, fontFamily: FONTS.extrabold, color: COLORS.textDark, marginBottom: 4 },
+  kpiSub:          { fontSize: 10, fontFamily: FONTS.semibold, color: COLORS.mutedDark, lineHeight: 14 },
 
   sectionLabelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, marginTop: 8 },
   sectionLabelLeft:{ flexDirection: 'row', alignItems: 'center', gap: 6 },
-  sectionLabel:    { fontSize: 9, fontWeight: '800', color: COLORS.mutedDark, textTransform: 'uppercase', letterSpacing: 1 },
+  sectionLabel:    { fontSize: 9, fontFamily: FONTS.extrabold, color: COLORS.mutedDark, textTransform: 'uppercase', letterSpacing: 1 },
   panel:           { backgroundColor: COLORS.cardDark, borderRadius: 16, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: COLORS.borderDark },
   panelDesc:       { fontSize: 12, color: COLORS.mutedDark, marginBottom: 12, lineHeight: 18 },
 
   emptyInner:      { alignItems: 'center', paddingVertical: 24 },
-  emptyInnerText:  { fontSize: 13, fontWeight: '700', color: '#968C82', marginTop: 8, textAlign: 'center' },
+  emptyInnerText:  { fontSize: 13, fontFamily: FONTS.bold, color: '#968C82', marginTop: 8, textAlign: 'center' },
 
   priorityRow:        { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: COLORS.borderDark, gap: 12 },
   priorityIconBadge:  { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  priorityTitle:      { fontSize: 12, fontWeight: '800', color: COLORS.textDark },
+  priorityTitle:      { fontSize: 12, fontFamily: FONTS.extrabold, color: COLORS.textDark },
   prioritySub:        { fontSize: 11, color: COLORS.mutedDark, marginTop: 2 },
   priorityTag:        { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  priorityTagText:    { fontSize: 9, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.3 },
+  priorityTagText:    { fontSize: 9, fontFamily: FONTS.extrabold, textTransform: 'uppercase', letterSpacing: 0.3 },
   priorityCountBadge: { minWidth: 20, height: 20, borderRadius: 10, backgroundColor: '#B5342C', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
-  priorityCountText:  { fontSize: 10, fontWeight: '900', color: '#fff' },
+  priorityCountText:  { fontSize: 10, fontFamily: FONTS.extrabold, color: '#fff' },
 
   alertCard:       { flexDirection: 'row', borderRadius: 12, padding: 12, marginBottom: 10, borderLeftWidth: 3, gap: 10 },
   alertCritical:   { backgroundColor: 'rgba(239,68,68,0.1)', borderLeftColor: '#B5342C' },
   alertInfo:       { backgroundColor: 'rgba(59,130,246,0.1)', borderLeftColor: '#4F6A82' },
   alertDot:        { width: 10, height: 10, borderRadius: 5, marginTop: 3, flexShrink: 0 },
-  alertTitle:      { fontSize: 12, fontWeight: '800', color: COLORS.textDark },
+  alertTitle:      { fontSize: 12, fontFamily: FONTS.extrabold, color: COLORS.textDark },
   alertMsg:        { fontSize: 11, color: COLORS.mutedDark, marginTop: 2 },
-  alertTime:       { fontSize: 10, fontWeight: '700', color: COLORS.mutedDark2, textTransform: 'uppercase', marginTop: 4 },
+  alertTime:       { fontSize: 10, fontFamily: FONTS.bold, color: COLORS.mutedDark2, textTransform: 'uppercase', marginTop: 4 },
 
   animalRow:       { flexDirection: 'row', alignItems: 'center', borderRadius: 12, padding: 12, marginBottom: 10, backgroundColor: COLORS.cardDark2, borderWidth: 1.5, borderColor: COLORS.borderDark },
   animalRowActive: { backgroundColor: 'rgba(251,192,45,0.1)', borderColor: 'rgba(251,192,45,0.4)' },
-  animalName:      { fontSize: 14, fontWeight: '900', color: COLORS.textDark },
+  animalName:      { fontSize: 14, fontFamily: FONTS.extrabold, color: COLORS.textDark },
   animalSub:       { fontSize: 11, color: COLORS.mutedDark, marginTop: 2 },
   animalListedRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
-  animalListed:    { fontSize: 10, fontWeight: '800', color: '#C99A4A' },
+  animalListed:    { fontSize: 10, fontFamily: FONTS.extrabold, color: '#C99A4A' },
   listBtn:         { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, borderWidth: 1.5, borderColor: COLORS.primary },
   listBtnActive:   { backgroundColor: '#C99A4A', borderColor: '#C99A4A' },
-  listBtnText:     { fontSize: 11, fontWeight: '800', color: COLORS.sprout },
+  listBtnText:     { fontSize: 11, fontFamily: FONTS.extrabold, color: COLORS.sprout },
   listBtnTextActive: { color: '#29231E' },
 
   medicineRow:     { backgroundColor: COLORS.cardDark2, borderRadius: 12, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: COLORS.borderDark },
-  medicineName:    { fontSize: 12, fontWeight: '800', color: COLORS.textDark },
-  medicineLow:     { fontSize: 10, fontWeight: '800', color: '#C75B50' },
+  medicineName:    { fontSize: 12, fontFamily: FONTS.extrabold, color: COLORS.textDark },
+  medicineLow:     { fontSize: 10, fontFamily: FONTS.extrabold, color: '#C75B50' },
   medicineDetail:  { fontSize: 10, color: COLORS.mutedDark, marginBottom: 8 },
   progressBar:     { height: 5, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden' },
   progressFill:    { height: '100%', borderRadius: 99 },
@@ -1132,67 +1143,67 @@ const s = StyleSheet.create({
 
   farmRow:         { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#3B342D', gap: 12 },
   farmAvatar:      { width: 40, height: 40, backgroundColor: '#554D45', borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  farmAvatarText:  { color: '#A8B78C', fontSize: 16, fontWeight: '900' },
-  farmName:        { fontSize: 13, fontWeight: '900' },
+  farmAvatarText:  { color: '#A8B78C', fontSize: 16, fontFamily: FONTS.extrabold },
+  farmName:        { fontSize: 13, fontFamily: FONTS.extrabold },
   farmSub:         { fontSize: 10, marginTop: 2 },
-  farmAlertBadge:  { backgroundColor: 'rgba(220,38,38,0.2)', color: '#C75B50', fontSize: 9, fontWeight: '800', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20, textTransform: 'uppercase' },
-  statusBadge:     { fontSize: 9, fontWeight: '800', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, textTransform: 'uppercase', overflow: 'hidden' },
+  farmAlertBadge:  { backgroundColor: 'rgba(220,38,38,0.2)', color: '#C75B50', fontSize: 9, fontFamily: FONTS.extrabold, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20, textTransform: 'uppercase' },
+  statusBadge:     { fontSize: 9, fontFamily: FONTS.extrabold, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, textTransform: 'uppercase', overflow: 'hidden' },
   statusVerified:  { backgroundColor: 'rgba(134,239,172,0.15)', color: '#8A9C68' },
   statusPending:   { backgroundColor: 'rgba(251,146,60,0.15)',  color: '#C87B3F' },
 
   orderRow:        { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 14, marginBottom: 10, backgroundColor: COLORS.cardDark2, borderWidth: 1.5, borderColor: COLORS.borderDark },
   orderIconWrap:   { width: 40, height: 40, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-  orderFarm:       { fontSize: 13, fontWeight: '800', color: COLORS.textDark },
+  orderFarm:       { fontSize: 13, fontFamily: FONTS.extrabold, color: COLORS.textDark },
   orderDetail:     { fontSize: 11, color: COLORS.mutedDark, marginTop: 2 },
-  urgentBadge:     { fontSize: 9, fontWeight: '800', color: '#8C632A', backgroundColor: COLORS.goldBg, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20, textTransform: 'uppercase', overflow: 'hidden' },
-  orderStatus:     { fontSize: 10, fontWeight: '800', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, textTransform: 'uppercase', overflow: 'hidden' },
+  urgentBadge:     { fontSize: 9, fontFamily: FONTS.extrabold, color: '#8C632A', backgroundColor: COLORS.goldBg, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20, textTransform: 'uppercase', overflow: 'hidden' },
+  orderStatus:     { fontSize: 10, fontFamily: FONTS.extrabold, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, textTransform: 'uppercase', overflow: 'hidden' },
   orderActionBtn:     { marginLeft: 8, backgroundColor: '#41586C', paddingHorizontal: 10, paddingVertical: 7, borderRadius: 10 },
-  orderActionBtnText: { color: '#fff', fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
+  orderActionBtnText: { color: '#fff', fontSize: 10, fontFamily: FONTS.extrabold, textTransform: 'uppercase' },
 
   listingRow:      { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 14, marginBottom: 12, backgroundColor: COLORS.cardDark2, borderWidth: 1.5, borderColor: COLORS.borderDark, gap: 10 },
-  certBadge:       { fontSize: 9, fontWeight: '800', backgroundColor: COLORS.gold, color: '#fff', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20, overflow: 'hidden' },
+  certBadge:       { fontSize: 9, fontFamily: FONTS.extrabold, backgroundColor: COLORS.gold, color: '#fff', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20, overflow: 'hidden' },
   bidBtn:          { marginTop: 8, backgroundColor: COLORS.purple, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
-  bidBtnText:      { color: '#fff', fontSize: 11, fontWeight: '800' },
+  bidBtnText:      { color: '#fff', fontSize: 11, fontFamily: FONTS.extrabold },
 
   bidRow:          { flexDirection: 'row', alignItems: 'center', padding: 12, backgroundColor: 'rgba(124,58,237,0.1)', borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(124,58,237,0.25)' },
 
   stepNum:         { width: 22, height: 22, backgroundColor: COLORS.purple, borderRadius: 11, alignItems: 'center', justifyContent: 'center', marginRight: 12, marginTop: 2 },
-  stepNumText:     { color: '#fff', fontSize: 10, fontWeight: '900' },
+  stepNumText:     { color: '#fff', fontSize: 10, fontFamily: FONTS.extrabold },
 
   primaryBtn:      { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, borderRadius: 16, paddingVertical: 16, elevation: 4, marginBottom: 16 },
-  primaryBtnText:  { color: '#fff', fontWeight: '900', fontSize: 15 },
+  primaryBtnText:  { color: '#fff', fontFamily: FONTS.extrabold, fontSize: 15 },
 
   miniChart:       { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', height: 80, marginTop: 6, gap: 6 },
   miniChartCol:    { flex: 1, alignItems: 'center', height: '100%', justifyContent: 'flex-end' },
   miniChartTrack:  { width: '100%', flex: 1, justifyContent: 'flex-end', borderRadius: 6, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.06)' },
   miniChartBar:    { width: '100%', borderRadius: 6 },
-  miniChartLabel:  { fontSize: 8, fontWeight: '800', color: COLORS.mutedDark, marginTop: 4, textTransform: 'uppercase' },
+  miniChartLabel:  { fontSize: 8, fontFamily: FONTS.extrabold, color: COLORS.mutedDark, marginTop: 4, textTransform: 'uppercase' },
 
   // Stakeholder map
   smCard:          { backgroundColor: COLORS.cardDark, borderRadius: 16, padding: 16, marginTop: 8, borderWidth: 1, borderColor: COLORS.borderDark, marginBottom: 8 },
   smTitleRow:      { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  smTitle:         { fontSize: 13, fontWeight: '900', color: COLORS.textDark },
+  smTitle:         { fontSize: 13, fontFamily: FONTS.extrabold, color: COLORS.textDark },
   smDesc:          { fontSize: 11, color: COLORS.mutedDark, marginBottom: 14, lineHeight: 16 },
   smRow:           { flexDirection: 'row', alignItems: 'flex-start', borderRadius: 12, padding: 12, marginBottom: 8 },
   smRowIcon:       { width: 22, marginRight: 10, alignItems: 'center' },
-  smRoleName:      { fontSize: 11, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
+  smRoleName:      { fontSize: 11, fontFamily: FONTS.extrabold, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
   smRoleDesc:      { fontSize: 10, color: 'rgba(0,0,0,0.55)', lineHeight: 14 },
   smFlow:          { backgroundColor: COLORS.cardDark2, borderRadius: 12, padding: 12, marginTop: 4 },
-  smFlowTitle:     { fontSize: 9, fontWeight: '900', color: COLORS.mutedDark, letterSpacing: 1, marginBottom: 8 },
+  smFlowTitle:     { fontSize: 9, fontFamily: FONTS.extrabold, color: COLORS.mutedDark, letterSpacing: 1, marginBottom: 8 },
   smFlowRow:       { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4, marginBottom: 6 },
-  smFlowName:      { fontSize: 11, fontWeight: '900', color: COLORS.textDark },
-  smFlowDesc:      { fontSize: 11, color: COLORS.mutedDark, fontWeight: '500' },
+  smFlowName:      { fontSize: 11, fontFamily: FONTS.extrabold, color: COLORS.textDark },
+  smFlowDesc:      { fontSize: 11, color: COLORS.mutedDark, fontFamily: FONTS.semibold },
 
   // Inline flow rows (Supplier/Buyer "how it works")
   flowRow:         { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
-  flowText:        { fontSize: 12, color: COLORS.mutedDark, fontWeight: '500' },
+  flowText:        { fontSize: 12, color: COLORS.mutedDark, fontFamily: FONTS.semibold },
 
   // Farmers Near You (peer community row)
   peerRow:         { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: COLORS.borderDark, gap: 12 },
   peerAvatar:      { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', position: 'relative' },
-  peerAvatarText:  { color: '#fff', fontSize: 13, fontWeight: '900' },
+  peerAvatarText:  { color: '#fff', fontSize: 13, fontFamily: FONTS.extrabold },
   peerDot:         { position: 'absolute', bottom: -2, right: -2, width: 11, height: 11, borderRadius: 6, borderWidth: 2, borderColor: COLORS.cardDark },
-  peerName:        { fontSize: 13, fontWeight: '800', color: COLORS.textDark },
+  peerName:        { fontSize: 13, fontFamily: FONTS.extrabold, color: COLORS.textDark },
   peerSub:         { fontSize: 11, color: COLORS.mutedDark, marginTop: 1 },
   peerMsgBtn:      { width: 34, height: 34, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.06)', alignItems: 'center', justifyContent: 'center' },
 
@@ -1200,23 +1211,23 @@ const s = StyleSheet.create({
   // and 2x3 colored action grid — matches the web app's mobile dashboard.
   darkHeaderRow:   { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
   darkAvatar:      { width: 44, height: 44, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  darkAvatarText:  { color: '#fff', fontSize: 14, fontWeight: '900' },
-  darkGreetLabel:  { color: COLORS.mutedDark, fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1.5 },
-  darkGreetName:   { color: COLORS.textDark, fontSize: 16, fontWeight: '900', marginTop: 2 },
+  darkAvatarText:  { color: '#fff', fontSize: 14, fontFamily: FONTS.extrabold },
+  darkGreetLabel:  { color: COLORS.mutedDark, fontSize: 10, fontFamily: FONTS.extrabold, textTransform: 'uppercase', letterSpacing: 1.5 },
+  darkGreetName:   { color: COLORS.textDark, fontSize: 16, fontFamily: FONTS.extrabold, marginTop: 2 },
 
   pillBar:         { flexDirection: 'row', borderRadius: 16, padding: 6, marginBottom: 16 },
   pillBtn:         { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12 },
-  pillBtnText:     { color: 'rgba(255,255,255,0.9)', fontSize: 11, fontWeight: '800' },
+  pillBtnText:     { color: 'rgba(255,255,255,0.9)', fontSize: 11, fontFamily: FONTS.extrabold },
 
   tipCard:         { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: COLORS.cardDark, borderRadius: 16, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: COLORS.borderDark },
   tipIconBadge:    { width: 32, height: 32, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  tipTitle:        { color: COLORS.textDark, fontSize: 12, fontWeight: '900' },
-  tipSub:          { color: COLORS.mutedDark, fontSize: 10, fontWeight: '600', marginTop: 1 },
+  tipTitle:        { color: COLORS.textDark, fontSize: 12, fontFamily: FONTS.extrabold },
+  tipSub:          { color: COLORS.mutedDark, fontSize: 10, fontFamily: FONTS.semibold, marginTop: 1 },
 
-  actionGrid:      { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 8 },
-  actionTile:      { width: '31%', backgroundColor: COLORS.cardDark, borderRadius: 16, borderWidth: 1, borderColor: COLORS.borderDark, paddingVertical: 14, alignItems: 'center', gap: 8 },
-  actionTileIcon:  { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  actionTileLabel: { color: 'rgba(255,255,255,0.75)', fontSize: 9, fontWeight: '700', textAlign: 'center' },
+  actionGrid:      { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 8 },
+  actionTile:      { width: '47%', backgroundColor: COLORS.cardDark, borderRadius: 20, borderWidth: 1, borderColor: COLORS.borderDark, paddingVertical: 20, alignItems: 'center', gap: 10 },
+  actionTileIcon:  { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  actionTileLabel: { color: 'rgba(255,255,255,0.92)', fontSize: 12, fontFamily: FONTS.extrabold, textAlign: 'center' },
   actionTileBadge: { position: 'absolute', top: 6, right: 6, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: '#B5342C', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
-  actionTileBadgeText: { color: '#fff', fontSize: 8, fontWeight: '900' },
+  actionTileBadgeText: { color: '#fff', fontSize: 8, fontFamily: FONTS.extrabold },
 });

@@ -1,5 +1,5 @@
 <meta charset="UTF-8">
-<title>PFUMA IoT Hardware — Board &amp; Enclosure Concepts</title>
+<title>PFUMA/INGCEBO IoT Hardware — Board &amp; Enclosure Concepts</title>
 <style>
 @font-face{
   font-family:'Jakarta';
@@ -254,7 +254,7 @@ footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);color:v
     <p>For the real thing: the <code>.pdsprj</code> files in <code>hardware/</code> are genuine Proteus projects — Proteus 8's 3D Visualization mode will render the actual populated board once the schematic is captured there. For the enclosure, this concept is a starting brief for whoever does the STEP/STL model, not a replacement for one.</p>
   </div>
 
-  <footer>PFUMA IoT — Zimbabwe Agricultural Show · concept view generated from hardware/HARDWARE_DESIGN.md</footer>
+  <footer>PFUMA/INGCEBO IoT — Zimbabwe Agricultural Show · concept view generated from hardware/HARDWARE_DESIGN.md</footer>
 </div>
 
 <script>
@@ -520,8 +520,8 @@ footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);color:v
     drawBlock(svg, P, {x0:10,x1:68,z0:9,z1:41,yB:20,yT:21.4, color:'#1c3b63', label:'Solar Panel', sub:'top face, flush-mounted', leader:[-4,-52]});
     drawGridLines(svg, P, {x0:10,x1:68,z0:9,z1:41,y:21.4,cols:6,rows:4,color:'#0a1c33'});
 
-    // PFUMA wordmark plate on front face (approx, as a small light block)
-    drawBlock(svg, P, {x0:26,x1:54,z0:46,z1:46.6,yB:9,yT:13, color:green, label:'PFUMA', sub:'brand plate, front face', leader:[54,10]});
+    // PFUMA/INGCEBO wordmark plate on front face (approx, as a small light block)
+    drawBlock(svg, P, {x0:26,x1:54,z0:46,z1:46.6,yB:9,yT:13, color:green, label:'PFUMA/INGCEBO', sub:'brand plate, front face', leader:[54,10]});
 
     // status LED
     drawBlock(svg, P, {x0:60,x1:62,z0:46,z1:46.6,yB:15,yT:16.4, color:'#38d17a'});
@@ -574,8 +574,8 @@ footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);color:v
     t4.textContent = 'PWR / LoRa / WiFi / Alert';
     svg.appendChild(t4);
 
-    // PFUMA wordmark
-    drawBlock(svg, P, {x0:70,x1:92,z0:66,z1:66.6,yB:23,yT:27, color:green, label:'PFUMA', sub:'brand plate', leader:[40,-30]});
+    // PFUMA/INGCEBO wordmark
+    drawBlock(svg, P, {x0:70,x1:92,z0:66,z1:66.6,yB:23,yT:27, color:green, label:'PFUMA/INGCEBO', sub:'brand plate', leader:[40,-30]});
 
     // antenna through top
     drawAntenna(svg, P, 80, 40, 30, 26, '#1a1a1a');

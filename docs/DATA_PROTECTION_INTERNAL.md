@@ -1,6 +1,6 @@
-# PFUMA — Internal Data Protection & Security Record
+# PFUMA/INGCEBO — Internal Data Protection & Security Record
 
-**Audience:** PFUMA team only. This is the operational backing document
+**Audience:** PFUMA/INGCEBO team only. This is the operational backing document
 for `PRIVACY_POLICY.md` — it records *how* we actually implement the
 commitments made there, so the team has one place to check before making
 changes that touch personal data, and one place to hand an auditor,

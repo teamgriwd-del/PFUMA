@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "PFUMA",
+    "name": "PFUMA/INGCEBO",
     "slug": "pfuma",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,7 +9,7 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "PFUMA needs access to your photos so you can attach a real photo of an animal or listing."
+        "NSPhotoLibraryUsageDescription": "PFUMA/INGCEBO needs access to your photos so you can attach a real photo of an animal or listing."
       }
     },
     "android": {
@@ -33,7 +33,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "PFUMA needs access to your photos so you can attach a real photo of an animal or listing."
+          "photosPermission": "PFUMA/INGCEBO needs access to your photos so you can attach a real photo of an animal or listing."
         }
       ],
       "expo-font",

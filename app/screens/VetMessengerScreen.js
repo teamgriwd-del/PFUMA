@@ -10,7 +10,7 @@ import {
   Send, MapPin, ShieldCheck, ClipboardList, MessageSquare, FileText, CheckCircle,
   Siren, Stethoscope, Pill, Sprout, Store, Users, ArrowLeft, Phone, Paperclip, X, Mail,
 } from 'lucide-react-native';
-import { COLORS, API } from '../config';
+import { COLORS, API, FONTS } from '../config';
 import { authFetch, authJson, assetToFormFile } from '../api';
 
 const ROLE_META = {
@@ -231,8 +231,8 @@ export default function VetMessengerScreen({ currentUser, route }) {
 
         {/* Header */}
         <View style={s.header}>
-          <Text style={s.headerSub}>PFUMA</Text>
-          <Text style={s.headerTitle}>PFUMA Messenger</Text>
+          <Text style={s.headerSub}>PFUMA/INGCEBO</Text>
+          <Text style={s.headerTitle}>PFUMA/INGCEBO Messenger</Text>
           <Text style={s.headerDesc}>Chat with vets, suppliers, farmers & buyers across Zimbabwe</Text>
         </View>
 
@@ -280,7 +280,7 @@ export default function VetMessengerScreen({ currentUser, route }) {
             <ActivityIndicator color={COLORS.primary} style={{ marginVertical: 24 }} />
           ) : directory.length === 0 ? (
             <Text style={{ color: COLORS.muted, fontStyle: 'italic', textAlign: 'center', paddingVertical: 24 }}>
-              No other verified PFUMA users found yet.
+              No other verified PFUMA/INGCEBO users found yet.
             </Text>
           ) : groups.map(g => g.contacts.length === 0 ? null : (
             <View key={g.type}>
@@ -298,7 +298,7 @@ export default function VetMessengerScreen({ currentUser, route }) {
           <View style={s.infoPanel}>
             <View style={s.infoTitleRow}>
               <ShieldCheck size={15} color={COLORS.primary} />
-              <Text style={s.infoTitle}>How PFUMA Messenger Works</Text>
+              <Text style={s.infoTitle}>How PFUMA/INGCEBO Messenger Works</Text>
             </View>
             {[
               { icon: ClipboardList, text: 'Pick anyone on the platform — a vet, supplier, fellow farmer, or buyer' },
@@ -384,7 +384,7 @@ export default function VetMessengerScreen({ currentUser, route }) {
               <View style={[s.msgAvatar, { backgroundColor: selectedContact.color }]}>
                 {selectedContact.icon
                   ? <selectedContact.icon size={13} color="#fff" />
-                  : <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>{selectedContact.avatar}</Text>}
+                  : <Text style={{ color: '#fff', fontSize: 10, fontFamily: FONTS.extrabold }}>{selectedContact.avatar}</Text>}
               </View>
             )}
             <View style={[s.bubble, msg.from === 'me' ? s.bubbleUser : s.bubbleVet]}>
@@ -499,53 +499,53 @@ export default function VetMessengerScreen({ currentUser, route }) {
 
 const s = StyleSheet.create({
   header:          { backgroundColor: COLORS.primary, padding: 24, paddingTop: 56 },
-  headerSub:       { color: '#DEC9AE', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
-  headerTitle:     { color: '#fff', fontSize: 24, fontWeight: '900', marginTop: 2 },
-  headerDesc:      { color: '#DEC9AE', fontSize: 12, fontWeight: '600', marginTop: 2 },
+  headerSub:       { color: '#DEC9AE', fontSize: 10, fontFamily: FONTS.bold, textTransform: 'uppercase', letterSpacing: 1 },
+  headerTitle:     { color: '#fff', fontSize: 24, fontFamily: FONTS.extrabold, marginTop: 2 },
+  headerDesc:      { color: '#DEC9AE', fontSize: 12, fontFamily: FONTS.semibold, marginTop: 2 },
 
   filterRow:       { backgroundColor: '#fff', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#EFE8DD' },
   filterChip:      { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: '#E0D6C7', backgroundColor: '#F7F3ED' },
-  filterChipText:  { fontSize: 11, fontWeight: '800', color: '#7C7268' },
+  filterChipText:  { fontSize: 11, fontFamily: FONTS.extrabold, color: '#7C7268' },
 
   sectionLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, marginTop: 16 },
-  sectionLabel:    { fontSize: 9, fontWeight: '800', color: '#968C82', textTransform: 'uppercase', letterSpacing: 1 },
+  sectionLabel:    { fontSize: 9, fontFamily: FONTS.extrabold, color: '#968C82', textTransform: 'uppercase', letterSpacing: 1 },
 
   emergencyBanner: { backgroundColor: '#FBEEEC', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: '#DA8279', marginBottom: 8 },
   emergencyIconWrap: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#F6D9D5', alignItems: 'center', justifyContent: 'center' },
-  emergencyTitle:  { fontSize: 13, fontWeight: '900', color: '#5C1915', marginBottom: 4 },
+  emergencyTitle:  { fontSize: 13, fontFamily: FONTS.extrabold, color: '#5C1915', marginBottom: 4 },
   emergencyDesc:   { fontSize: 11, color: '#7C221C', lineHeight: 16 },
   callBtn:         { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#B5342C', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
-  callBtnText:     { color: '#fff', fontSize: 12, fontWeight: '800' },
+  callBtnText:     { color: '#fff', fontSize: 12, fontFamily: FONTS.extrabold },
 
   vetCard:         { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 10, flexDirection: 'row', alignItems: 'center', elevation: 2 },
   avatar:          { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginRight: 14, position: 'relative' },
-  avatarText:      { color: '#fff', fontSize: 16, fontWeight: '900' },
+  avatarText:      { color: '#fff', fontSize: 16, fontFamily: FONTS.extrabold },
   onlineDot:       { position: 'absolute', bottom: -2, right: -2, width: 13, height: 13, borderRadius: 7, borderWidth: 2, borderColor: '#fff' },
-  vetName:         { fontSize: 14, fontWeight: '900', color: '#29231E' },
+  vetName:         { fontSize: 14, fontFamily: FONTS.extrabold, color: '#29231E' },
   typeBadge:       { width: 16, height: 16, borderRadius: 5, alignItems: 'center', justifyContent: 'center' },
-  vetRole:         { fontSize: 11, color: '#7C7268', fontWeight: '600' },
+  vetRole:         { fontSize: 11, color: '#7C7268', fontFamily: FONTS.semibold },
   vetProvinceRow:  { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
   vetProvince:     { fontSize: 10, color: '#968C82' },
 
   infoPanel:       { backgroundColor: '#F0E6D9', borderRadius: 16, padding: 16, marginTop: 16 },
   infoTitleRow:    { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12 },
-  infoTitle:       { fontSize: 13, fontWeight: '900', color: COLORS.primary },
+  infoTitle:       { fontSize: 13, fontFamily: FONTS.extrabold, color: COLORS.primary },
   infoLineRow:     { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 8 },
-  infoLine:        { flex: 1, fontSize: 12, color: '#A6763C', lineHeight: 18, fontWeight: '500' },
+  infoLine:        { flex: 1, fontSize: 12, color: '#A6763C', lineHeight: 18, fontFamily: FONTS.semibold },
 
   chatHeader:      { flexDirection: 'row', alignItems: 'center', padding: 14, paddingTop: 6 },
   backBtn:         { width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginRight: 8 },
   avatarSm:        { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
-  chatName:        { color: '#fff', fontSize: 15, fontWeight: '900' },
+  chatName:        { color: '#fff', fontSize: 15, fontFamily: FONTS.extrabold },
   statusDot:       { width: 6, height: 6, borderRadius: 3 },
-  errorBanner:     { backgroundColor: '#FBEEEC', color: COLORS.danger, fontSize: 12, fontWeight: '700', padding: 10, textAlign: 'center' },
-  chatStatus:      { color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '600' },
+  errorBanner:     { backgroundColor: '#FBEEEC', color: COLORS.danger, fontSize: 12, fontFamily: FONTS.bold, padding: 10, textAlign: 'center' },
+  chatStatus:      { color: 'rgba(255,255,255,0.7)', fontSize: 11, fontFamily: FONTS.semibold },
 
   catRow:          { backgroundColor: '#fff', paddingHorizontal: 14, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#EFE8DD' },
   catChip:         { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1.5, borderColor: '#E0D6C7', backgroundColor: '#F7F3ED' },
-  catChipText:     { fontSize: 12, fontWeight: '700', color: '#7C7268' },
+  catChipText:     { fontSize: 12, fontFamily: FONTS.bold, color: '#7C7268' },
   typeChip:        { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, alignSelf: 'flex-start' },
-  typeChipText:    { fontSize: 12, fontWeight: '800' },
+  typeChipText:    { fontSize: 12, fontFamily: FONTS.extrabold },
 
   msgRow:          { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 12 },
   msgRowUser:      { flexDirection: 'row-reverse' },
@@ -563,18 +563,18 @@ const s = StyleSheet.create({
 
   attachmentImg:   { width: 200, height: 150, borderRadius: 12, marginBottom: 6 },
   attachmentFile:  { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#EFE8DD', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 6 },
-  attachmentFileName: { fontSize: 12, fontWeight: '700', color: '#554D45', maxWidth: 160 },
+  attachmentFileName: { fontSize: 12, fontFamily: FONTS.bold, color: '#554D45', maxWidth: 160 },
 
   attachPreviewRow:  { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fff', paddingHorizontal: 14, paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#E0D6C7' },
   attachPreviewImg:  { width: 36, height: 36, borderRadius: 8 },
-  attachPreviewName: { flex: 1, fontSize: 12, fontWeight: '700', color: '#554D45' },
+  attachPreviewName: { flex: 1, fontSize: 12, fontFamily: FONTS.bold, color: '#554D45' },
 
   modalOverlay:    { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 24 },
   contactSheet:    { backgroundColor: '#fff', borderRadius: 24, padding: 24, width: '100%', maxWidth: 340 },
-  contactName:     { fontSize: 17, fontWeight: '900', color: '#29231E', textAlign: 'center' },
-  contactRole:     { fontSize: 12, fontWeight: '700', color: '#968C82', textAlign: 'center', marginTop: 2, marginBottom: 16, textTransform: 'uppercase', letterSpacing: 0.5 },
+  contactName:     { fontSize: 17, fontFamily: FONTS.extrabold, color: '#29231E', textAlign: 'center' },
+  contactRole:     { fontSize: 12, fontFamily: FONTS.bold, color: '#968C82', textAlign: 'center', marginTop: 2, marginBottom: 16, textTransform: 'uppercase', letterSpacing: 0.5 },
   contactRow:      { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F7F3ED', borderRadius: 12, padding: 12, marginBottom: 8 },
-  contactRowText:  { fontSize: 13, fontWeight: '700', color: '#29231E', flex: 1 },
+  contactRowText:  { fontSize: 13, fontFamily: FONTS.bold, color: '#29231E', flex: 1 },
   contactCloseBtn: { backgroundColor: '#EFE8DD', borderRadius: 14, paddingVertical: 12, alignItems: 'center', marginTop: 8 },
-  contactCloseText:{ fontSize: 12, fontWeight: '800', color: '#7C7268', textTransform: 'uppercase', letterSpacing: 0.5 },
+  contactCloseText:{ fontSize: 12, fontFamily: FONTS.extrabold, color: '#7C7268', textTransform: 'uppercase', letterSpacing: 0.5 },
 });

@@ -78,7 +78,7 @@ const LifecycleTimeline = ({ animalId, currentUser }) => {
         if (!res.ok) setError(body.error || 'Could not load this animal\'s record.');
         else setData(body);
       } catch {
-        if (!cancelled) setError('Could not reach the PFUMA API — the lifecycle record is held on the server.');
+        if (!cancelled) setError('Could not reach the PFUMA/INGCEBO API — the lifecycle record is held on the server.');
       }
       if (!cancelled) setLoading(false);
     })();

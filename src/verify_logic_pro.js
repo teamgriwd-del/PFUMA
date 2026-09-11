@@ -1,10 +1,10 @@
-// PFUMA Pro Logic Verification Suite
+// PFUMA/INGCEBO Pro Logic Verification Suite
 // This suite tests high-confidence features like weighted scoring, noise filtering, and edge cases.
 
 import { diseaseDatabase } from './components/DiseaseDetection/diseaseData.js';
 import { HEALTH_PROTOCOLS } from './components/HealthManagement/healthData.js';
 
-console.log("🚀 STARTING PFUMA PRO VALIDATION SUITE\n");
+console.log("🚀 STARTING PFUMA/INGCEBO PRO VALIDATION SUITE\n");
 
 // 1. TEST: Diagnostic Weighted Logic & False Positive Penalization
 function testDiagnosticConfidence() {

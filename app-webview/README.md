@@ -1,6 +1,6 @@
-# PFUMA — WebView Mobile App
+# PFUMA/INGCEBO — WebView Mobile App
 
-A **thin native shell around the real PFUMA web app** — not a second implementation of the UI. This exists because the old `app/` folder (kept as-is, untouched) is a fully separate React Native codebase with its own screens that constantly drift out of sync with the web app: every backend feature has to be hand-rebuilt twice, and things quietly fall behind (e.g. the Messenger screen there is still the old hardcoded demo mock the web app moved past). This project has no screens of its own — it's one `WebView` pointing at the web app, so there is exactly one UI to build and test.
+A **thin native shell around the real PFUMA/INGCEBO web app** — not a second implementation of the UI. This exists because the old `app/` folder (kept as-is, untouched) is a fully separate React Native codebase with its own screens that constantly drift out of sync with the web app: every backend feature has to be hand-rebuilt twice, and things quietly fall behind (e.g. the Messenger screen there is still the old hardcoded demo mock the web app moved past). This project has no screens of its own — it's one `WebView` pointing at the web app, so there is exactly one UI to build and test.
 
 ## How it works
 
@@ -12,7 +12,7 @@ A **thin native shell around the real PFUMA web app** — not a second implement
 
 ## Running it
 
-1. Start the real PFUMA backend and web app (see the root `SETUP.md`):
+1. Start the real PFUMA/INGCEBO backend and web app (see the root `SETUP.md`):
    ```
    cd ../backend && python app.py
    cd .. && npm run dev

@@ -1,5 +1,5 @@
-# PFUMA IoT Hardware Design v1.0
-# PFUMA Livestock Monitoring System
+# PFUMA/INGCEBO IoT Hardware Design v1.0
+# PFUMA/INGCEBO Livestock Monitoring System
 # Designed for KiCad 7+ / Proteus 8+
 
 ---
@@ -7,8 +7,8 @@
 ## SYSTEM OVERVIEW
 
 Two PCB designs:
-- CN-01  PFUMA Collar Node    — worn on animal, battery + solar, all sensors
-- BS-01  PFUMA Base Station   — fixed at farm, LoRa gateway → WiFi → Flask API
+- CN-01  PFUMA/INGCEBO Collar Node    — worn on animal, battery + solar, all sensors
+- BS-01  PFUMA/INGCEBO Base Station   — fixed at farm, LoRa gateway → WiFi → Flask API
 
 Communication chain:
   Animal Collar (CN-01)
@@ -19,11 +19,11 @@ Communication chain:
       ↓ WiFi / Ethernet
   Flask API (backend/app.py)
       ↓ HTTP / WebSocket
-  PFUMA Mobile App + Web Dashboard
+  PFUMA/INGCEBO Mobile App + Web Dashboard
 
 ---
 
-## BOARD 1: CN-01 — PFUMA COLLAR NODE
+## BOARD 1: CN-01 — PFUMA/INGCEBO COLLAR NODE
 
 ### 1.1  BLOCK DIAGRAM
 
@@ -264,7 +264,7 @@ Pin 4  U1 TXD0
 
 ---
 
-## BOARD 2: BS-01 — PFUMA BASE STATION
+## BOARD 2: BS-01 — PFUMA/INGCEBO BASE STATION
 
 ### 2.1  BLOCK DIAGRAM
 

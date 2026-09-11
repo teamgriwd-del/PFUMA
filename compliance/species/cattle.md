@@ -14,7 +14,7 @@
 | **Police clearance** before/at point of sale | Confirms the animal isn't stolen, matches brand/tag to owner records | [stock-theft-act.md](../laws/stock-theft-act.md) |
 | **Buyer/butcher record-keeping** (if reselling or slaughtering commercially) | Required under the Stock Theft Prevention Act for butchers/hide buyers | [stock-theft-act.md](../laws/stock-theft-act.md) |
 
-A cattle listing on PFUMA that is missing brand/tag identification, or has no path to police clearance, should be treated as high-risk and flagged before a sale is facilitated.
+A cattle listing on PFUMA/INGCEBO that is missing brand/tag identification, or has no path to police clearance, should be treated as high-risk and flagged before a sale is facilitated.
 
 ## 2. Common diseases
 

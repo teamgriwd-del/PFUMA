@@ -138,7 +138,7 @@ export default function LoginScreen({ onLogin }) {
       if (!res.ok) { setAuthError(data.error || 'Login failed.'); return; }
       onLogin(userFromApi(data.user, data.token));
     } catch {
-      setAuthError('Could not reach the PFUMA API. Check that Flask is running and API in config.js points to your PC\'s IP.');
+      setAuthError('Could not reach the PFUMA/INGCEBO API. Check that Flask is running and API in config.js points to your PC\'s IP.');
     } finally {
       setAuthBusy(false);
     }
@@ -169,7 +169,7 @@ export default function LoginScreen({ onLogin }) {
       if (!res.ok) { setAuthError(data.error || 'Registration failed.'); return; }
       onLogin(userFromApi(data.user, data.token));
     } catch {
-      setAuthError('Could not reach the PFUMA API. Check that Flask is running and API in config.js points to your PC\'s IP.');
+      setAuthError('Could not reach the PFUMA/INGCEBO API. Check that Flask is running and API in config.js points to your PC\'s IP.');
     } finally {
       setAuthBusy(false);
     }
@@ -193,7 +193,7 @@ export default function LoginScreen({ onLogin }) {
   const renderStep0 = () => (
     <View>
       <Text style={styles.stepTitle}>Choose Your Role</Text>
-      <Text style={styles.stepSub}>Your role determines what you can see and do on PFUMA.</Text>
+      <Text style={styles.stepSub}>Your role determines what you can see and do on PFUMA/INGCEBO.</Text>
       <View style={styles.roleGrid}>
         {ROLES.map(r => (
           <TouchableOpacity key={r.name} activeOpacity={0.8}
@@ -219,12 +219,12 @@ export default function LoginScreen({ onLogin }) {
       <Text style={styles.label}>Phone Number *</Text>
       <InputField icon={Phone} placeholder="+263 77 123 4567"   value={form.phone}    onChangeText={v=>set('phone',v)}    keyboardType="phone-pad" />
       {!!form.phone.trim() && !isValidZwPhone(form.phone) && (
-        <Text style={{ color: COLORS.danger, fontSize: 11, fontWeight: '700', marginTop: -8, marginBottom: 10 }}>Enter a valid Zimbabwean mobile number (Econet 077/078, NetOne 071, or Telecel 073).</Text>
+        <Text style={{ color: COLORS.danger, fontSize: 11, fontFamily: FONTS.bold, marginTop: -8, marginBottom: 10 }}>Enter a valid Zimbabwean mobile number (Econet 077/078, NetOne 071, or Telecel 073).</Text>
       )}
       <Text style={styles.label}>National ID Number *</Text>
       <InputField icon={CreditCard} placeholder="e.g. 63-1234567A00" value={form.nationalId} onChangeText={v=>set('nationalId',v)} />
       {!!form.nationalId.trim() && !isValidZwNationalId(form.nationalId) && (
-        <Text style={{ color: COLORS.danger, fontSize: 11, fontWeight: '700', marginTop: -8, marginBottom: 10 }}>Doesn't match the Zimbabwe ID format, e.g. 63-1234567A00.</Text>
+        <Text style={{ color: COLORS.danger, fontSize: 11, fontFamily: FONTS.bold, marginTop: -8, marginBottom: 10 }}>Doesn't match the Zimbabwe ID format, e.g. 63-1234567A00.</Text>
       )}
       <Text style={styles.label}>Email Address</Text>
       <InputField icon={Mail}  placeholder="you@example.com"    value={form.email}    onChangeText={v=>set('email',v)}    keyboardType="email-address" />
@@ -233,9 +233,9 @@ export default function LoginScreen({ onLogin }) {
       <Text style={styles.label}>Confirm Password *</Text>
       <InputField icon={Lock} placeholder="Re-enter your password" value={form.confirmPassword} onChangeText={v=>set('confirmPassword',v)} secureTextEntry />
       {!!form.password && !!form.confirmPassword && form.password !== form.confirmPassword && (
-        <Text style={{ color: COLORS.danger, fontSize: 11, fontWeight: '700', marginBottom: 10 }}>Passwords don't match.</Text>
+        <Text style={{ color: COLORS.danger, fontSize: 11, fontFamily: FONTS.bold, marginBottom: 10 }}>Passwords don't match.</Text>
       )}
-      <View style={styles.infoBox}><Text style={styles.infoText}>Your phone number lets farmers, vets, and suppliers find and contact you directly in the PFUMA directory.</Text></View>
+      <View style={styles.infoBox}><Text style={styles.infoText}>Your phone number lets farmers, vets, and suppliers find and contact you directly in the PFUMA/INGCEBO directory.</Text></View>
     </View>
   );
 
@@ -328,7 +328,7 @@ export default function LoginScreen({ onLogin }) {
   const renderStep4 = () => (
     <View>
       <Text style={styles.stepTitle}>Confirm Your Identity</Text>
-      <Text style={styles.stepSub}>Review before creating your PFUMA Digital ID.</Text>
+      <Text style={styles.stepSub}>Review before creating your PFUMA/INGCEBO Digital ID.</Text>
       <View style={[styles.confirmCard, { borderLeftColor: role.color }]}>
         <View style={[styles.roleBadge, { backgroundColor: role.color }]}>
           <role.icon size={13} color="#fff" />
@@ -348,7 +348,7 @@ export default function LoginScreen({ onLogin }) {
           </View>
         ))}
       </View>
-      <View style={styles.infoBox}><Text style={styles.infoText}>Your profile will be visible in the PFUMA stakeholder directory. Others can search for you by name, organisation, or province.</Text></View>
+      <View style={styles.infoBox}><Text style={styles.infoText}>Your profile will be visible in the PFUMA/INGCEBO stakeholder directory. Others can search for you by name, organisation, or province.</Text></View>
     </View>
   );
 
@@ -366,7 +366,7 @@ export default function LoginScreen({ onLogin }) {
           <View style={styles.headerTop}>
             <Image source={pfumaMark} style={styles.logoBox} />
             <View style={{ flex:1 }}>
-              <Text style={styles.appName}>PFUMA</Text>
+              <Text style={styles.appName}>PFUMA/INGCEBO</Text>
               <Text style={styles.appTagline}>Zimbabwe's Livestock Intelligence Platform</Text>
             </View>
           </View>
@@ -387,7 +387,7 @@ export default function LoginScreen({ onLogin }) {
           {mode === 'login' ? (
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <Text style={styles.cardTitle}>Welcome Back</Text>
-              <Text style={styles.cardSub}>Sign in with your phone number and password. Your role comes from your verified PFUMA account.</Text>
+              <Text style={styles.cardSub}>Sign in with your phone number and password. Your role comes from your verified PFUMA/INGCEBO account.</Text>
               <Text style={styles.label}>Phone Number *</Text>
               <InputField icon={Phone} placeholder="+263 77 123 4567" value={loginPhone} onChangeText={setLoginPhone} keyboardType="phone-pad" />
               <Text style={styles.label}>Password *</Text>
@@ -403,7 +403,7 @@ export default function LoginScreen({ onLogin }) {
                 {!authBusy && <ArrowRight size={16} color="#fff" />}
               </TouchableOpacity>
               <TouchableOpacity onPress={() => { setMode('register'); setStep(0); setAuthError(''); }} style={styles.switchLink}>
-                <Text style={styles.switchText}>New to PFUMA? <Text style={{ color:COLORS.primary, fontWeight:'800' }}>Create Digital ID</Text></Text>
+                <Text style={styles.switchText}>New to PFUMA/INGCEBO? <Text style={{ color:COLORS.primary, fontFamily: FONTS.extrabold }}>Create Digital ID</Text></Text>
               </TouchableOpacity>
             </ScrollView>
           ) : (
@@ -436,7 +436,7 @@ export default function LoginScreen({ onLogin }) {
                 )}
               </View>
               <TouchableOpacity onPress={() => { setMode('login'); setAuthError(''); }} style={styles.switchLink}>
-                <Text style={styles.switchText}>Already registered? <Text style={{ color:COLORS.primary, fontWeight:'800' }}>Sign In</Text></Text>
+                <Text style={styles.switchText}>Already registered? <Text style={{ color:COLORS.primary, fontFamily: FONTS.extrabold }}>Sign In</Text></Text>
               </TouchableOpacity>
             </ScrollView>
           )}
@@ -457,43 +457,43 @@ const styles = StyleSheet.create({
   ecosystemRow:    { flexDirection:'row', justifyContent:'space-between', paddingHorizontal:2 },
   ecosystemItem:   { alignItems:'center', gap:5, width:64 },
   ecosystemIconBox:{ width:36, height:36, borderRadius:12, backgroundColor:'rgba(255,255,255,0.14)', borderWidth:1, borderColor:'rgba(255,255,255,0.2)', alignItems:'center', justifyContent:'center' },
-  ecosystemLabel:  { fontSize:9, fontWeight:'700', color:'rgba(255,255,255,0.85)', textAlign:'center' },
+  ecosystemLabel:  { fontSize:9, fontFamily: FONTS.bold, color:'rgba(255,255,255,0.85)', textAlign:'center' },
   card:          { flex:1, backgroundColor:'#fff', borderTopLeftRadius:28, borderTopRightRadius:28, padding:24, paddingBottom:40 },
-  cardTitle:     { fontSize:24, fontWeight:'900', color:'#29231E', marginBottom:4 },
+  cardTitle:     { fontSize:24, fontFamily: FONTS.extrabold, color:'#29231E', marginBottom:4 },
   cardSub:       { fontSize:13, color:'#888', marginBottom:20 },
   roleGrid:      { flexDirection:'row', flexWrap:'wrap', gap:10, marginBottom:20 },
   roleCard:      { width:'47%', borderWidth:1.5, borderColor:'#E0D6C7', borderRadius:16, padding:14, alignItems:'center', backgroundColor:'#F7F3ED' },
   roleIconBox:   { width:44, height:44, borderRadius:14, alignItems:'center', justifyContent:'center', marginBottom:8 },
-  roleName:      { fontSize:13, fontWeight:'900', color:'#29231E', marginBottom:4 },
+  roleName:      { fontSize:13, fontFamily: FONTS.extrabold, color:'#29231E', marginBottom:4 },
   roleDesc:      { fontSize:10, color:'#888', textAlign:'center', lineHeight:14 },
-  label:         { fontSize:11, fontWeight:'800', color:'#888', textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 },
+  label:         { fontSize:11, fontFamily: FONTS.extrabold, color:'#888', textTransform:'uppercase', letterSpacing:0.5, marginBottom:6 },
   inputWrap:     { justifyContent:'center', marginBottom:12 },
   inputIcon:     { position:'absolute', left:14, zIndex:1 },
   inputWithIcon: { paddingLeft:42, marginBottom:0 },
   inputWithToggle: { paddingRight:42 },
   inputToggle:   { position:'absolute', right:14, zIndex:1 },
   infoBox:       { backgroundColor:'#F0E6D9', borderRadius:12, padding:12, marginTop:4, marginBottom:12 },
-  infoText:      { fontSize:12, color:COLORS.primary, fontWeight:'600', lineHeight:18 },
+  infoText:      { fontSize:12, color:COLORS.primary, fontFamily: FONTS.semibold, lineHeight:18 },
   progress:      { flexDirection:'row', alignItems:'center', marginBottom:24 },
   progDot:       { width:28, height:28, borderRadius:14, backgroundColor:'#eee', alignItems:'center', justifyContent:'center' },
-  progDotText:   { fontSize:11, fontWeight:'800', color:'#999' },
+  progDotText:   { fontSize:11, fontFamily: FONTS.extrabold, color:'#999' },
   progLine:      { flex:1, height:2, backgroundColor:'#eee' },
-  stepTitle:     { fontSize:20, fontWeight:'900', color:'#29231E', marginBottom:4 },
+  stepTitle:     { fontSize:20, fontFamily: FONTS.extrabold, color:'#29231E', marginBottom:4 },
   stepSub:       { fontSize:13, color:'#888', marginBottom:20, lineHeight:18 },
   chip:          { paddingHorizontal:14, paddingVertical:8, borderRadius:20, borderWidth:1.5, borderColor:'#E0D6C7', backgroundColor:'#F7F3ED', marginRight:8, marginBottom:8 },
-  chipText:      { fontSize:12, fontWeight:'700', color:'#555' },
+  chipText:      { fontSize:12, fontFamily: FONTS.bold, color:'#555' },
   chipRow:       { flexDirection:'row', flexWrap:'wrap', marginBottom:12 },
   confirmCard:   { backgroundColor:'#F7F3ED', borderRadius:16, padding:16, marginBottom:14, borderLeftWidth:4 },
   roleBadge:     { flexDirection:'row', alignItems:'center', gap:6, alignSelf:'flex-start', paddingHorizontal:12, paddingVertical:5, borderRadius:20, marginBottom:12 },
-  roleBadgeText: { color:'#fff', fontSize:12, fontWeight:'800' },
+  roleBadgeText: { color:'#fff', fontSize:12, fontFamily: FONTS.extrabold },
   confirmRow:    { flexDirection:'row', justifyContent:'space-between', paddingVertical:6, borderBottomWidth:1, borderBottomColor:'#EFE8DD' },
-  confirmLabel:  { fontSize:12, color:'#888', fontWeight:'600' },
-  confirmVal:    { fontSize:12, fontWeight:'800', color:'#29231E', maxWidth:'55%', textAlign:'right' },
+  confirmLabel:  { fontSize:12, color:'#888', fontFamily: FONTS.semibold },
+  confirmVal:    { fontSize:12, fontFamily: FONTS.extrabold, color:'#29231E', maxWidth:'55%', textAlign:'right' },
   navRow:        { flexDirection:'row', gap:12, marginTop:20, marginBottom:8 },
   backBtn:       { flexDirection:'row', alignItems:'center', gap:6, paddingHorizontal:20, paddingVertical:15, backgroundColor:'#EFE8DD', borderRadius:16, justifyContent:'center' },
-  backBtnText:   { fontWeight:'800', color:'#555', fontSize:14 },
+  backBtnText:   { fontFamily: FONTS.extrabold, color:'#555', fontSize:14 },
   primaryBtn:    { flexDirection:'row', alignItems:'center', justifyContent:'center', gap:8, backgroundColor:COLORS.primary, borderRadius:16, paddingVertical:16, elevation:4 },
-  primaryBtnText:{ color:'#fff', fontWeight:'900', fontSize:15 },
+  primaryBtnText:{ color:'#fff', fontFamily: FONTS.extrabold, fontSize:15 },
   switchLink:    { alignItems:'center', marginTop:16, paddingVertical:8 },
   switchText:    { fontSize:13, color:'#999' },
 });

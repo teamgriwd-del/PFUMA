@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Modal, View, Image, Text, TouchableOpacity, FlatList, StyleSheet, Dimensions } from 'react-native';
 import { X } from 'lucide-react-native';
+import { FONTS } from '../config';
 
 // Full-screen, uncropped photo viewer — the counterpart to every small
 // resizeMode="cover" gallery thumbnail in the app, which always crops.
@@ -76,7 +77,7 @@ export default function PhotoLightbox({ visible, photos, startIndex = 0, onClose
 const styles = StyleSheet.create({
   overlay:    { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center' },
   closeBtn:   { position: 'absolute', top: 50, right: 20, zIndex: 10, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
-  counter:    { position: 'absolute', top: 60, left: 20, zIndex: 10, color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase' },
+  counter:    { position: 'absolute', top: 60, left: 20, zIndex: 10, color: 'rgba(255,255,255,0.7)', fontSize: 11, fontFamily: FONTS.extrabold, letterSpacing: 1, textTransform: 'uppercase' },
   thumbRow:   { paddingHorizontal: 16, paddingTop: 14, gap: 8 },
   thumb:      { width: 52, height: 52, borderRadius: 10, marginRight: 8, opacity: 0.5 },
   thumbActive:{ opacity: 1, borderWidth: 2, borderColor: '#fff' },

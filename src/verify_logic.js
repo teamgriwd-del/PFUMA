@@ -1,4 +1,4 @@
-// PFUMA Logic Verification Suite
+// PFUMA/INGCEBO Logic Verification Suite
 // To run: node src/verify_logic.js
 
 import { diseaseDatabase } from './components/DiseaseDetection/diseaseData.js';

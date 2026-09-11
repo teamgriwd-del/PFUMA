@@ -6,9 +6,9 @@ import { API } from '../../config';
 
 // The counterparty half of the valuation-certificate feature — a bank or
 // insurer's loan officer lands here straight from the printed certificate
-// or a QR code, with no PFUMA account and no login. Rendered standalone
+// or a QR code, with no PFUMA/INGCEBO account and no login. Rendered standalone
 // from main.jsx before the authenticated app ever mounts, since this page
-// must work for someone who has never touched PFUMA before.
+// must work for someone who has never touched PFUMA/INGCEBO before.
 const CertificateVerify = ({ code }) => {
   const [result, setResult] = useState(undefined); // undefined = loading
 
@@ -20,7 +20,7 @@ const CertificateVerify = ({ code }) => {
         const data = await res.json();
         if (!cancelled) setResult(res.ok ? data : { valid: false, error: data.error });
       } catch {
-        if (!cancelled) setResult({ valid: false, error: 'Could not reach the PFUMA verification service — try again shortly.' });
+        if (!cancelled) setResult({ valid: false, error: 'Could not reach the PFUMA/INGCEBO verification service — try again shortly.' });
       }
     })();
     return () => { cancelled = true; };
@@ -30,7 +30,7 @@ const CertificateVerify = ({ code }) => {
     <div className="min-h-screen bg-pfuma-cream flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
-          <p className="text-xs font-bold text-pfuma-green uppercase tracking-[3px]">PFUMA Certificate Verification</p>
+          <p className="text-xs font-bold text-pfuma-green uppercase tracking-[3px]">PFUMA/INGCEBO Certificate Verification</p>
           <p className="text-xs text-gray-400 font-medium mt-1">Independent lookup — no account required</p>
         </div>
 
@@ -52,7 +52,7 @@ const CertificateVerify = ({ code }) => {
               <div className="p-6 space-y-4">
                 {result.already_pledged && (
                   <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 rounded-xl px-3 py-2.5 text-xs font-bold">
-                    <ShieldX size={14} className="shrink-0" /> Already flagged as held collateral by a PFUMA-verified institution — confirm with the farmer before relying on this certificate.
+                    <ShieldX size={14} className="shrink-0" /> Already flagged as held collateral by a PFUMA/INGCEBO-verified institution — confirm with the farmer before relying on this certificate.
                   </div>
                 )}
                 <div className="bg-gray-50 rounded-2xl p-5 text-center">
@@ -73,7 +73,7 @@ const CertificateVerify = ({ code }) => {
                   ))}
                 </div>
                 <p className="text-xs text-gray-400 font-medium pt-3 border-t border-gray-100">
-                  This value was computed by PFUMA at the time of issue from the animal's recorded weight, species, and certified health history. It is not a live re-appraisal.
+                  This value was computed by PFUMA/INGCEBO at the time of issue from the animal's recorded weight, species, and certified health history. It is not a live re-appraisal.
                 </p>
               </div>
             </>
@@ -85,14 +85,14 @@ const CertificateVerify = ({ code }) => {
               </div>
               <div className="p-6">
                 <p className="text-xs text-gray-500 font-medium">
-                  {result.error || 'No certificate matches this code'}. Double-check the code printed on the certificate, or contact the issuing farmer to confirm it was actually issued through PFUMA.
+                  {result.error || 'No certificate matches this code'}. Double-check the code printed on the certificate, or contact the issuing farmer to confirm it was actually issued through PFUMA/INGCEBO.
                 </p>
               </div>
             </>
           )}
         </div>
 
-        <p className="text-center text-xs text-gray-400 font-medium mt-6">PFUMA — Zimbabwe Livestock Platform</p>
+        <p className="text-center text-xs text-gray-400 font-medium mt-6">PFUMA/INGCEBO — Zimbabwe Livestock Platform</p>
       </div>
     </div>
   );

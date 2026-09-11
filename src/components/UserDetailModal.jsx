@@ -42,7 +42,7 @@ const UserDetailModal = ({ user, currentUser, onClose }) => {
       if (!res.ok) { window.alert('No document on file, or not authorized to view it.'); setDocBusy(null); return; }
       const blob = await res.blob();
       window.open(URL.createObjectURL(blob), '_blank');
-    } catch { window.alert('Could not reach the PFUMA API.'); }
+    } catch { window.alert('Could not reach the PFUMA/INGCEBO API.'); }
     setDocBusy(null);
   };
 

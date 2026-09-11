@@ -16,7 +16,7 @@ import './index.css'
 
 // No router in this app — activeTab state handles everything once logged
 // in. A certificate-verification link has to work for a bank/insurer loan
-// officer with no PFUMA account at all, so it's the one URL checked before
+// officer with no PFUMA/INGCEBO account at all, so it's the one URL checked before
 // the normal (authenticated) app ever mounts.
 const certMatch = window.location.pathname.match(/^\/verify\/certificate\/([^/]+)\/?$/);
 

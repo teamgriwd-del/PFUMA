@@ -1,4 +1,4 @@
-# PFUMA Compliance & Reference Library
+# PFUMA/INGCEBO Compliance & Reference Library
 
 This folder is the source-of-truth reference material used to:
 
@@ -36,7 +36,7 @@ Before relying on any of this for a real transaction, dispute, prosecution, or m
 Each species doc covers: legal requirements to own/keep/sell, a common-diseases table, basic diagnosis guidance (vet call vs. routine care), and typical vaccination/dipping schedule pointers for Zimbabwean conditions.
 
 ### Signup & verification
-- [`signup-verification-requirements.md`](signup-verification-requirements.md) — What documents/credentials PFUMA should require and verify for each of the 5 roles at signup: Farmer, Veterinarian, Supplier, Retailer, Police.
+- [`signup-verification-requirements.md`](signup-verification-requirements.md) — What documents/credentials PFUMA/INGCEBO should require and verify for each of the 5 roles at signup: Farmer, Veterinarian, Supplier, Retailer, Police.
 
 ## How to use this in-app
 

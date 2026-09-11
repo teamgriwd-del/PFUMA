@@ -102,7 +102,7 @@ const passportHtml = (animal, healthEvents) => {
       </div>
       <h2 class="section-title">Health Event Log</h2>
       ${logHtml}
-      <p class="footer">PFUMA Verified · ${new Date().getFullYear()}</p>
+      <p class="footer">PFUMA/INGCEBO Verified · ${new Date().getFullYear()}</p>
     </div>
   </body></html>`;
 };
@@ -314,7 +314,7 @@ export default function HerdScreen({ currentUser }) {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerSub}>PFUMA</Text>
+          <Text style={styles.headerSub}>PFUMA/INGCEBO</Text>
           <Text style={styles.headerTitle}>Herd Registry</Text>
           <Text style={styles.headerDesc}>{animals.length} animal{animals.length !== 1 ? 's' : ''} registered</Text>
         </View>
@@ -572,7 +572,7 @@ export default function HerdScreen({ currentUser }) {
 
               <View style={styles.passportFooter}>
                 <Tag size={12} color={COLORS.primary} />
-                <Text style={styles.passportFooterText}>PFUMA Verified · {new Date().getFullYear()}</Text>
+                <Text style={styles.passportFooterText}>PFUMA/INGCEBO Verified · {new Date().getFullYear()}</Text>
               </View>
             </ScrollView>
           </SafeAreaView>

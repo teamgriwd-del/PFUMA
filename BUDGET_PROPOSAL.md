@@ -1,4 +1,4 @@
-# PFUMA — Hardware Budget Proposal
+# PFUMA/INGCEBO — Hardware Budget Proposal
 # Team GRIWD | Zimbabwe Agricultural Show 2026
 # Prepared: 2026-06-23
 
@@ -6,12 +6,12 @@
 
 ## EXECUTIVE SUMMARY
 
-PFUMA requires two custom IoT hardware units:
+PFUMA/INGCEBO requires two custom IoT hardware units:
 
 | Unit | Description | Role |
 |------|-------------|------|
-| **CN-01** | PFUMA Collar Node | Worn on animal — senses, transmits |
-| **BS-01** | PFUMA Base Station | Fixed at farm — receives, relays to cloud |
+| **CN-01** | PFUMA/INGCEBO Collar Node | Worn on animal — senses, transmits |
+| **BS-01** | PFUMA/INGCEBO Base Station | Fixed at farm — receives, relays to cloud |
 
 All prices are in **USD**. Online sourcing (AliExpress / LCSC) is the baseline.
 A **+40% local premium** is applied for the Zimbabwe local market estimate.
@@ -199,5 +199,5 @@ Order online for prototype build, allow 4–6 weeks lead time. Source connectors
 
 ---
 
-*PFUMA — Team GRIWD | teamgriwd@gmail.com*
+*PFUMA/INGCEBO — Team GRIWD | teamgriwd@gmail.com*
 *Zimbabwe Agricultural Show 2026*

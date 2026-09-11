@@ -1,4 +1,4 @@
-// ── PFUMA UI primitives ────────────────────────────────────────────────────
+// ── PFUMA/INGCEBO UI primitives ────────────────────────────────────────────────────
 //
 // The shared vocabulary every redesigned screen is built from. Kept in one
 // module rather than fifteen one-component files: the set is small, it is

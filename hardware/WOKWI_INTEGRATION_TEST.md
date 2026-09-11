@@ -8,7 +8,7 @@ It is **not** the real hardware design. The real physical firmware (SF7 LoRa, co
 
 - A free [wokwi.com](https://wokwi.com) account (browser-based, no install).
 - [ngrok](https://ngrok.com) (free tier) — to expose your local Flask API to the internet, since Wokwi's simulated ESP32 runs in the cloud/your browser, not on your LAN.
-- The PFUMA backend and web app running locally (`backend/` and `npm run dev`, per `SETUP.md`).
+- The PFUMA/INGCEBO backend and web app running locally (`backend/` and `npm run dev`, per `SETUP.md`).
 
 ## Step-by-step
 
@@ -43,12 +43,12 @@ Watch the two Serial Monitors:
 - Base station: `[LINK] RX nn bytes` then `[API] POST .../api/iot/telemetry -> 200`.
 
 ### 5. Watch it land in the real app
-Open the paired animal's **IoT Monitor** tab in the PFUMA web app. Within ~8 seconds (the dashboard's poll interval) the status badge should flip to **"Live · Physical Device"** and show the real values coming out of the Wokwi simulation — proving the full pairing → telemetry → storage → dashboard pipeline end-to-end.
+Open the paired animal's **IoT Monitor** tab in the PFUMA/INGCEBO web app. Within ~8 seconds (the dashboard's poll interval) the status badge should flip to **"Live · Physical Device"** and show the real values coming out of the Wokwi simulation — proving the full pairing → telemetry → storage → dashboard pipeline end-to-end.
 
 ## Why this is a legitimate test, not a shortcut
 
 - The Flask endpoints, pairing rules, database schema, and dashboard logic are **exactly** what real hardware will hit — nothing is mocked or bypassed on the software side.
-- The only substitution is the radio hop (LoRa → MQTT), which is purely a Wokwi tooling limitation, not a PFUMA design choice.
+- The only substitution is the radio hop (LoRa → MQTT), which is purely a Wokwi tooling limitation, not a PFUMA/INGCEBO design choice.
 - A public MQTT broker (`broker.hivemq.com`) is shared with the entire internet — the topic string is your only isolation. If you see telemetry you didn't send, or want stronger isolation for a real demo, make the topic string in both sketches more unique (e.g. append today's date) before a public demonstration.
 
 ## Known gaps vs. real hardware

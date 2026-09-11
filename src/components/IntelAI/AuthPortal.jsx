@@ -70,7 +70,7 @@ const ROLES = [
     desc: 'Verify livestock valuation certificates presented as loan or insurance collateral.',
   },
   // Police is deliberately not a self-signup role — an officer account can
-  // only come from an existing officer's nomination, approved by PFUMA
+  // only come from an existing officer's nomination, approved by PFUMA/INGCEBO
   // Admin (see PoliceDashboard's "Add Officer" and AdminDashboard's Users
   // tab). Listing it here would invite exactly the fraud path that flow
   // exists to close.
@@ -233,7 +233,7 @@ const AuthPortal = ({ onLogin }) => {
     nextOfKinVerificationStatus: apiUser.next_of_kin_verification_status,
     // Real uploaded profile photo when the user has set one; otherwise the
     // same deterministic placeholder avatar as always.
-    avatar: apiUser.avatar_url ? `${API}${apiUser.avatar_url}` : `https://api.dicebear.com/7.x/avataaars/svg?seed=${apiUser.full_name || 'PFUMA'}`,
+    avatar: apiUser.avatar_url ? `${API}${apiUser.avatar_url}` : `https://api.dicebear.com/7.x/avataaars/svg?seed=${apiUser.full_name || 'PFUMA/INGCEBO'}`,
   });
 
   // ── login ──
@@ -250,7 +250,7 @@ const AuthPortal = ({ onLogin }) => {
       if (!res.ok) { setAuthError(data.error || 'Login failed.'); return; }
       onLogin(userFromApi(data.user, data.token));
     } catch {
-      setAuthError('Could not reach the PFUMA API. Is the Flask backend running?');
+      setAuthError('Could not reach the PFUMA/INGCEBO API. Is the Flask backend running?');
     } finally {
       setAuthBusy(false);
     }
@@ -291,7 +291,7 @@ const AuthPortal = ({ onLogin }) => {
       if (!res.ok) { setAuthError(data.error || 'Registration failed.'); return; }
       onLogin(userFromApi(data.user, data.token));
     } catch {
-      setAuthError('Could not reach the PFUMA API. Is the Flask backend running?');
+      setAuthError('Could not reach the PFUMA/INGCEBO API. Is the Flask backend running?');
     } finally {
       setAuthBusy(false);
     }
@@ -313,7 +313,7 @@ const AuthPortal = ({ onLogin }) => {
     <div className="space-y-4">
       <div>
         <h3 className="pf-display text-2xl text-gray-900">Choose Your Role</h3>
-        <p className="text-sm text-gray-600 mt-2.5 leading-relaxed">Your role determines what you can see and do on PFUMA.</p>
+        <p className="text-sm text-gray-600 mt-2.5 leading-relaxed">Your role determines what you can see and do on PFUMA/INGCEBO.</p>
       </div>
       <div className="grid grid-cols-2 gap-3">
         {ROLES.map(r => (
@@ -378,7 +378,7 @@ const AuthPortal = ({ onLogin }) => {
         <p className="text-xs text-red-500 font-bold">Passwords don't match.</p>
       )}
       <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700 font-medium">
-        Your phone number is used so farmers, vets, and suppliers can reach you directly through the PFUMA directory.
+        Your phone number is used so farmers, vets, and suppliers can reach you directly through the PFUMA/INGCEBO directory.
       </div>
     </div>
   );
@@ -425,7 +425,7 @@ const AuthPortal = ({ onLogin }) => {
       <div className="pt-2 border-t border-gray-100">
         <h4 className="text-sm font-bold text-gray-900 mb-1">Next of Kin</h4>
         <p className="text-xs text-gray-400 font-medium mb-3">
-          Who should PFUMA contact — and who can request to take over this account — if something happens to you. Required for every role.
+          Who should PFUMA/INGCEBO contact — and who can request to take over this account — if something happens to you. Required for every role.
         </p>
       </div>
       <Field label="Next of Kin Full Name" required>
@@ -472,7 +472,7 @@ const AuthPortal = ({ onLogin }) => {
           </div>
         </Field>
         <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-xs text-green-700 font-medium">
-          This helps the PFUMA AI recommend the right vaccine schedules and dosages for your specific livestock.
+          This helps the PFUMA/INGCEBO AI recommend the right vaccine schedules and dosages for your specific livestock.
         </div>
       </div>
     );
@@ -561,7 +561,7 @@ const AuthPortal = ({ onLogin }) => {
           <input className={inputCls} type="text" placeholder="e.g. RBZ-BNK-2024-0012" value={form.businessReg} onChange={e => set('businessReg', e.target.value)} />
         </Field>
         <div className="bg-teal-50 border border-teal-200 rounded-xl p-3 text-xs text-teal-700 font-medium">
-          Once verified, you can look up any PFUMA valuation certificate and flag it as held collateral — so a second lender sees it's already pledged.
+          Once verified, you can look up any PFUMA/INGCEBO valuation certificate and flag it as held collateral — so a second lender sees it's already pledged.
         </div>
       </div>
     );
@@ -594,7 +594,7 @@ const AuthPortal = ({ onLogin }) => {
       <div className="space-y-4">
         <div>
           <h3 className="pf-display text-2xl text-gray-900">Confirm Your Identity</h3>
-          <p className="text-sm text-gray-600 mt-2.5 leading-relaxed">Review your details before creating your PFUMA Digital ID.</p>
+          <p className="text-sm text-gray-600 mt-2.5 leading-relaxed">Review your details before creating your PFUMA/INGCEBO Digital ID.</p>
         </div>
         <div className="bg-gray-50 rounded-2xl p-5 space-y-3">
           {/* Role badge */}
@@ -630,7 +630,7 @@ const AuthPortal = ({ onLogin }) => {
           </div>
         </div>
         <div className="bg-pfuma-green/5 border border-pfuma-green/20 rounded-xl p-3 text-xs text-gray-600 font-medium leading-relaxed">
-          Your account starts <span className="font-bold">pending verification</span> — {form.role === 'Veterinarian' ? 'an existing verified vet' : 'Police'} reviews your documents before you get full access. Your profile is only visible in the PFUMA directory once verified.
+          Your account starts <span className="font-bold">pending verification</span> — {form.role === 'Veterinarian' ? 'an existing verified vet' : 'Police'} reviews your documents before you get full access. Your profile is only visible in the PFUMA/INGCEBO directory once verified.
         </div>
 
         <div className="border border-gray-200 rounded-xl p-3.5">
@@ -642,7 +642,7 @@ const AuthPortal = ({ onLogin }) => {
               onChange={e => setAgreedToTerms(e.target.checked)}
             />
             <span className="text-xs text-gray-600 font-medium leading-relaxed">
-              I confirm the details above are accurate and I agree to PFUMA's{' '}
+              I confirm the details above are accurate and I agree to PFUMA/INGCEBO's{' '}
               <button type="button" onClick={() => setShowTerms(true)} className="text-pfuma-green font-bold hover:underline">
                 Terms &amp; Conditions and Privacy Policy
               </button>.
@@ -655,13 +655,13 @@ const AuthPortal = ({ onLogin }) => {
             <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
               <h4 className="text-lg font-bold text-gray-900 mb-3">Terms &amp; Conditions</h4>
               <div className="space-y-3 text-xs text-gray-600 font-medium leading-relaxed">
-                <p>By creating a PFUMA Digital ID you agree that:</p>
+                <p>By creating a PFUMA/INGCEBO Digital ID you agree that:</p>
                 <ul className="list-disc pl-5 space-y-1.5">
                   <li>The personal, farm/business, and identity details you provide are true and belong to you.</li>
                   <li>Your uploaded ID and credential documents may be reviewed by Police (or, for veterinarians, an existing verified vet) to verify your identity before your account is activated.</li>
-                  <li>Your name, role, organisation, and province are visible to other verified PFUMA members in the directory once your account is verified, so they can contact you for trade, veterinary, or supply purposes.</li>
+                  <li>Your name, role, organisation, and province are visible to other verified PFUMA/INGCEBO members in the directory once your account is verified, so they can contact you for trade, veterinary, or supply purposes.</li>
                   <li>Livestock listings, sale data, health records, and marketplace activity you create are stored and may be reviewed by Police as part of the sale-clearance process, to prevent stock theft and fraud.</li>
-                  <li>PFUMA may suspend accounts found to be fraudulent, impersonating another party, or otherwise abusing the platform.</li>
+                  <li>PFUMA/INGCEBO may suspend accounts found to be fraudulent, impersonating another party, or otherwise abusing the platform.</li>
                 </ul>
                 <p>See <span className="font-bold">docs/PRIVACY_POLICY.md</span> in the project repository for the full data-handling policy.</p>
               </div>
@@ -718,7 +718,7 @@ const AuthPortal = ({ onLogin }) => {
           <div className="relative h-full flex flex-col justify-between p-6 sm:p-9 lg:p-12 xl:p-14 text-white">
             <div className="flex items-center gap-3">
               <img src={pfumaMark} alt="" className="w-10 h-10 rounded-xl object-cover shadow-lg shrink-0" />
-              <span className="text-lg font-extrabold tracking-tight">PFUMA</span>
+              <span className="text-lg font-extrabold tracking-tight">PFUMA/INGCEBO</span>
             </div>
 
             <div className="mt-10 lg:mt-0">
@@ -755,7 +755,7 @@ const AuthPortal = ({ onLogin }) => {
             {/* Role preview — desktop only. During registration the chosen
                 role lights up here, so the two panels stay connected. */}
             <div className="hidden lg:block mt-10">
-              <p className="pf-eyebrow-light mb-3">Who PFUMA is for</p>
+              <p className="pf-eyebrow-light mb-3">Who PFUMA/INGCEBO is for</p>
               <div className="grid grid-cols-2 gap-x-6 gap-y-1">
                 {ROLES.map(r => {
                   const on = form.role === r.name && !isReturning;
@@ -784,7 +784,7 @@ const AuthPortal = ({ onLogin }) => {
                 <p className="pf-eyebrow mb-3">Sign in</p>
                 <h2 className="pf-display text-3xl text-gray-900">Welcome back</h2>
                 <p className="text-sm text-gray-600 mt-3 leading-relaxed">
-                  Your role and permissions come from your verified PFUMA account.
+                  Your role and permissions come from your verified PFUMA/INGCEBO account.
                 </p>
 
                 <form onSubmit={handleLogin} className="space-y-5 mt-9">
@@ -810,7 +810,7 @@ const AuthPortal = ({ onLogin }) => {
                 </form>
 
                 <p className="mt-9 text-sm text-gray-500">
-                  New to PFUMA?{' '}
+                  New to PFUMA/INGCEBO?{' '}
                   <button onClick={() => { setIsReturning(false); setStep(0); setAuthError(''); }} className="text-bark-500 font-bold hover:text-bark-700 pf-navlink">
                     Create a Digital ID
                   </button>

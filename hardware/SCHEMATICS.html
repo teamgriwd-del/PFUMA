@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PFUMA IoT Hardware — Schematics & Specs</title>
+<title>PFUMA/INGCEBO IoT Hardware — Schematics & Specs</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f172a; color: #e2e8f0; }
@@ -57,15 +57,15 @@
 <body>
 <div class="page">
 
-  <h1>PFUMA IoT Hardware Design</h1>
-  <p class="subtitle">PFUMA Livestock Monitoring System · v1.0 · Open in browser to view schematics</p>
+  <h1>PFUMA/INGCEBO IoT Hardware Design</h1>
+  <p class="subtitle">PFUMA/INGCEBO Livestock Monitoring System · v1.0 · Open in browser to view schematics</p>
 
   <!-- ═══════════════════════════════════════════════════════ -->
   <!-- SYSTEM DIAGRAM                                           -->
   <!-- ═══════════════════════════════════════════════════════ -->
   <div class="board-card">
     <div class="board-title">System Architecture</div>
-    <div class="board-sub">How the two boards connect to each other and to PFUMA</div>
+    <div class="board-sub">How the two boards connect to each other and to PFUMA/INGCEBO</div>
     <div class="sys-wrap">
       <svg width="1040" height="200" viewBox="0 0 1040 200">
         <!-- Collar -->
@@ -115,9 +115,9 @@
         <text x="830" y="98" fill="#a78bfa" font-size="9" text-anchor="middle">WebSocket</text>
         <text x="830" y="116" fill="#64748b" font-size="8" text-anchor="middle">real-time push</text>
 
-        <!-- PFUMA App -->
+        <!-- PFUMA/INGCEBO App -->
         <rect x="892" y="55" width="140" height="100" rx="12" fill="#1a1205" stroke="#fbbf24" stroke-width="2"/>
-        <text x="962" y="78" fill="#fbbf24" font-size="11" font-weight="900" text-anchor="middle">PFUMA APP</text>
+        <text x="962" y="78" fill="#fbbf24" font-size="11" font-weight="900" text-anchor="middle">PFUMA/INGCEBO APP</text>
         <text x="962" y="93" fill="#fde68a" font-size="9" text-anchor="middle">IoTScreen.js</text>
         <text x="962" y="107" fill="#fde68a" font-size="9" text-anchor="middle">Live vitals display</text>
         <text x="962" y="121" fill="#fde68a" font-size="9" text-anchor="middle">GPS zone status</text>
@@ -135,7 +135,7 @@
   <!-- CN-01 COLLAR NODE                                        -->
   <!-- ═══════════════════════════════════════════════════════ -->
   <div class="board-card">
-    <div class="board-title">CN-01 — PFUMA Collar Node</div>
+    <div class="board-title">CN-01 — PFUMA/INGCEBO Collar Node</div>
     <div class="board-sub">Worn on animal. Solar-charged. Transmits live vitals every 10 s via LoRa.</div>
 
     <div class="two-col">
@@ -282,7 +282,7 @@
           <text x="10" y="400" fill="#64748b" font-size="8">All GND pins → common GND</text>
 
           <!-- Title -->
-          <text x="240" y="530" fill="#334155" font-size="9" text-anchor="middle">CN-01 PFUMA Collar Node — Schematic Block Diagram</text>
+          <text x="240" y="530" fill="#334155" font-size="9" text-anchor="middle">CN-01 PFUMA/INGCEBO Collar Node — Schematic Block Diagram</text>
         </svg>
       </div>
 
@@ -418,8 +418,8 @@
   <!-- BS-01 BASE STATION                                       -->
   <!-- ═══════════════════════════════════════════════════════ -->
   <div class="board-card">
-    <div class="board-title">BS-01 — PFUMA Base Station</div>
-    <div class="board-sub">Fixed at farm. Receives all collar LoRa packets. Forwards to PFUMA API via WiFi.</div>
+    <div class="board-title">BS-01 — PFUMA/INGCEBO Base Station</div>
+    <div class="board-sub">Fixed at farm. Receives all collar LoRa packets. Forwards to PFUMA/INGCEBO API via WiFi.</div>
 
     <div class="two-col">
       <div>
@@ -517,7 +517,7 @@
           <line x1="310" y1="47" x2="310" y2="100" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="3,2"/>
           <line x1="310" y1="100" x2="310" y2="108" stroke="#a78bfa" stroke-width="1.5"/>
           <text x="10"  y="370" fill="#64748b" font-size="8">All GND pins → common GND. All VCC pins → 3.3V rail.</text>
-          <text x="140" y="390" fill="#334155" font-size="9" text-anchor="middle">BS-01 PFUMA Base Station — Schematic Block Diagram</text>
+          <text x="140" y="390" fill="#334155" font-size="9" text-anchor="middle">BS-01 PFUMA/INGCEBO Base Station — Schematic Block Diagram</text>
         </svg>
       </div>
 
@@ -562,7 +562,7 @@
           <text x="345" y="80" fill="#4ade80" font-size="7">Ant.</text>
           <!-- WiFi note -->
           <text x="180" y="194" fill="#7dd3fc" font-size="9" text-anchor="middle">WiFi: connects to farm router</text>
-          <text x="180" y="207" fill="#64748b" font-size="8" text-anchor="middle">→ sends data to PFUMA API</text>
+          <text x="180" y="207" fill="#64748b" font-size="8" text-anchor="middle">→ sends data to PFUMA/INGCEBO API</text>
           <!-- Cable entry -->
           <circle cx="300" cy="240" r="8" fill="#0f172a" stroke="#64748b" stroke-width="1.5"/>
           <text x="300" y="258" fill="#64748b" font-size="7" text-anchor="middle">cable</text>

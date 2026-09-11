@@ -102,7 +102,7 @@ def normalize_zw_phone(raw):
     """Returns the normalized '0XXXXXXXXX' form of a Zimbabwean mobile
     number, or None if it isn't a recognized Zimbabwean mobile format.
     Landlines (province area codes, not 07x-mobile) are out of scope —
-    PFUMA accounts are expected to be reachable by SMS/call for
+    PFUMA/INGCEBO accounts are expected to be reachable by SMS/call for
     verification, same as the rest of the signup flow."""
     digits = re.sub(r'\D', '', raw or '')
     if digits.startswith('263'):
@@ -619,7 +619,7 @@ def create_notification(c, user_id, ntype, title, message, related_user_id=None,
 # ── HEALTH CHECK ──────────────────────────────────────────────
 @app.route('/')
 def home():
-    return jsonify({"message": "PFUMA API is running ✅", "version": "3.0"})
+    return jsonify({"message": "PFUMA/INGCEBO API is running ✅", "version": "3.0"})
 
 
 # ── AUTHENTICATION ───────────────────────────────────────────────
@@ -977,7 +977,7 @@ def create_user():
     are not self-service). This does NOT verify the account — a single
     officer being able to unilaterally mint other verified officer accounts
     is exactly the fraud risk this closes. The account sits pending, with
-    requested_by recording who nominated them, until PFUMA Admin reviews
+    requested_by recording who nominated them, until PFUMA/INGCEBO Admin reviews
     and approves it via PATCH /verifications/<id> (see resolve_verification,
     which only allows Admin to resolve a Police applicant, not another
     officer)."""
@@ -1018,7 +1018,7 @@ def create_user():
     db.commit()
     user_id = c.lastrowid
     db.close()
-    return jsonify({"id": user_id, "message": "Officer nomination submitted — pending PFUMA Admin approval before this account can log in."})
+    return jsonify({"id": user_id, "message": "Officer nomination submitted — pending PFUMA/INGCEBO Admin approval before this account can log in."})
 
 
 @app.route('/users/<int:user_id>', methods=['GET'])
@@ -1226,7 +1226,7 @@ def get_conversation_contact(conversation_id):
 def create_conversation():
     """Starts (or, for a plain General chat, reuses) a conversation with
     another verified user. Any verified user can message any other verified
-    user directly — PFUMA's roles work together, this isn't role-gated."""
+    user directly — PFUMA/INGCEBO's roles work together, this isn't role-gated."""
     d = request.json or {}
     me = g.current_user['id']
     other_id = d.get('other_user_id')
@@ -2363,7 +2363,7 @@ def animal_timeline(animal_id):
         add(animal['birth_date'], 'birth', 'Born',
             f"{animal['breed'] or animal['species']}"
             + (f" · birth weight {animal['birth_weight']}kg" if animal['birth_weight'] else ''))
-        add(animal['created_at'], 'registration', 'Registered on PFUMA',
+        add(animal['created_at'], 'registration', 'Registered on PFUMA/INGCEBO',
             f"Digital identity created"
             + (f" · ear tag {animal['tag_id']}" if animal['tag_id'] else '')
             + (f" · brand {animal['brand_id']}" if animal['brand_id'] else ''),
@@ -2452,7 +2452,7 @@ def animal_timeline(animal_id):
         for a in c.fetchall():
             add(a['created_at'], 'compliance',
                 f"{compliance_labels.get(a['action'], a['action'])} — {a['vaccine_name']}",
-                a['notes'] or '', actor=a['actor_name'] or 'PFUMA (automatic)')
+                a['notes'] or '', actor=a['actor_name'] or 'PFUMA/INGCEBO (automatic)')
 
         # ── Market ──
         c.execute("""SELECT * FROM marketplace_listings WHERE animal_id = %s""", (animal_id,))
@@ -3251,7 +3251,7 @@ def update_clearance_details(clearance_id):
 def sign_clearance(clearance_id):
     """One shared endpoint for every Part D signature line — role picks which
     column gets written and who's allowed to write it. Buyer signatures are
-    seller-uploaded too (a buyer without their own PFUMA account still signs
+    seller-uploaded too (a buyer without their own PFUMA/INGCEBO account still signs
     in person, on the seller's device, exactly as they would on paper)."""
     role = (request.form.get('role') or '').strip().lower()
     if role not in ('seller', 'vet', 'buyer'):
@@ -3632,7 +3632,7 @@ def accept_bid(listing_id, bid_id):
 
     # Both sides of the sale get a real notification, each carrying the
     # other party's user id so the frontend can drop them straight into a
-    # PFUMA Messenger conversation instead of just showing text.
+    # PFUMA/INGCEBO Messenger conversation instead of just showing text.
     c.execute("SELECT full_name FROM users WHERE id=%s", (bid['bidder_id'],))
     buyer_name = (c.fetchone() or {}).get('full_name', 'The buyer')
     create_notification(
@@ -3762,7 +3762,7 @@ def issue_valuation_certificate(animal_id):
 @app.route('/verify/certificate/<code>', methods=['GET'])
 def verify_certificate(code):
     """No-auth by design — a bank/insurer loan officer checks this without
-    needing a PFUMA account. Returns only what's needed to independently
+    needing a PFUMA/INGCEBO account. Returns only what's needed to independently
     confirm the certificate, not the owner's private account details."""
     db = get_db()
     c = db.cursor()
@@ -4732,7 +4732,7 @@ def search_feed():
 # lookup table: it computes what THIS animal actually needs (species +
 # live weight + age → daily protein/energy target, standard maintenance
 # formulas scaled by growth stage) and prices a chosen ration against real
-# PFUMA Marketplace listings, not generic numbers.
+# PFUMA/INGCEBO Marketplace listings, not generic numbers.
 RATION_SUPPORTED_SPECIES = {'Cattle', 'Goat'}
 
 # Maintenance requirement coefficients per kg^0.75 of live weight.
@@ -4833,7 +4833,7 @@ def feed_requirements():
 @app.route('/feed/prices', methods=['GET'])
 def feed_prices():
     """Feed reference data enriched with live Marketplace pricing, so a
-    farmer sees what each feed actually costs from real PFUMA suppliers
+    farmer sees what each feed actually costs from real PFUMA/INGCEBO suppliers
     right now, not just its nutrient content."""
     db = get_db()
     c = db.cursor()

@@ -103,7 +103,7 @@ const HealthPassport = ({ animal, auditLog, currentUser, onClose }) => {
   // not evidence a bank/insurer should trust. Issuing a certificate asks the
   // backend to compute the same figure server-side and hand back a
   // verification code anyone can independently check at /verify/certificate,
-  // with no PFUMA account needed.
+  // with no PFUMA/INGCEBO account needed.
   const issueCertificate = async () => {
     setCertBusy(true); setCertError('');
     try {
@@ -113,7 +113,7 @@ const HealthPassport = ({ animal, auditLog, currentUser, onClose }) => {
       const data = await res.json();
       if (!res.ok) { setCertError(data.error || 'Could not issue a certificate.'); setCertBusy(false); return; }
       setCertData(data);
-    } catch { setCertError('Could not reach the PFUMA API.'); }
+    } catch { setCertError('Could not reach the PFUMA/INGCEBO API.'); }
     setCertBusy(false);
   };
 
@@ -234,7 +234,7 @@ const HealthPassport = ({ animal, auditLog, currentUser, onClose }) => {
       {/* Footer */}
       <div className="px-10 py-5 bg-gray-50 border-t border-gray-100 flex justify-between items-center print:hidden">
         <div className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wide">
-          <ShieldCheck size={14} className="text-pfuma-green" /> PFUMA Verified · {new Date().getFullYear()}
+          <ShieldCheck size={14} className="text-pfuma-green" /> PFUMA/INGCEBO Verified · {new Date().getFullYear()}
         </div>
         <div className="flex gap-3">
           <button onClick={handlePrint} className="px-6 py-2.5 bg-white border-2 border-gray-200 rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-gray-100 transition">Print</button>
@@ -251,7 +251,7 @@ const HealthPassport = ({ animal, auditLog, currentUser, onClose }) => {
           <div className="flex items-center gap-3 mb-8 border-b-2 border-pfuma-green pb-6">
             <ShieldCheck size={32} className="text-pfuma-green" />
             <div>
-              <h2 className="text-xl font-bold text-gray-900 uppercase tracking-tight">PFUMA Livestock Valuation Certificate</h2>
+              <h2 className="text-xl font-bold text-gray-900 uppercase tracking-tight">PFUMA/INGCEBO Livestock Valuation Certificate</h2>
               <p className="text-xs text-gray-400 font-medium">Issued {new Date(certData.issued_at).toLocaleString()}</p>
             </div>
           </div>
@@ -276,7 +276,7 @@ const HealthPassport = ({ animal, auditLog, currentUser, onClose }) => {
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Independent Verification</p>
             <p className="text-sm font-bold text-gray-800">Code: {certData.verification_code}</p>
             <p className="text-xs text-gray-500 font-medium mt-1 mb-2">
-              A bank, insurer, or any third party can verify this certificate at any time — no PFUMA account required — by
+              A bank, insurer, or any third party can verify this certificate at any time — no PFUMA/INGCEBO account required — by
               visiting the link below and entering the code above.
             </p>
             <p className="text-xs font-bold text-pfuma-green break-all">
@@ -455,7 +455,7 @@ const ClaimAnimalModal = ({ currentUser, onClose, onClaimed }) => {
       if (!res.ok) { setError(data.error || 'Could not claim this animal.'); setBusy(false); return; }
       setResult(data);
       onClaimed && onClaimed();
-    } catch { setError('Could not reach the PFUMA API.'); }
+    } catch { setError('Could not reach the PFUMA/INGCEBO API.'); }
     setBusy(false);
   };
 
@@ -475,7 +475,7 @@ const ClaimAnimalModal = ({ currentUser, onClose, onClaimed }) => {
           <form onSubmit={submit}>
             <h3 className="text-lg font-bold text-gray-900 mb-1">Claim an Animal</h3>
             <p className="text-xs text-gray-400 font-medium mb-5">
-              Bought an animal from another PFUMA farmer off-platform? Enter the transfer code they gave you.
+              Bought an animal from another PFUMA/INGCEBO farmer off-platform? Enter the transfer code they gave you.
             </p>
             <input
               autoFocus value={code} onChange={e => setCode(e.target.value.toUpperCase())}
@@ -515,7 +515,7 @@ const TransferCard = ({ animal, currentUser }) => {
       const data = await res.json();
       if (res.ok) setTransfer(data);
       else window.alert(data.error || 'Could not generate a transfer code.');
-    } catch { window.alert('Could not reach the PFUMA API.'); }
+    } catch { window.alert('Could not reach the PFUMA/INGCEBO API.'); }
     setBusy(false);
   };
 
@@ -591,7 +591,7 @@ export const MovementPermitCard = ({ animal, currentUser }) => {
       setForm(EMPTY_PERMIT_FORM);
       setShowForm(false);
       await load();
-    } catch { setError('Could not reach the PFUMA API.'); }
+    } catch { setError('Could not reach the PFUMA/INGCEBO API.'); }
     setBusy(false);
   };
 

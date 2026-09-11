@@ -58,7 +58,7 @@ const ActionTrail = ({ actions = [] }) => {
                 <p className="font-bold text-gray-700 capitalize">{a.action.replace(/_/g, ' ')}</p>
                 {a.notes && <p className="text-gray-500 font-medium leading-snug">{a.notes}</p>}
                 <p className="text-xs text-gray-400 font-bold uppercase tracking-wide mt-0.5">
-                  {a.actor_name || 'PFUMA (automatic)'} · {new Date(a.created_at).toLocaleDateString()}
+                  {a.actor_name || 'PFUMA/INGCEBO (automatic)'} · {new Date(a.created_at).toLocaleDateString()}
                 </p>
               </div>
             </li>
@@ -91,7 +91,7 @@ const BlockerForm = ({ caseId, currentUser, onDone, onCancel }) => {
       if (!res.ok) { setError(data.error || 'Could not send this — try again.'); setBusy(false); return; }
       onDone(data);
     } catch {
-      setError('Could not reach the PFUMA API. Try again when you have signal.');
+      setError('Could not reach the PFUMA/INGCEBO API. Try again when you have signal.');
       setBusy(false);
     }
   };
@@ -248,7 +248,7 @@ const VetCase = ({ c, currentUser, onChanged }) => {
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Could not update this case.'); setBusy(false); return; }
       setNotes(''); setBusy(false); onChanged();
-    } catch { setError('Could not reach the PFUMA API.'); setBusy(false); }
+    } catch { setError('Could not reach the PFUMA/INGCEBO API.'); setBusy(false); }
   };
 
   // A lockout is only offered once a notice has actually expired — the button
@@ -443,7 +443,7 @@ const ComplianceCenter = ({ currentUser }) => {
         ) : offline ? (
           <div className="p-6 bg-white rounded-2xl border border-gray-100 text-center">
             <AlertTriangle size={24} className="mx-auto text-gray-200 mb-2" />
-            <p className="text-xs font-bold text-gray-500">Could not reach the PFUMA API.</p>
+            <p className="text-xs font-bold text-gray-500">Could not reach the PFUMA/INGCEBO API.</p>
             <p className="text-xs text-gray-400 font-medium mt-1">Compliance cases are held on the server — reconnect to see them.</p>
           </div>
         ) : cases.length === 0 ? (

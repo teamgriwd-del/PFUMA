@@ -6,7 +6,7 @@ import {
   Store, Sprout, LogOut, ChevronRight, Camera, HeartPulse, ShieldAlert, Handshake,
   Shield, Landmark, Package, BookOpen,
 } from 'lucide-react-native';
-import { COLORS, API } from '../config';
+import { COLORS, API, FONTS } from '../config';
 import { authFetch, assetToFormFile } from '../api';
 import pfumaMark from '../assets/pfuma-mark.png';
 
@@ -142,7 +142,7 @@ export default function ProfileScreen({ navigation, currentUser, onLogout, onUse
           <View style={styles.apiStatus}>
             <View style={styles.apiDot} />
             <View>
-              <Text style={styles.apiLabel}>PFUMA API</Text>
+              <Text style={styles.apiLabel}>PFUMA/INGCEBO API</Text>
               <Text style={styles.apiUrl}>{API}</Text>
             </View>
           </View>
@@ -158,7 +158,7 @@ export default function ProfileScreen({ navigation, currentUser, onLogout, onUse
             activeOpacity={0.8}
           >
             <LogOut size={20} color="#9A2A23" strokeWidth={2.2} />
-            <Text style={{ fontSize: 14, fontWeight: '800', color: '#9A2A23', flex: 1 }}>Sign Out</Text>
+            <Text style={{ fontSize: 14, fontFamily: FONTS.extrabold, color: '#9A2A23', flex: 1 }}>Sign Out</Text>
             <ChevronRight size={18} color="#DA8279" />
           </TouchableOpacity>
         </View>
@@ -168,7 +168,7 @@ export default function ProfileScreen({ navigation, currentUser, onLogout, onUse
       <View style={[styles.section, { marginBottom: 40 }]}>
         <View style={styles.aboutCard}>
           <View style={styles.aboutLogo}><Image source={pfumaMark} style={styles.aboutLogoImg} /></View>
-          <Text style={styles.aboutName}>PFUMA</Text>
+          <Text style={styles.aboutName}>PFUMA/INGCEBO</Text>
           <Text style={styles.aboutTagline}>Zimbabwe's Livestock Intelligence Platform</Text>
           <Text style={styles.aboutDesc}>Built by Arnold Mapindu &amp; Addy · 2026{'\n'}React Native (Expo) · Flask API · MySQL</Text>
           <View style={styles.stakeholderRow}>
@@ -188,32 +188,32 @@ const styles = StyleSheet.create({
   avatar:         { width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.yellow, alignItems: 'center', justifyContent: 'center', marginBottom: 12, elevation: 6, overflow: 'hidden' },
   avatarImg:      { width: '100%', height: '100%' },
   avatarBadge:    { position: 'absolute', bottom: -2, right: -2, width: 26, height: 26, borderRadius: 13, backgroundColor: COLORS.primary, borderWidth: 2, borderColor: '#fff', alignItems: 'center', justifyContent: 'center' },
-  userName:       { color: '#fff', fontSize: 22, fontWeight: '900' },
-  userRole:       { color: '#DEC9AE', fontSize: 13, fontWeight: '600', marginTop: 4 },
-  userOrg:        { color: '#DEC9AE', fontSize: 12, fontWeight: '600', marginTop: 2 },
+  userName:       { color: '#fff', fontSize: 22, fontFamily: FONTS.extrabold },
+  userRole:       { color: '#DEC9AE', fontSize: 13, fontFamily: FONTS.semibold, marginTop: 4 },
+  userOrg:        { color: '#DEC9AE', fontSize: 12, fontFamily: FONTS.semibold, marginTop: 2 },
   userStats:      { flexDirection: 'row', marginTop: 20, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 16, padding: 16, gap: 24 },
   userStat:       { alignItems: 'center', flex: 1 },
-  userStatVal:    { color: '#fff', fontSize: 22, fontWeight: '900' },
-  userStatLabel:  { color: '#DEC9AE', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', marginTop: 2 },
+  userStatVal:    { color: '#fff', fontSize: 22, fontFamily: FONTS.extrabold },
+  userStatLabel:  { color: '#DEC9AE', fontSize: 10, fontFamily: FONTS.bold, textTransform: 'uppercase', marginTop: 2 },
   statDivider:    { width: 1, backgroundColor: 'rgba(255,255,255,0.2)' },
   section:        { marginHorizontal: 16, marginTop: 20 },
-  sectionTitle:   { fontSize: 12, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 },
+  sectionTitle:   { fontSize: 12, fontFamily: FONTS.extrabold, color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 },
   menuCard:       { backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden', elevation: 2 },
   menuItem:       { flexDirection: 'row', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#EFE8DD', gap: 14 },
   menuIcon:       { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  menuLabel:      { fontSize: 14, fontWeight: '800', color: COLORS.text },
+  menuLabel:      { fontSize: 14, fontFamily: FONTS.extrabold, color: COLORS.text },
   menuDesc:       { fontSize: 11, color: COLORS.muted, marginTop: 2 },
   apiStatus:      { flexDirection: 'row', alignItems: 'center', padding: 16, gap: 12 },
   apiDot:         { width: 10, height: 10, borderRadius: 5, backgroundColor: '#66734A' },
-  apiLabel:       { fontSize: 14, fontWeight: '800', color: COLORS.text },
+  apiLabel:       { fontSize: 14, fontFamily: FONTS.extrabold, color: COLORS.text },
   apiUrl:         { fontSize: 11, color: COLORS.muted, marginTop: 2 },
   aboutCard:      { backgroundColor: COLORS.primary, borderRadius: 20, padding: 24, alignItems: 'center' },
   aboutLogo:      { width: 52, height: 52, backgroundColor: '#fff', borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginBottom: 12, elevation: 4, padding: 8 },
   aboutLogoImg:   { width: '100%', height: '100%', resizeMode: 'contain' },
-  aboutName:      { color: '#fff', fontSize: 20, fontWeight: '900' },
+  aboutName:      { color: '#fff', fontSize: 20, fontFamily: FONTS.extrabold },
   aboutTagline:   { color: '#DEC9AE', fontSize: 12, marginTop: 4, marginBottom: 8 },
   aboutDesc:      { color: '#DEC9AE', fontSize: 11, textAlign: 'center', lineHeight: 18, marginBottom: 16 },
   stakeholderRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
   stakeholderChip:{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5 },
-  stakeholderText:{ color: '#fff', fontSize: 11, fontWeight: '700' },
+  stakeholderText:{ color: '#fff', fontSize: 11, fontFamily: FONTS.bold },
 });

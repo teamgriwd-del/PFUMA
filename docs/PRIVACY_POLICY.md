@@ -1,9 +1,9 @@
-# PFUMA Privacy Policy
+# PFUMA/INGCEBO Privacy Policy
 
 **Last updated:** [DATE — fill in before publishing]
-**Applies to:** the PFUMA web app, mobile app, and API (pfuma.co.zw and associated domains)
+**Applies to:** the PFUMA/INGCEBO web app, mobile app, and API (pfuma.co.zw and associated domains)
 
-This policy explains what information PFUMA collects, why, who can see it, and
+This policy explains what information PFUMA/INGCEBO collects, why, who can see it, and
 what rights you have over it. It is written in plain language on purpose. If
 anything here is unclear, contact us at [SUPPORT EMAIL] before you sign up.
 
@@ -16,7 +16,7 @@ not after.
 
 ## 1. Who this covers
 
-PFUMA has five account types: **Farmers**, **Veterinarians**, **Suppliers**,
+PFUMA/INGCEBO has five account types: **Farmers**, **Veterinarians**, **Suppliers**,
 **Retailers/Buyers**, and **Police (DVS/ZRP liaison) officers**. What we
 collect and who can see it differs by role — see Section 4.
 
@@ -55,7 +55,7 @@ paper trail for livestock movement and reduce stock theft.
 
 ### 2.5 What we do *not* collect
 We do not collect precise GPS location, biometric data, payment card
-details (PFUMA does not process payments), or data from anyone under 18.
+details (PFUMA/INGCEBO does not process payments), or data from anyone under 18.
 We do not use tracking cookies or third-party analytics/advertising SDKs.
 
 ## 3. Why we collect it (purpose)
@@ -82,7 +82,7 @@ just hidden in the app's UI:
   address, or ID documents unless that user's role makes contact info
   public by design (e.g. a Supplier's phone is visible so farmers can
   order from them).
-- **PFUMA administrators** (a small, non-public internal role) can see
+- **PFUMA/INGCEBO administrators** (a small, non-public internal role) can see
   platform-wide records for support, moderation, and reporting — this
   role is never visible to other users and cannot be created through
   self-signup.
@@ -128,7 +128,7 @@ a form that no longer identifies you personally where that's possible.
 
 ## 8. Third parties
 
-- **Hosting**: PFUMA's database and API run on infrastructure we
+- **Hosting**: PFUMA/INGCEBO's database and API run on infrastructure we
   operate. [FILL IN: hosting provider name/location once finalised.]
 - We do not use third-party advertising, analytics, or data-broker
   services.

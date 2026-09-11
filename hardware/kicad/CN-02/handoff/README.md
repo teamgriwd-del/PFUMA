@@ -1,4 +1,4 @@
-# PFUMA Rev B — KiCad single-sided PCBs
+# PFUMA/INGCEBO Rev B — KiCad single-sided PCBs
 
 Real KiCad 10 boards for **BS-02** (base station) and **CN-02** (collar node),
 generated from script so the layout is reproducible and reviewable.

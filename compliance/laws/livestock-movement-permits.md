@@ -29,7 +29,7 @@ Zimbabwe operates a network of **thousands of communal dip tanks**, administered
 
 Cross-border livestock movement (e.g., into/out of Zimbabwe, or informal cross-border trade with neighbouring countries) is a distinct and more heavily regulated matter, involving import/export permits, veterinary certification for international trade, and — per recent reporting reviewed — a nascent inter-governmental effort (an MoU signed in early 2024) between Zimbabwe and neighbours to jointly address cross-border cattle rustling. There has also been reported movement toward **digital/electronic movement permits** to reduce fraud and speed up cross-border transport processing. **Cross-border specifics change frequently and should always be confirmed directly with DVS and the relevant border/customs authority (ZIMRA) before a real cross-border transaction.**
 
-## What this means for PFUMA
+## What this means for PFUMA/INGCEBO
 
 - Any in-app flow for **listing an animal for sale that will need to travel** (especially cross-district) should prompt the Farmer/Retailer/Supplier to confirm they have (or will obtain) both a **DVS Veterinary Movement Permit** and **Police Clearance** before the transaction is treated as complete.
 - The AI assistant should be able to explain the two-gate process (vet inspection + police clearance) in plain language and should flag that **during a declared disease outbreak, movement may be restricted regardless of an otherwise-valid permit** (see [animal-health-act.md](animal-health-act.md)).

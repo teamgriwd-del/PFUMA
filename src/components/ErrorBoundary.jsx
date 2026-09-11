@@ -12,7 +12,7 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
-    console.error('[PFUMA] Component error:', error, info.componentStack);
+    console.error('[PFUMA/INGCEBO] Component error:', error, info.componentStack);
   }
 
   render() {

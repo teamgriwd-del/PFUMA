@@ -766,7 +766,7 @@ const IoTControlTab = ({ currentUser }) => {
         setFeedback(data.error || 'Push failed');
       }
     } catch {
-      setFeedback('Offline — could not reach the PFUMA API');
+      setFeedback('Offline — could not reach the PFUMA/INGCEBO API');
     } finally {
       setBusy(false);
     }
@@ -798,7 +798,7 @@ const IoTControlTab = ({ currentUser }) => {
       if (res.ok) { setFeedback('Geofence saved'); loadGeofence(ownerId); }
       else setFeedback(data.error || 'Could not save geofence');
     } catch {
-      setFeedback('Offline — could not reach the PFUMA API');
+      setFeedback('Offline — could not reach the PFUMA/INGCEBO API');
     } finally {
       setBusy(false);
       setTimeout(() => setFeedback(null), 3000);
@@ -1003,7 +1003,7 @@ const DataImportTab = ({ currentUser }) => {
       if (!res.ok) { setError(data.error || 'Import failed.'); setBusy(false); return; }
       setPreview(data);
       if (commit) await loadLogs();
-    } catch { setError('Could not reach the PFUMA API.'); }
+    } catch { setError('Could not reach the PFUMA/INGCEBO API.'); }
     setBusy(false);
   };
 
@@ -1088,7 +1088,6 @@ const DataImportTab = ({ currentUser }) => {
 const TABS = [
   { id: 'users', label: 'Users', icon: Users },
   { id: 'listings', label: 'Listings', icon: Package },
-  { id: 'iot', label: 'IoT Control', icon: Satellite },
   { id: 'trends', label: 'Trends', icon: TrendingUp },
   { id: 'activity', label: 'Activity', icon: Activity },
   { id: 'import', label: 'Data Import', icon: Database },
@@ -1108,7 +1107,7 @@ const AdminDashboard = ({ currentUser, onLogout }) => {
             <ShieldCheck size={18} className="text-amber-300" aria-hidden="true" />
           </div>
           <div>
-            <p className="text-white font-extrabold text-[0.9375rem] leading-none tracking-tight">PFUMA Admin</p>
+            <p className="text-white font-extrabold text-[0.9375rem] leading-none tracking-tight">PFUMA/INGCEBO Admin</p>
             <p className="text-white/45 text-xs font-medium mt-1">Platform oversight</p>
           </div>
         </div>
@@ -1130,7 +1129,6 @@ const AdminDashboard = ({ currentUser, onLogout }) => {
       <div className="flex-1 overflow-y-auto p-6">
         {tab === 'users' && <UsersTab currentUser={currentUser} />}
         {tab === 'listings' && <ListingsTab currentUser={currentUser} />}
-        {tab === 'iot' && <IoTControlTab currentUser={currentUser} />}
         {tab === 'trends' && <TrendsTab currentUser={currentUser} />}
         {tab === 'activity' && <ActivityTab currentUser={currentUser} />}
         {tab === 'import' && <DataImportTab currentUser={currentUser} />}

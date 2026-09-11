@@ -9,7 +9,6 @@ import FeedAnalyzer      from './components/FeedAnalyzer/FeedAnalyzer';
 import Cooperative       from './components/Cooperative/Cooperative';
 import TradingJournal    from './components/TradingJournal/TradingJournal';
 import SupplierStock     from './components/SupplierStock/SupplierStock';
-import HardwareSimulation from './components/HardwareSimulation/HardwareSimulation';
 import ComplianceCenter  from './components/Compliance/ComplianceCenter';
 import AdminDashboard    from './components/Admin/AdminDashboard';
 import Jinda      from './components/IntelAI/PfumaIntelAI';
@@ -93,15 +92,15 @@ const StakeholderMap = () => (
   <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
     <div className="flex items-center gap-2 mb-1">
       <Globe size={15} className="text-pfuma-green" />
-      <h3 className="text-sm font-bold text-gray-800">How PFUMA Connects Everyone</h3>
+      <h3 className="text-sm font-bold text-gray-800">How PFUMA/INGCEBO Connects Everyone</h3>
     </div>
     <p className="text-xs text-gray-400 font-medium mb-5">
-      PFUMA is a four-stakeholder ecosystem. Every role plays a specific part — here's how they all connect.
+      PFUMA/INGCEBO is a four-stakeholder ecosystem. Every role plays a specific part — here's how they all connect.
     </p>
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
       {[
         { icon: Sprout,      role: 'Farmer',      color: 'bg-green-50 border-green-200',   text: 'text-green-800',  desc: 'Registers animals, tracks health, orders medicines, and lists livestock for sale.' },
-        { icon: Pill,        role: 'Supplier',     color: 'bg-orange-50 border-orange-200', text: 'text-orange-800', desc: 'Distributes vaccines, medicines, and feed to farmers. Receives orders through PFUMA.' },
+        { icon: Pill,        role: 'Supplier',     color: 'bg-orange-50 border-orange-200', text: 'text-orange-800', desc: 'Distributes vaccines, medicines, and feed to farmers. Receives orders through PFUMA/INGCEBO.' },
         { icon: Store,       role: 'Buyer',     color: 'bg-purple-50 border-purple-200', text: 'text-purple-800', desc: 'Browses certified livestock listed by farmers, places bids, and receives DVS trade certificates.' },
         { icon: Stethoscope, role: 'Veterinarian', color: 'bg-blue-50 border-blue-200',     text: 'text-blue-800',   desc: 'Certifies animal health, issues movement permits, and manages regional disease outbreaks.' },
       ].map(r => (
@@ -205,7 +204,7 @@ const SellDirectlyCard = ({ animals, currentUser }) => {
       const res = await fetch(`${API}/animals/${animalId}/transfer`, { method: 'POST', headers: { Authorization: `Bearer ${currentUser.token}` } });
       const data = await res.json();
       if (res.ok) setTransfer(data); else setError(data.error || 'Could not generate a code.');
-    } catch { setError('Could not reach the PFUMA API.'); }
+    } catch { setError('Could not reach the PFUMA/INGCEBO API.'); }
     setBusy(false);
   };
 
@@ -572,9 +571,9 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
 
       <div className="p-6 xl:p-8 space-y-6">
 
-      {/* Your Role on PFUMA */}
+      {/* Your Role on PFUMA/INGCEBO */}
       <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
-        <p className="text-xs font-bold text-pfuma-green uppercase tracking-wide mb-1.5">Your Role on PFUMA</p>
+        <p className="text-xs font-bold text-pfuma-green uppercase tracking-wide mb-1.5">Your Role on PFUMA/INGCEBO</p>
         <h3 className="text-sm font-bold text-gray-900 mb-2">You are the heart of the herd</h3>
         <p className="text-xs text-gray-500 font-medium leading-relaxed mb-4">
           Register your animals, track their health, and reorder medicine before stocks run low. When ready, list animals on the Marketplace — a DVS vet certifies them so buyers across Zimbabwe can bid with confidence.
@@ -663,7 +662,7 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
               <h3 className="text-sm font-bold text-gray-800">Sell Your Animals</h3>
             </div>
             <p className="text-xs text-gray-400 font-medium mb-4 leading-snug">
-              List any animal below on the PFUMA Marketplace. Every livestock listing waits for Police sale-clearance before buyers can see it or bid — a sold animal can never be listed again.
+              List any animal below on the PFUMA/INGCEBO Marketplace. Every livestock listing waits for Police sale-clearance before buyers can see it or bid — a sold animal can never be listed again.
             </p>
 
             {animals.length === 0 ? (
@@ -735,7 +734,7 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
               <div className="mt-4 bg-purple-50 border border-purple-200 rounded-xl p-3">
                 <p className="text-xs font-bold text-purple-700 uppercase mb-1">What happens next</p>
                 <div className="space-y-1">
-                  {['Police review and clear the sale (papers, brand, movement permit)', 'Once cleared, buyers browse your listing on the Marketplace', 'A buyer places a bid — you receive it via PFUMA Messenger', 'Vet issues a DVS movement certificate for the sale'].map((s, i) => (
+                  {['Police review and clear the sale (papers, brand, movement permit)', 'Once cleared, buyers browse your listing on the Marketplace', 'A buyer places a bid — you receive it via PFUMA/INGCEBO Messenger', 'Vet issues a DVS movement certificate for the sale'].map((s, i) => (
                     <div key={i} className="flex items-start gap-2 text-xs text-purple-600 font-medium">
                       <span className="w-4 h-4 bg-purple-200 text-purple-700 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">{i + 1}</span>
                       {s}
@@ -756,7 +755,7 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
               <h3 className="text-sm font-bold text-gray-800">Medicine Cabinet</h3>
               <button onClick={() => setActiveTab('health')} className="text-xs font-bold text-pfuma-green hover:underline uppercase">Manage →</button>
             </div>
-            <p className="text-xs text-gray-400 font-medium mb-4">Your current medicine stock. Medicines are supplied by registered PFUMA Suppliers — contact them via PFUMA Messenger.</p>
+            <p className="text-xs text-gray-400 font-medium mb-4">Your current medicine stock. Medicines are supplied by registered PFUMA/INGCEBO Suppliers — contact them via PFUMA/INGCEBO Messenger.</p>
             <div className="space-y-3">
               {inventory.map(item => {
                 const isLow = item.stock <= item.min;
@@ -860,7 +859,7 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
               <Users size={15} className="text-pfuma-green" />
               <h3 className="text-sm font-bold text-gray-800">Farmers Near You</h3>
             </div>
-            <p className="text-xs text-gray-400 font-medium mb-4">Connect with other PFUMA farmers to swap tips, feed, or breeding stock.</p>
+            <p className="text-xs text-gray-400 font-medium mb-4">Connect with other PFUMA/INGCEBO farmers to swap tips, feed, or breeding stock.</p>
             {nearbyFarmers.length === 0 ? (
               <p className="text-xs text-gray-400 italic font-medium text-center py-4">No other registered farmers nearby yet</p>
             ) : (
@@ -928,7 +927,7 @@ const VetMedicationRecommender = ({ animals, currentUser }) => {
       setFeedback({ ok: true, msg: `Sent to ${animal.ownerName || 'the farmer'} — they can administer it from their Medicine Cabinet.` });
       setNotes(''); setFrequency('');
     } catch {
-      setFeedback({ ok: false, msg: 'Could not reach the PFUMA API.' });
+      setFeedback({ ok: false, msg: 'Could not reach the PFUMA/INGCEBO API.' });
     } finally {
       setBusy(false);
     }
@@ -1077,7 +1076,7 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
       if (!res.ok) return { error: data.error || 'Could not record signature.' };
       await loadVetData();
       return { ok: true };
-    } catch { return { error: 'Could not reach the PFUMA API.' }; }
+    } catch { return { error: 'Could not reach the PFUMA/INGCEBO API.' }; }
   };
 
   const issuePermit = async (permitId, blob) => {
@@ -1094,7 +1093,7 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
       if (!res.ok) return { error: data.error || 'Could not issue permit.' };
       await loadVetData();
       return { ok: true };
-    } catch { return { error: 'Could not reach the PFUMA API.' }; }
+    } catch { return { error: 'Could not reach the PFUMA/INGCEBO API.' }; }
   };
 
   const rejectPermit = async (permitId) => {
@@ -1809,10 +1808,10 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
       {/* Role explanation */}
       <div className="grid grid-cols-1 gap-4">
         <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
-          <p className="text-xs font-bold text-pfuma-gold uppercase tracking-wide mb-2">Your Role on PFUMA</p>
+          <p className="text-xs font-bold text-pfuma-gold uppercase tracking-wide mb-2">Your Role on PFUMA/INGCEBO</p>
           <p className="text-sm font-bold text-gray-800 mb-2">You are a veterinary medicine &amp; vaccine distributor</p>
           <p className="text-xs text-gray-500 font-medium leading-relaxed mb-3">
-            Farmers across Zimbabwe register on PFUMA to manage their herd health. When they run low on vaccines or medicines, they contact you through the platform. You fulfill the order and dispatch to the farm.
+            Farmers across Zimbabwe register on PFUMA/INGCEBO to manage their herd health. When they run low on vaccines or medicines, they contact you through the platform. You fulfill the order and dispatch to the farm.
           </p>
           <div className="flex items-center gap-2 text-xs font-medium text-gray-500 flex-wrap">
             <Sprout size={16} className="text-pfuma-gold shrink-0" /><span>Farmer runs low on stock</span>
@@ -1842,12 +1841,12 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
 
       {/* My Stock — a Supplier's stock IS their marketplace listings; there's
           no separate warehouse/intake step. This is the first, unmissable
-          answer to "how do I get my products into PFUMA?" */}
+          answer to "how do I get my products into PFUMA/INGCEBO?" */}
       {myStock.length === 0 ? (
         <div className="bg-pfuma-gold/10 border-2 border-dashed border-pfuma-gold/40 rounded-2xl p-6 flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h3 className="text-sm font-bold text-gray-800 mb-1">You haven't added any stock yet</h3>
-            <p className="text-xs text-gray-500 font-medium max-w-md">Posting a product on the Marketplace is how your stock gets into PFUMA — the quantity you enter is what farmers see and can order against.</p>
+            <p className="text-xs text-gray-500 font-medium max-w-md">Posting a product on the Marketplace is how your stock gets into PFUMA/INGCEBO — the quantity you enter is what farmers see and can order against.</p>
           </div>
           <button onClick={onAddStock} className="shrink-0 flex items-center gap-2 px-5 py-3 bg-pfuma-gold text-white rounded-xl font-bold text-xs uppercase tracking-wide hover:bg-amber-600 transition">
             <Plus size={15} /> Add Your First Product
@@ -2024,7 +2023,7 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
       setClaimSuccess(`${data.animal_name} is now yours.`);
       setClaimCode('');
       await loadPurchases();
-    } catch { setClaimError('Could not reach the PFUMA API.'); }
+    } catch { setClaimError('Could not reach the PFUMA/INGCEBO API.'); }
     setClaimBusy(false);
   };
 
@@ -2174,10 +2173,10 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
       {/* Role explanation */}
       <div className="grid grid-cols-1 gap-4">
         <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
-          <p className="text-xs font-bold text-pfuma-plum uppercase tracking-wide mb-2">Your Role on PFUMA</p>
+          <p className="text-xs font-bold text-pfuma-plum uppercase tracking-wide mb-2">Your Role on PFUMA/INGCEBO</p>
           <p className="text-sm font-bold text-gray-800 mb-2">You are a livestock buyer &amp; trader</p>
           <p className="text-xs text-gray-500 font-medium leading-relaxed mb-3">
-            Farmers list their animals for sale on PFUMA. You browse verified listings — each animal comes with a certified Health Passport. You place a bid, the farmer accepts, and a DVS Vet issues an official movement certificate so you can legally transport the animal.
+            Farmers list their animals for sale on PFUMA/INGCEBO. You browse verified listings — each animal comes with a certified Health Passport. You place a bid, the farmer accepts, and a DVS Vet issues an official movement certificate so you can legally transport the animal.
           </p>
           <div className="flex items-center gap-2 text-xs font-medium text-gray-500 flex-wrap">
             <Sprout size={16} className="text-pfuma-plum shrink-0" /><span>Farmer lists</span>
@@ -2215,7 +2214,7 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
             <div className="flex justify-between items-center mb-5">
               <div>
                 <h3 className="text-sm font-bold text-gray-800">Verified Marketplace Listings</h3>
-                <p className="text-xs text-gray-400 font-medium mt-0.5">All animals have a certified PFUMA Health Passport — safe to bid</p>
+                <p className="text-xs text-gray-400 font-medium mt-0.5">All animals have a certified PFUMA/INGCEBO Health Passport — safe to bid</p>
               </div>
               <button onClick={() => setActiveTab('profile')} className="text-xs font-bold text-pfuma-plum hover:underline uppercase">View All →</button>
             </div>
@@ -2259,7 +2258,7 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
             {/* Price trend chart */}
             <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
               <h3 className="text-sm font-bold text-gray-800 mb-1">Livestock Price Trend (USD / head)</h3>
-              <p className="text-xs text-gray-400 font-medium mb-4">Average price of livestock sales actually completed on PFUMA, last 6 months</p>
+              <p className="text-xs text-gray-400 font-medium mb-4">Average price of livestock sales actually completed on PFUMA/INGCEBO, last 6 months</p>
               {priceTrend.length === 0 ? (
                 <div className="h-36 flex items-center justify-center">
                   <p className="text-xs text-gray-400 font-medium italic">No completed sales yet — chart fills in as bids are accepted</p>
@@ -2412,7 +2411,7 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
             <h3 className="text-sm font-bold text-gray-800 mb-3">How to Buy</h3>
             <div className="space-y-3">
               {[
-                { n: '1', t: 'Browse Listings', d: 'All animals carry a certified PFUMA Health Passport' },
+                { n: '1', t: 'Browse Listings', d: 'All animals carry a certified PFUMA/INGCEBO Health Passport' },
                 { n: '2', t: 'Check the Passport', d: 'View vaccination history and breed details before bidding' },
                 { n: '3', t: 'Place a Bid', d: 'Your offer goes directly to the farmer via the platform' },
                 { n: '4', t: 'Receive Certificate', d: 'DVS movement permit issued on confirmed sale' },
@@ -2506,12 +2505,12 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
       });
       const data = await res.json();
       if (!res.ok) { setOfficerError(data.error || 'Could not provision this officer.'); return; }
-      setFeedback(`${officerForm.full_name}'s nomination was submitted — PFUMA Admin must approve it before the account can act as an officer. Give them their phone number and the temporary password so they're ready to log in once approved.`);
+      setFeedback(`${officerForm.full_name}'s nomination was submitted — PFUMA/INGCEBO Admin must approve it before the account can act as an officer. Give them their phone number and the temporary password so they're ready to log in once approved.`);
       setOfficerForm(EMPTY_OFFICER_FORM);
       setShowAddOfficer(false);
       setTimeout(() => setFeedback(null), 6000);
     } catch {
-      setOfficerError('Could not reach the PFUMA API. Is the Flask backend running?');
+      setOfficerError('Could not reach the PFUMA/INGCEBO API. Is the Flask backend running?');
     } finally {
       setOfficerBusy(false);
     }
@@ -2585,7 +2584,7 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
       const data = await res.json();
       if (!res.ok) { setFeedback(data.error || 'Could not resolve this clearance.'); setBusyId(null); setTimeout(() => setFeedback(null), 4000); return; }
       setFeedback(status === 'cleared' ? 'Sale cleared for listing.' : 'Sale clearance rejected.');
-    } catch { setFeedback('Could not reach the PFUMA API.'); }
+    } catch { setFeedback('Could not reach the PFUMA/INGCEBO API.'); }
     setClearances(prev => prev.filter(c => c.id !== clearanceId));
     setBusyId(null);
     setTimeout(() => setFeedback(null), 2500);
@@ -2607,7 +2606,7 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
       } else {
         window.alert(data.error || 'Could not upload photo.');
       }
-    } catch { window.alert('Could not reach the PFUMA API — the photo was not uploaded.'); }
+    } catch { window.alert('Could not reach the PFUMA/INGCEBO API — the photo was not uploaded.'); }
     setPhotoUploadingId(null);
   };
 
@@ -2617,7 +2616,6 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
   const policeActions = [
     { icon: ShieldCheck,   label: 'Verifications', color: 'bg-white/10', badge: verifications.length || null, onClick: () => scrollToId('police-verify-queue') },
     { icon: Tag,           label: 'Clearances',    color: 'bg-white/10',  badge: clearances.length || null,     onClick: () => scrollToId('police-clearance-queue') },
-    { icon: AlertTriangle, label: 'Theft Alerts',  color: 'bg-white/10',   badge: theftAlerts.length || null,    tab: 'iot' },
     { icon: Store,         label: 'Marketplace',   color: 'bg-white/10', tab: 'marketplace' },
     { icon: MessageSquare, label: 'Messenger',     color: 'bg-white/10',  tab: 'vet' },
     { icon: UserPlus,      label: 'Add Officer',   color: 'bg-white/10', onClick: () => { setShowAddOfficer(true); setOfficerError(''); scrollToId('police-officer-form'); } },
@@ -2649,7 +2647,6 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
             {[
               { icon: UserPlus,      label: 'Add Officer', onClick: () => { setShowAddOfficer(true); setOfficerError(''); scrollToId('police-officer-form'); } },
               { icon: Store,         label: 'Marketplace', tab: 'marketplace' },
-              { icon: Radio,         label: 'IoT Monitor', tab: 'iot' },
               { icon: MessageSquare, label: 'Messenger',   tab: 'vet' },
             ].map(q => (
               <button key={q.label} onClick={() => q.onClick ? q.onClick() : setActiveTab(q.tab)} className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl text-white/90 hover:bg-white/10 transition shrink-0 whitespace-nowrap">
@@ -2693,7 +2690,7 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
         role="Police"
         eyebrow={`Stock theft & verification unit · ${currentUser?.jurisdictionProvince || currentUser?.province || 'Mashonaland West'}`}
         title={`${greet()}, ${currentUser?.name || 'Officer'}`}
-        stats="Review signup verifications and livestock sale-clearance requests before they go live on PFUMA."
+        stats="Review signup verifications and livestock sale-clearance requests before they go live on PFUMA/INGCEBO."
         actions={
           <Button variant="onImage" icon={UserPlus} onClick={() => { setShowAddOfficer(s => !s); setOfficerError(''); }}>
             {showAddOfficer ? 'Cancel' : 'Add officer'}
@@ -2721,13 +2718,13 @@ const PoliceDashboard = ({ currentUser, setActiveTab, notifications, onMessageFa
           signup, and an existing officer can no longer unilaterally verify
           the next one (that was the fraud path: one compromised or rogue
           account minting others). This submits a pending request that only
-          PFUMA Admin can approve, in the Admin Panel. */}
+          PFUMA/INGCEBO Admin can approve, in the Admin Panel. */}
       {showAddOfficer && (
         <form id="police-officer-form" onSubmit={provisionOfficer} className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-4">
           <div className="flex items-start justify-between">
             <div>
               <h3 className="text-sm font-bold text-white mb-1">Nominate New Officer</h3>
-              <p className="text-xs text-gray-500 font-medium">Police accounts aren't self-service signup. This submits a request — PFUMA Admin must review and approve it (confirming a real officer vouched for them) before the account can log in and act as Police.</p>
+              <p className="text-xs text-gray-500 font-medium">Police accounts aren't self-service signup. This submits a request — PFUMA/INGCEBO Admin must review and approve it (confirming a real officer vouched for them) before the account can log in and act as Police.</p>
             </div>
             <button type="button" onClick={() => setShowAddOfficer(false)} className="text-gray-500 hover:text-white transition p-1">
               <X size={16} />
@@ -3103,7 +3100,7 @@ const InstitutionDashboard = ({ currentUser, setActiveTab }) => {
       if (!res.ok) { setLookupError(data.error || 'Could not find this certificate.'); setLookupBusy(false); return; }
       setResult(data);
       await loadLedger();
-    } catch { setLookupError('Could not reach the PFUMA API.'); }
+    } catch { setLookupError('Could not reach the PFUMA/INGCEBO API.'); }
     setLookupBusy(false);
   };
 
@@ -3198,7 +3195,7 @@ const InstitutionDashboard = ({ currentUser, setActiveTab }) => {
       {/* Role explanation */}
       <div className="grid grid-cols-1 gap-4">
         <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
-          <p className="text-xs font-bold text-teal-700 uppercase tracking-wide mb-2">Your Role on PFUMA</p>
+          <p className="text-xs font-bold text-teal-700 uppercase tracking-wide mb-2">Your Role on PFUMA/INGCEBO</p>
           <p className="text-sm font-bold text-gray-800 mb-2">You verify livestock as loan/insurance collateral</p>
           <p className="text-xs text-gray-500 font-medium leading-relaxed">
             A farmer shares you a certificate code for an animal they're offering as collateral. Look it up here — the check is saved to your ledger, and flagging it as held collateral warns any other lender who checks the same certificate.
@@ -3332,7 +3329,6 @@ const NAV_SECTIONS = {
         { tab: 'compliance',  icon: ShieldAlert,     label: 'Follow-Ups',    desc: 'Overdue vaccinations & what to do' },
         { tab: 'disease',     icon: Stethoscope,     label: 'Diagnostics',   desc: 'AI disease checker' },
         { tab: 'feed',        icon: Wheat,           label: 'Feed Analyzer', desc: 'Livestock nutrition database' },
-        { tab: 'iot',         icon: Radio,           label: 'IoT Monitor',   desc: 'Live collar sensor data' },
       ]
     },
     {
@@ -3371,12 +3367,6 @@ const NAV_SECTIONS = {
         { tab: 'compliance',  icon: ShieldAlert,     label: 'Follow-Ups',    desc: 'Overdue vaccinations in your province' },
         { tab: 'vet',         icon: MessageSquare,   label: 'Messenger',     desc: 'Vets, suppliers, farmers & buyers' },
         { tab: 'marketplace', icon: Store,           label: 'Marketplace',   desc: 'Monitor trade & listings' },
-      ]
-    },
-    {
-      section: 'Surveillance',
-      items: [
-        { tab: 'iot',         icon: Radio,           label: 'IoT Stream',    desc: 'Live herd health sensors' },
       ]
     },
   ],
@@ -3433,12 +3423,6 @@ const NAV_SECTIONS = {
       items: [
         { tab: 'marketplace', icon: Store,           label: 'Marketplace',   desc: 'Monitor livestock trade activity' },
         { tab: 'vet',         icon: MessageSquare,   label: 'Messenger',     desc: 'Vets, suppliers, farmers & buyers' },
-      ]
-    },
-    {
-      section: 'Surveillance',
-      items: [
-        { tab: 'iot',         icon: Radio,           label: 'IoT Monitor',   desc: 'Theft & geofence alerts' },
       ]
     },
   ],
@@ -3743,7 +3727,7 @@ function App() {
         ? { ok: true, warning: `Animal registered, but ${extraFailed} of ${files.length - 1} extra photo(s) didn't upload — add them again from the animal's profile.` }
         : { ok: true };
     } catch {
-      return { ok: false, error: 'Could not reach the PFUMA API. Is the Flask backend running?' };
+      return { ok: false, error: 'Could not reach the PFUMA/INGCEBO API. Is the Flask backend running?' };
     }
   };
 
@@ -3761,7 +3745,7 @@ function App() {
       if (failed > 0) return { ok: succeeded > 0, error: `${succeeded} added, ${failed} failed — try adding the missing one(s) again.` };
       return { ok: true };
     } catch {
-      return { ok: false, error: 'Could not reach the PFUMA API. Is the Flask backend running?' };
+      return { ok: false, error: 'Could not reach the PFUMA/INGCEBO API. Is the Flask backend running?' };
     }
   };
 
@@ -3917,7 +3901,7 @@ function App() {
         <div className="px-5 pt-6 pb-5 flex items-start gap-3">
           <img src={pfumaMark} alt="" className="w-10 h-10 rounded-xl shrink-0 object-cover" />
           <div className="flex-1 min-w-0 pt-0.5">
-            <span className="text-[1.0625rem] font-extrabold tracking-tight block leading-none">PFUMA</span>
+            <span className="text-[1.0625rem] font-extrabold tracking-tight block leading-none">PFUMA/INGCEBO</span>
             <span className={`text-[0.6875rem] font-bold uppercase tracking-[0.12em] mt-1.5 block ${tint.text}`}>
               {role}
             </span>
@@ -4104,7 +4088,7 @@ function App() {
             <Menu size={20} />
           </button>
           <img src={pfumaMark} alt="" className="w-7 h-7 rounded-lg shrink-0 object-cover" />
-          <span className="text-[0.9375rem] font-extrabold text-gray-900 tracking-tight">PFUMA</span>
+          <span className="text-[0.9375rem] font-extrabold text-gray-900 tracking-tight">PFUMA/INGCEBO</span>
           <span className={`text-[0.625rem] font-bold uppercase tracking-[0.1em] px-2 py-0.5 rounded-full bg-cream text-bark-500`}>
             {role}
           </span>
@@ -4193,7 +4177,6 @@ function App() {
           {activeTab === 'compliance' && <ErrorBoundary><ComplianceCenter currentUser={currentUser} /></ErrorBoundary>}
           {activeTab === 'cooperative' && <ErrorBoundary><Cooperative currentUser={currentUser} /></ErrorBoundary>}
           {activeTab === 'tradingJournal' && <ErrorBoundary><TradingJournal currentUser={currentUser} setActiveTab={setActiveTab} /></ErrorBoundary>}
-          {activeTab === 'iot'         && <ErrorBoundary><HardwareSimulation animals={animals} currentUser={currentUser} /></ErrorBoundary>}
         </div>
 
         <Jinda setActiveTab={setActiveTab} animals={animals} currentUser={currentUser} />

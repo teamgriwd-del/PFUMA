@@ -22,7 +22,7 @@ The Act is implemented through a series of Statutory Instruments (SIs) made unde
 ## Key obligations
 
 ### 1. Disease reporting duty
-Under Section 3 of the Animal Health (General) Regulations, 1994 (made under the Act), the **owner of an animal suffering from, or suspected of suffering from, a notifiable disease must report it to an authorized person (a DVS officer) or a police officer**, and must also notify owners of other animals in the vicinity. This is the legal basis for the "if in doubt, report it" guidance PFUMA should give farmers and vets.
+Under Section 3 of the Animal Health (General) Regulations, 1994 (made under the Act), the **owner of an animal suffering from, or suspected of suffering from, a notifiable disease must report it to an authorized person (a DVS officer) or a police officer**, and must also notify owners of other animals in the vicinity. This is the legal basis for the "if in doubt, report it" guidance PFUMA/INGCEBO should give farmers and vets.
 
 Notifiable/controlled diseases in Zimbabwe generally align with the World Organisation for Animal Health (WOAH, formerly OIE) list and include diseases such as Foot and Mouth Disease, Anthrax, African Swine Fever, Lumpy Skin Disease, and others covered in the species docs in this folder. The Act does not itself enumerate the full current list in an easily citable single section from public sources reviewed — **the authoritative, current notifiable-disease list should be confirmed directly with DVS**, since it is updated by regulation/notice, not fixed permanently in the primary Act text.
 
@@ -30,12 +30,12 @@ Notifiable/controlled diseases in Zimbabwe generally align with the World Organi
 The Minister and DVS officers have the power to declare quarantine/infected areas, restrict or prohibit movement of animals into or out of an area, and order the destruction or safe disposal of infected animals and carcasses to stop disease spread. This is the legal basis for [movement permits](livestock-movement-permits.md) and dip-tank/area-based controls referenced elsewhere in this folder.
 
 ### 3. Import/export control
-The Act underpins Zimbabwe's ability to prevent disease introduction via imported animals or animal products, relevant to any Supplier role importing livestock, semen, or animal products through PFUMA.
+The Act underpins Zimbabwe's ability to prevent disease introduction via imported animals or animal products, relevant to any Supplier role importing livestock, semen, or animal products through PFUMA/INGCEBO.
 
 ### 4. Ministerial regulation-making power
 Much of the day-to-day detail (fees, forms, specific notifiable diseases, dipping requirements) is delegated to Statutory Instruments made under the Act rather than fixed in the Act itself, meaning the practical rules can and do change by SI without amending the Act's chapter number.
 
-## What this means for PFUMA
+## What this means for PFUMA/INGCEBO
 
 - A **Farmer** or **Vet** reporting a suspected outbreak (e.g. flagging a sick animal in-app) should be told this may trigger a legal reporting duty, and given contact guidance toward DVS/police, not just told to "wait and see."
 - A **Farmer** trying to sell/move an animal during a declared outbreak or from a quarantined area should be warned that movement may be restricted regardless of any movement permit otherwise held (see [livestock-movement-permits.md](livestock-movement-permits.md)).

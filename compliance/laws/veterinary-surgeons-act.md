@@ -31,12 +31,12 @@ Based on the structure of the Act and standard professional-registration practic
 - **A current practising certificate/annual renewal**, if the Council operates an annual renewal system (common in professional-council models in Zimbabwe and the region) — **confirm directly with CVSZ whether renewal is annual and what the current certificate looks like**, as we could not independently confirm the renewal cadence from primary source text.
 - **National identification** matching the name on the register.
 
-## What this means for PFUMA
+## What this means for PFUMA/INGCEBO
 
 - The **Veterinarian** signup flow should require a **CVSZ registration/licence number** plus supporting ID, and ideally a manual or semi-automated cross-check against the CVSZ register before the account is marked "verified vet" (see [signup-verification-requirements.md](signup-verification-requirements.md)).
 - Any diagnosis, treatment recommendation, or medicine dispensing guidance surfaced by a Vet account in-app should be understood by users as coming from someone who is supposed to be CVSZ-registered — the platform should make "verified" badge status meaningful, not cosmetic.
 - The AI assistant, when asked "is this a real vet," should explain that legitimate practice requires CVSZ registration and should not itself attempt to confirm registration status — that check belongs to the platform's verification process, ideally corroborated with CVSZ directly.
-- Related professional roles referenced in the Act's subsidiary regulations (e.g. embryo transfer technicians, laboratory technologists) may be relevant if PFUMA later supports more specialized professional roles — flagged here for future scope, not needed for the current 5-role model.
+- Related professional roles referenced in the Act's subsidiary regulations (e.g. embryo transfer technicians, laboratory technologists) may be relevant if PFUMA/INGCEBO later supports more specialized professional roles — flagged here for future scope, not needed for the current 5-role model.
 
 ## What we could not verify with confidence
 

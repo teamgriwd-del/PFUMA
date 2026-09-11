@@ -68,7 +68,7 @@ export default function HomeScreen({ navigation, currentUser }) {
       <View style={styles.header}>
         <View>
           <Text style={styles.greet}>{greet()}, Farmer 🌾</Text>
-          <Text style={styles.appName}>PFUMA</Text>
+          <Text style={styles.appName}>PFUMA/INGCEBO</Text>
           <Text style={styles.tagline}>Zimbabwe's Livestock Intelligence Platform</Text>
         </View>
         <Image source={pfumaMark} style={styles.logoBox} />
@@ -134,28 +134,28 @@ export default function HomeScreen({ navigation, currentUser }) {
 const styles = StyleSheet.create({
   container:     { flex: 1, backgroundColor: COLORS.bg },
   header:        { backgroundColor: COLORS.primary, padding: 24, paddingTop: 56, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  greet:         { color: '#DEC9AE', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
+  greet:         { color: '#DEC9AE', fontSize: 12, fontFamily: FONTS.bold, textTransform: 'uppercase', letterSpacing: 1 },
   appName:       { color: '#fff', fontSize: 26, fontFamily: FONTS.extrabold, marginTop: 4, letterSpacing: -0.5 },
-  tagline:       { color: '#DEC9AE', fontSize: 11, fontWeight: '600', marginTop: 2 },
+  tagline:       { color: '#DEC9AE', fontSize: 11, fontFamily: FONTS.semibold, marginTop: 2 },
   logoBox:       { width: 44, height: 44, borderRadius: 14, elevation: 4 },
   section:       { marginHorizontal: 16, marginTop: 20 },
-  sectionTitle:  { fontSize: 14, fontWeight: '800', color: COLORS.text, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
+  sectionTitle:  { fontSize: 14, fontFamily: FONTS.extrabold, color: COLORS.text, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 },
   statsRow:      { flexDirection: 'row', gap: 8 },
   statCard:      { flex: 1, borderRadius: 16, padding: 12, alignItems: 'center', elevation: 2 },
   statEmoji:     { fontSize: 20, marginBottom: 4 },
-  statValue:     { fontSize: 18, fontWeight: '900' },
-  statLabel:     { fontSize: 9, color: COLORS.muted, fontWeight: '700', textTransform: 'uppercase', textAlign: 'center', marginTop: 2 },
+  statValue:     { fontSize: 18, fontFamily: FONTS.extrabold },
+  statLabel:     { fontSize: 9, color: COLORS.muted, fontFamily: FONTS.bold, textTransform: 'uppercase', textAlign: 'center', marginTop: 2 },
   quickRow:      { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   quickBtn:      { width: '47%', borderRadius: 16, borderWidth: 1.5, padding: 14, alignItems: 'center', backgroundColor: '#fff', elevation: 2 },
   quickIcon:     { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  quickLabel:    { fontSize: 11, fontWeight: '800', textAlign: 'center', textTransform: 'uppercase' },
+  quickLabel:    { fontSize: 11, fontFamily: FONTS.extrabold, textAlign: 'center', textTransform: 'uppercase' },
   alertCard:     { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 10, borderLeftWidth: 4, flexDirection: 'row', alignItems: 'flex-start', gap: 10, elevation: 1 },
   alertDot:      { width: 8, height: 8, borderRadius: 4, marginTop: 4, flexShrink: 0 },
-  alertTitle:    { fontSize: 13, fontWeight: '800', color: COLORS.text },
+  alertTitle:    { fontSize: 13, fontFamily: FONTS.extrabold, color: COLORS.text },
   alertMsg:      { fontSize: 12, color: COLORS.muted, marginTop: 2, lineHeight: 17 },
   eventCard:     { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 12, elevation: 1 },
   eventDot:      { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.primary, flexShrink: 0 },
-  eventAction:   { fontSize: 13, fontWeight: '700', color: COLORS.text },
+  eventAction:   { fontSize: 13, fontFamily: FONTS.bold, color: COLORS.text },
   eventMeta:     { fontSize: 11, color: COLORS.muted, marginTop: 2 },
   emptyText:     { color: COLORS.muted, fontStyle: 'italic', textAlign: 'center', paddingVertical: 20 },
 });

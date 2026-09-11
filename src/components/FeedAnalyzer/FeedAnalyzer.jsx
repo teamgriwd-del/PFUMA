@@ -58,7 +58,7 @@ const NutrientBar = ({ label, value, max, unit, color }) => {
 // The differentiator: computes what a farmer's REAL registered animal
 // needs (species + live weight + age → daily protein/energy target using
 // standard maintenance formulas) and prices a chosen ration against live
-// PFUMA Marketplace listings — not a static "here's what's in maize" table.
+// PFUMA/INGCEBO Marketplace listings — not a static "here's what's in maize" table.
 const RationBuilder = ({ currentUser, animals, feeds, onUpdateAnimal }) => {
   const eligibleAnimals = useMemo(
     () => (animals || []).filter(a => RATION_SPECIES.includes(a.species)),
@@ -180,7 +180,7 @@ const RationBuilder = ({ currentUser, animals, feeds, onUpdateAnimal }) => {
       <div className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex items-start gap-3">
         <Calculator size={16} className="text-pfuma-green mt-0.5 shrink-0" />
         <p className="text-xs text-gray-600 font-medium leading-relaxed">
-          <span className="font-bold text-gray-800">This is the difference:</span> you already know Maize is energy and Soya is protein. What you don't know off the top of your head is exactly how many grams of protein <em>this specific animal</em>, at <em>this weight and age</em>, needs today — and what that ration actually costs at real PFUMA supplier prices. That's what this calculates.
+          <span className="font-bold text-gray-800">This is the difference:</span> you already know Maize is energy and Soya is protein. What you don't know off the top of your head is exactly how many grams of protein <em>this specific animal</em>, at <em>this weight and age</em>, needs today — and what that ration actually costs at real PFUMA/INGCEBO supplier prices. That's what this calculates.
         </p>
       </div>
 
@@ -262,7 +262,7 @@ const RationBuilder = ({ currentUser, animals, feeds, onUpdateAnimal }) => {
                     className="w-24 px-3 py-2.5 bg-gray-50 rounded-xl border border-gray-200 text-xs font-bold outline-none focus:ring-2 focus:ring-pfuma-green/30"
                   />
                   {feed && !feed.market_price && (
-                    <span title="No live PFUMA supplier price for this feed yet"><AlertTriangle size={14} className="text-amber-400 shrink-0" /></span>
+                    <span title="No live PFUMA/INGCEBO supplier price for this feed yet"><AlertTriangle size={14} className="text-amber-400 shrink-0" /></span>
                   )}
                   <button onClick={() => removeRow(idx)} disabled={rows.length === 1} className="text-gray-300 hover:text-red-500 disabled:opacity-30 shrink-0">
                     <Trash2 size={15} />
@@ -308,7 +308,7 @@ const RationBuilder = ({ currentUser, animals, feeds, onUpdateAnimal }) => {
                 <span className="text-lg font-bold text-white">USD {preview.cost.toFixed(2)}</span>
               </div>
               {preview.anyUnpriced && (
-                <p className="text-xs text-amber-600 font-bold">⚠ One or more feeds have no live PFUMA supplier listing — cost shown is partial. List that feed on the Marketplace to get real pricing here.</p>
+                <p className="text-xs text-amber-600 font-bold">⚠ One or more feeds have no live PFUMA/INGCEBO supplier listing — cost shown is partial. List that feed on the Marketplace to get real pricing here.</p>
               )}
 
               {error && <p className="text-xs text-red-600 font-bold bg-red-50 border border-red-200 rounded-xl p-3">{error}</p>}
@@ -523,7 +523,7 @@ const FeedAnalyzer = ({ currentUser, animals = [], onUpdateAnimal }) => {
         image={photo('cropRows', { w: 1800, q: 74 })}
         eyebrow="Feed analyzer"
         title="Ration builder & nutrition database"
-        sub="Not just what's in the bag — what your animal actually needs today, and what it costs from real PFUMA suppliers."
+        sub="Not just what's in the bag — what your animal actually needs today, and what it costs from real PFUMA/INGCEBO suppliers."
         aside={
           <span className={`flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold backdrop-blur-sm ${
             apiOnline

@@ -271,7 +271,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
             setFormError(data.error || 'Could not open that conversation.');
           }
         } catch {
-          setFormError('Could not reach the PFUMA API.');
+          setFormError('Could not reach the PFUMA/INGCEBO API.');
         }
       })();
       onIntentConsumed?.();
@@ -327,7 +327,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
       await loadConversations();
       openConversation(data.id);
     } catch {
-      setFormError('Could not reach the PFUMA API.');
+      setFormError('Could not reach the PFUMA/INGCEBO API.');
     }
   };
 
@@ -373,7 +373,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
         setFormError(data.error || 'Message could not be sent.');
       }
     } catch {
-      setFormError('Could not reach the PFUMA API — message not sent.');
+      setFormError('Could not reach the PFUMA/INGCEBO API — message not sent.');
     } finally {
       setSendBusy(false);
     }
@@ -425,7 +425,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
       setNewCase({ category: 'General', animalId: '', province: '', district: '', subject: '', description: '' });
       openConversation(data.id);
     } catch {
-      setFormError('Could not reach the PFUMA API.');
+      setFormError('Could not reach the PFUMA/INGCEBO API.');
     }
   };
 
@@ -442,7 +442,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
 
         <div className="px-5 pt-6 pb-4 border-b border-gray-100">
           <div className="flex justify-between items-center mb-1">
-            <h2 className="text-xl font-bold text-gray-900">PFUMA Messenger</h2>
+            <h2 className="text-xl font-bold text-gray-900">PFUMA/INGCEBO Messenger</h2>
             <button
               onClick={() => { setIsComposing(true); setSelectedContact(null); setActiveConvId(null); setPeopleQuery(''); }}
               className="w-9 h-9 bg-pfuma-green text-white rounded-full flex items-center justify-center hover:bg-green-700 transition shadow-md"
@@ -451,10 +451,10 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
               <Plus size={18} />
             </button>
           </div>
-          <p className="text-xs text-gray-400 font-medium mb-4">Any verified PFUMA member can message any other — vets, suppliers, farmers &amp; buyers.</p>
+          <p className="text-xs text-gray-400 font-medium mb-4">Any verified PFUMA/INGCEBO member can message any other — vets, suppliers, farmers &amp; buyers.</p>
           {!apiOnline && (
             <div className="mb-3 flex items-center gap-2 bg-yellow-50 border border-yellow-200 px-3 py-2 rounded-xl text-xs font-bold text-yellow-700">
-              Can't reach the PFUMA API — check the Flask backend is running.
+              Can't reach the PFUMA/INGCEBO API — check the Flask backend is running.
             </div>
           )}
           <div className="relative mb-3">
@@ -814,7 +814,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
                 </button>
               </div>
               <p className="flex items-center justify-center gap-1 text-center text-xs text-gray-400 font-medium mt-2">
-                <Lock size={10} /> Messages are stored on your PFUMA account
+                <Lock size={10} /> Messages are stored on your PFUMA/INGCEBO account
               </p>
             </div>
           </>
@@ -826,7 +826,7 @@ const VetCommunication = ({ animals = [], currentUser, intent, onIntentConsumed 
             <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center shadow-lg mb-6 border border-gray-100">
               <Users size={40} className="text-pfuma-green" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-800 mb-2">PFUMA Messenger</h3>
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">PFUMA/INGCEBO Messenger</h3>
             <p className="text-gray-400 font-medium text-sm max-w-xs leading-relaxed mb-8">
               Search for anyone by name or phone number — vets, suppliers, farmers, or buyers — and start a real conversation.
             </p>

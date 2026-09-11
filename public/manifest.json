@@ -1,6 +1,6 @@
 {
-  "name": "PFUMA — Livestock Intelligence",
-  "short_name": "PFUMA",
+  "name": "PFUMA/INGCEBO — Livestock Intelligence",
+  "short_name": "PFUMA/INGCEBO",
   "description": "Zimbabwe's Livestock Intelligence Platform — register your herd, track health, and sell with a certified digital passport.",
   "start_url": "/",
   "scope": "/",

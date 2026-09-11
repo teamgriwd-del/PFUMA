@@ -1,4 +1,4 @@
-# PFUMA — Proteus 8 Simulation Guide
+# PFUMA/INGCEBO — Proteus 8 Simulation Guide
 # Step-by-step: build and run the collar node simulation
 
 ---
@@ -177,7 +177,7 @@ DC Voltmeter      Battery node               See 5V supply
 Paste this into Arduino IDE, compile, export .hex, load into Proteus.
 
 ```cpp
-// PFUMA CN-01 — Proteus Simulation Firmware
+// PFUMA/INGCEBO CN-01 — Proteus Simulation Firmware
 // For: Arduino Mega 2560 (simulates ESP32 collar node)
 // Board in Proteus: ARDUINO MEGA 2560
 
@@ -226,7 +226,7 @@ void setup() {
     digitalWrite(PIN_LED_STATUS, HIGH); delay(200);
     digitalWrite(PIN_LED_STATUS, LOW);  delay(200);
   }
-  Serial.println(F("PFUMA Collar Node — Proteus Simulation"));
+  Serial.println(F("PFUMA/INGCEBO Collar Node — Proteus Simulation"));
 }
 
 void loop() {

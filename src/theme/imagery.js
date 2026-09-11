@@ -1,4 +1,4 @@
-// ── PFUMA imagery ──────────────────────────────────────────────────────────
+// ── PFUMA/INGCEBO imagery ──────────────────────────────────────────────────────────
 //
 // Every photograph in the product resolves through this one module, so the
 // whole library can be repointed at self-hosted assets later by editing

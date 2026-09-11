@@ -36,7 +36,7 @@ A small per-animal registration fee has historically applied (this has been waiv
 - **Police cannot lawfully clear the transfer/sale of unbranded animals** in the standard clearance process (see [stock-theft-act.md](stock-theft-act.md) and [livestock-movement-permits.md](livestock-movement-permits.md)), which in practice blocks a legitimate sale.
 - The **Stock Theft Act** imposes criminal penalties (a fine up to level 7 and/or imprisonment up to four years, per sources reviewed) for failing to provide required identification/traceability documentation for an animal — underscoring that identification isn't just paperwork, it's what stands between an owner and a theft accusation.
 
-## What this means for PFUMA
+## What this means for PFUMA/INGCEBO
 
 - A **Farmer** listing cattle (and, where applicable, sheep/goats) for sale should be prompted for **brand/tag details** (brand mark code, dip tank, district) as part of the listing, and the platform should treat "no brand/tag on record" as a red flag requiring extra scrutiny before a sale is facilitated.
 - The AI assistant should tell farmers that branding/tagging is not optional decoration — it is what makes an animal legally provable as theirs, and a precondition for police clearance and lawful transport.

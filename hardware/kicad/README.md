@@ -1,4 +1,4 @@
-# PFUMA Rev B — KiCad single-sided PCBs
+# PFUMA/INGCEBO Rev B — KiCad single-sided PCBs
 
 > **On hold.** The current build path is the hand-soldered stripboard version
 > — see [`../VEROBOARD.md`](../VEROBOARD.md). These etched-PCB files stay valid

@@ -38,7 +38,7 @@ const RestockRow = ({ listing, onRestocked, currentUser }) => {
       if (!res.ok) { setError(data.error || 'Could not restock.'); setBusy(false); return; }
       setAdding('');
       await onRestocked();
-    } catch { setError('Could not reach the PFUMA API.'); }
+    } catch { setError('Could not reach the PFUMA/INGCEBO API.'); }
     setBusy(false);
   };
 

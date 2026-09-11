@@ -2,7 +2,7 @@
 
 > Not legal advice. See the [disclaimer](../README.md). This document combines specific legal requirements documented in this folder's law docs with **general, standard Zimbabwean business/regulatory practice** where no specific statute was found. Every item below is marked either **[Legal]** (traceable to a law doc in this folder) or **[Standard practice]** (a reasonable, common-practice inference, not a confirmed statutory mandate) — confirm the latter category with a lawyer/regulator before treating it as a hard legal requirement.
 
-PFUMA has 5 roles: Farmer, Veterinarian, Supplier, Retailer, Police. Each needs different documentation at signup because each carries different legal exposure and trust requirements on the platform.
+PFUMA/INGCEBO has 5 roles: Farmer, Veterinarian, Supplier, Retailer, Police. Each needs different documentation at signup because each carries different legal exposure and trust requirements on the platform.
 
 ## 1. Farmer
 
@@ -24,7 +24,7 @@ PFUMA has 5 roles: Farmer, Veterinarian, Supplier, Retailer, Police. Each needs 
 | Veterinary qualification (degree/diploma) | [Standard practice] | Supporting evidence alongside the CVSZ number |
 | Current practising certificate / proof of active (non-lapsed) registration, if CVSZ issues one | [Standard practice — unconfirmed cadence] | We could not confirm from primary sources whether CVSZ registration requires annual renewal; ask the applicant to supply whatever CVSZ currently issues as proof of active status, and ideally cross-check against the CVSZ register directly |
 
-**Verification recommendation:** Treat the CVSZ number as the load-bearing credential. Where possible, PFUMA should cross-check submitted numbers against the CVSZ register (https://cvsz.org/) manually or via any API/lookup CVSZ may offer, rather than trusting the number at face value, since a "verified vet" badge implies real legal standing to other users.
+**Verification recommendation:** Treat the CVSZ number as the load-bearing credential. Where possible, PFUMA/INGCEBO should cross-check submitted numbers against the CVSZ register (https://cvsz.org/) manually or via any API/lookup CVSZ may offer, rather than trusting the number at face value, since a "verified vet" badge implies real legal standing to other users.
 
 ## 3. Supplier
 
@@ -57,11 +57,11 @@ This is explicitly **platform-internal verification**, not self-service — the 
 | **Service/force number** | [Standard practice] | Zimbabwe Republic Police (ZRP) service members carry individual service numbers; this is the natural equivalent of a professional registration number for this role |
 | **Badge number** | [Standard practice] | Additional identifier, cross-checkable in person/administratively |
 | **Station attachment** (which police station/district the officer is attached to) | [Standard practice] | Needed to route clearance requests appropriately and to allow offline verification through the chain of command at that station |
-| **Manual/out-of-band vetting** — e.g. a verification call or letter to the named station, rather than pure self-service signup | [Standard practice — strongly recommended] | Given documented real-world corruption risk around cattle clearance fees and forged paperwork (see [stock-theft-act.md](laws/stock-theft-act.md) sources), PFUMA should not grant the Police role purely on submitted documents — this account type should be seeded or manually approved by platform admins after independent confirmation, not self-service like the other four roles |
+| **Manual/out-of-band vetting** — e.g. a verification call or letter to the named station, rather than pure self-service signup | [Standard practice — strongly recommended] | Given documented real-world corruption risk around cattle clearance fees and forged paperwork (see [stock-theft-act.md](laws/stock-theft-act.md) sources), PFUMA/INGCEBO should not grant the Police role purely on submitted documents — this account type should be seeded or manually approved by platform admins after independent confirmation, not self-service like the other four roles |
 
 ## Cross-cutting recommendation
 
-For all roles, PFUMA should:
+For all roles, PFUMA/INGCEBO should:
 - Store the exact document/number submitted (not just a "verified: yes/no" flag) so a dispute or later audit can trace back what was checked.
 - Periodically re-verify credentials that can lapse (vet registration renewal, business registration renewal) rather than treating verification as a one-time gate.
 - Make clear to users which roles are self-service-verified (Farmer, Vet, Supplier, Retailer — verified against submitted documents) versus manually vetted (Police), so trust expectations are accurate.

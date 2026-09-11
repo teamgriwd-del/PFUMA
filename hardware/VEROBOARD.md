@@ -1,4 +1,4 @@
-# PFUMA — Veroboard build (current build path)
+# PFUMA/INGCEBO — Veroboard build (current build path)
 
 Hand-soldered stripboard versions of **BS-02** (base station) and **CN-02**
 (collar node). This is what is actually being built. The etched PCBs in

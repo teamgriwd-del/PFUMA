@@ -79,17 +79,18 @@ export const HEALTH_PROTOCOLS = {
 
 export const BREED_PROFILES = {
   Cattle: [
-    { breed: "Brahman", origin: "India/USA", mature_weight_kg: 500, heat_tolerance: "Excellent", notes: "Best tick resistance in Zimbabwe" },
+    { breed: "Brahman", origin: "India/USA", mature_weight_kg: 500, heat_tolerance: "Excellent", notes: "Best tick resistance in Zimbabwe; avid forager and good walker, hybrid vigour boosts weaner growth" },
     { breed: "Hereford", origin: "England", mature_weight_kg: 650, heat_tolerance: "Moderate", notes: "Excellent marbling, British beef breed" },
-    { breed: "Mashona", origin: "Zimbabwe", mature_weight_kg: 400, heat_tolerance: "Excellent", notes: "Indigenous breed — high disease resistance" },
+    { breed: "Mashona", origin: "Zimbabwe", mature_weight_kg: 400, heat_tolerance: "Excellent", notes: "Indigenous breed — high disease resistance, excellent mother, early-maturing with a high dressing percentage" },
     { breed: "Nguni", origin: "Southern Africa", mature_weight_kg: 380, heat_tolerance: "Excellent", notes: "Hardy, tick-resistant, suits communal farming" },
     { breed: "Simmental", origin: "Switzerland", mature_weight_kg: 700, heat_tolerance: "Poor", notes: "Dual-purpose (milk+beef), needs good management" },
     { breed: "Charolais", origin: "France", mature_weight_kg: 750, heat_tolerance: "Poor", notes: "Fast growth, lean beef — high-input required" },
-    { breed: "Tuli", origin: "Zimbabwe", mature_weight_kg: 420, heat_tolerance: "Excellent", notes: "Sanga type, excellent forager, drought-tolerant" }
+    { breed: "Tuli", origin: "Zimbabwe", mature_weight_kg: 420, heat_tolerance: "Excellent", notes: "Sanga type, excellent forager, drought-tolerant; polled, docile, easy calving" }
   ],
   Goat: [
-    { breed: "Boer", origin: "South Africa", mature_weight_kg: 110, notes: "Primary meat breed, fast growth rate" },
-    { breed: "Matebele", origin: "Zimbabwe", mature_weight_kg: 45, notes: "Indigenous, highly adapted to communal conditions" },
+    { breed: "Boer", origin: "South Africa", mature_weight_kg: 110, notes: "Primary meat breed, fast growth rate; white coat with a red head and neck, large drooping ears — nearly twice the frame of a Matabele goat" },
+    { breed: "Matebele", origin: "Zimbabwe", mature_weight_kg: 45, notes: "Indigenous, highly adapted to communal conditions; concentrated in Matabeleland South and Masvingo, around 50% twinning rate" },
+    { breed: "Small East African", origin: "Zimbabwe", mature_weight_kg: 30, notes: "Indigenous, drought-hardy; found in the dry parts of Mashonaland North, the Midlands and the Zambezi Valley — smaller-framed than the Matabele goat, around 20% twinning rate" },
     { breed: "Saanen", origin: "Switzerland", mature_weight_kg: 65, notes: "Top dairy goat breed — needs supplement feeding" },
     { breed: "Kalahari Red", origin: "South Africa", mature_weight_kg: 90, notes: "Heat-tolerant meat breed" }
   ],

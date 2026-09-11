@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
-  StyleSheet, ActivityIndicator, RefreshControl, Image, Alert,
+  StyleSheet, ActivityIndicator, RefreshControl, Image, ImageBackground, Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import {
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react-native';
 import { COLORS, FONTS, API } from '../config';
 import { authFetch, authJson, assetToFormFile } from '../api';
+import { roleHero } from '../imagery';
 
 const initials = (name) => (name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 const resolveImageUrl = (url) => (url && url.startsWith('/uploads/')) ? `${API}${url}` : url;
@@ -209,21 +210,23 @@ export default function PoliceScreen({ currentUser }) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) { Alert.alert('Could not resolve', data.error || 'Try again.'); setBusyId(null); return; }
       setClearances(prev => prev.filter(x => x.id !== c.id));
-    } catch { Alert.alert('Could not reach the PFUMA API.'); }
+    } catch { Alert.alert('Could not reach the PFUMA/INGCEBO API.'); }
     setBusyId(null);
   };
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.slate }}>
-      <View style={styles.header}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <View style={styles.officerAvatar}><Text style={styles.officerAvatarText}>{initials(currentUser?.name)}</Text></View>
-          <View>
-            <Text style={styles.headerEyebrow}>ZRP Officer</Text>
-            <Text style={styles.headerTitle}>{currentUser?.name || 'Officer'}</Text>
+      <ImageBackground source={{ uri: roleHero('Police', { w: 900, q: 70 }) }} style={styles.header}>
+        <View style={styles.headerScrim}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={styles.officerAvatar}><Text style={styles.officerAvatarText}>{initials(currentUser?.name)}</Text></View>
+            <View>
+              <Text style={styles.headerEyebrow}>ZRP Officer</Text>
+              <Text style={styles.headerTitle}>{currentUser?.name || 'Officer'}</Text>
+            </View>
           </View>
         </View>
-      </View>
+      </ImageBackground>
 
       <View style={styles.tabRow}>
         {[
@@ -272,54 +275,55 @@ export default function PoliceScreen({ currentUser }) {
 }
 
 const styles = StyleSheet.create({
-  header:        { backgroundColor: COLORS.danger, padding: 24, paddingTop: 56, paddingBottom: 20 },
+  header:        { backgroundColor: COLORS.danger },
+  headerScrim:   { backgroundColor: COLORS.danger + 'D1', padding: 24, paddingTop: 56, paddingBottom: 20 },
   officerAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
-  officerAvatarText: { color: '#fff', fontSize: 14, fontWeight: '900' },
-  headerEyebrow: { color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 2 },
-  headerTitle:   { color: '#fff', fontSize: 17, fontWeight: '900' },
+  officerAvatarText: { color: '#fff', fontSize: 14, fontFamily: FONTS.extrabold },
+  headerEyebrow: { color: 'rgba(255,255,255,0.7)', fontSize: 10, fontFamily: FONTS.extrabold, textTransform: 'uppercase', letterSpacing: 2 },
+  headerTitle:   { color: '#fff', fontSize: 17, fontFamily: FONTS.extrabold },
 
   tabRow:  { flexDirection: 'row', gap: 6, paddingHorizontal: 16, paddingBottom: 14, backgroundColor: COLORS.danger },
   tabBtn:  { flex: 1, paddingVertical: 9, borderRadius: 10, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.12)' },
   tabBtnActive: { backgroundColor: '#fff' },
-  tabBtnText: { fontSize: 10, fontWeight: '800', color: '#fff', textTransform: 'uppercase' },
+  tabBtnText: { fontSize: 10, fontFamily: FONTS.extrabold, color: '#fff', textTransform: 'uppercase' },
   tabBtnTextActive: { color: COLORS.danger },
 
   emptyCard: { alignItems: 'center', paddingVertical: 40, backgroundColor: COLORS.cardDark, borderRadius: 20, borderWidth: 1, borderColor: COLORS.borderDark },
-  emptyText: { fontSize: 13, fontWeight: '700', color: COLORS.mutedDark, marginTop: 10 },
+  emptyText: { fontSize: 13, fontFamily: FONTS.bold, color: COLORS.mutedDark, marginTop: 10 },
 
   card:     { backgroundColor: COLORS.cardDark, borderRadius: 18, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: COLORS.borderDark },
-  cardName: { fontSize: 13, fontWeight: '800', color: COLORS.textDark },
+  cardName: { fontSize: 13, fontFamily: FONTS.extrabold, color: COLORS.textDark },
   cardSub:  { fontSize: 11, color: COLORS.mutedDark, marginTop: 2 },
   clearanceImg: { width: 44, height: 44, borderRadius: 12 },
 
   pendingBadge: { backgroundColor: 'rgba(213,168,92,0.18)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 },
-  pendingBadgeText: { fontSize: 9, fontWeight: '900', color: '#D5A85C', textTransform: 'uppercase' },
+  pendingBadgeText: { fontSize: 9, fontFamily: FONTS.extrabold, color: '#D5A85C', textTransform: 'uppercase' },
 
-  detailToggle: { fontSize: 11, fontWeight: '700', color: COLORS.mutedDark },
+  detailToggle: { fontSize: 11, fontFamily: FONTS.bold, color: COLORS.mutedDark },
   detailBox:    { backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 10, marginBottom: 10 },
   detailRow:    { fontSize: 11, color: 'rgba(247,243,237,0.75)', marginBottom: 2 },
 
   verifyBtn: { flex: 1, backgroundColor: '#57633E', borderRadius: 12, paddingVertical: 11, alignItems: 'center' },
-  verifyBtnText: { color: '#fff', fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
+  verifyBtnText: { color: '#fff', fontSize: 11, fontFamily: FONTS.extrabold, textTransform: 'uppercase' },
   rejectBtn: { flex: 1, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 12, paddingVertical: 11, alignItems: 'center' },
-  rejectBtnText: { color: 'rgba(247,243,237,0.75)', fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
+  rejectBtnText: { color: 'rgba(247,243,237,0.75)', fontSize: 11, fontFamily: FONTS.extrabold, textTransform: 'uppercase' },
 
   leaderBoxOk:      { backgroundColor: 'rgba(87,99,62,0.15)', borderWidth: 1, borderColor: 'rgba(87,99,62,0.35)', borderRadius: 12, padding: 10, marginBottom: 8 },
-  leaderTitleOk:    { fontSize: 11, fontWeight: '800', color: '#A8B78C', textTransform: 'uppercase' },
+  leaderTitleOk:    { fontSize: 11, fontFamily: FONTS.extrabold, color: '#A8B78C', textTransform: 'uppercase' },
   leaderBoxNeutral: { backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 10, marginBottom: 8 },
-  leaderTitleNeutral: { fontSize: 11, fontWeight: '800', color: COLORS.mutedDark, textTransform: 'uppercase' },
+  leaderTitleNeutral: { fontSize: 11, fontFamily: FONTS.extrabold, color: COLORS.mutedDark, textTransform: 'uppercase' },
   leaderBoxWarn:    { backgroundColor: 'rgba(154,42,35,0.15)', borderWidth: 1, borderColor: 'rgba(154,42,35,0.35)', borderRadius: 12, padding: 10, marginBottom: 8 },
-  leaderTitleWarn:  { fontSize: 11, fontWeight: '700', color: '#C75B50' },
+  leaderTitleWarn:  { fontSize: 11, fontFamily: FONTS.bold, color: '#C75B50' },
   leaderDetail:     { fontSize: 11, color: 'rgba(247,243,237,0.7)', marginTop: 2 },
 
   formCard:      { backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: 10, marginBottom: 4 },
-  formCardLabel: { fontSize: 9, fontWeight: '800', color: COLORS.mutedDark, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
+  formCardLabel: { fontSize: 9, fontFamily: FONTS.extrabold, color: COLORS.mutedDark, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 },
   formCardText:  { fontSize: 11, color: 'rgba(247,243,237,0.75)', marginBottom: 2 },
 
   signBadge:     { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   signBadgeOk:   { backgroundColor: 'rgba(87,99,62,0.15)' },
   signBadgeOff:  { backgroundColor: 'rgba(255,255,255,0.05)' },
-  signBadgeText: { fontSize: 9, fontWeight: '800', textTransform: 'uppercase' },
+  signBadgeText: { fontSize: 9, fontFamily: FONTS.extrabold, textTransform: 'uppercase' },
 
   formInput: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: 11, fontSize: 12, color: '#fff' },
   certifyRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
@@ -328,9 +332,9 @@ const styles = StyleSheet.create({
   certifyText: { flex: 1, fontSize: 11, color: 'rgba(247,243,237,0.75)', lineHeight: 16 },
 
   signatureBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#fff', borderRadius: 12, paddingVertical: 12 },
-  signatureBtnText: { fontSize: 11, fontWeight: '800', color: COLORS.primary, textTransform: 'uppercase' },
+  signatureBtnText: { fontSize: 11, fontFamily: FONTS.extrabold, color: COLORS.primary, textTransform: 'uppercase' },
   signaturePreview: { width: 60, height: 40, borderRadius: 8, backgroundColor: '#fff' },
-  removeSignature:  { fontSize: 11, fontWeight: '800', color: '#C75B50', textTransform: 'uppercase' },
+  removeSignature:  { fontSize: 11, fontFamily: FONTS.extrabold, color: '#C75B50', textTransform: 'uppercase' },
 
-  transferStatus: { fontSize: 10, fontWeight: '700', color: COLORS.mutedDark, textTransform: 'uppercase', marginTop: 4 },
+  transferStatus: { fontSize: 10, fontFamily: FONTS.bold, color: COLORS.mutedDark, textTransform: 'uppercase', marginTop: 4 },
 });

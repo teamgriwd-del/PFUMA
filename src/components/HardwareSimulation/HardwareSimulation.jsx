@@ -161,7 +161,7 @@ const DevicePairingPanel = ({ animals, currentUser }) => {
         setSerial(''); setAnimalId(''); loadDevices();
       }
     } catch {
-      setFeedback('Offline — could not reach the PFUMA API to pair this device.');
+      setFeedback('Offline — could not reach the PFUMA/INGCEBO API to pair this device.');
     } finally {
       setBusy(false);
       setTimeout(() => setFeedback(null), 3500);
@@ -456,7 +456,7 @@ const HardwareSimulation = ({ animals = [], currentUser }) => {
       <Hero
         size="sm"
         image={photo('cattleField', { w: 1800, q: 74 })}
-        eyebrow="PFUMA smart ear tag system"
+        eyebrow="PFUMA/INGCEBO smart ear tag system"
         title="Live animal health monitor"
         sub="Each animal wears a solar-powered ear tag measuring body temperature, heart rate, movement and GPS location — so you can spot health problems before they become emergencies."
       />

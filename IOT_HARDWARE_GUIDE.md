@@ -1,6 +1,6 @@
-# PFUMA: IoT Hardware Guide
+# PFUMA/INGCEBO: IoT Hardware Guide
 
-This guide covers the **Physical Hardware Layer** of PFUMA: how to connect a real collar (CN-01) and base station (BS-01) to your farm and your PFUMA account, and how the Proteus/Arduino simulation setup works for development.
+This guide covers the **Physical Hardware Layer** of PFUMA/INGCEBO: how to connect a real collar (CN-01) and base station (BS-01) to your farm and your PFUMA/INGCEBO account, and how the Proteus/Arduino simulation setup works for development.
 
 **Where things stand today:** device pairing, real telemetry storage, and the app's IoT Monitor display are all wired end-to-end and verified working. When a paired collar has reported within the last ~20 seconds, the dashboard shows its real readings (temperature, heart rate, GPS, battery, RSSI) and is clearly labelled "Live · Physical Collar." When it hasn't (no hardware built yet, or a collar's gone quiet), the dashboard falls back to a clearly-labelled "Demo Simulation" so the app is still usable for demos without hardware in hand.
 
@@ -21,7 +21,7 @@ Two board types, per the full design in [`hardware/HARDWARE_DESIGN.md`](hardware
 | Board | Purpose | Core parts |
 |---|---|---|
 | **CN-01 Collar Node** (one per animal) | Worn on the animal — measures temperature, heart rate, movement, GPS location, and radios it to the base station | ESP32-WROOM-32, SX1278 LoRa module, NEO-6M GPS, MPU-6050 (motion), MAX30102 (heart rate), DS18B20 (temperature), solar panel + LiPo battery + TP4056 charger |
-| **BS-01 Base Station** (one per farm) | Fixed near your house/router — receives LoRa data from collars in range and forwards it to the PFUMA backend over WiFi. At the firmware's current SF7 setting, that's typically **~1-2km on farm terrain** (traded down from a theoretical ~5km SF9 max range to comfortably support **30+ collars per base station** — see "Network Capacity" in `HARDWARE_DESIGN.md` for the real numbers behind that trade-off) | ESP32-WROOM-32, SX1278 LoRa module, SSD1306 OLED display |
+| **BS-01 Base Station** (one per farm) | Fixed near your house/router — receives LoRa data from collars in range and forwards it to the PFUMA/INGCEBO backend over WiFi. At the firmware's current SF7 setting, that's typically **~1-2km on farm terrain** (traded down from a theoretical ~5km SF9 max range to comfortably support **30+ collars per base station** — see "Network Capacity" in `HARDWARE_DESIGN.md` for the real numbers behind that trade-off) | ESP32-WROOM-32, SX1278 LoRa module, SSD1306 OLED display |
 
 You can order the components from the BOM tables in `HARDWARE_DESIGN.md` (or the shopping-list version in `hardware/actual_equipment/README.md`) and assemble/solder them yourself, or have a local electronics workshop build the boards from that design.
 
@@ -45,7 +45,7 @@ Both files have a clearly marked `CONFIGURATION` section near the top with place
 1. Power on the **base station** first, near your router. Its WiFi status LED (yellow, `PIN_LED_WIFI`) should light up once it connects — check the OLED screen for a "WiFi Connected" message.
 2. Attach the **collar** securely to the animal (waterproof housing recommended) and power it on. It will start broadcasting over LoRa to any base station in range.
 
-### Step 4 — Pair the device in the PFUMA app
+### Step 4 — Pair the device in the PFUMA/INGCEBO app
 1. Log in to the web app as a **Farmer** and open the **IoT Monitor** tab.
 2. In the **Paired Devices** panel, enter the device serial exactly as you set `STATION_ID` or `COLLAR_ID` in the firmware.
 3. Optionally select which animal the device is attached to (you can also do this later).
@@ -58,7 +58,7 @@ Once paired, the backend will accept telemetry sent from that device (`POST /api
 
 ## 2. Simulation / Development Setup (Proteus)
 
-For development and demos without physical hardware, build a simplified "PFUMA Security Node" in Proteus:
+For development and demos without physical hardware, build a simplified "PFUMA/INGCEBO Security Node" in Proteus:
 
 ### Components List
 - **Microcontroller:** Arduino Uno (recommended for simulation stability).
@@ -166,12 +166,12 @@ The device doesn't just send raw data — it performs edge computing:
 
 | Endpoint | Used by | Purpose |
 |---|---|---|
-| `POST /iot-devices/pair` | PFUMA app (farmer, authenticated) | Claim a device serial under your account |
-| `GET /iot-devices` | PFUMA app (farmer, authenticated) | List your paired devices |
-| `PATCH /iot-devices/<id>` | PFUMA app (farmer, authenticated) | Attach/change which animal a device is linked to |
+| `POST /iot-devices/pair` | PFUMA/INGCEBO app (farmer, authenticated) | Claim a device serial under your account |
+| `GET /iot-devices` | PFUMA/INGCEBO app (farmer, authenticated) | List your paired devices |
+| `PATCH /iot-devices/<id>` | PFUMA/INGCEBO app (farmer, authenticated) | Attach/change which animal a device is linked to |
 | `POST /api/iot/telemetry` | Base station firmware | Sensor readings — validated (both the base station's and the collar's serial must be paired) and **stored** in `iot_readings` |
 | `POST /api/iot/alert` | Base station firmware | Theft/fever alerts — same handling and storage as telemetry |
-| `GET /animals/<id>/iot-readings` | PFUMA app (farmer/vet/police, authenticated) | Recent real readings for one animal's paired collar — this is what the IoT Monitor tab polls to decide "live" vs "simulated" |
+| `GET /animals/<id>/iot-readings` | PFUMA/INGCEBO app (farmer/vet/police, authenticated) | Recent real readings for one animal's paired collar — this is what the IoT Monitor tab polls to decide "live" vs "simulated" |
 
 ---
-*PFUMA IoT — Zimbabwe Agricultural Show*
+*PFUMA/INGCEBO IoT — Zimbabwe Agricultural Show*

@@ -13,7 +13,7 @@ Pigs are legally classed as "stock" under the **Stock Theft Prevention Act [Chap
 | **DVS movement permit / veterinary clearance** for transport, especially during an ASF outbreak in the area | Pig diseases like ASF spread extremely fast; DVS can and does restrict pig movement in outbreak zones | [livestock-movement-permits.md](../laws/livestock-movement-permits.md) |
 | **Biosecurity at point of sale** (buyer awareness of herd health status) | Not a specific pig-only statute found in our research, but a reasonable extension of the Animal Health Act's disease-control purpose and, for a Retailer, the Consumer Protection Act's disclosure duty | [animal-health-act.md](../laws/animal-health-act.md), [consumer-protection-retailers.md](../laws/consumer-protection-retailers.md) |
 
-**We could not confirm from our research whether Zimbabwe requires a specific brand/tag/registration certificate for pigs the way it does for cattle.** Farmers/Suppliers listing pigs on PFUMA should still expect to provide ownership proof and disease-status disclosure, but should confirm with DVS whether any pig-specific identification scheme applies in their district.
+**We could not confirm from our research whether Zimbabwe requires a specific brand/tag/registration certificate for pigs the way it does for cattle.** Farmers/Suppliers listing pigs on PFUMA/INGCEBO should still expect to provide ownership proof and disease-status disclosure, but should confirm with DVS whether any pig-specific identification scheme applies in their district.
 
 ## 2. Common diseases
 

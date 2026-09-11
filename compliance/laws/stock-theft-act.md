@@ -38,10 +38,10 @@ In practice, Zimbabwe uses a **livestock clearance process** before cattle are m
 
 This process exists specifically to prevent exactly what the Stock Theft Act criminalizes: the movement and sale of stolen animals. A buyer who purchases an animal that later turns out to be stolen, without having seen valid clearance/ownership documentation, risks being treated as a receiver of stolen stock — a criminal offence in its own right, even if they claim they didn't know. Note: one Zimbabwean High Court judgment reviewed in our research indicates there is **no absolute legal requirement for the buyer specifically to personally obtain police clearance** — but sellers, and especially butchers/dealers, face binding record-keeping duties, and clearance remains the practical, expected norm for a safe transaction. **Police clearance is also supposed to be a free service** — officers who charge farmers a fee for it are acting outside policy, per Zimbabwe Republic Police statements reviewed.
 
-## What this means for PFUMA
+## What this means for PFUMA/INGCEBO
 
 - Every livestock listing (Farmer selling to Retailer/Supplier/another Farmer) should surface: brand/tag details, and a prompt to obtain/attach **police clearance** and **DVS movement permit** documentation before a sale is finalized, especially for cross-district transactions.
-- The **Police** role in PFUMA maps directly onto this real-world clearance function — the platform should treat "police-verified" listings as materially different (and safer) from unverified ones, and should never represent a listing as "cleared" without an actual clearance reference.
+- The **Police** role in PFUMA/INGCEBO maps directly onto this real-world clearance function — the platform should treat "police-verified" listings as materially different (and safer) from unverified ones, and should never represent a listing as "cleared" without an actual clearance reference.
 - Retailers/Suppliers/Butchers acting as buyers should be encouraged (and ideally required, mirroring the Act's register duty for butchers/hide buyers) to keep transaction records: seller identity, animal identification, and clearance reference.
 - The AI assistant should be able to explain, in plain language, why "no brand + no clearance" is a serious risk signal for both buyer and seller, not just a bureaucratic inconvenience.
 

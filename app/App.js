@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { View, Text, StyleSheet } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
 import {
   useFonts,
@@ -26,7 +26,6 @@ import MarketplaceScreen  from './screens/MarketplaceScreen';
 import FeedAnalyzerScreen from './screens/FeedAnalyzerScreen';
 import VetMessengerScreen from './screens/VetMessengerScreen';
 import ProfileScreen      from './screens/ProfileScreen';
-import IoTScreen          from './screens/IoTScreen';
 import HealthManagementScreen  from './screens/HealthManagementScreen';
 import ComplianceScreen        from './screens/ComplianceScreen';
 import DiseaseDetectionScreen  from './screens/DiseaseDetectionScreen';
@@ -46,42 +45,39 @@ const ROLE_TABS = {
     { name: 'Herd',      icon: Users,         label: 'Herd',    screen: HerdScreen },
     { name: 'Market',    icon: ShoppingCart,  label: 'Market',  screen: MarketplaceScreen },
     { name: 'Feed',      icon: Wheat,         label: 'Feed',    screen: FeedAnalyzerScreen },
-    { name: 'IoT',       icon: Radio,         label: 'IoT',     screen: IoTScreen },
-    { name: 'Vet',       icon: MessageSquare, label: 'Messages',screen: VetMessengerScreen },
+    { name: 'Vet',       icon: MessageSquare, label: 'Chat',      screen: VetMessengerScreen },
     { name: 'Profile',   icon: User,          label: 'More',    screen: ProfileScreen },
   ],
   Veterinarian: [
     { name: 'Dashboard', icon: ClipboardList, label: 'Home',    screen: DashboardScreen },
     { name: 'Herd',      icon: Users,         label: 'Animals', screen: HerdScreen },
-    { name: 'IoT',       icon: Radio,         label: 'IoT',     screen: IoTScreen },
     { name: 'Market',    icon: ShoppingCart,  label: 'Market',  screen: MarketplaceScreen },
-    { name: 'Vet',       icon: MessageSquare, label: 'Messages',screen: VetMessengerScreen },
+    { name: 'Vet',       icon: MessageSquare, label: 'Chat',      screen: VetMessengerScreen },
     { name: 'Profile',   icon: User,          label: 'More',    screen: ProfileScreen },
   ],
   Supplier: [
     { name: 'Dashboard', icon: Package,       label: 'Home',    screen: DashboardScreen },
     { name: 'Market',    icon: ShoppingCart,  label: 'Market',  screen: MarketplaceScreen },
     { name: 'Feed',      icon: Wheat,         label: 'Feed',    screen: FeedAnalyzerScreen },
-    { name: 'Vet',       icon: MessageSquare, label: 'Messages',screen: VetMessengerScreen },
+    { name: 'Vet',       icon: MessageSquare, label: 'Chat',      screen: VetMessengerScreen },
     { name: 'Profile',   icon: User,          label: 'More',    screen: ProfileScreen },
   ],
   Buyer: [
     { name: 'Dashboard', icon: Store,         label: 'Home',    screen: DashboardScreen },
     { name: 'Market',    icon: ShoppingCart,  label: 'Market',  screen: MarketplaceScreen },
     { name: 'Feed',      icon: Wheat,         label: 'Feed',    screen: FeedAnalyzerScreen },
-    { name: 'Vet',       icon: MessageSquare, label: 'Messages',screen: VetMessengerScreen },
+    { name: 'Vet',       icon: MessageSquare, label: 'Chat',      screen: VetMessengerScreen },
     { name: 'Profile',   icon: User,          label: 'Profile', screen: ProfileScreen },
   ],
   Police: [
     { name: 'Dashboard', icon: Shield,        label: 'Home',    screen: PoliceScreen },
     { name: 'Market',    icon: ShoppingCart,  label: 'Market',  screen: MarketplaceScreen },
-    { name: 'IoT',       icon: Radio,         label: 'Alerts',  screen: IoTScreen },
-    { name: 'Vet',       icon: MessageSquare, label: 'Messages',screen: VetMessengerScreen },
+    { name: 'Vet',       icon: MessageSquare, label: 'Chat',      screen: VetMessengerScreen },
     { name: 'Profile',   icon: User,          label: 'Profile', screen: ProfileScreen },
   ],
   Institution: [
     { name: 'Dashboard', icon: Landmark,      label: 'Home',    screen: InstitutionScreen },
-    { name: 'Vet',       icon: MessageSquare, label: 'Messages',screen: VetMessengerScreen },
+    { name: 'Vet',       icon: MessageSquare, label: 'Chat',      screen: VetMessengerScreen },
     { name: 'Profile',   icon: User,          label: 'Profile', screen: ProfileScreen },
   ],
   // Admin moderation tools are web-only (data-dense tables/charts, not a
@@ -134,12 +130,23 @@ const ROLE_COLORS = {
 };
 
 // ── Tab icon: pill highlight on active, clean spacing ──────────────────────
+// No fixed width here — the column is sized by tabBarItemStyle (flex:1,
+// equal share of the bar) so every role's tab count distributes evenly, and
+// the label gets numberOfLines+adjustsFontSizeToFit instead of a narrow box,
+// which is what was clipping/wrapping "Messages" onto two lines.
 const TabIcon = ({ icon: Icon, label, focused, roleColor }) => (
   <View style={styles.tabIconWrap}>
     <View style={[styles.tabPill, focused && { backgroundColor: roleColor + '1a' }]}>
-      <Icon size={focused ? 21 : 19} color={focused ? roleColor : '#968C82'} strokeWidth={focused ? 2.4 : 2} />
+      <Icon size={focused ? 21 : 19} color={focused ? roleColor : '#C9BFB4'} strokeWidth={focused ? 2.4 : 2} />
     </View>
-    <Text style={[styles.tabLabel, { color: focused ? roleColor : '#aaa' }]}>{label}</Text>
+    <Text
+      style={[styles.tabLabel, { color: focused ? roleColor : '#D8CFC4' }]}
+      numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={0.8}
+    >
+      {label}
+    </Text>
     {focused && <View style={[styles.tabDot, { backgroundColor: roleColor }]} />}
   </View>
 );
@@ -149,6 +156,7 @@ function RoleTabNavigator({ currentUser, onLogout, onUserUpdate }) {
   const tabs  = ROLE_TABS[role] || ROLE_TABS.Farmer;
   const hiddenTabs = HIDDEN_TABS[role] || [];
   const color = ROLE_COLORS[role] || COLORS.primary;
+  const insets = useSafeAreaInsets();
 
   return (
     <Tab.Navigator
@@ -157,7 +165,10 @@ function RoleTabNavigator({ currentUser, onLogout, onUserUpdate }) {
         tabBarStyle: {
           ...styles.tabBar,
           borderTopColor: color + '25',
+          height: 60 + insets.bottom,
+          paddingBottom: insets.bottom,
         },
+        tabBarItemStyle: styles.tabBarItem,
         tabBarShowLabel: false,
         tabBarHideOnKeyboard: true,
       }}
@@ -179,7 +190,17 @@ function RoleTabNavigator({ currentUser, onLogout, onUserUpdate }) {
         <Tab.Screen
           key={t.name}
           name={t.name}
-          options={{ tabBarButton: () => null }}
+          options={{
+            // tabBarButton hides these from view, but the navigator's default
+            // tabBarItemStyle (flex:1) still allocates each of them a share
+            // of the bar's width even though nothing renders there — with
+            // several hidden routes that squeezed the *visible* tabs into
+            // one side of the bar with dead space on the other. Zeroing
+            // their own item style out of the layout is what actually fixes
+            // the equal-distribution bug, not just the tabBarButton override.
+            tabBarButton: () => null,
+            tabBarItemStyle: { flex: 0, width: 0, padding: 0, margin: 0 },
+          }}
         >
           {props => <t.screen {...props} currentUser={currentUser} onLogout={onLogout} onUserUpdate={onUserUpdate} />}
         </Tab.Screen>
@@ -232,7 +253,7 @@ export default function App() {
             top of the chat's own send button there (see JindaFAB's fixed
             bottom-right position), which is worse than redundant since a
             chat screen already has messaging. */}
-        {activeRoute !== 'Vet' && <JindaFAB currentUser={currentUser} />}
+        {activeRoute !== 'Vet' && <JindaFAB currentUser={currentUser} navRef={navRef} />}
       </View>
     </SafeAreaProvider>
   );
@@ -242,8 +263,6 @@ const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: COLORS.cardDark,
     borderTopWidth: 1,
-    height: 76,
-    paddingBottom: 0,
     paddingTop: 0,
     elevation: 20,
     shadowColor: '#000',
@@ -252,18 +271,28 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
   },
 
+  // Every tab gets an equal flex share of the bar's width, however many
+  // tabs a role has — this is what actually guarantees even distribution
+  // (a fixed-width inner column just centers within whatever react-navigation
+  // gave it, it doesn't equalize the columns themselves).
+  tabBarItem: {
+    flex: 1,
+    paddingHorizontal: 2,
+  },
+
   // Each tab column
   tabIconWrap: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 6,
-    width: 50,
+    paddingHorizontal: 2,
   },
 
   // Pill behind the icon when focused
   tabPill: {
-    width: 40,
-    height: 32,
+    width: 42,
+    height: 34,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
@@ -271,10 +300,11 @@ const styles = StyleSheet.create({
   },
 
   tabLabel: {
-    fontSize: 10,
+    fontSize: 10.5,
     fontFamily: FONTS.bold,
     letterSpacing: 0.1,
     marginBottom: 2,
+    maxWidth: 64,
   },
 
   // Tiny active dot below the label

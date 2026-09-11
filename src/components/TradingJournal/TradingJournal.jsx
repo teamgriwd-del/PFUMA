@@ -36,7 +36,7 @@ const TradingJournal = ({ currentUser, setActiveTab }) => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2"><BookOpen size={20} className="text-pfuma-green" /> Trading Journal</h2>
-          <p className="text-xs text-gray-400 font-medium mt-1">Your real trade history on PFUMA — who you trade with most, and how much.</p>
+          <p className="text-xs text-gray-400 font-medium mt-1">Your real trade history on PFUMA/INGCEBO — who you trade with most, and how much.</p>
         </div>
         <button onClick={() => setActiveTab('marketplace')} className="flex items-center gap-2 px-4 py-2.5 bg-pfuma-green text-white rounded-xl text-xs font-bold uppercase hover:bg-green-700 transition">
           <Store size={14} /> {isSupplier ? 'List New Stock' : 'Browse Marketplace'} <ArrowRight size={13} />

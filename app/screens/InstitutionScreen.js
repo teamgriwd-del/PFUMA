@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
-  StyleSheet, ActivityIndicator, RefreshControl,
+  StyleSheet, ActivityIndicator, RefreshControl, ImageBackground,
 } from 'react-native';
 import { Search, ShieldAlert, Landmark, CheckCircle } from 'lucide-react-native';
 import { COLORS, FONTS } from '../config';
 import { authFetch, authJson } from '../api';
+import { roleHero } from '../imagery';
 
 const initials = (name) => (name || '?').split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
 
@@ -55,27 +56,29 @@ export default function InstitutionScreen({ currentUser }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.slate }}>
-      <View style={styles.header}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-          <View style={styles.avatar}><Text style={styles.avatarText}>{initials(currentUser?.org || currentUser?.name)}</Text></View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.headerEyebrow}>{currentUser?.institutionType || 'Institution'}</Text>
-            <Text style={styles.headerTitle} numberOfLines={1}>{currentUser?.org || currentUser?.name || 'Institution'}</Text>
+      <ImageBackground source={{ uri: roleHero('Institution', { w: 900, q: 70 }) }} style={styles.header}>
+        <View style={styles.headerScrim}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <View style={styles.avatar}><Text style={styles.avatarText}>{initials(currentUser?.org || currentUser?.name)}</Text></View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.headerEyebrow}>{currentUser?.institutionType || 'Institution'}</Text>
+              <Text style={styles.headerTitle} numberOfLines={1}>{currentUser?.org || currentUser?.name || 'Institution'}</Text>
+            </View>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <View style={styles.metricCard}>
+              <Search size={14} color={COLORS.teal} />
+              <Text style={styles.metricValue}>{ledger.length}</Text>
+              <Text style={styles.metricLabel}>Checked</Text>
+            </View>
+            <View style={styles.metricCard}>
+              <ShieldAlert size={14} color="#D5A85C" />
+              <Text style={styles.metricValue}>{flaggedCount}</Text>
+              <Text style={styles.metricLabel}>Flagged</Text>
+            </View>
           </View>
         </View>
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <View style={styles.metricCard}>
-            <Search size={14} color={COLORS.teal} />
-            <Text style={styles.metricValue}>{ledger.length}</Text>
-            <Text style={styles.metricLabel}>Checked</Text>
-          </View>
-          <View style={styles.metricCard}>
-            <ShieldAlert size={14} color="#D5A85C" />
-            <Text style={styles.metricValue}>{flaggedCount}</Text>
-            <Text style={styles.metricLabel}>Flagged</Text>
-          </View>
-        </View>
-      </View>
+      </ImageBackground>
 
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 60 }}
@@ -154,39 +157,40 @@ export default function InstitutionScreen({ currentUser }) {
 }
 
 const styles = StyleSheet.create({
-  header:        { backgroundColor: COLORS.teal, padding: 24, paddingTop: 56, paddingBottom: 20 },
+  header:        { backgroundColor: COLORS.teal },
+  headerScrim:   { backgroundColor: COLORS.teal + 'D1', padding: 24, paddingTop: 56, paddingBottom: 20 },
   avatar:        { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
-  avatarText:    { color: '#fff', fontSize: 14, fontWeight: '900' },
-  headerEyebrow: { color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 2 },
-  headerTitle:   { color: '#fff', fontSize: 16, fontWeight: '900' },
+  avatarText:    { color: '#fff', fontSize: 14, fontFamily: FONTS.extrabold },
+  headerEyebrow: { color: 'rgba(255,255,255,0.7)', fontSize: 10, fontFamily: FONTS.extrabold, textTransform: 'uppercase', letterSpacing: 2 },
+  headerTitle:   { color: '#fff', fontSize: 16, fontFamily: FONTS.extrabold },
   metricCard:    { flex: 1, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 14, padding: 12 },
-  metricValue:   { color: '#fff', fontSize: 18, fontWeight: '900', marginTop: 6 },
-  metricLabel:   { color: 'rgba(255,255,255,0.7)', fontSize: 9, fontWeight: '800', textTransform: 'uppercase', marginTop: 2 },
+  metricValue:   { color: '#fff', fontSize: 18, fontFamily: FONTS.extrabold, marginTop: 6 },
+  metricLabel:   { color: 'rgba(255,255,255,0.7)', fontSize: 9, fontFamily: FONTS.extrabold, textTransform: 'uppercase', marginTop: 2 },
 
   card:      { backgroundColor: COLORS.cardDark, borderRadius: 20, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: COLORS.borderDark },
-  cardTitle: { fontSize: 14, fontWeight: '900', color: COLORS.textDark, marginBottom: 4 },
+  cardTitle: { fontSize: 14, fontFamily: FONTS.extrabold, color: COLORS.textDark, marginBottom: 4 },
   cardDesc:  { fontSize: 12, color: COLORS.mutedDark, marginBottom: 12, lineHeight: 17 },
 
-  codeInput: { flex: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: 12, fontSize: 14, fontWeight: '800', color: '#fff', textAlign: 'center', letterSpacing: 1.5 },
+  codeInput: { flex: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: 12, fontSize: 14, fontFamily: FONTS.extrabold, color: '#fff', textAlign: 'center', letterSpacing: 1.5 },
   verifyBtn: { backgroundColor: COLORS.teal, borderRadius: 12, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center' },
-  verifyBtnText: { color: '#fff', fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
-  errorText: { fontSize: 11, fontWeight: '800', color: '#C75B50', marginTop: 8 },
+  verifyBtnText: { color: '#fff', fontSize: 11, fontFamily: FONTS.extrabold, textTransform: 'uppercase' },
+  errorText: { fontSize: 11, fontFamily: FONTS.extrabold, color: '#C75B50', marginTop: 8 },
 
   resultBox:   { marginTop: 14, backgroundColor: 'rgba(63,112,107,0.12)', borderWidth: 1, borderColor: 'rgba(63,112,107,0.35)', borderRadius: 16, padding: 14 },
   pledgedWarn: { flexDirection: 'row', gap: 8, backgroundColor: 'rgba(154,42,35,0.2)', borderRadius: 12, padding: 10, marginBottom: 10 },
-  pledgedWarnText: { flex: 1, fontSize: 11, fontWeight: '700', color: '#DA8279' },
+  pledgedWarnText: { flex: 1, fontSize: 11, fontFamily: FONTS.bold, color: '#DA8279' },
   resultRow:   { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.06)' },
-  resultLabel: { fontSize: 11, fontWeight: '700', color: COLORS.mutedDark },
-  resultValue: { fontSize: 12, fontWeight: '800', color: '#fff' },
+  resultLabel: { fontSize: 11, fontFamily: FONTS.bold, color: COLORS.mutedDark },
+  resultValue: { fontSize: 12, fontFamily: FONTS.extrabold, color: '#fff' },
   flagBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#554D45', borderRadius: 12, paddingVertical: 12, marginTop: 12 },
-  flagBtnText: { color: '#fff', fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
+  flagBtnText: { color: '#fff', fontSize: 11, fontFamily: FONTS.extrabold, textTransform: 'uppercase' },
 
-  ledgerHeading: { fontSize: 11, fontWeight: '800', color: COLORS.mutedDark, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
+  ledgerHeading: { fontSize: 11, fontFamily: FONTS.extrabold, color: COLORS.mutedDark, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 },
   emptyCard: { alignItems: 'center', paddingVertical: 30, backgroundColor: COLORS.cardDark, borderRadius: 16, borderWidth: 1, borderColor: COLORS.borderDark },
-  emptyText: { fontSize: 12, fontWeight: '700', color: COLORS.mutedDark, marginTop: 8 },
+  emptyText: { fontSize: 12, fontFamily: FONTS.bold, color: COLORS.mutedDark, marginTop: 8 },
   ledgerRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.cardDark, borderRadius: 14, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: COLORS.borderDark },
-  ledgerName:{ fontSize: 12, fontWeight: '800', color: '#fff' },
+  ledgerName:{ fontSize: 12, fontFamily: FONTS.extrabold, color: '#fff' },
   ledgerSub: { fontSize: 11, color: COLORS.mutedDark, marginTop: 2 },
   flaggedBadge: { backgroundColor: 'rgba(213,168,92,0.18)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 },
-  flaggedBadgeText: { fontSize: 9, fontWeight: '900', color: '#D5A85C', textTransform: 'uppercase' },
+  flaggedBadgeText: { fontSize: 9, fontFamily: FONTS.extrabold, color: '#D5A85C', textTransform: 'uppercase' },
 });

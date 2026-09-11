@@ -252,7 +252,7 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefre
       await loadRecommendations();
       await onRefreshInventory?.();
     } catch {
-      showFeedback('Could not reach the PFUMA API.', 'error');
+      showFeedback('Could not reach the PFUMA/INGCEBO API.', 'error');
     } finally {
       setAdministeringId(null);
     }
@@ -534,7 +534,7 @@ const HealthManagement = ({ animals, auditLog, onAddAuditLog, inventory, onRefre
                 <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-2xl">
                   <FlaskConical size={24} className="mx-auto text-gray-300 mb-2" />
                   <p className="text-xs font-bold text-gray-400">No recommendations yet</p>
-                  <p className="text-xs text-gray-400 font-medium mt-1 px-4">Ask your vet on PFUMA Messenger to review {selectedAnimal.name} — anything they prescribe shows up here.</p>
+                  <p className="text-xs text-gray-400 font-medium mt-1 px-4">Ask your vet on PFUMA/INGCEBO Messenger to review {selectedAnimal.name} — anything they prescribe shows up here.</p>
                 </div>
               ) : (
                 <div className="space-y-3">

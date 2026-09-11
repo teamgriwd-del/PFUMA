@@ -150,7 +150,7 @@ const PostForm = ({ currentUser, onSubmit, onCancel, animals, initialAnimalId })
       <div className="flex justify-between items-center mb-5">
         <div>
           <h3 className="text-sm font-bold text-gray-900">Post a Listing</h3>
-          <p className="text-xs text-gray-400 font-medium mt-0.5">Visible to all PFUMA users — farmers, buyers, and suppliers</p>
+          <p className="text-xs text-gray-400 font-medium mt-0.5">Visible to all PFUMA/INGCEBO users — farmers, buyers, and suppliers</p>
         </div>
         <button onClick={onCancel} className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-700 transition">
           <X size={16} />
@@ -453,7 +453,7 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal, presetAnimalId, 
         : 'Listing posted successfully.'));
       await fetchListings();
     } catch {
-      setFeedback('Could not reach the PFUMA API — the listing was not posted.');
+      setFeedback('Could not reach the PFUMA/INGCEBO API — the listing was not posted.');
     }
     setShowForm(false);
     setTimeout(() => setFeedback(null), 4000);
@@ -522,7 +522,7 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal, presetAnimalId, 
       setOpenBidsId(null);
       await fetchListings();
     } catch {
-      setFeedback('Could not reach the PFUMA API — bid not accepted.');
+      setFeedback('Could not reach the PFUMA/INGCEBO API — bid not accepted.');
       setTimeout(() => setFeedback(null), 4000);
     }
   };
@@ -542,9 +542,9 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal, presetAnimalId, 
       <Hero
         size="sm"
         image={photo('harvestHandshake', { w: 1800, q: 74 })}
-        eyebrow="PFUMA marketplace"
+        eyebrow="PFUMA/INGCEBO marketplace"
         title="Agri-commerce hub"
-        sub="Livestock, feed, produce, medicine and equipment — every listing posted by a verified PFUMA member, with their contact details attached."
+        sub="Livestock, feed, produce, medicine and equipment — every listing posted by a verified PFUMA/INGCEBO member, with their contact details attached."
         actions={
           <>
             {canPost && (

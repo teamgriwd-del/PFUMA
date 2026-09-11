@@ -45,7 +45,7 @@ const CreateOrJoin = ({ currentUser, onChanged }) => {
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Could not join — try again.'); setBusy(false); return; }
       onChanged();
-    } catch { setError('Could not reach the PFUMA API.'); setBusy(false); }
+    } catch { setError('Could not reach the PFUMA/INGCEBO API.'); setBusy(false); }
   };
 
   const create = async (e) => {
@@ -60,7 +60,7 @@ const CreateOrJoin = ({ currentUser, onChanged }) => {
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Could not create — try again.'); setBusy(false); return; }
       onChanged();
-    } catch { setError('Could not reach the PFUMA API.'); setBusy(false); }
+    } catch { setError('Could not reach the PFUMA/INGCEBO API.'); setBusy(false); }
   };
 
   return (
@@ -200,7 +200,7 @@ const CooperativeHome = ({ currentUser, coop, onChanged }) => {
       setDipForm({ scheduled_date: '', notes: '' }); setShowDipForm(false);
       await load();
       notify('✓ Dip day scheduled for the group.');
-    } catch { notify('Could not reach the PFUMA API.'); }
+    } catch { notify('Could not reach the PFUMA/INGCEBO API.'); }
     setBusy(false);
   };
 
@@ -218,7 +218,7 @@ const CooperativeHome = ({ currentUser, coop, onChanged }) => {
       setReqForm({ reason: '', preferred_date: '' }); setShowReqForm(false);
       await load();
       notify('✓ Vet request posted — any verified vet in the province can pick it up.');
-    } catch { notify('Could not reach the PFUMA API.'); }
+    } catch { notify('Could not reach the PFUMA/INGCEBO API.'); }
     setBusy(false);
   };
 
@@ -227,7 +227,7 @@ const CooperativeHome = ({ currentUser, coop, onChanged }) => {
     try {
       await fetch(`${API}/cooperatives/${coop.id}/leave`, { method: 'POST', headers: { Authorization: `Bearer ${currentUser.token}` } });
       onChanged();
-    } catch { notify('Could not reach the PFUMA API.'); setBusy(false); }
+    } catch { notify('Could not reach the PFUMA/INGCEBO API.'); setBusy(false); }
   };
 
   return (

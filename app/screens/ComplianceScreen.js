@@ -115,7 +115,7 @@ function ActionTrail({ actions = [] }) {
           <View style={{ flex: 1 }}>
             <Text style={styles.trailAction}>{a.action.replace(/_/g, ' ')}</Text>
             {a.notes ? <Text style={styles.trailNotes}>{a.notes}</Text> : null}
-            <Text style={styles.trailBy}>{a.actor_name || 'PFUMA (automatic)'} · {new Date(a.created_at).toLocaleDateString()}</Text>
+            <Text style={styles.trailBy}>{a.actor_name || 'PFUMA/INGCEBO (automatic)'} · {new Date(a.created_at).toLocaleDateString()}</Text>
           </View>
         </View>
       ))}
@@ -274,7 +274,7 @@ export default function ComplianceScreen({ currentUser }) {
         ) : offline ? (
           <View style={styles.emptyCard}>
             <AlertTriangle size={22} color={COLORS.border} />
-            <Text style={styles.emptyTitle}>Could not reach the PFUMA API.</Text>
+            <Text style={styles.emptyTitle}>Could not reach the PFUMA/INGCEBO API.</Text>
             <Text style={styles.emptyDesc}>Compliance cases are held on the server — reconnect to see them.</Text>
           </View>
         ) : cases.length === 0 ? (
@@ -300,77 +300,77 @@ export default function ComplianceScreen({ currentUser }) {
 
 const styles = StyleSheet.create({
   header:        { backgroundColor: COLORS.slate, padding: 24, paddingTop: 56, paddingBottom: 24 },
-  headerEyebrow: { color: '#EDD5A6', fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 2 },
-  headerTitle:   { color: '#fff', fontSize: 20, fontWeight: '900', marginBottom: 6 },
+  headerEyebrow: { color: '#EDD5A6', fontSize: 10, fontFamily: FONTS.extrabold, textTransform: 'uppercase', letterSpacing: 2 },
+  headerTitle:   { color: '#fff', fontSize: 20, fontFamily: FONTS.extrabold, marginBottom: 6 },
   headerDesc:    { color: 'rgba(247,243,237,0.65)', fontSize: 12, lineHeight: 18 },
 
   howCard:  { backgroundColor: '#fff', borderRadius: 18, padding: 16, marginBottom: 14, elevation: 2 },
-  howTitle: { fontSize: 11, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
+  howTitle: { fontSize: 11, fontFamily: FONTS.extrabold, color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 },
   howLine:  { fontSize: 12, color: COLORS.muted, marginBottom: 4, lineHeight: 17 },
-  howBold:  { fontWeight: '800', color: COLORS.text },
-  howFooter:{ fontSize: 11, fontWeight: '700', color: COLORS.primary, marginTop: 6, lineHeight: 16 },
+  howBold:  { fontFamily: FONTS.extrabold, color: COLORS.text },
+  howFooter:{ fontSize: 11, fontFamily: FONTS.bold, color: COLORS.primary, marginTop: 6, lineHeight: 16 },
 
   statRow:  { flexDirection: 'row', gap: 10, marginBottom: 10 },
   stat:     { flex: 1, borderRadius: 16, padding: 14, borderWidth: 1 },
-  statValue:{ fontSize: 22, fontWeight: '900', marginTop: 6 },
-  statLabel:{ fontSize: 10, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase', marginTop: 2 },
+  statValue:{ fontSize: 22, fontFamily: FONTS.extrabold, marginTop: 6 },
+  statLabel:{ fontSize: 10, fontFamily: FONTS.extrabold, color: COLORS.muted, textTransform: 'uppercase', marginTop: 2 },
 
   filterRow:      { flexDirection: 'row', gap: 8, marginBottom: 14 },
   filterBtn:      { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, backgroundColor: '#fff', borderWidth: 1, borderColor: COLORS.border },
   filterBtnActive:{ backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  filterBtnText:  { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', color: COLORS.muted },
+  filterBtnText:  { fontSize: 11, fontFamily: FONTS.extrabold, textTransform: 'uppercase', color: COLORS.muted },
   filterBtnTextActive: { color: '#fff' },
 
   emptyCard: { backgroundColor: '#fff', borderRadius: 20, padding: 30, alignItems: 'center' },
-  emptyTitle:{ fontSize: 13, fontWeight: '800', color: COLORS.text, marginTop: 10, textAlign: 'center' },
+  emptyTitle:{ fontSize: 13, fontFamily: FONTS.extrabold, color: COLORS.text, marginTop: 10, textAlign: 'center' },
   emptyDesc: { fontSize: 12, color: COLORS.muted, marginTop: 4, textAlign: 'center' },
 
   caseCard:   { borderRadius: 18, padding: 16, marginBottom: 12, borderWidth: 1 },
   caseIcon:   { width: 38, height: 38, borderRadius: 12, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
-  caseVaccine:{ fontSize: 13, fontWeight: '800', color: COLORS.text },
-  caseSub:    { fontSize: 11, fontWeight: '700', color: COLORS.muted, marginTop: 2 },
+  caseVaccine:{ fontSize: 13, fontFamily: FONTS.extrabold, color: COLORS.text },
+  caseSub:    { fontSize: 11, fontFamily: FONTS.bold, color: COLORS.muted, marginTop: 2 },
   stageChip:  { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 },
-  stageChipText: { fontSize: 9, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.3 },
-  caseMsg:    { fontSize: 12, fontWeight: '700', marginTop: 10, lineHeight: 17 },
+  stageChipText: { fontSize: 9, fontFamily: FONTS.extrabold, textTransform: 'uppercase', letterSpacing: 0.3 },
+  caseMsg:    { fontSize: 12, fontFamily: FONTS.bold, marginTop: 10, lineHeight: 17 },
 
   rowGap:       { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 },
-  urgentText:   { fontSize: 11, fontWeight: '800', color: '#9A2A23' },
-  pausedText:   { fontSize: 11, fontWeight: '800', color: COLORS.teal, flex: 1 },
-  resolvedNote: { fontSize: 11, fontWeight: '800', color: COLORS.primary, textAlign: 'center' },
+  urgentText:   { fontSize: 11, fontFamily: FONTS.extrabold, color: '#9A2A23' },
+  pausedText:   { fontSize: 11, fontFamily: FONTS.extrabold, color: COLORS.teal, flex: 1 },
+  resolvedNote: { fontSize: 11, fontFamily: FONTS.extrabold, color: COLORS.primary, textAlign: 'center' },
 
   penaltyBox:   { marginTop: 10, backgroundColor: '#fff', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#EAB0A9' },
-  penaltyTitle: { fontSize: 11, fontWeight: '800', color: '#9A2A23' },
+  penaltyTitle: { fontSize: 11, fontFamily: FONTS.extrabold, color: '#9A2A23' },
   penaltyDesc:  { fontSize: 11, color: COLORS.muted, marginTop: 4, lineHeight: 16 },
 
-  flashText: { fontSize: 11, fontWeight: '800', color: '#465032', backgroundColor: COLORS.sproutBg, borderWidth: 1, borderColor: '#C9D2B4', borderRadius: 12, padding: 10, marginTop: 10 },
+  flashText: { fontSize: 11, fontFamily: FONTS.extrabold, color: '#465032', backgroundColor: COLORS.sproutBg, borderWidth: 1, borderColor: '#C9D2B4', borderRadius: 12, padding: 10, marginTop: 10 },
 
   blockerBtn:     { backgroundColor: '#fff', borderWidth: 1, borderColor: 'rgba(122,63,11,0.25)', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 9 },
-  blockerBtnText: { fontSize: 11, fontWeight: '700', color: COLORS.text },
-  orText:         { fontSize: 11, fontWeight: '700', color: COLORS.muted },
+  blockerBtnText: { fontSize: 11, fontFamily: FONTS.bold, color: COLORS.text },
+  orText:         { fontSize: 11, fontFamily: FONTS.bold, color: COLORS.muted },
 
   blockerForm:    { marginTop: 12, backgroundColor: '#fff', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: COLORS.border },
-  blockerTitle:   { fontSize: 12, fontWeight: '800', color: COLORS.text, marginBottom: 4 },
+  blockerTitle:   { fontSize: 12, fontFamily: FONTS.extrabold, color: COLORS.text, marginBottom: 4 },
   blockerHint:    { fontSize: 11, color: COLORS.muted, marginBottom: 10, lineHeight: 16 },
   blockerOption:  { flexDirection: 'row', gap: 10, padding: 10, borderRadius: 12, borderWidth: 2, borderColor: COLORS.border, marginBottom: 8 },
   blockerOptionActive: { borderColor: COLORS.primary, backgroundColor: COLORS.light },
   radio:          { width: 14, height: 14, borderRadius: 7, borderWidth: 2, borderColor: COLORS.border, marginTop: 2 },
   radioActive:    { borderColor: COLORS.primary, backgroundColor: COLORS.primary },
-  blockerLabel:   { fontSize: 11, fontWeight: '800', color: COLORS.text },
+  blockerLabel:   { fontSize: 11, fontFamily: FONTS.extrabold, color: COLORS.text },
   blockerSub:     { fontSize: 10, color: COLORS.muted, marginTop: 1, lineHeight: 14 },
   routeNote:      { flexDirection: 'row', gap: 6, alignItems: 'flex-start', backgroundColor: COLORS.tealBg, borderWidth: 1, borderColor: 'rgba(63,112,107,0.25)', borderRadius: 12, padding: 10, marginTop: 4 },
-  routeNoteText:  { fontSize: 11, fontWeight: '700', color: COLORS.teal, flex: 1 },
+  routeNoteText:  { fontSize: 11, fontFamily: FONTS.bold, color: COLORS.teal, flex: 1 },
   notesInput:     { marginTop: 10, backgroundColor: COLORS.bg, borderRadius: 12, padding: 12, fontSize: 12, color: COLORS.text, minHeight: 50, textAlignVertical: 'top' },
-  errorText:      { fontSize: 11, fontWeight: '800', color: '#9A2A23', marginTop: 8 },
+  errorText:      { fontSize: 11, fontFamily: FONTS.extrabold, color: '#9A2A23', marginTop: 8 },
   sendBtn:        { flex: 1, backgroundColor: COLORS.primary, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
-  sendBtnText:    { color: '#fff', fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
+  sendBtnText:    { color: '#fff', fontSize: 11, fontFamily: FONTS.extrabold, textTransform: 'uppercase' },
   cancelBtn:      { paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center' },
-  cancelBtnText:  { color: COLORS.muted, fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
+  cancelBtnText:  { color: COLORS.muted, fontSize: 11, fontFamily: FONTS.extrabold, textTransform: 'uppercase' },
 
   trail:        { marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.08)' },
-  trailToggle:  { fontSize: 11, fontWeight: '700', color: COLORS.muted },
+  trailToggle:  { fontSize: 11, fontFamily: FONTS.bold, color: COLORS.muted },
   trailRow:     { flexDirection: 'row', gap: 8, marginTop: 8 },
   trailDot:     { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.border, marginTop: 5 },
-  trailAction:  { fontSize: 11, fontWeight: '800', color: COLORS.text, textTransform: 'capitalize' },
+  trailAction:  { fontSize: 11, fontFamily: FONTS.extrabold, color: COLORS.text, textTransform: 'capitalize' },
   trailNotes:   { fontSize: 11, color: COLORS.muted, marginTop: 1 },
-  trailBy:      { fontSize: 10, fontWeight: '700', color: COLORS.muted, textTransform: 'uppercase', marginTop: 2 },
+  trailBy:      { fontSize: 10, fontFamily: FONTS.bold, color: COLORS.muted, textTransform: 'uppercase', marginTop: 2 },
 });

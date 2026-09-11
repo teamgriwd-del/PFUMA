@@ -1,4 +1,4 @@
-# PFUMA — Project Setup Guide
+# PFUMA/INGCEBO — Project Setup Guide
 
 Two people, three apps — this guide gets everything running.
 
@@ -7,7 +7,7 @@ Two people, three apps — this guide gets everything running.
 ## What's in this repo
 
 ```
-PFUMA/
+PFUMA/INGCEBO/
 ├── src/          ← Arnold's React web app (Vite + Tailwind)
 ├── app/          ← Addy's React Native mobile app (Expo)
 ├── backend/      ← Shared Flask API + MySQL database
@@ -62,7 +62,7 @@ API runs at: **http://localhost:5000**
 
 Test it: open http://localhost:5000 in your browser — you should see:
 ```json
-{"message": "PFUMA API is running ✅", "version": "3.0"}
+{"message": "PFUMA/INGCEBO API is running ✅", "version": "3.0"}
 ```
 
 **Demo login password for every seeded account:** `Pfuma2026!` (phone number is the login identifier, e.g. `+263 77 100 0001` for Arnold).
@@ -72,7 +72,7 @@ Test it: open http://localhost:5000 in your browser — you should see:
 ## Step 4 — Run the React web app (Arnold's)
 
 ```bash
-cd ..           # back to PFUMA root
+cd ..           # back to PFUMA/INGCEBO root
 npm install
 npm run dev
 ```

@@ -10,7 +10,7 @@ import {
 } from 'lucide-react-native';
 
 const CATEGORY_ICON = { protein: Drumstick, energy: Zap, roughage: Leaf, mineral: Bone };
-import { API, COLORS } from '../config';
+import { API, COLORS, FONTS } from '../config';
 import { authFetch, authJson } from '../api';
 
 const DEMO_FEEDS = [
@@ -57,7 +57,7 @@ const NutrientBar = ({ label, value, display, max, color }) => (
 
 // ── RATION BUILDER ────────────────────────────────────────────
 // Computes what THIS animal (real species/weight/age) needs today and
-// prices the ration against live PFUMA Marketplace listings — the part
+// prices the ration against live PFUMA/INGCEBO Marketplace listings — the part
 // that goes beyond "here's what's in maize".
 function RationBuilder({ currentUser, feeds }) {
   const [animals, setAnimals]         = useState([]);
@@ -160,7 +160,7 @@ function RationBuilder({ currentUser, feeds }) {
       <View style={styles.pitchBox}>
         <Calculator size={16} color={COLORS.primary} />
         <Text style={styles.pitchText}>
-          You already know Maize is energy and Soya is protein. What this calculates is exactly how many grams of protein <Text style={{ fontWeight: '900' }}>this animal</Text>, at <Text style={{ fontWeight: '900' }}>this weight and age</Text>, needs today — and what that ration costs at real PFUMA supplier prices.
+          You already know Maize is energy and Soya is protein. What this calculates is exactly how many grams of protein <Text style={{ fontFamily: FONTS.extrabold }}>this animal</Text>, at <Text style={{ fontFamily: FONTS.extrabold }}>this weight and age</Text>, needs today — and what that ration costs at real PFUMA/INGCEBO supplier prices.
         </Text>
       </View>
 
@@ -257,7 +257,7 @@ function RationBuilder({ currentUser, feeds }) {
                       return (
                         <View key={n.label} style={[styles.verdictBox, { backgroundColor: s.bg }]}>
                           <Text style={[styles.verdictLabel, { color: s.color }]}>{n.label} — {s.label}</Text>
-                          <Text style={styles.verdictVal}>{n.total.toFixed(1)}{n.unit} <Text style={{ color: '#968C82', fontWeight: '600' }}>/ {n.target}{n.unit}</Text></Text>
+                          <Text style={styles.verdictVal}>{n.total.toFixed(1)}{n.unit} <Text style={{ color: '#968C82', fontFamily: FONTS.semibold }}>/ {n.target}{n.unit}</Text></Text>
                         </View>
                       );
                     })}
@@ -273,7 +273,7 @@ function RationBuilder({ currentUser, feeds }) {
                   {preview.anyUnpriced && (
                     <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 4 }}>
                       <AlertTriangle size={13} color={COLORS.gold} style={{ marginTop: 1 }} />
-                      <Text style={[styles.warnText, { flex: 1 }]}>One or more feeds have no live PFUMA supplier listing — cost shown is partial.</Text>
+                      <Text style={[styles.warnText, { flex: 1 }]}>One or more feeds have no live PFUMA/INGCEBO supplier listing — cost shown is partial.</Text>
                     </View>
                   )}
 
@@ -360,9 +360,9 @@ export default function FeedAnalyzerScreen({ currentUser }) {
               )}
             </View>
             <View style={styles.inlineStats}>
-              <Text style={styles.inlineStat}>Protein <Text style={{ color: '#41586C', fontWeight:'800' }}>{item.protein_percent}%</Text></Text>
-              <Text style={styles.inlineStat}>Energy <Text style={{ color:'#8E450E', fontWeight:'800' }}>{item.energy_mj}MJ</Text></Text>
-              <Text style={styles.inlineStat}>Fibre <Text style={{ color:'#A6763C', fontWeight:'800' }}>{item.fibre_percent}%</Text></Text>
+              <Text style={styles.inlineStat}>Protein <Text style={{ color: '#41586C', fontFamily: FONTS.extrabold }}>{item.protein_percent}%</Text></Text>
+              <Text style={styles.inlineStat}>Energy <Text style={{ color:'#8E450E', fontFamily: FONTS.extrabold }}>{item.energy_mj}MJ</Text></Text>
+              <Text style={styles.inlineStat}>Fibre <Text style={{ color:'#A6763C', fontFamily: FONTS.extrabold }}>{item.fibre_percent}%</Text></Text>
             </View>
           </View>
           <Text style={{ fontSize: 16, color: COLORS.muted }}>{isOpen ? '▲' : '▼'}</Text>
@@ -395,7 +395,7 @@ export default function FeedAnalyzerScreen({ currentUser }) {
     <View style={{ flex: 1, backgroundColor: COLORS.bg }}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerSub}>PFUMA</Text>
+          <Text style={styles.headerSub}>PFUMA/INGCEBO</Text>
           <Text style={styles.headerTitle}>Feed Analyzer</Text>
           <Text style={styles.headerDesc}>Not just what's in the bag — what your animal needs today</Text>
         </View>
@@ -450,80 +450,80 @@ export default function FeedAnalyzerScreen({ currentUser }) {
 
 const styles = StyleSheet.create({
   header:        { backgroundColor: COLORS.primary, padding: 24, paddingTop: 56, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-  headerSub:     { color: '#DEC9AE', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
-  headerTitle:   { color: '#fff', fontSize: 24, fontWeight: '900', marginTop: 2 },
+  headerSub:     { color: '#DEC9AE', fontSize: 10, fontFamily: FONTS.bold, textTransform: 'uppercase', letterSpacing: 1 },
+  headerTitle:   { color: '#fff', fontSize: 24, fontFamily: FONTS.extrabold, marginTop: 2 },
   headerDesc:    { color: '#DEC9AE', fontSize: 11, marginTop: 2, maxWidth: 220 },
 
   tabBar2:       { flexDirection: 'row', gap: 8, padding: 16, paddingBottom: 4 },
   tabBtn:        { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12, backgroundColor: '#fff', elevation: 1 },
   tabBtnActive:  { backgroundColor: COLORS.primary },
-  tabBtnText:    { fontSize: 12, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase' },
+  tabBtnText:    { fontSize: 12, fontFamily: FONTS.extrabold, color: COLORS.muted, textTransform: 'uppercase' },
   tabBtnTextActive: { color: '#fff' },
 
   pitchBox:      { flexDirection: 'row', gap: 10, backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 16, elevation: 1 },
-  pitchText:     { flex: 1, fontSize: 12, color: COLORS.muted, lineHeight: 18, fontWeight: '600' },
+  pitchText:     { flex: 1, fontSize: 12, color: COLORS.muted, lineHeight: 18, fontFamily: FONTS.semibold },
 
-  filterLabel:      { fontSize: 9, fontWeight: '800', color: '#968C82', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, marginTop: 4 },
+  filterLabel:      { fontSize: 9, fontFamily: FONTS.extrabold, color: '#968C82', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, marginTop: 4 },
   filterGrid:       { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
   filterChip:       { paddingHorizontal: 14, paddingVertical: 9, borderRadius: 22, borderWidth: 2 },
-  filterChipText:   { fontSize: 12, fontWeight: '800' },
+  filterChipText:   { fontSize: 12, fontFamily: FONTS.extrabold },
 
   emptyBox:      { backgroundColor: '#fff', borderRadius: 14, borderWidth: 1, borderColor: '#eee', borderStyle: 'dashed', padding: 16 },
-  emptyBoxText:  { fontSize: 12, color: COLORS.muted, fontWeight: '600', textAlign: 'center' },
+  emptyBoxText:  { fontSize: 12, color: COLORS.muted, fontFamily: FONTS.semibold, textAlign: 'center' },
 
   statRow:       { flexDirection: 'row', gap: 8, marginVertical: 12 },
   statBox:       { flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 10, alignItems: 'center', elevation: 1 },
-  statLabel:     { fontSize: 9, fontWeight: '800', color: '#968C82', textTransform: 'uppercase', marginTop: 4 },
-  statVal:       { fontSize: 13, fontWeight: '900', color: COLORS.text, marginTop: 2 },
+  statLabel:     { fontSize: 9, fontFamily: FONTS.extrabold, color: '#968C82', textTransform: 'uppercase', marginTop: 4 },
+  statVal:       { fontSize: 13, fontFamily: FONTS.extrabold, color: COLORS.text, marginTop: 2 },
 
   addFeedChip:      { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#fff', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8, elevation: 1 },
-  addFeedChipText:  { fontSize: 11, fontWeight: '700', color: COLORS.text },
-  addFeedChipPrice: { fontSize: 10, fontWeight: '800', color: '#A6763C' },
+  addFeedChipText:  { fontSize: 11, fontFamily: FONTS.bold, color: COLORS.text },
+  addFeedChipPrice: { fontSize: 10, fontFamily: FONTS.extrabold, color: '#A6763C' },
 
   rationRow:        { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 10, marginBottom: 8, elevation: 1 },
-  rationRowName:    { flex: 1, fontSize: 12, fontWeight: '700', color: COLORS.text },
-  rationQtyInput:   { width: 64, backgroundColor: '#EFE8DD', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6, fontSize: 12, fontWeight: '700', marginRight: 8, textAlign: 'center' },
+  rationRowName:    { flex: 1, fontSize: 12, fontFamily: FONTS.bold, color: COLORS.text },
+  rationQtyInput:   { width: 64, backgroundColor: '#EFE8DD', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6, fontSize: 12, fontFamily: FONTS.bold, marginRight: 8, textAlign: 'center' },
 
   verdictRow:    { flexDirection: 'row', gap: 8, marginTop: 8 },
   verdictBox:    { flex: 1, borderRadius: 12, padding: 10 },
-  verdictLabel:  { fontSize: 10, fontWeight: '800', textTransform: 'uppercase', marginBottom: 4 },
-  verdictVal:    { fontSize: 13, fontWeight: '900', color: COLORS.text },
+  verdictLabel:  { fontSize: 10, fontFamily: FONTS.extrabold, textTransform: 'uppercase', marginBottom: 4 },
+  verdictVal:    { fontSize: 13, fontFamily: FONTS.extrabold, color: COLORS.text },
 
   costBanner:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#29231E', borderRadius: 12, padding: 14, marginTop: 12 },
-  costLabel:     { fontSize: 11, fontWeight: '800', color: '#fff', textTransform: 'uppercase' },
-  costVal:       { fontSize: 16, fontWeight: '900', color: '#fff' },
-  warnText:      { fontSize: 10, color: '#8E450E', fontWeight: '700', marginTop: 8 },
-  errorText:     { fontSize: 11, color: '#B5342C', fontWeight: '700', backgroundColor: '#FBEEEC', borderRadius: 10, padding: 10, marginTop: 10 },
+  costLabel:     { fontSize: 11, fontFamily: FONTS.extrabold, color: '#fff', textTransform: 'uppercase' },
+  costVal:       { fontSize: 16, fontFamily: FONTS.extrabold, color: '#fff' },
+  warnText:      { fontSize: 10, color: '#8E450E', fontFamily: FONTS.bold, marginTop: 8 },
+  errorText:     { fontSize: 11, color: '#B5342C', fontFamily: FONTS.bold, backgroundColor: '#FBEEEC', borderRadius: 10, padding: 10, marginTop: 10 },
 
   saveBtn:       { backgroundColor: COLORS.primary, borderRadius: 12, paddingVertical: 13, alignItems: 'center', marginTop: 12 },
-  saveBtnText:   { color: '#fff', fontSize: 12, fontWeight: '900', textTransform: 'uppercase' },
+  saveBtnText:   { color: '#fff', fontSize: 12, fontFamily: FONTS.extrabold, textTransform: 'uppercase' },
   savedBox:      { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F0E6D9', borderRadius: 12, padding: 10, marginTop: 10 },
-  savedText:     { flex: 1, fontSize: 11, fontWeight: '700', color: '#A6763C' },
+  savedText:     { flex: 1, fontSize: 11, fontFamily: FONTS.bold, color: '#A6763C' },
 
   historyRow:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', borderRadius: 10, padding: 10, marginBottom: 6, elevation: 1 },
-  historyDate:   { fontSize: 11, color: COLORS.muted, fontWeight: '600' },
-  historyStatus: { fontSize: 11, fontWeight: '800' },
-  historyCost:   { fontSize: 11, fontWeight: '900', color: COLORS.text },
+  historyDate:   { fontSize: 11, color: COLORS.muted, fontFamily: FONTS.semibold },
+  historyStatus: { fontSize: 11, fontFamily: FONTS.extrabold },
+  historyCost:   { fontSize: 11, fontFamily: FONTS.extrabold, color: COLORS.text },
 
-  resultCount:   { fontSize: 11, color: COLORS.muted, fontWeight: '700', textTransform: 'uppercase', marginBottom: 10, letterSpacing: 0.5 },
+  resultCount:   { fontSize: 11, color: COLORS.muted, fontFamily: FONTS.bold, textTransform: 'uppercase', marginBottom: 10, letterSpacing: 0.5 },
   card:          { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2 },
   cardTop:       { flexDirection: 'row', alignItems: 'center', gap: 12 },
   catIcon:       { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   cardHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' },
-  cardName:      { fontSize: 15, fontWeight: '900', color: COLORS.text, flex: 1 },
+  cardName:      { fontSize: 15, fontFamily: FONTS.extrabold, color: COLORS.text, flex: 1 },
   catBadge:      { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
-  catBadgeText:  { fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
+  catBadgeText:  { fontSize: 10, fontFamily: FONTS.extrabold, textTransform: 'uppercase' },
   inlineStats:   { flexDirection: 'row', gap: 10 },
   inlineStat:    { fontSize: 11, color: COLORS.muted },
   expanded:      { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#EFE8DD' },
   desc:          { fontSize: 12, color: COLORS.muted, lineHeight: 18, marginBottom: 12, backgroundColor: '#FBF5E9', padding: 10, borderRadius: 10 },
-  nutriTitle:    { fontSize: 12, fontWeight: '800', color: COLORS.text, textTransform: 'uppercase', marginBottom: 10 },
-  nutriLabel:    { fontSize: 12, color: COLORS.muted, fontWeight: '600' },
-  nutriVal:      { fontSize: 12, fontWeight: '900' },
+  nutriTitle:    { fontSize: 12, fontFamily: FONTS.extrabold, color: COLORS.text, textTransform: 'uppercase', marginBottom: 10 },
+  nutriLabel:    { fontSize: 12, color: COLORS.muted, fontFamily: FONTS.semibold },
+  nutriVal:      { fontSize: 12, fontFamily: FONTS.extrabold },
   barBg:         { height: 6, backgroundColor: '#EFE8DD', borderRadius: 4, overflow: 'hidden' },
   barFill:       { height: '100%', borderRadius: 4 },
   speciesRow:    { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 12 },
-  speciesTitle:  { fontSize: 11, fontWeight: '700', color: COLORS.muted },
+  speciesTitle:  { fontSize: 11, fontFamily: FONTS.bold, color: COLORS.muted },
   speciesChip:   { backgroundColor: COLORS.light, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
-  speciesChipText:{ fontSize: 11, fontWeight: '700', color: COLORS.primary },
+  speciesChipText:{ fontSize: 11, fontFamily: FONTS.bold, color: COLORS.primary },
 });

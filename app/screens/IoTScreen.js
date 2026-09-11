@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Thermometer, Heart, Check, AlertTriangle, Radio, RadioTower, Tag, Link2, Plus, ShieldCheck } from 'lucide-react-native';
-import { COLORS } from '../config';
+import { COLORS, FONTS } from '../config';
 import { authFetch, authJson } from '../api';
 
 const DEVICE_TYPES = [
@@ -118,21 +118,21 @@ function PairingPanel({ currentUser, animals, devices, onPaired }) {
 
 const p = StyleSheet.create({
   card:        { backgroundColor: '#fff', borderRadius: 16, padding: 16, elevation: 2, marginBottom: 16 },
-  title:       { fontSize: 14, fontWeight: '900', color: '#29231E' },
-  subtitle:    { fontSize: 11, color: '#968C82', fontWeight: '500', marginBottom: 12 },
+  title:       { fontSize: 14, fontFamily: FONTS.extrabold, color: '#29231E' },
+  subtitle:    { fontSize: 11, color: '#968C82', fontFamily: FONTS.semibold, marginBottom: 12 },
   deviceRow:   { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F7F3ED', borderRadius: 12, padding: 10 },
   deviceIconBox:{ width: 26, height: 26, borderRadius: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#E0D6C7', alignItems: 'center', justifyContent: 'center' },
-  deviceSerial:{ fontSize: 11, fontWeight: '900', color: '#29231E' },
-  deviceMeta:  { fontSize: 10, color: '#968C82', fontWeight: '600', marginTop: 1 },
-  feedback:    { fontSize: 11, fontWeight: '700', color: COLORS.primary, backgroundColor: '#F2F4EB', borderWidth: 1, borderColor: '#C9D2B4', borderRadius: 10, padding: 8, marginBottom: 10 },
+  deviceSerial:{ fontSize: 11, fontFamily: FONTS.extrabold, color: '#29231E' },
+  deviceMeta:  { fontSize: 10, color: '#968C82', fontFamily: FONTS.semibold, marginTop: 1 },
+  feedback:    { fontSize: 11, fontFamily: FONTS.bold, color: COLORS.primary, backgroundColor: '#F2F4EB', borderWidth: 1, borderColor: '#C9D2B4', borderRadius: 10, padding: 8, marginBottom: 10 },
   typeBtn:     { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderRadius: 12, backgroundColor: '#F7F3ED' },
-  typeBtnText: { fontSize: 10, fontWeight: '900', color: '#7C7268', textTransform: 'uppercase' },
-  hint:        { fontSize: 10, color: '#968C82', fontWeight: '500', marginBottom: 10, lineHeight: 15 },
-  input:       { backgroundColor: '#F7F3ED', borderRadius: 12, padding: 12, fontSize: 13, fontWeight: '600', color: '#29231E', marginBottom: 10 },
+  typeBtnText: { fontSize: 10, fontFamily: FONTS.extrabold, color: '#7C7268', textTransform: 'uppercase' },
+  hint:        { fontSize: 10, color: '#968C82', fontFamily: FONTS.semibold, marginBottom: 10, lineHeight: 15 },
+  input:       { backgroundColor: '#F7F3ED', borderRadius: 12, padding: 12, fontSize: 13, fontFamily: FONTS.semibold, color: '#29231E', marginBottom: 10 },
   animalChip:  { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: '#E0D6C7' },
-  animalChipText:{ fontSize: 11, fontWeight: '700', color: '#7C7268' },
+  animalChipText:{ fontSize: 11, fontFamily: FONTS.bold, color: '#7C7268' },
   pairBtn:     { backgroundColor: COLORS.primary, borderRadius: 12, paddingVertical: 13, alignItems: 'center' },
-  pairBtnText: { color: '#fff', fontSize: 13, fontWeight: '900' },
+  pairBtnText: { color: '#fff', fontSize: 13, fontFamily: FONTS.extrabold },
 });
 
 // Real device data always takes priority. This local jitter generator only
@@ -165,7 +165,7 @@ const bat = StyleSheet.create({
   body:  { width: 40, height: 16, borderRadius: 4, borderWidth: 1.5, borderColor: '#ccc', overflow: 'hidden', backgroundColor: '#EFE8DD' },
   fill:  { height: '100%', borderRadius: 2 },
   tip:   { width: 4, height: 8, backgroundColor: '#ccc', borderTopRightRadius: 2, borderBottomRightRadius: 2, marginLeft: -1 },
-  label: { fontSize: 11, fontWeight: '800' },
+  label: { fontSize: 11, fontFamily: FONTS.extrabold },
 });
 
 function SignalDots({ level }) {
@@ -287,14 +287,14 @@ export default function IoTScreen({ currentUser }) {
         <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
         <View style={s.header}>
           <View>
-            <Text style={s.headerSub}>PFUMA</Text>
+            <Text style={s.headerSub}>PFUMA/INGCEBO</Text>
             <Text style={s.headerTitle}>IoT Monitor</Text>
           </View>
         </View>
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 110 }}>
           <View style={{ padding: 24, alignItems: 'center', marginBottom: 8 }}>
             <Radio size={40} color={COLORS.muted} strokeWidth={1.5} />
-            <Text style={{ fontSize: 13, fontWeight: '700', color: COLORS.muted, marginTop: 12, textAlign: 'center' }}>
+            <Text style={{ fontSize: 13, fontFamily: FONTS.bold, color: COLORS.muted, marginTop: 12, textAlign: 'center' }}>
               Register an animal in your Herd to see sensor data here.
             </Text>
           </View>
@@ -337,7 +337,7 @@ export default function IoTScreen({ currentUser }) {
       {/* Header */}
       <View style={s.header}>
         <View>
-          <Text style={s.headerSub}>PFUMA</Text>
+          <Text style={s.headerSub}>PFUMA/INGCEBO</Text>
           <Text style={s.headerTitle}>IoT Monitor</Text>
           <Text style={s.headerDesc}>{isLive ? 'Live collar telemetry' : 'No live collar — showing demo data'}</Text>
         </View>
@@ -510,68 +510,68 @@ export default function IoTScreen({ currentUser }) {
 
 const s = StyleSheet.create({
   header:        { backgroundColor: COLORS.primary, padding: 24, paddingTop: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-  headerSub:     { color: '#DEC9AE', fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
-  headerTitle:   { color: '#fff', fontSize: 24, fontWeight: '900', marginTop: 2 },
+  headerSub:     { color: '#DEC9AE', fontSize: 10, fontFamily: FONTS.bold, textTransform: 'uppercase', letterSpacing: 1 },
+  headerTitle:   { color: '#fff', fontSize: 24, fontFamily: FONTS.extrabold, marginTop: 2 },
   headerDesc:    { color: '#DEC9AE', fontSize: 11, marginTop: 2 },
   liveChip:      { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, gap: 6 },
   liveDot:       { width: 8, height: 8, borderRadius: 4, backgroundColor: '#8A9C68' },
-  liveText:      { color: '#fff', fontSize: 11, fontWeight: '900', letterSpacing: 1 },
+  liveText:      { color: '#fff', fontSize: 11, fontFamily: FONTS.extrabold, letterSpacing: 1 },
 
-  sectionLabel:  { fontSize: 9, fontWeight: '800', color: '#968C82', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, marginTop: 8 },
+  sectionLabel:  { fontSize: 9, fontFamily: FONTS.extrabold, color: '#968C82', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8, marginTop: 8 },
 
   animalSelector:{ flexDirection: 'row', gap: 10, marginBottom: 12 },
   animalTab:     { flex: 1, backgroundColor: '#fff', borderRadius: 14, padding: 12, borderWidth: 2, borderColor: '#E0D6C7', elevation: 2 },
   animalTabActive:{ backgroundColor: COLORS.primary, borderColor: COLORS.primary },
   animalDot:     { width: 8, height: 8, borderRadius: 4 },
-  animalTabName: { fontSize: 14, fontWeight: '900', color: '#29231E', marginBottom: 2 },
-  animalTabSub:  { fontSize: 10, color: '#968C82', fontWeight: '600' },
+  animalTabName: { fontSize: 14, fontFamily: FONTS.extrabold, color: '#29231E', marginBottom: 2 },
+  animalTabSub:  { fontSize: 10, color: '#968C82', fontFamily: FONTS.semibold },
 
   collarCard:    { backgroundColor: '#fff', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 4, elevation: 2 },
-  collarName:    { fontSize: 18, fontWeight: '900', color: '#29231E' },
+  collarName:    { fontSize: 18, fontFamily: FONTS.extrabold, color: '#29231E' },
   collarSub:     { fontSize: 11, color: '#968C82', marginTop: 2 },
 
   vitalsRow:     { flexDirection: 'row', gap: 10, marginBottom: 12 },
   vitalCard:     { flex: 1, backgroundColor: '#fff', borderRadius: 16, padding: 16, borderTopWidth: 4, elevation: 2, alignItems: 'center' },
-  vitalValue:    { fontSize: 24, fontWeight: '900', marginBottom: 2 },
-  vitalLabel:    { fontSize: 10, color: '#968C82', fontWeight: '700', textTransform: 'uppercase', marginBottom: 4 },
-  vitalStatus:   { fontSize: 11, fontWeight: '900', letterSpacing: 0.5 },
+  vitalValue:    { fontSize: 24, fontFamily: FONTS.extrabold, marginBottom: 2 },
+  vitalLabel:    { fontSize: 10, color: '#968C82', fontFamily: FONTS.bold, textTransform: 'uppercase', marginBottom: 4 },
+  vitalStatus:   { fontSize: 11, fontFamily: FONTS.extrabold, letterSpacing: 0.5 },
   vitalRef:      { fontSize: 9, color: '#CBBFAD', marginTop: 4 },
 
   activityCard:  { backgroundColor: '#fff', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 4, elevation: 2 },
-  actLabel:      { fontSize: 10, fontWeight: '700', color: '#968C82', textTransform: 'uppercase', marginBottom: 4 },
-  actValue:      { fontSize: 16, fontWeight: '900', color: '#29231E' },
+  actLabel:      { fontSize: 10, fontFamily: FONTS.bold, color: '#968C82', textTransform: 'uppercase', marginBottom: 4 },
+  actValue:      { fontSize: 16, fontFamily: FONTS.extrabold, color: '#29231E' },
   actBadge:      { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6 },
-  actBadgeText:  { fontSize: 13, fontWeight: '900' },
+  actBadgeText:  { fontSize: 13, fontFamily: FONTS.extrabold },
 
   zoneCard:      { borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 4, elevation: 2 },
   zoneCardSafe:  { backgroundColor: '#F2F4EB', borderWidth: 1.5, borderColor: '#C9D2B4' },
   zoneCardAlert: { backgroundColor: '#FBEEEC', borderWidth: 1.5, borderColor: '#DA8279' },
-  zoneStatus:    { fontSize: 12, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
-  zoneName:      { fontSize: 16, fontWeight: '900', color: '#29231E', marginBottom: 4 },
+  zoneStatus:    { fontSize: 12, fontFamily: FONTS.extrabold, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
+  zoneName:      { fontSize: 16, fontFamily: FONTS.extrabold, color: '#29231E', marginBottom: 4 },
   zoneCoord:     { fontSize: 11, color: '#7C7268', lineHeight: 16 },
   zoneIcon:      { width: 52, height: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
 
   trendCard:     { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 4, elevation: 2 },
-  trendTitle:    { fontSize: 11, fontWeight: '700', color: '#7C7268', marginBottom: 14 },
+  trendTitle:    { fontSize: 11, fontFamily: FONTS.bold, color: '#7C7268', marginBottom: 14 },
   trendBars:     { flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 90 },
   trendBarCol:   { flex: 1, alignItems: 'center', justifyContent: 'flex-end' },
-  trendBarVal:   { fontSize: 9, fontWeight: '800', marginBottom: 3 },
+  trendBarVal:   { fontSize: 9, fontFamily: FONTS.extrabold, marginBottom: 3 },
   trendBar:      { width: '100%', borderRadius: 4, minHeight: 10 },
-  trendBarX:     { fontSize: 8, color: '#968C82', marginTop: 4, fontWeight: '600' },
+  trendBarX:     { fontSize: 8, color: '#968C82', marginTop: 4, fontFamily: FONTS.semibold },
 
   alertCard:     { flexDirection: 'row', borderRadius: 14, padding: 14, marginBottom: 10, borderLeftWidth: 3, gap: 12, alignItems: 'flex-start' },
   alertCritical: { backgroundColor: '#FBEEEC', borderLeftColor: '#B5342C' },
   alertWarning:  { backgroundColor: '#FBF5E9', borderLeftColor: '#C99A4A' },
   alertDot:      { width: 10, height: 10, borderRadius: 5, marginTop: 3, flexShrink: 0 },
-  alertAnimal:   { fontSize: 12, fontWeight: '900', color: '#29231E' },
-  alertTime:     { fontSize: 10, fontWeight: '700', color: '#968C82' },
+  alertAnimal:   { fontSize: 12, fontFamily: FONTS.extrabold, color: '#29231E' },
+  alertTime:     { fontSize: 10, fontFamily: FONTS.bold, color: '#968C82' },
   alertMsg:      { fontSize: 11, color: '#7C7268', marginTop: 2, lineHeight: 16 },
 
   noAlerts:      { backgroundColor: '#F2F4EB', borderRadius: 16, padding: 20, alignItems: 'center', marginBottom: 12 },
-  noAlertsText:  { fontSize: 13, fontWeight: '700', color: '#57633E' },
+  noAlertsText:  { fontSize: 13, fontFamily: FONTS.bold, color: '#57633E' },
 
   fleetCard:     { backgroundColor: '#fff', borderRadius: 16, padding: 16, flexDirection: 'row', justifyContent: 'space-between', elevation: 2 },
   fleetStat:     { alignItems: 'center' },
-  fleetStatValue:{ fontSize: 22, fontWeight: '900', marginBottom: 2 },
-  fleetStatLabel:{ fontSize: 9, fontWeight: '700', color: '#968C82', textTransform: 'uppercase', textAlign: 'center' },
+  fleetStatValue:{ fontSize: 22, fontFamily: FONTS.extrabold, marginBottom: 2 },
+  fleetStatLabel:{ fontSize: 9, fontFamily: FONTS.bold, color: '#968C82', textTransform: 'uppercase', textAlign: 'center' },
 });

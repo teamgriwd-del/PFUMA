@@ -107,28 +107,28 @@ export default function TradingJournalScreen({ currentUser, navigation }) {
 
 const styles = StyleSheet.create({
   header:        { backgroundColor: COLORS.primary, padding: 24, paddingTop: 56, paddingBottom: 20 },
-  headerEyebrow: { color: '#DEC9AE', fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 2 },
-  headerTitle:   { color: '#fff', fontSize: 20, fontWeight: '900', marginBottom: 12 },
+  headerEyebrow: { color: '#DEC9AE', fontSize: 10, fontFamily: FONTS.extrabold, textTransform: 'uppercase', letterSpacing: 2 },
+  headerTitle:   { color: '#fff', fontSize: 20, fontFamily: FONTS.extrabold, marginBottom: 12 },
   actionBtn:     { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#fff', alignSelf: 'flex-start', paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12 },
-  actionBtnText: { fontSize: 11, fontWeight: '800', color: COLORS.primary, textTransform: 'uppercase' },
+  actionBtnText: { fontSize: 11, fontFamily: FONTS.extrabold, color: COLORS.primary, textTransform: 'uppercase' },
 
   statRow:  { flexDirection: 'row', gap: 10, marginBottom: 14 },
   statCard: { flex: 1, backgroundColor: '#fff', borderRadius: 16, padding: 14 },
-  statLabel:{ fontSize: 9, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase' },
-  statValue:{ fontSize: 24, fontWeight: '900', color: COLORS.text, marginTop: 6 },
+  statLabel:{ fontSize: 9, fontFamily: FONTS.extrabold, color: COLORS.muted, textTransform: 'uppercase' },
+  statValue:{ fontSize: 24, fontFamily: FONTS.extrabold, color: COLORS.text, marginTop: 6 },
   statSub:  { fontSize: 10, color: COLORS.muted, marginTop: 2 },
 
   card:      { backgroundColor: '#fff', borderRadius: 20, padding: 16 },
-  cardTitle: { fontSize: 14, fontWeight: '900', color: COLORS.text },
+  cardTitle: { fontSize: 14, fontFamily: FONTS.extrabold, color: COLORS.text },
   cardDesc:  { fontSize: 12, color: COLORS.muted, marginBottom: 12 },
 
   emptyInner: { alignItems: 'center', paddingVertical: 24 },
-  emptyText:  { fontSize: 12, fontWeight: '700', color: COLORS.muted, marginTop: 8 },
+  emptyText:  { fontSize: 12, fontFamily: FONTS.bold, color: COLORS.muted, marginTop: 8 },
 
   cpRow:   { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: COLORS.bg, borderRadius: 14, padding: 12, marginBottom: 8 },
   cpRank:  { width: 30, height: 30, borderRadius: 8, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
-  cpRankText: { fontSize: 11, fontWeight: '900', color: COLORS.primary },
-  cpName:  { fontSize: 12, fontWeight: '800', color: COLORS.text },
+  cpRankText: { fontSize: 11, fontFamily: FONTS.extrabold, color: COLORS.primary },
+  cpName:  { fontSize: 12, fontFamily: FONTS.extrabold, color: COLORS.text },
   cpSub:   { fontSize: 10, color: COLORS.muted, marginTop: 1 },
-  cpValue: { fontSize: 13, fontWeight: '900', color: COLORS.primary },
+  cpValue: { fontSize: 13, fontFamily: FONTS.extrabold, color: COLORS.primary },
 });

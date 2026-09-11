@@ -1,5 +1,5 @@
 // Shared authenticated-fetch helper for every screen — every non-public
-// PFUMA endpoint requires `Authorization: Bearer <token>` (see backend/app.py
+// PFUMA/INGCEBO endpoint requires `Authorization: Bearer <token>` (see backend/app.py
 // require_auth). Screens were previously calling fetch() directly without
 // this header, which the real backend has always rejected with 401 — they
 // only ever *looked* wired up because the 401 silently fell through to each

@@ -191,7 +191,7 @@ function CooperativeHome({ currentUser, coop, onChanged }) {
       { text: 'Leave', style: 'destructive', onPress: async () => {
         setBusy(true);
         try { await authFetch(currentUser, `/cooperatives/${coop.id}/leave`, { method: 'POST' }); onChanged(); }
-        catch { Alert.alert('Could not reach the PFUMA API.'); setBusy(false); }
+        catch { Alert.alert('Could not reach the PFUMA/INGCEBO API.'); setBusy(false); }
       } },
     ]);
   };
@@ -346,62 +346,62 @@ export default function CooperativeScreen({ currentUser }) {
 
 const styles = StyleSheet.create({
   header:        { backgroundColor: COLORS.primary, padding: 24, paddingTop: 56, paddingBottom: 24 },
-  headerEyebrow: { color: '#F6E9CF', fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 2 },
-  headerTitle:   { color: '#fff', fontSize: 20, fontWeight: '900', marginBottom: 6 },
+  headerEyebrow: { color: '#F6E9CF', fontSize: 10, fontFamily: FONTS.extrabold, textTransform: 'uppercase', letterSpacing: 2 },
+  headerTitle:   { color: '#fff', fontSize: 20, fontFamily: FONTS.extrabold, marginBottom: 6 },
   headerDesc:    { color: 'rgba(247,243,237,0.75)', fontSize: 12, lineHeight: 18 },
 
   tabRow:        { flexDirection: 'row', gap: 4, backgroundColor: '#fff', margin: 16, marginBottom: 0, borderRadius: 16, padding: 4, elevation: 2 },
   tabBtn:        { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 12 },
   tabBtnActive:  { backgroundColor: COLORS.primary },
-  tabBtnText:    { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', color: COLORS.muted },
+  tabBtnText:    { fontSize: 11, fontFamily: FONTS.extrabold, textTransform: 'uppercase', color: COLORS.muted },
   tabBtnTextActive: { color: '#fff' },
 
   card:          { backgroundColor: '#fff', borderRadius: 20, padding: 16, marginBottom: 14, elevation: 2 },
-  cardTitle:     { fontSize: 14, fontWeight: '900', color: COLORS.text, marginBottom: 4 },
+  cardTitle:     { fontSize: 14, fontFamily: FONTS.extrabold, color: COLORS.text, marginBottom: 4 },
   cardDesc:      { fontSize: 12, color: COLORS.muted, marginBottom: 12, lineHeight: 17 },
 
   emptyState:    { alignItems: 'center', paddingVertical: 30 },
-  emptyTitle:    { fontSize: 14, fontWeight: '800', color: COLORS.text, marginTop: 8 },
+  emptyTitle:    { fontSize: 14, fontFamily: FONTS.extrabold, color: COLORS.text, marginTop: 8 },
   emptyDesc:     { fontSize: 12, color: COLORS.muted, marginTop: 4 },
   emptyInline:   { fontSize: 12, color: COLORS.muted, fontStyle: 'italic', textAlign: 'center', paddingVertical: 14 },
 
   coopRow:       { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, backgroundColor: COLORS.bg, borderRadius: 16, marginBottom: 10 },
-  coopName:      { fontSize: 14, fontWeight: '800', color: COLORS.text },
+  coopName:      { fontSize: 14, fontFamily: FONTS.extrabold, color: COLORS.text },
   coopSub:       { fontSize: 11, color: COLORS.muted, marginTop: 1 },
   joinBtn:       { backgroundColor: COLORS.primary, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 12 },
-  joinBtnText:   { color: '#fff', fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
+  joinBtnText:   { color: '#fff', fontSize: 11, fontFamily: FONTS.extrabold, textTransform: 'uppercase' },
 
-  formLabel:     { fontSize: 11, fontWeight: '800', color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6, marginTop: 10 },
+  formLabel:     { fontSize: 11, fontFamily: FONTS.extrabold, color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6, marginTop: 10 },
   formInput:     { backgroundColor: COLORS.bg, borderRadius: 12, padding: 13, fontSize: 14, color: COLORS.text, marginBottom: 4 },
   provinceNote:  { fontSize: 11, color: COLORS.muted, marginTop: 8, marginBottom: 14 },
   submitBtn:     { backgroundColor: COLORS.primary, borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
-  submitText:    { color: '#fff', fontWeight: '900', fontSize: 14 },
+  submitText:    { color: '#fff', fontFamily: FONTS.extrabold, fontSize: 14 },
 
   heroCard:      { backgroundColor: COLORS.slate, borderRadius: 20, padding: 20, marginBottom: 14 },
-  heroTitle:     { color: '#fff', fontSize: 20, fontWeight: '900', marginBottom: 4 },
-  heroSub:       { color: 'rgba(247,243,237,0.6)', fontSize: 12, fontWeight: '600' },
+  heroTitle:     { color: '#fff', fontSize: 20, fontFamily: FONTS.extrabold, marginBottom: 4 },
+  heroSub:       { color: 'rgba(247,243,237,0.6)', fontSize: 12, fontFamily: FONTS.semibold },
   leaveBtn:      { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.12)', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10 },
-  leaveBtnText:  { color: '#fff', fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
+  leaveBtnText:  { color: '#fff', fontSize: 11, fontFamily: FONTS.extrabold, textTransform: 'uppercase' },
 
   memberRow:     { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 8, backgroundColor: COLORS.bg, borderRadius: 12, marginBottom: 8 },
   memberAvatar:  { width: 32, height: 32, borderRadius: 16, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
-  memberAvatarText: { color: '#fff', fontSize: 11, fontWeight: '900' },
-  memberName:    { fontSize: 12, fontWeight: '800', color: COLORS.text },
+  memberAvatarText: { color: '#fff', fontSize: 11, fontFamily: FONTS.extrabold },
+  memberName:    { fontSize: 12, fontFamily: FONTS.extrabold, color: COLORS.text },
   memberSub:     { fontSize: 11, color: COLORS.muted },
 
-  addLink:       { fontSize: 11, fontWeight: '800', color: COLORS.primary, textTransform: 'uppercase' },
+  addLink:       { fontSize: 11, fontFamily: FONTS.extrabold, color: COLORS.primary, textTransform: 'uppercase' },
   inlineForm:    { backgroundColor: COLORS.bg, borderRadius: 14, padding: 10, marginBottom: 12 },
   smallSubmitBtn:{ backgroundColor: COLORS.primary, borderRadius: 10, paddingVertical: 9, alignItems: 'center', marginTop: 4 },
-  smallSubmitText: { color: '#fff', fontSize: 11, fontWeight: '800', textTransform: 'uppercase' },
+  smallSubmitText: { color: '#fff', fontSize: 11, fontFamily: FONTS.extrabold, textTransform: 'uppercase' },
 
   dipRow:        { backgroundColor: COLORS.tealBg, borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: 'rgba(63,112,107,0.18)' },
-  dipDate:       { fontSize: 12, fontWeight: '800', color: COLORS.text },
+  dipDate:       { fontSize: 12, fontFamily: FONTS.extrabold, color: COLORS.text },
   dipNotes:      { fontSize: 11, color: COLORS.muted, marginTop: 2 },
-  dipBy:         { fontSize: 10, fontWeight: '700', color: COLORS.muted, textTransform: 'uppercase', marginTop: 4 },
+  dipBy:         { fontSize: 10, fontFamily: FONTS.bold, color: COLORS.muted, textTransform: 'uppercase', marginTop: 4 },
 
   reqRow:        { backgroundColor: COLORS.bg, borderRadius: 12, padding: 12, marginBottom: 8 },
-  reqReason:     { flex: 1, fontSize: 12, fontWeight: '800', color: COLORS.text, lineHeight: 16 },
+  reqReason:     { flex: 1, fontSize: 12, fontFamily: FONTS.extrabold, color: COLORS.text, lineHeight: 16 },
   reqBadge:      { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, alignSelf: 'flex-start' },
-  reqBadgeText:  { fontSize: 9, fontWeight: '900', textTransform: 'uppercase' },
+  reqBadgeText:  { fontSize: 9, fontFamily: FONTS.extrabold, textTransform: 'uppercase' },
   reqSub:        { fontSize: 11, color: COLORS.muted, marginTop: 3 },
 });
