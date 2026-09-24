@@ -4,7 +4,7 @@ import {
   CheckCircle, XCircle, ShoppingCart, AlertTriangle, Handshake, Package,
   Ban, RotateCcw, Satellite, Navigation, Crosshair, Thermometer, Heart,
   BatteryMedium, Play, Pause, RadioTower, Target, Save, Trash2,
-  Upload, Database, FileSpreadsheet, UserPlus, Eye, X, MapPin, Calendar, Shield, DollarSign, Tag, RefreshCw, Key, Crown,
+  Upload, Database, FileSpreadsheet, UserPlus, Eye, X, MapPin, Calendar, Shield, DollarSign, Tag, RefreshCw, Key, Crown, Star, EyeOff,
 } from 'lucide-react';
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
@@ -1301,9 +1301,111 @@ const DataImportTab = ({ currentUser }) => {
   );
 };
 
+// Ratings moderation — every rating on the platform, newest first, with a
+// hide/restore toggle for abusive or fake reviews (a hidden rating stops
+// counting toward the user's average). "Flagged" lists users whose average
+// has fallen to 2.0 or below: a prompt for a human to look, never an
+// automatic suspension.
+const RatingsTab = ({ currentUser }) => {
+  const [data, setData] = useState({ ratings: [], flagged_users: [] });
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [busyId, setBusyId] = useState(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (statusFilter) params.set('status', statusFilter);
+    try {
+      const res = await fetch(`${API}/admin/ratings?${params}`, { headers: { Authorization: `Bearer ${currentUser.token}` } });
+      if (res.ok) setData(await res.json());
+    } catch { /* offline — leave empty */ }
+    setLoading(false);
+  }, [currentUser.token, statusFilter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const setStatus = async (r, status) => {
+    let reason = '';
+    if (status === 'hidden') {
+      reason = window.prompt('Reason for hiding this rating (abusive, fake, off-topic…):', '');
+      if (reason === null) return;
+    }
+    setBusyId(r.id);
+    try {
+      await fetch(`${API}/admin/ratings/${r.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentUser.token}` },
+        body: JSON.stringify({ status, reason }),
+      });
+      await load();
+    } catch { /* offline */ }
+    setBusyId(null);
+  };
+
+  const stars = n => '★'.repeat(n) + '☆'.repeat(5 - n);
+
+  return (
+    <div className="space-y-4">
+      {data.flagged_users.length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-4">
+          <p className="text-xs font-bold text-red-700 uppercase tracking-wide flex items-center gap-2 mb-2"><AlertTriangle size={14} /> Low-rated accounts — review</p>
+          <div className="space-y-1">
+            {data.flagged_users.map(u => (
+              <p key={u.id} className="text-xs text-red-700 font-medium">
+                {u.full_name} — {u.role} · {u.phone} · ★ {u.average.toFixed(1)} from {u.rating_count} ratings · {u.account_status}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        {[['', 'All'], ['visible', 'Visible'], ['hidden', 'Hidden']].map(([v, label]) => (
+          <button key={v} onClick={() => setStatusFilter(v)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold ${statusFilter === v ? 'bg-gray-900 text-white' : 'bg-white border border-gray-200 text-gray-600'}`}>{label}</button>
+        ))}
+      </div>
+
+      <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+        {loading ? (
+          <p className="text-xs text-gray-400 font-medium italic text-center py-10">Loading…</p>
+        ) : data.ratings.length === 0 ? (
+          <p className="text-xs text-gray-400 font-medium italic text-center py-10">No ratings yet.</p>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {data.ratings.map(r => (
+              <div key={r.id} className={`flex items-start gap-4 p-4 ${r.status === 'hidden' ? 'opacity-60' : ''}`}>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-gray-900">
+                    <span className="text-amber-500">{stars(r.stars)}</span> {r.rater_name} <span className="text-gray-400 font-medium">({r.rater_role})</span> → {r.ratee_name} <span className="text-gray-400 font-medium">({r.ratee_role})</span>
+                  </p>
+                  {r.comment && <p className="text-xs text-gray-600 font-medium mt-1">“{r.comment}”</p>}
+                  {r.reply && <p className="text-xs text-gray-500 font-medium mt-1">Reply: {r.reply}</p>}
+                  <p className="text-[0.6875rem] text-gray-400 font-medium mt-1">
+                    {r.context_type} #{r.context_id} · {new Date(r.created_at).toLocaleString()}
+                    {r.status === 'hidden' && ` · HIDDEN${r.hidden_reason ? `: ${r.hidden_reason}` : ''}`}
+                  </p>
+                </div>
+                {r.status === 'visible' ? (
+                  <button onClick={() => setStatus(r, 'hidden')} disabled={busyId === r.id} title="Hide (abusive/fake)" aria-label="Hide rating"
+                    className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition disabled:opacity-50 shrink-0"><EyeOff size={14} /></button>
+                ) : (
+                  <button onClick={() => setStatus(r, 'visible')} disabled={busyId === r.id} title="Restore" aria-label="Restore rating"
+                    className="p-1.5 bg-green-50 hover:bg-green-100 text-green-700 rounded-lg transition disabled:opacity-50 shrink-0"><RotateCcw size={14} /></button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const TABS = [
   { id: 'users', label: 'Users', icon: Users },
   { id: 'listings', label: 'Listings', icon: Package },
+  { id: 'ratings', label: 'Ratings', icon: Star },
   { id: 'trends', label: 'Trends', icon: TrendingUp },
   { id: 'activity', label: 'Activity', icon: Activity },
   { id: 'import', label: 'Data Import', icon: Database },
@@ -1346,6 +1448,7 @@ const AdminDashboard = ({ currentUser, onLogout }) => {
       <div className="flex-1 overflow-y-auto p-6">
         {tab === 'users' && <UsersTab currentUser={currentUser} />}
         {tab === 'listings' && <ListingsTab currentUser={currentUser} />}
+        {tab === 'ratings' && <RatingsTab currentUser={currentUser} />}
         {tab === 'trends' && <TrendsTab currentUser={currentUser} />}
         {tab === 'activity' && <ActivityTab currentUser={currentUser} />}
         {tab === 'import' && <DataImportTab currentUser={currentUser} />}

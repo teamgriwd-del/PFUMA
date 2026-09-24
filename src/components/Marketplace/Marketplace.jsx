@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 
 import { API } from '../../config';
+import { RatingBadge, TrustProfileModal } from '../Ratings/Ratings';
 import Lightbox from '../Lightbox';
 import SignaturePad from '../SignaturePad';
 import { Hero, Button } from '../ui';
@@ -392,6 +393,7 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal, presetAnimalId, 
   // they can find and manage their own without hunting through everyone
   // else's.
   const [viewMode, setViewMode]     = useState('market');
+  const [trustSeller, setTrustSeller] = useState(null); // { id, name } — seller/bidder whose trust profile is open
 
   const fetchListings = useCallback(async () => {
     setLoading(true);
@@ -696,6 +698,11 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal, presetAnimalId, 
                     <span>{listing.seller_name}</span>
                     {listing.seller_province && <span className="text-gray-300">· {listing.seller_province}</span>}
                   </div>
+                  {listing.seller_rating && (
+                    <div className="pl-[19px]">
+                      <RatingBadge rating={listing.seller_rating} onClick={() => setTrustSeller({ id: listing.user_id, name: listing.seller_name })} />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -737,6 +744,9 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal, presetAnimalId, 
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-gray-800 truncate">{bid.bidder_name} · USD {Number(bid.amount).toLocaleString()}</p>
                           <p className="text-xs text-gray-400 font-bold uppercase">{bid.status}</p>
+                          {bid.bidder_rating && (
+                            <RatingBadge rating={bid.bidder_rating} onClick={() => setTrustSeller({ id: bid.bidder_id, name: bid.bidder_name })} />
+                          )}
                         </div>
                         {bid.status === 'pending' && listing.status !== 'sold' && (
                           <button onClick={() => acceptBid(listing, bid)} className="shrink-0 px-3 py-1.5 bg-pfuma-green text-white rounded-lg text-xs font-bold uppercase hover:bg-green-700 transition">
@@ -753,6 +763,9 @@ const Marketplace = ({ currentUser, animals = [], onListAnimal, presetAnimalId, 
         </div>
       )}
       </div>
+      {trustSeller && (
+        <TrustProfileModal userId={trustSeller.id} name={trustSeller.name} currentUser={currentUser} onClose={() => setTrustSeller(null)} />
+      )}
     </div>
   );
 };

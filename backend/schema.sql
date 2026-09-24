@@ -796,6 +796,34 @@ CREATE TABLE IF NOT EXISTS import_logs (
   FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+-- ── USER RATINGS ─────────────────────────────────────────────
+-- Trust ratings between trading parties. A rating can only exist for a
+-- real completed deal (context_type + context_id point at it: a sold
+-- listing, a delivered order, a completed cooperative vet request, or a
+-- claimed animal transfer) — one rating per rater per deal, so a user
+-- can't be pumped up or piled on with fake reviews. Police, Admin and
+-- Institution are never rated (regulators, not trading parties).
+-- Admin can hide an abusive rating; a hidden rating stops counting
+-- toward the average. Created by ensure_schema() on existing databases.
+CREATE TABLE IF NOT EXISTS user_ratings (
+  id           INT AUTO_INCREMENT PRIMARY KEY,
+  rater_id     INT NOT NULL,
+  ratee_id     INT NOT NULL,
+  context_type ENUM('sale','order','vet_request','transfer') NOT NULL,
+  context_id   INT NOT NULL,
+  stars        TINYINT NOT NULL,          -- 1..5, enforced in the API
+  comment      VARCHAR(500),
+  reply        VARCHAR(500),              -- one public reply from the ratee
+  replied_at   TIMESTAMP NULL,
+  status       ENUM('visible','hidden') NOT NULL DEFAULT 'visible',
+  hidden_reason VARCHAR(200),
+  created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_rating_per_deal (rater_id, context_type, context_id),
+  KEY idx_ratings_ratee (ratee_id, status),
+  FOREIGN KEY (rater_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (ratee_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 
 -- ── UPGRADES FOR EXISTING DATABASES ───────────────────────────
 -- Columns added after the first release. A database created earlier will not

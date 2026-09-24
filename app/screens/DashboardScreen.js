@@ -13,6 +13,7 @@ import { COLORS, FONTS, API } from '../config';
 import { authFetch } from '../api';
 import pfumaMark from '../assets/pfuma-mark.png';
 import { roleHero } from '../imagery';
+import { RatingsDashboardCard } from '../components/Ratings';
 
 // A real uploaded photo is a relative /uploads/... path; a species stock
 // fallback (assigned server-side) is already a full URL.
@@ -307,6 +308,7 @@ function FarmerDashboard({ currentUser, navigation }) {
 
   return (
     <ScrollView style={s.bg} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <RatingsDashboardCard currentUser={currentUser} />
 
       {/* Greeting banner */}
       <GradientBanner role="Farmer" colors={ROLE_GRADIENT.Farmer}>
@@ -633,6 +635,7 @@ function VeterinarianDashboard({ currentUser, navigation }) {
 
   return (
     <ScrollView style={[s.bg, { backgroundColor: COLORS.slate }]} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <RatingsDashboardCard currentUser={currentUser} />
 
       {/* Greeting banner */}
       <GradientBanner role="Veterinarian" colors={ROLE_GRADIENT.Veterinarian}>
@@ -872,6 +875,7 @@ function SupplierDashboard({ currentUser, navigation }) {
 
   return (
     <ScrollView style={s.bg} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <RatingsDashboardCard currentUser={currentUser} />
 
       {/* Banner */}
       <GradientBanner role="Supplier" colors={ROLE_GRADIENT.Supplier}>
@@ -1030,6 +1034,7 @@ function BuyerDashboard({ currentUser, navigation }) {
 
   return (
     <ScrollView style={s.bg} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <RatingsDashboardCard currentUser={currentUser} />
 
       {/* Banner */}
       <GradientBanner role="Buyer" colors={ROLE_GRADIENT.Buyer}>

@@ -11,6 +11,7 @@ import {
 import { API, COLORS, FONTS } from '../config';
 import { authFetch, authJson, assetToFormFile } from '../api';
 import PhotoLightbox from '../components/PhotoLightbox';
+import { RatingBadge, TrustProfileModal } from '../components/Ratings';
 
 const CATEGORIES = [
   { id: 'all',       label: 'All',       icon: LayoutGrid },
@@ -221,7 +222,7 @@ const PostModal = ({ visible, onClose, onSubmit, error, animals = [] }) => {
 
 // Bids panel — only rendered for the listing's own owner. Lets them see
 // pending bids and accept one, mirroring the web Marketplace.jsx flow.
-const BidsPanel = ({ currentUser, listing, onAccepted }) => {
+const BidsPanel = ({ currentUser, listing, onAccepted, onViewTrust }) => {
   const [open, setOpen] = useState(false);
   const [bids, setBids] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -258,6 +259,7 @@ const BidsPanel = ({ currentUser, listing, onAccepted }) => {
               <View style={{ flex: 1 }}>
                 <Text style={styles.bidderName}>{b.bidder_name} · ${Number(b.amount).toLocaleString()}</Text>
                 <Text style={styles.bidStatus}>{b.status}</Text>
+                {b.bidder_rating && <RatingBadge rating={b.bidder_rating} onPress={() => onViewTrust({ id: b.bidder_id, name: b.bidder_name })} />}
               </View>
               {b.status === 'pending' && listing.status !== 'sold' && (
                 <TouchableOpacity style={styles.acceptBtn} onPress={() => accept(b)} activeOpacity={0.8}>
@@ -335,6 +337,7 @@ export default function MarketplaceScreen({ currentUser }) {
   const [showPost,   setShowPost]   = useState(false);
   const [postError,  setPostError]  = useState(null);
   const [bidTarget,  setBidTarget]  = useState(null); // listing being bid on
+  const [trustUser,  setTrustUser]  = useState(null); // { id, name } — seller/bidder whose trust profile is open
   const [bidAmount,  setBidAmount]  = useState('');
   const [orderTarget, setOrderTarget] = useState(null); // medicine/equipment listing being ordered
   const [orderQty,    setOrderQty]    = useState('');
@@ -447,6 +450,9 @@ export default function MarketplaceScreen({ currentUser }) {
         <View style={styles.metaRow}><Package size={12} color={COLORS.muted} /><Text style={styles.metaText}>{item.quantity} {item.unit}</Text></View>
         <View style={styles.metaRow}><MapPin size={12} color={COLORS.muted} /><Text style={styles.metaText}>{item.location}</Text></View>
         <View style={styles.metaRow}><User size={12} color={COLORS.muted} /><Text style={styles.metaText}>{item.seller_name}</Text></View>
+        {item.seller_rating && (
+          <View style={styles.metaRow}><RatingBadge rating={item.seller_rating} onPress={() => setTrustUser({ id: item.user_id, name: item.seller_name })} /></View>
+        )}
       </View>
       <View style={styles.cardActions}>
         {item.phone ? (
@@ -460,7 +466,7 @@ export default function MarketplaceScreen({ currentUser }) {
         </TouchableOpacity>
       </View>
       {item.user_id === currentUser?.id && (
-        <BidsPanel currentUser={currentUser} listing={item} onAccepted={load} />
+        <BidsPanel currentUser={currentUser} listing={item} onAccepted={load} onViewTrust={setTrustUser} />
       )}
     </View>
     );
@@ -519,6 +525,8 @@ export default function MarketplaceScreen({ currentUser }) {
           </View>
         }
       />
+
+      <TrustProfileModal visible={!!trustUser} userId={trustUser?.id} name={trustUser?.name} currentUser={currentUser} onClose={() => setTrustUser(null)} />
 
       <PostModal visible={showPost} onClose={() => { setShowPost(false); setPostError(null); }} onSubmit={handlePost} error={postError} animals={myAnimals} />
 

@@ -485,6 +485,26 @@ def ensure_schema():
           triggered_by VARCHAR(20) NOT NULL DEFAULT 'scheduler'
         )
     """)
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS user_ratings (
+          id           INT AUTO_INCREMENT PRIMARY KEY,
+          rater_id     INT NOT NULL,
+          ratee_id     INT NOT NULL,
+          context_type ENUM('sale','order','vet_request','transfer') NOT NULL,
+          context_id   INT NOT NULL,
+          stars        TINYINT NOT NULL,
+          comment      VARCHAR(500),
+          reply        VARCHAR(500),
+          replied_at   TIMESTAMP NULL,
+          status       ENUM('visible','hidden') NOT NULL DEFAULT 'visible',
+          hidden_reason VARCHAR(200),
+          created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          UNIQUE KEY uniq_rating_per_deal (rater_id, context_type, context_id),
+          KEY idx_ratings_ratee (ratee_id, status),
+          FOREIGN KEY (rater_id) REFERENCES users(id) ON DELETE CASCADE,
+          FOREIGN KEY (ratee_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    """)
     c.execute("SELECT COUNT(*) AS n FROM market_rates")
     if c.fetchone()['n'] == 0:
         for species, price in DEFAULT_LIVESTOCK_PRICE_PER_KG_USD.items():
@@ -3039,6 +3059,9 @@ def get_listings():
     c.execute(sql, params)
     listings = c.fetchall()
     _attach_listing_photos(c, listings)
+    ratings = rating_summaries(c, [l['user_id'] for l in listings])
+    for l in listings:
+        l['seller_rating'] = ratings.get(l['user_id'])
     db.close()
     return jsonify(listings)
 
@@ -3922,6 +3945,10 @@ def get_bids(listing_id):
     sql += " ORDER BY b.created_at DESC"
     c.execute(sql, params)
     rows = c.fetchall()
+    # Seller sees each bidder's trust rating before deciding who to sell to.
+    ratings = rating_summaries(c, [r['bidder_id'] for r in rows])
+    for r in rows:
+        r['bidder_rating'] = ratings.get(r['bidder_id'])
     db.close()
     return jsonify(rows)
 
@@ -5704,6 +5731,327 @@ def get_cases():
     cases = c.fetchall()
     db.close()
     return jsonify(cases)
+
+
+# ── USER RATINGS (trust between trading parties) ──────────────────
+# A rating can only be left for a real, completed deal the rater was a
+# party to — never an open review box — so every star traces back to a
+# sale/order/visit/transfer the platform itself recorded. Police, Admin and
+# Institution are never rated: they're regulators/overseers, and letting
+# the people they clear or block rate them would invite revenge ratings.
+RATEABLE_ROLES = ('Farmer', 'Buyer', 'Supplier', 'Veterinarian')
+RATING_WINDOW_DAYS = 30
+# Below this many ratings the average isn't published — one bad (or one
+# friendly) review shouldn't define a brand-new account.
+MIN_RATINGS_FOR_AVERAGE = 3
+LOW_RATING_FLAG = 2.0
+
+
+def _rateable_deals(c, user_id, context_type=None, context_id=None):
+    """Every completed deal `user_id` was a party to, inside the rating
+    window, with the other party still rateable and not yet rated by
+    `user_id` for that deal. Passing context_type/context_id narrows it to
+    one deal — that's how create_rating() checks eligibility, so the list
+    the UI offers and the rule the API enforces can't drift apart."""
+    window = f"INTERVAL {RATING_WINDOW_DAYS} DAY"
+    queries = {
+        # Seller rates the buyer, buyer rates the seller.
+        'sale': [
+            f"""SELECT l.id AS context_id, b.bidder_id AS counterparty_id, l.product_name AS label, l.sold_at AS completed_at
+                FROM marketplace_listings l JOIN bids b ON b.listing_id = l.id AND b.status = 'accepted'
+                WHERE l.status = 'sold' AND l.user_id = %s AND l.sold_at >= NOW() - {window}""",
+            f"""SELECT l.id AS context_id, l.user_id AS counterparty_id, l.product_name AS label, l.sold_at AS completed_at
+                FROM marketplace_listings l JOIN bids b ON b.listing_id = l.id AND b.status = 'accepted'
+                WHERE l.status = 'sold' AND b.bidder_id = %s AND l.sold_at >= NOW() - {window}""",
+        ],
+        # Farmer rates the supplier who delivered.
+        'order': [
+            f"""SELECT o.id AS context_id, o.supplier_id AS counterparty_id, l.product_name AS label, o.delivered_at AS completed_at
+                FROM orders o JOIN marketplace_listings l ON o.listing_id = l.id
+                WHERE o.status = 'delivered' AND o.farmer_id = %s AND o.delivered_at >= NOW() - {window}""",
+        ],
+        # The farmer who requested a cooperative vet visit rates the vet.
+        'vet_request': [
+            f"""SELECT vr.id AS context_id, vr.vet_id AS counterparty_id, LEFT(vr.reason, 80) AS label, vr.completed_at AS completed_at
+                FROM cooperative_vet_requests vr
+                WHERE vr.status = 'completed' AND vr.vet_id IS NOT NULL AND vr.requested_by = %s
+                  AND vr.completed_at >= NOW() - {window}""",
+        ],
+        # Off-platform transfer: both sides rate each other.
+        'transfer': [
+            f"""SELECT at.id AS context_id, at.claimed_by AS counterparty_id, a.name AS label, at.claimed_at AS completed_at
+                FROM animal_transfers at JOIN animals a ON at.animal_id = a.id
+                WHERE at.status = 'claimed' AND at.from_owner_id = %s AND at.claimed_at >= NOW() - {window}""",
+            f"""SELECT at.id AS context_id, at.from_owner_id AS counterparty_id, a.name AS label, at.claimed_at AS completed_at
+                FROM animal_transfers at JOIN animals a ON at.animal_id = a.id
+                WHERE at.status = 'claimed' AND at.claimed_by = %s AND at.claimed_at >= NOW() - {window}""",
+        ],
+    }
+    deals = []
+    for ctype, sqls in queries.items():
+        if context_type and ctype != context_type:
+            continue
+        for sql in sqls:
+            params = [user_id]
+            if context_id is not None:
+                sql += " AND " + ("l.id" if ctype == 'sale' else "o.id" if ctype == 'order'
+                                  else "vr.id" if ctype == 'vet_request' else "at.id") + " = %s"
+                params.append(context_id)
+            c.execute(sql, params)
+            for row in c.fetchall():
+                row['context_type'] = ctype
+                deals.append(row)
+
+    result = []
+    for d in deals:
+        if not d['counterparty_id'] or d['counterparty_id'] == user_id:
+            continue
+        c.execute("SELECT id, full_name, role FROM users WHERE id=%s", (d['counterparty_id'],))
+        cp = c.fetchone()
+        if not cp or cp['role'] not in RATEABLE_ROLES:
+            continue
+        c.execute("SELECT id FROM user_ratings WHERE rater_id=%s AND context_type=%s AND context_id=%s",
+                  (user_id, d['context_type'], d['context_id']))
+        if c.fetchone():
+            continue
+        d['counterparty_name'] = cp['full_name']
+        d['counterparty_role'] = cp['role']
+        d['completed_at'] = str(d['completed_at']) if d['completed_at'] else None
+        result.append(d)
+    result.sort(key=lambda d: d['completed_at'] or '', reverse=True)
+    return result
+
+
+def rating_summaries(c, user_ids):
+    """{user_id: {'count', 'average'}} from visible ratings only — the
+    average is None until MIN_RATINGS_FOR_AVERAGE is reached."""
+    ids = [i for i in set(user_ids) if i]
+    if not ids:
+        return {}
+    placeholders = ','.join(['%s'] * len(ids))
+    c.execute(f"""
+        SELECT ratee_id, COUNT(*) AS n, AVG(stars) AS avg_stars
+        FROM user_ratings WHERE status='visible' AND ratee_id IN ({placeholders})
+        GROUP BY ratee_id
+    """, ids)
+    out = {i: {'count': 0, 'average': None} for i in ids}
+    for r in c.fetchall():
+        out[r['ratee_id']] = {
+            'count': r['n'],
+            'average': round(float(r['avg_stars']), 1) if r['n'] >= MIN_RATINGS_FOR_AVERAGE else None,
+        }
+    return out
+
+
+def _completed_trade_count(c, user_id):
+    c.execute("""
+        SELECT
+          (SELECT COUNT(*) FROM marketplace_listings WHERE user_id=%s AND status='sold')
+        + (SELECT COUNT(*) FROM bids WHERE bidder_id=%s AND status='accepted')
+        + (SELECT COUNT(*) FROM orders WHERE (supplier_id=%s OR farmer_id=%s) AND status='delivered')
+        + (SELECT COUNT(*) FROM animal_transfers WHERE (from_owner_id=%s OR claimed_by=%s) AND status='claimed')
+        + (SELECT COUNT(*) FROM cooperative_vet_requests WHERE vet_id=%s AND status='completed') AS n
+    """, (user_id,) * 7)
+    return c.fetchone()['n']
+
+
+@app.route('/ratings/pending', methods=['GET'])
+@require_auth
+def get_pending_ratings():
+    """Completed deals the current user can still rate — drives the
+    "Rate your recent deals" prompt on the dashboard."""
+    if g.current_user['role'] not in RATEABLE_ROLES:
+        return jsonify([])
+    db = get_db()
+    c = db.cursor()
+    deals = _rateable_deals(c, g.current_user['id'])
+    db.close()
+    return jsonify(deals)
+
+
+@app.route('/ratings', methods=['POST'])
+@require_auth
+@require_verified
+def create_rating():
+    d = request.json or {}
+    context_type = d.get('context_type')
+    if context_type not in ('sale', 'order', 'vet_request', 'transfer'):
+        return jsonify({"error": "context_type must be sale, order, vet_request or transfer"}), 400
+    try:
+        context_id = int(d.get('context_id'))
+        stars = int(d.get('stars'))
+    except (TypeError, ValueError):
+        return jsonify({"error": "context_id and stars are required"}), 400
+    if not 1 <= stars <= 5:
+        return jsonify({"error": "stars must be between 1 and 5"}), 400
+    comment = (d.get('comment') or '').strip()[:500] or None
+
+    if g.current_user['role'] not in RATEABLE_ROLES:
+        return jsonify({"error": "Your account type doesn't take part in ratings"}), 403
+
+    db = get_db()
+    c = db.cursor()
+    deals = _rateable_deals(c, g.current_user['id'], context_type, context_id)
+    if not deals:
+        db.close()
+        return jsonify({"error": f"You can only rate a deal you completed in the last {RATING_WINDOW_DAYS} days, once."}), 403
+    deal = deals[0]
+    try:
+        c.execute("""
+            INSERT INTO user_ratings (rater_id, ratee_id, context_type, context_id, stars, comment)
+            VALUES (%s,%s,%s,%s,%s,%s)
+        """, (g.current_user['id'], deal['counterparty_id'], context_type, context_id, stars, comment))
+    except pymysql.err.IntegrityError:
+        db.close()
+        return jsonify({"error": "You've already rated this deal"}), 409
+    rating_id = c.lastrowid
+    create_notification(
+        c, deal['counterparty_id'], 'rating_received',
+        f"New {stars}-star rating",
+        f"{g.current_user['full_name']} rated your deal ({deal['label']}). You can reply from your profile.",
+        related_user_id=g.current_user['id'],
+    )
+    db.commit()
+    db.close()
+    return jsonify({"id": rating_id, "message": "Thanks — your rating has been recorded ✅"})
+
+
+@app.route('/users/<int:user_id>/ratings', methods=['GET'])
+@require_auth
+def get_user_ratings(user_id):
+    """Public trust profile: star rating (once there are enough ratings),
+    plus signals the platform verifies itself — verified status, completed
+    trades, member-since and, for sellers, the police-clearance record."""
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT id, role, verification_status, created_at FROM users WHERE id=%s", (user_id,))
+    user = c.fetchone()
+    # Non-rateable roles 404 exactly like a missing user, so this endpoint
+    # can't be used to discover Police/Admin/Institution accounts.
+    if not user or user['role'] not in RATEABLE_ROLES:
+        db.close()
+        return jsonify({"error": "Not found"}), 404
+
+    summary = rating_summaries(c, [user_id])[user_id]
+    c.execute("""
+        SELECT cleared.n AS cleared, rejected.n AS rejected FROM
+          (SELECT COUNT(*) AS n FROM sale_clearances WHERE seller_id=%s AND status='cleared') cleared,
+          (SELECT COUNT(*) AS n FROM sale_clearances WHERE seller_id=%s AND status='rejected') rejected
+    """, (user_id, user_id))
+    clr = c.fetchone()
+    c.execute("""
+        SELECT r.id, r.stars, r.comment, r.reply, r.replied_at, r.created_at, r.context_type,
+               u.full_name AS rater_name, u.role AS rater_role
+        FROM user_ratings r JOIN users u ON r.rater_id = u.id
+        WHERE r.ratee_id=%s AND r.status='visible'
+        ORDER BY r.created_at DESC LIMIT 20
+    """, (user_id,))
+    reviews = c.fetchall()
+    trades = _completed_trade_count(c, user_id)
+    db.close()
+    for r in reviews:
+        r['created_at'] = str(r['created_at'])
+        r['replied_at'] = str(r['replied_at']) if r['replied_at'] else None
+    resolved = clr['cleared'] + clr['rejected']
+    return jsonify({
+        "user_id": user_id,
+        "count": summary['count'],
+        "average": summary['average'],
+        "min_ratings_for_average": MIN_RATINGS_FOR_AVERAGE,
+        "verified": user['verification_status'] == 'verified',
+        "completed_trades": trades,
+        "member_since": user['created_at'].strftime('%Y-%m') if user['created_at'] else None,
+        "clearances_cleared": clr['cleared'],
+        "clearance_pass_rate": round(100 * clr['cleared'] / resolved) if resolved else None,
+        "reviews": reviews,
+    })
+
+
+@app.route('/ratings/<int:rating_id>/reply', methods=['POST'])
+@require_auth
+def reply_to_rating(rating_id):
+    reply = ((request.json or {}).get('reply') or '').strip()[:500]
+    if not reply:
+        return jsonify({"error": "reply is required"}), 400
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT ratee_id, reply, status FROM user_ratings WHERE id=%s", (rating_id,))
+    r = c.fetchone()
+    if not r or r['ratee_id'] != g.current_user['id'] or r['status'] != 'visible':
+        db.close(); return jsonify({"error": "Rating not found"}), 404
+    if r['reply']:
+        db.close(); return jsonify({"error": "You've already replied to this rating"}), 409
+    c.execute("UPDATE user_ratings SET reply=%s, replied_at=NOW() WHERE id=%s", (reply, rating_id))
+    db.commit()
+    db.close()
+    return jsonify({"message": "Reply posted ✅"})
+
+
+@app.route('/admin/ratings', methods=['GET'])
+@require_auth
+@require_admin
+def admin_list_ratings():
+    """Moderation view: recent ratings (optionally one status/user) plus
+    users whose visible average has dropped to LOW_RATING_FLAG or below.
+    A low average only flags an account for a human to look at — it
+    never suspends anyone automatically."""
+    status = request.args.get('status')
+    user_id = request.args.get('user_id')
+    sql = """
+        SELECT r.*, rater.full_name AS rater_name, rater.role AS rater_role,
+               ratee.full_name AS ratee_name, ratee.role AS ratee_role
+        FROM user_ratings r
+        JOIN users rater ON r.rater_id = rater.id
+        JOIN users ratee ON r.ratee_id = ratee.id
+        WHERE 1=1
+    """
+    params = []
+    if status in ('visible', 'hidden'):
+        sql += " AND r.status=%s"; params.append(status)
+    if user_id:
+        sql += " AND (r.ratee_id=%s OR r.rater_id=%s)"; params += [user_id, user_id]
+    sql += " ORDER BY r.created_at DESC LIMIT 200"
+    db = get_db()
+    c = db.cursor()
+    c.execute(sql, params)
+    ratings = c.fetchall()
+    c.execute("""
+        SELECT u.id, u.full_name, u.role, u.phone, u.account_status,
+               COUNT(*) AS rating_count, ROUND(AVG(r.stars), 1) AS average
+        FROM user_ratings r JOIN users u ON r.ratee_id = u.id
+        WHERE r.status='visible'
+        GROUP BY u.id, u.full_name, u.role, u.phone, u.account_status
+        HAVING COUNT(*) >= %s AND AVG(r.stars) <= %s
+        ORDER BY average ASC
+    """, (MIN_RATINGS_FOR_AVERAGE, LOW_RATING_FLAG))
+    flagged = c.fetchall()
+    db.close()
+    for r in ratings:
+        r['created_at'] = str(r['created_at'])
+        r['replied_at'] = str(r['replied_at']) if r['replied_at'] else None
+    for f in flagged:
+        f['average'] = float(f['average'])
+    return jsonify({"ratings": ratings, "flagged_users": flagged})
+
+
+@app.route('/admin/ratings/<int:rating_id>', methods=['PATCH'])
+@require_auth
+@require_admin
+def admin_set_rating_status(rating_id):
+    d = request.json or {}
+    new_status = d.get('status')
+    if new_status not in ('visible', 'hidden'):
+        return jsonify({"error": "status must be 'visible' or 'hidden'"}), 400
+    reason = (d.get('reason') or '').strip()[:200] or None if new_status == 'hidden' else None
+    db = get_db()
+    c = db.cursor()
+    c.execute("SELECT id FROM user_ratings WHERE id=%s", (rating_id,))
+    if not c.fetchone():
+        db.close(); return jsonify({"error": "Rating not found"}), 404
+    c.execute("UPDATE user_ratings SET status=%s, hidden_reason=%s WHERE id=%s", (new_status, reason, rating_id))
+    db.commit()
+    db.close()
+    return jsonify({"message": f"Rating {new_status}"})
 
 
 # ── ADMIN (hidden platform oversight — see require_admin above) ─────

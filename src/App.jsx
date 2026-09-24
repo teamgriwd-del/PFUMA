@@ -16,6 +16,7 @@ import AuthPortal        from './components/IntelAI/AuthPortal';
 import ErrorBoundary     from './components/ErrorBoundary';
 import SignaturePad      from './components/SignaturePad';
 import UserDetailModal   from './components/UserDetailModal';
+import { RatingsDashboardCard } from './components/Ratings/Ratings';
 import { HEALTH_PROTOCOLS } from './components/HealthManagement/healthData';
 import { DOSAGE_RATES } from './components/HealthManagement/dosageData';
 import {
@@ -4335,6 +4336,9 @@ function App() {
         <div className={`flex-1 ${activeTab === 'vet' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           {activeTab === 'dashboard' && (
             <ErrorBoundary>
+              {['Farmer', 'Veterinarian', 'Supplier', 'Buyer'].includes(role) && (
+                <div className="px-4 sm:px-6 pt-4"><RatingsDashboardCard currentUser={currentUser} /></div>
+              )}
               {role === 'Farmer'       && <FarmerDashboard      animals={animals} auditLog={auditLog} inventory={inventory} notifications={notifications} nearbyFarmers={nearbyFarmers} currentUser={currentUser} setActiveTab={setActiveTab} onListAnimal={handleListAnimal} />}
               {role === 'Veterinarian' && <VeterinarianDashboard animals={animals} notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} onMessageFarmer={requestVetContact} />}
               {role === 'Supplier'     && <SupplierDashboard     inventory={inventory} setActiveTab={setActiveTab} currentUser={currentUser} onMessageFarmer={requestVetContact} onAddStock={openMarketplacePostForm} />}
