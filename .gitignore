@@ -52,3 +52,7 @@ backend/uploads/
 # Arduino local secrets (WiFi password, API host) — template is committed
 hardware/**/secrets.h
 !hardware/**/secrets.h.example
+
+# Funding/procurement papers and TelOne samples: internal and confidential, keep out of this public repo.
+# Files already tracked here (e.g. BUDGET_PROPOSAL.md) stay tracked; only new files are ignored.
+DOCUMENTATION/business-and-funding/*
