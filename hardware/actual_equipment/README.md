@@ -1,6 +1,6 @@
 # Actual Equipment — What You're Ordering
 
-Reference photos and exact search/order terms for the **real, physical components** used in CN-01 (collar) and BS-01 (base station) — matching [`hardware/HARDWARE_DESIGN.md`](../HARDWARE_DESIGN.md) and the wiring diagrams ([`PFUMA_CN01_Wiring_Diagram.pdf`](../../DOCUMENTATION/source-materials/PFUMA_CN01_Wiring_Diagram.pdf), [`PFUMA_BS01_Wiring_Diagram.pdf`](../../DOCUMENTATION/source-materials/PFUMA_BS01_Wiring_Diagram.pdf)) exactly. Full pricing and supplier comparison: [`BUDGET_PROPOSAL.md`](../../BUDGET_PROPOSAL.md).
+Reference photos and exact search/order terms for the **real, physical components** used in CN-01 (collar) and BS-01 (base station) — matching [`hardware/HARDWARE_DESIGN.md`](../HARDWARE_DESIGN.md) and the wiring diagrams ([`PFUMA_CN01_Wiring_Diagram.pdf`](../../DOCUMENTATION/posters-and-diagrams/PFUMA_CN01_Wiring_Diagram.pdf), [`PFUMA_BS01_Wiring_Diagram.pdf`](../../DOCUMENTATION/posters-and-diagrams/PFUMA_BS01_Wiring_Diagram.pdf)) exactly. Full pricing and supplier comparison: [`BUDGET_PROPOSAL.md`](../../DOCUMENTATION/business-and-funding/BUDGET_PROPOSAL.md).
 
 **Honesty note:** 7 of the components below now have a verified, correctly-matched reference photo in this folder (sourced from Wikimedia Commons, properly licensed and attributed — see each entry). For the rest, a web search (checked again in a second pass) turned up no openly-licensed photo confirmed to match the exact variant our BOM specifies — e.g. the DS18B20 search initially only surfaced the bare TO-92 chip (skipped), until a second pass found the correct waterproof cable-probe version. A DC barrel jack was found but was the PCB-mount type, not our panel-mount CN1/BS-01 variant, so it's skipped too. Use the exact search term given for each to find and verify the part yourself before ordering.
 
@@ -54,5 +54,5 @@ Reference photos and exact search/order terms for the **real, physical component
 ## Before you order
 
 1. Cross-check every part number against [`HARDWARE_DESIGN.md`](../HARDWARE_DESIGN.md) §1.2/§2.2 (full BOM with exact package/footprint) — this README is a shopping aid, that file is the source of truth.
-2. Read [`../../IOT_HARDWARE_GUIDE.md`](../../IOT_HARDWARE_GUIDE.md) §1 for the full build/flash/pair walkthrough once parts arrive.
+2. Read [`IOT_HARDWARE_GUIDE.md`](../../DOCUMENTATION/hardware/IOT_HARDWARE_GUIDE.md) §1 for the full build/flash/pair walkthrough once parts arrive.
 3. Note the firmware now ships at **SF7** (not SF9) — see the `LORA_SF` comment in both `.ino` files and the "Network Capacity" section of `HARDWARE_DESIGN.md` for why, and the range trade-off (~1-2km typical farm terrain instead of ~5km open-field) this implies. If your grazing area is unusually large or hilly, that's a deliberate trade-off you may want to revisit before ordering antennas/enclosures.

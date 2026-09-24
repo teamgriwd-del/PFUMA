@@ -26,10 +26,17 @@ PFUMA/
 │   ├── app.py            # 143 routes, all business logic
 │   ├── protocols.py       # disease/diagnostic knowledge used by Jinda + DiseaseDetection
 │   └── schema.sql         # source of truth for the data model
-├── compliance/           # cited Zimbabwean livestock-law research (laws/, species/)
-├── hardware/             # IoT hardware design docs — dormant, see PLATFORM_OVERVIEW.md
-├── docs/                  # PRIVACY_POLICY.md, DATA_PROTECTION_INTERNAL.md
-├── DOCUMENTATION/         # this folder — generalized platform documentation
+├── hardware/             # IoT hardware design + firmware — dormant, see PLATFORM_OVERVIEW.md
+├── DOCUMENTATION/         # ALL non-code material, grouped by topic (see DOCUMENTATION/README.md):
+│   ├── platform/          #   these generalized platform docs
+│   ├── agric-show-2026/   #   ZAS-specific pitch guide, impact doc, deck, dossier
+│   ├── business-and-funding/ # budget, procurement, commercialization requests
+│   ├── hardware/          #   IOT_HARDWARE_GUIDE.md + component/breadboard docs
+│   ├── posters-and-diagrams/ # poster + wiring-diagram HTML sources, generators, PDFs
+│   ├── compliance-research/  # cited Zimbabwean livestock-law research (laws/, species/)
+│   ├── legal-and-privacy/ #   PRIVACY_POLICY.md, DATA_PROTECTION_INTERNAL.md
+│   ├── setup/             #   SETUP.md (local dev setup)
+│   └── brand/, team-tasks/, field-research/
 └── run_project.bat        # one-command local dev launcher (DB + backend + web + Expo)
 ```
 
@@ -78,7 +85,7 @@ locally. Diff `SHOW TABLES` on prod against `schema.sql` after any such commit.
 
 `run_project.bat` launches DB (XAMPP MariaDB), backend (`py app.py`), web (Vite dev server) and
 Expo mobile dev server in separate windows. First-time setup and the "phone can't reach the API"
-Wi-Fi/IP gotcha are documented in the root `SETUP.md` — that content is dev-environment mechanics,
+Wi-Fi/IP gotcha are documented in [`DOCUMENTATION/setup/SETUP.md`](../setup/SETUP.md) — that content is dev-environment mechanics,
 not event-specific, so it doesn't need duplicating here; just be aware it still applies.
 
 ## Production deployment (current live instance)

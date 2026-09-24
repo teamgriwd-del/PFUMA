@@ -62,7 +62,7 @@ commit:
   `HardwareSimulation` component and backend routes (`/iot-devices`, `/api/iot/telemetry`,
   `/admin/iot/*`) — this code was **not deleted**, it's just no longer surfaced as a marketed,
   demo-ready feature, because there is no hardware in hand to back it live at a booth.
-- `IOT_HARDWARE_GUIDE.md` and `hardware/` (wiring diagrams, BOM, Proteus projects) remain in the
+- [`DOCUMENTATION/hardware/IOT_HARDWARE_GUIDE.md`](../hardware/IOT_HARDWARE_GUIDE.md) and the root `hardware/` folder (wiring diagrams, BOM, Proteus projects) remain in the
   repo as design documentation for if/when the hardware track resumes, but should not be presented
   as a current capability.
 
@@ -73,7 +73,7 @@ a live demo or claim it works today.
 
 ## What's new since the last full documentation pass
 
-The root README/PITCH_GUIDE still describe an earlier five-role version of the product. The
+The root README and `agric-show-2026/PITCH_GUIDE.md` still describe an earlier five-role version of the product. The
 platform has grown past that. Current roles and features (detailed in
 [FEATURES_AND_ROLES.md](FEATURES_AND_ROLES.md)) include:
 

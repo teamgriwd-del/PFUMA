@@ -49,10 +49,10 @@ Structured ticketing system localized for Zimbabwe.
 A fifth stakeholder role modelling real-world livestock-trade law enforcement.
 - **Signup Verification Queue:** Police review Farmer/Supplier/Buyer applications (Vets are peer-reviewed by an existing verified vet); Police accounts are provisioned out-of-band, not self-service.
 - **Sale Clearance Queue:** Every livestock marketplace listing tied to a registered animal starts `pending_clearance` and stays invisible to buyers until an officer verifies ownership/brand papers and issues a movement permit number.
-- **Document Verification at Signup:** Every role uploads an ID document plus a role-specific credential (DVS license, business registration, land proof, etc.) — see `compliance/signup-verification-requirements.md`.
+- **Document Verification at Signup:** Every role uploads an ID document plus a role-specific credential (DVS license, business registration, land proof, etc.) — see [`signup-verification-requirements.md`](DOCUMENTATION/compliance-research/signup-verification-requirements.md).
 
 ### 6. Compliance Knowledge Base
-Researched, cited reference material — not legal advice — covering Zimbabwean livestock law and species-specific health requirements for Cattle, Pigs, Sheep, and Goats. See the [`compliance/`](compliance/) folder. Jinda draws on a condensed version of this to answer "what do I need to legally keep/sell X" questions in-chat.
+Researched, cited reference material — not legal advice — covering Zimbabwean livestock law and species-specific health requirements for Cattle, Pigs, Sheep, and Goats. See the [`DOCUMENTATION/compliance-research/`](DOCUMENTATION/compliance-research/) folder. Jinda draws on a condensed version of this to answer "what do I need to legally keep/sell X" questions in-chat.
 
 ### 7. Real Authentication & Role-Based Access Control
 - **Password auth (bcrypt) + JWT sessions** — no endpoint is open to an unauthenticated caller except health-check, login, register, and public feed reference data.
@@ -96,7 +96,7 @@ Every registered animal also gets a **Health Passport** — verified digital ped
 
 ## ⚖️ Built on Zimbabwean Law
 
-Every headline feature maps to a specific Act — researched, cited, and in the repo (`compliance/`) for anyone who wants to check it. This is researched and cited, not a lawyer-certified audit; sources are ZimLII, FAOLEX, CVSZ, Veritas and the Consumer Council, and where a detail couldn't be confirmed, the research says so plainly instead of guessing.
+Every headline feature maps to a specific Act — researched, cited, and in the repo ([`DOCUMENTATION/compliance-research/`](DOCUMENTATION/compliance-research/)) for anyone who wants to check it. This is researched and cited, not a lawyer-certified audit; sources are ZimLII, FAOLEX, CVSZ, Veritas and the Consumer Council, and where a detail couldn't be confirmed, the research says so plainly instead of guessing.
 
 | What PFUMA/INGCEBO enforces | The law it operationalizes |
 |---|---|
@@ -122,7 +122,7 @@ Every headline feature maps to a specific Act — researched, cited, and in the 
 - **Frontend:** React (Vite) + Tailwind CSS v4
 - **Backend:** Flask + PyMySQL, bcrypt password hashing, PyJWT sessions
 - **Visualization:** Recharts (Historical Trends & Herd Analytics)
-- **Intelligence:** Custom NLP Logic (Jinda Engine), role-aware, sourced from `compliance/`
+- **Intelligence:** Custom NLP Logic (Jinda Engine), role-aware, sourced from `DOCUMENTATION/compliance-research/`
 
 ## 🚀 Running Locally
 
@@ -154,6 +154,10 @@ The mobile app talks to Flask over Wi-Fi, so two things must be right or you'll 
 | PFUMA/INGCEBO Expo | Expo mobile dev server | (scan QR in Expo Go) |
 
 If the MySQL window says **"port in use,"** that's harmless — the database is already running.
+
+## 📚 Documentation
+
+Everything that isn't code lives in [`DOCUMENTATION/`](DOCUMENTATION/) — start with its [README](DOCUMENTATION/README.md). Full local setup: [`DOCUMENTATION/setup/SETUP.md`](DOCUMENTATION/setup/SETUP.md). Pitch script for the show: [`DOCUMENTATION/agric-show-2026/PITCH_GUIDE.md`](DOCUMENTATION/agric-show-2026/PITCH_GUIDE.md).
 
 ## 🌍 Target Market
 Specifically designed for the **Zimbabwean agricultural landscape**, bridging the gap between traditional farming wisdom and modern enterprise technology.

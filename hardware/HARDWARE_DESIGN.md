@@ -415,7 +415,7 @@ Where `PL` = payload bytes, `CRC=1`, `IH=0` (explicit header), `DE=0` (low data 
 ### Further improvements (not yet implemented)
 
 - **Per-collar TX jitter**: add `+random(0, 1500)` ms to each collar's report interval so collars don't clock-drift into transmitting simultaneously — cheap insurance against the "worst case all N collars fire at once" scenario the utilization math assumes.
-- **Multiple base stations**: for herds beyond ~30 head or farms with dead zones, add a second BS-01 rather than over-loading one channel — each is inexpensive (~$25-43, see `BUDGET_PROPOSAL.md`).
+- **Multiple base stations**: for herds beyond ~30 head or farms with dead zones, add a second BS-01 rather than over-loading one channel — each is inexpensive (~$25-43, see `DOCUMENTATION/business-and-funding/BUDGET_PROPOSAL.md`).
 - **Frequency/channel planning**: if you deploy multiple base stations covering overlapping areas, give them different sync words or frequencies within the 433MHz ISM band to avoid one base station hearing another's collars as noise. Confirm your local ISM-band duty-cycle/channel rules with POTRAZ before a multi-station commercial deployment.
 
 ---

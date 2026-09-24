@@ -5,7 +5,7 @@ they read as a matched pair, but written for farmers, traders, and visitors
 at the Zimbabwe Agricultural Show who have never seen an API endpoint and
 don't need to. No jargon: no "JWT", "RBAC", "backend", "endpoint", etc.
 
-Regenerate: python make_poster_public.py && python render_poster_public.py
+Regenerate (from this folder): python make_poster_public.py && python render_poster_public.py
 Same real, computed numbers as the technical poster (15 diseases, 5 roles).
 """
 

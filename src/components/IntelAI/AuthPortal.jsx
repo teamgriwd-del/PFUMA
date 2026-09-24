@@ -664,7 +664,7 @@ const AuthPortal = ({ onLogin }) => {
                   <li>Livestock listings, sale data, health records, and marketplace activity you create are stored and may be reviewed by Police as part of the sale-clearance process, to prevent stock theft and fraud.</li>
                   <li>PFUMA/INGCEBO may suspend accounts found to be fraudulent, impersonating another party, or otherwise abusing the platform.</li>
                 </ul>
-                <p>See <span className="font-bold">docs/PRIVACY_POLICY.md</span> in the project repository for the full data-handling policy.</p>
+                <p>See <span className="font-bold">DOCUMENTATION/legal-and-privacy/PRIVACY_POLICY.md</span> in the project repository for the full data-handling policy.</p>
               </div>
               <button onClick={() => setShowTerms(false)} className="w-full mt-5 py-3 bg-pfuma-green text-white rounded-2xl font-bold uppercase text-xs tracking-wide hover:bg-green-700 transition">
                 Close

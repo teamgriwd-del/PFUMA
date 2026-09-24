@@ -8,7 +8,7 @@ Palette: same as MASAISAI (dataviz skill's validated default).
 Categorical slot 1 (blue #2a78d6) = primary/working, slot 2 (aqua #1baf7a) =
 secondary/planned. Sequential ramp used for the species disease-coverage bars.
 
-Regenerate: python make_poster.py && python render_poster.py
+Regenerate (from this folder): python make_poster.py && python render_poster.py
 Numbers below are computed directly from the codebase, not invented:
   - 33 API endpoints:  grep -c "@app.route" backend/app.py
   - 15 diseases, per-species coverage: parsed from diseaseData.js

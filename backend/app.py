@@ -1861,7 +1861,7 @@ def delete_animal_photo_route(animal_id, photo_id):
 
 
 # ── IOT DEVICES ───────────────────────────────────────────────
-# Pairing bookkeeping for physical collars/base stations — see IOT_HARDWARE_GUIDE.md
+# Pairing bookkeeping for physical collars/base stations — see DOCUMENTATION/hardware/IOT_HARDWARE_GUIDE.md
 # for how a farmer physically sets up the hardware and finds their device's serial.
 @app.route('/iot-devices', methods=['GET'])
 @require_auth

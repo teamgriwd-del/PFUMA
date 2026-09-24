@@ -11,12 +11,12 @@ This guide covers the **Physical Hardware Layer** of PFUMA/INGCEBO: how to conne
 ### Real wiring diagrams and reference photos
 
 This section is the walkthrough; for the actual build reference, use:
-- [`DOCUMENTATION/source-materials/PFUMA_CN01_Wiring_Diagram.pdf`](DOCUMENTATION/source-materials/PFUMA_CN01_Wiring_Diagram.pdf) / [`DOCUMENTATION/source-materials/PFUMA_BS01_Wiring_Diagram.pdf`](DOCUMENTATION/source-materials/PFUMA_BS01_Wiring_Diagram.pdf) — real, pin-level, colour-coded wiring diagrams (regenerate with `python make_wiring_diagrams.py && python render_wiring_diagrams.py` if the design changes). These are module-interconnection diagrams for perfboard/breadboard building, not the simplified Proteus simulation circuit in §2 below.
-- [`hardware/actual_equipment/README.md`](hardware/actual_equipment/README.md) — reference photos and exact order/search terms for every real component in the BOM.
-- [`hardware/HARDWARE_DESIGN.md`](hardware/HARDWARE_DESIGN.md) — the full pin-by-pin netlist and BOM these diagrams are generated from (source of truth if anything conflicts).
+- [`DOCUMENTATION/posters-and-diagrams/PFUMA_CN01_Wiring_Diagram.pdf`](../posters-and-diagrams/PFUMA_CN01_Wiring_Diagram.pdf) / [`DOCUMENTATION/posters-and-diagrams/PFUMA_BS01_Wiring_Diagram.pdf`](../posters-and-diagrams/PFUMA_BS01_Wiring_Diagram.pdf) — real, pin-level, colour-coded wiring diagrams (regenerate with `python DOCUMENTATION/posters-and-diagrams/make_wiring_diagrams.py && python DOCUMENTATION/posters-and-diagrams/render_wiring_diagrams.py` if the design changes). These are module-interconnection diagrams for perfboard/breadboard building, not the simplified Proteus simulation circuit in §2 below.
+- [`hardware/actual_equipment/README.md`](../../hardware/actual_equipment/README.md) — reference photos and exact order/search terms for every real component in the BOM.
+- [`hardware/HARDWARE_DESIGN.md`](../../hardware/HARDWARE_DESIGN.md) — the full pin-by-pin netlist and BOM these diagrams are generated from (source of truth if anything conflicts).
 
 ### What you need
-Two board types, per the full design in [`hardware/HARDWARE_DESIGN.md`](hardware/HARDWARE_DESIGN.md):
+Two board types, per the full design in [`hardware/HARDWARE_DESIGN.md`](../../hardware/HARDWARE_DESIGN.md):
 
 | Board | Purpose | Core parts |
 |---|---|---|
@@ -28,7 +28,7 @@ You can order the components from the BOM tables in `HARDWARE_DESIGN.md` (or the
 ### Step 1 — Flash the firmware
 1. Install the [Arduino IDE](https://www.arduino.cc/en/software) and add ESP32 board support (Boards Manager → search "esp32").
 2. Install the required libraries via Library Manager: `LoRa` (Sandeep Mistry), `ArduinoJson`, `Adafruit SSD1306`, `Adafruit GFX` (base station only), `PubSubClient` if used, `DHT`/`OneWire`/`DallasTemperature` for the DS18B20 sensor (collar only).
-3. Open [`hardware/base_station/firmware/base_station.ino`](hardware/base_station/firmware/base_station.ino) for the base station, or [`hardware/collar_node/firmware/collar_node.ino`](hardware/collar_node/firmware/collar_node.ino) for a collar.
+3. Open [`hardware/base_station/firmware/base_station.ino`](../../hardware/base_station/firmware/base_station.ino) for the base station, or [`hardware/collar_node/firmware/collar_node.ino`](../../hardware/collar_node/firmware/collar_node.ino) for a collar.
 
 ### Step 2 — Edit the configuration block (do this before flashing)
 Both files have a clearly marked `CONFIGURATION` section near the top with placeholder values you must replace:
@@ -72,11 +72,11 @@ For development and demos without physical hardware, build a simplified "PFUMA/I
 2. **Buzzer:** Negative to GND, Positive to **Digital Pin 8**.
 3. **GPS (NEO-6M):** TX to Pin 0, RX to Pin 1.
 
-See [`hardware/PROTEUS_SIMULATION_GUIDE.md`](hardware/PROTEUS_SIMULATION_GUIDE.md) for the full simulation walkthrough and `.pdsprj` project files.
+See [`hardware/PROTEUS_SIMULATION_GUIDE.md`](../../hardware/PROTEUS_SIMULATION_GUIDE.md) for the full simulation walkthrough and `.pdsprj` project files.
 
 ### Testing the full pipeline right now, with no hardware at all
 
-Proteus proves the firmware logic works in isolation. If you want to prove the **entire chain** — pairing, real telemetry hitting the real backend, and the dashboard flipping to "Live · Physical Device" — before any physical board exists, there's a second, separate simulation rig built specifically for that: [`hardware/WOKWI_INTEGRATION_TEST.md`](hardware/WOKWI_INTEGRATION_TEST.md). It runs the collar and base station as free browser-based [Wokwi](https://wokwi.com) ESP32 simulations (`hardware/pfuma collar/` and `hardware/pfuma/`) that talk MQTT instead of LoRa, then forward real JSON into your local `backend/app.py` over ngrok — same endpoints, same pairing rules, same database as real hardware would use.
+Proteus proves the firmware logic works in isolation. If you want to prove the **entire chain** — pairing, real telemetry hitting the real backend, and the dashboard flipping to "Live · Physical Device" — before any physical board exists, there's a second, separate simulation rig built specifically for that: [`hardware/WOKWI_INTEGRATION_TEST.md`](../../hardware/WOKWI_INTEGRATION_TEST.md). It runs the collar and base station as free browser-based [Wokwi](https://wokwi.com) ESP32 simulations (`hardware/pfuma collar/` and `hardware/pfuma/`) that talk MQTT instead of LoRa, then forward real JSON into your local `backend/app.py` over ngrok — same endpoints, same pairing rules, same database as real hardware would use.
 
 ### Simplified sketch (Arduino Uno simulation only — not the real ESP32 firmware)
 

@@ -18,7 +18,7 @@ hand-drawn/Proteus schematic instead of a rat's nest):
   3. No wire's routed path is allowed to pass behind/through an unrelated
      component box — every jog is placed in open canvas space.
 
-Regenerate: python make_wiring_diagrams.py && python render_wiring_diagrams.py
+Regenerate (from this folder): python make_wiring_diagrams.py && python render_wiring_diagrams.py
 """
 
 from pathlib import Path
@@ -401,7 +401,7 @@ cn01_html = html_template.format(
           "the nearest point on the rail, exactly as you'd wire a breadboard's rail strips. I2C (blue) is a shared bus: MPU-6050 and "
           "MAX30102 both tap the same SDA/SCL lines feeding the ESP32, with 4.7k&Omega; pull-ups to 3V3. SPI (purple) is dedicated "
           "point-to-point wiring to the LoRa module only, one signal per lane. Full BOM with part numbers and supplier links: "
-          "BUDGET_PROPOSAL.md and hardware/actual_equipment/README.md."),
+          "DOCUMENTATION/business-and-funding/BUDGET_PROPOSAL.md and hardware/actual_equipment/README.md."),
 )
 bs01_html = html_template.format(
     title="PFUMA BS-01 — Base Station Wiring Diagram",

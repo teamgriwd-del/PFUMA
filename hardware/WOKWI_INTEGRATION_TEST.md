@@ -8,7 +8,7 @@ It is **not** the real hardware design. The real physical firmware (SF7 LoRa, co
 
 - A free [wokwi.com](https://wokwi.com) account (browser-based, no install).
 - [ngrok](https://ngrok.com) (free tier) — to expose your local Flask API to the internet, since Wokwi's simulated ESP32 runs in the cloud/your browser, not on your LAN.
-- The PFUMA/INGCEBO backend and web app running locally (`backend/` and `npm run dev`, per `SETUP.md`).
+- The PFUMA/INGCEBO backend and web app running locally (`backend/` and `npm run dev`, per `DOCUMENTATION/setup/SETUP.md`).
 
 ## Step-by-step
 

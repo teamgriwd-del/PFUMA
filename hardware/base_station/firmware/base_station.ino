@@ -53,7 +53,7 @@
 
 // ═══════════════════════════════════════════════════════════════════════
 //  CONFIGURATION
-//  See "Connecting Your Physical Hardware" in IOT_HARDWARE_GUIDE.md for the
+//  See "Connecting Your Physical Hardware" in DOCUMENTATION/hardware/IOT_HARDWARE_GUIDE.md for the
 //  full step-by-step (non-technical) walkthrough.
 // ═══════════════════════════════════════════════════════════════════════
 // WiFi credentials and the API host live in secrets.h, which is gitignored so

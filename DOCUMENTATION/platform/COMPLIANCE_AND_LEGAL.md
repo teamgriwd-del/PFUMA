@@ -4,8 +4,8 @@
 
 Every headline feature is built to mirror a specific piece of Zimbabwean law, researched and cited
 — not a lawyer-certified audit, but real citations (ZimLII, FAOLEX, CVSZ, Veritas, Consumer
-Council), documented in full in the [`compliance/`](../compliance/) folder
-(`compliance/laws/`, `compliance/species/`, `compliance/signup-verification-requirements.md`).
+Council), documented in full in the [`compliance-research/`](../compliance-research/) folder
+(`compliance-research/laws/`, `compliance-research/species/`, `compliance-research/signup-verification-requirements.md`).
 
 | What PFUMA/INGCEBO enforces | The law it operationalizes |
 |---|---|
@@ -36,7 +36,7 @@ When repositioning for a different regulator or domain:
    paper.
 3. Show the same thing PFUMA/INGCEBO shows here: the check is enforced *in the software*, not left
    to a paper policy that can be skipped.
-4. Cite the source the way `compliance/` does — reviewers doing due diligence for an innovation
+4. Cite the source the way `compliance-research/` does — reviewers doing due diligence for an innovation
    competition specifically reward "we checked this against the real law" over "this seems useful."
 
 Don't invent a fake mapping for a new domain just to look thorough — if this platform is pitched
@@ -46,7 +46,7 @@ the proof-of-concept, rather than implying the same Acts apply.
 
 ## Data protection
 
-`docs/PRIVACY_POLICY.md` (public-facing) and `docs/DATA_PROTECTION_INTERNAL.md` (internal) cover
+[`legal-and-privacy/PRIVACY_POLICY.md`](../legal-and-privacy/PRIVACY_POLICY.md) (public-facing) and [`legal-and-privacy/DATA_PROTECTION_INTERNAL.md`](../legal-and-privacy/DATA_PROTECTION_INTERNAL.md) (internal) cover
 what's collected, why, and how uploaded ID/credential documents are stored and access-controlled.
 These are domain-agnostic (personal data handling, not livestock-specific) and can be reused
 largely as-is for a different event's due-diligence questions.

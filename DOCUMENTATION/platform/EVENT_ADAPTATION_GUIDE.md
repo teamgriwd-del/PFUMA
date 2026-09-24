@@ -46,7 +46,7 @@ agriculture/legal audience; for a different regulator (POTRAZ), present the *met
 implying the same Acts apply to a different domain.
 
 ### 4. The demo script
-`PITCH_GUIDE.md` (root) is a good template for structure — 10-second hook → problem → 30-second
+[`agric-show-2026/PITCH_GUIDE.md`](../agric-show-2026/PITCH_GUIDE.md) is a good template for structure — 10-second hook → problem → 30-second
 explainer → role-by-role branch → common objections → call to action — but its content is
 agric-show-specific. When adapting it for a new event:
 

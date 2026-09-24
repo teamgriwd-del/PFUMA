@@ -10,7 +10,7 @@ The `users.role` enum (`backend/schema.sql`) is:
 
 **Farmer · Veterinarian · Supplier · Buyer · Police · Admin · Institution**
 
-(The root README/PITCH_GUIDE call the buyer-side role "Retailer" — that name is stale; the schema,
+(The root README and `agric-show-2026/PITCH_GUIDE.md` call the buyer-side role "Retailer" — that name is stale; the schema,
 UI, and API all use `Buyer`.)
 
 ### Farmer
@@ -111,7 +111,7 @@ so a farmer reaches the right person directly instead of a phone call and a gues
 Role-aware natural-language assistant (custom NLP, not a hosted LLM integration) that answers
 livestock-health and legal-compliance questions ("what do I legally need before I can sell this
 animal?"), does smart in-app navigation ("take me to the marketplace"), and calculates herd
-analytics via chat. Trained on a condensed version of the `compliance/` knowledge base plus
+analytics via chat. Trained on a condensed version of the `compliance-research/` knowledge base plus
 disease/diagnostic protocols (`backend/protocols.py`).
 
 ### IoT (dormant — see PLATFORM_OVERVIEW.md)

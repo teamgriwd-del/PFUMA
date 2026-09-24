@@ -1,7 +1,7 @@
 # PFUMA/INGCEBO — Booth Pitch Guide
 ### For explaining PFUMA/INGCEBO to a crowd at the Zimbabwe Agricultural Show 2026
 
-This is not a technical document — it's a script and a set of talking points for standing at the stand and actually selling the idea to whoever walks up, in the thirty seconds you have before they decide whether to keep listening. Read it once before the show, then keep it nearby as a cheat sheet. For the technical deep-dive, use [`DOCUMENTATION/source-materials/PFUMA_Poster.pdf`](DOCUMENTATION/source-materials/PFUMA_Poster.pdf); for the plain-language handout, use [`DOCUMENTATION/source-materials/PFUMA_Poster_Public.pdf`](DOCUMENTATION/source-materials/PFUMA_Poster_Public.pdf); for the legal/impact case, use `IMPACT_AND_COMPLIANCE.md`. This doc is for your *voice*, not for handing out.
+This is not a technical document — it's a script and a set of talking points for standing at the stand and actually selling the idea to whoever walks up, in the thirty seconds you have before they decide whether to keep listening. Read it once before the show, then keep it nearby as a cheat sheet. For the technical deep-dive, use [`posters-and-diagrams/PFUMA_Poster.pdf`](../posters-and-diagrams/PFUMA_Poster.pdf); for the plain-language handout, use [`posters-and-diagrams/PFUMA_Poster_Public.pdf`](../posters-and-diagrams/PFUMA_Poster_Public.pdf); for the legal/impact case, use [`IMPACT_AND_COMPLIANCE.md`](IMPACT_AND_COMPLIANCE.md). This doc is for your *voice*, not for handing out.
 
 ---
 
@@ -80,7 +80,7 @@ Walk it as a story, not a diagram:
 > "Police accounts aren't self-signup — an existing verified officer has to create and vouch for the next one, the same way real ZRP units onboard new members. There's no way to just register as a police officer off the street."
 
 **"Is this legal / does it actually match Zimbabwean law?"**
-> "Yes — every major feature is mapped to a specific Act: the Stock Theft Prevention Act, the Animal Health Act, the Veterinary Surgeons Act, the Livestock Identification framework, the Consumer Protection Act. It's documented, cited, and in the `compliance/` folder if anyone wants to check it themselves."
+> "Yes — every major feature is mapped to a specific Act: the Stock Theft Prevention Act, the Animal Health Act, the Veterinary Surgeons Act, the Livestock Identification framework, the Consumer Protection Act. It's documented, cited, and in the `DOCUMENTATION/compliance-research/` folder if anyone wants to check it themselves."
 
 ---
 

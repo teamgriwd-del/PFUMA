@@ -54,7 +54,7 @@ const char* MQTT_TOPIC = "pfuma/ramambo/griwd/telemetry-v2";   // <-- same as BS
 // ── Collar identity ─────────────────────────────────────────────────────
 // This is the device serial you'll pair in the app's IoT tab ("Paired
 // Devices" panel), same as a real collar — max 8 characters to mirror the
-// real firmware's convention (see IOT_HARDWARE_GUIDE.md).
+// real firmware's convention (see DOCUMENTATION/hardware/IOT_HARDWARE_GUIDE.md).
 #define COLLAR_ID    "CN001SIM"
 #define ANIMAL_NAME  "Bessie"   // for your own reference only — not sent to the app; pairing links the collar to an animal in-app
 

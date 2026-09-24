@@ -4,7 +4,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 HERE = Path(__file__).resolve().parent
-OUT_DIR = HERE / "DOCUMENTATION" / "source-materials"
+OUT_DIR = HERE
 
 PAGES = [
     ("wiring_cn01.html", "PFUMA_CN01_Wiring_Diagram.pdf", "wiring_cn01_preview.png"),

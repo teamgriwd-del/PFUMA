@@ -12,7 +12,7 @@ A **thin native shell around the real PFUMA/INGCEBO web app** — not a second i
 
 ## Running it
 
-1. Start the real PFUMA/INGCEBO backend and web app (see the root `SETUP.md`):
+1. Start the real PFUMA/INGCEBO backend and web app (see `DOCUMENTATION/setup/SETUP.md`):
    ```
    cd ../backend && python app.py
    cd .. && npm run dev

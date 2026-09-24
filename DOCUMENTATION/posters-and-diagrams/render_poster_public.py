@@ -1,12 +1,12 @@
-"""Renders poster.html to PFUMA_Poster.pdf and a PNG preview via Playwright."""
+"""Renders poster_public.html to PFUMA_Poster_Public.pdf and a PNG preview via Playwright."""
 
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
 HERE = Path(__file__).resolve().parent
-OUT_DIR = HERE / "DOCUMENTATION" / "source-materials"
-html_path = HERE / "poster.html"
+OUT_DIR = HERE
+html_path = HERE / "poster_public.html"
 
 with sync_playwright() as p:
     browser = p.chromium.launch()
@@ -17,10 +17,10 @@ with sync_playwright() as p:
     height = page.evaluate("document.querySelector('.poster').scrollHeight")
     page.set_viewport_size({"width": 1800, "height": int(height)})
 
-    page.screenshot(path=str(HERE / "poster_preview.png"), full_page=True)
+    page.screenshot(path=str(HERE / "poster_public_preview.png"), full_page=True)
 
     page.pdf(
-        path=str(OUT_DIR / "PFUMA_Poster.pdf"),
+        path=str(OUT_DIR / "PFUMA_Poster_Public.pdf"),
         width="1800px",
         height=f"{height}px",
         print_background=True,
@@ -28,4 +28,4 @@ with sync_playwright() as p:
     )
     browser.close()
 
-print("Saved DOCUMENTATION/source-materials/PFUMA_Poster.pdf and poster_preview.png")
+print("Saved PFUMA_Poster_Public.pdf and poster_public_preview.png")
