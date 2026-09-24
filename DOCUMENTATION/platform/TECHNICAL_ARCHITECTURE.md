@@ -16,7 +16,7 @@
 PFUMA/
 ├── src/                 # React web app
 │   ├── components/      # Admin, AnimalProfile, CertificateVerify, Compliance, Cooperative,
-│   │                     #   DiseaseDetection, FeedAnalyzer, HardwareSimulation (dormant),
+│   │                     #   DiseaseDetection, FeedAnalyzer,
 │   │                     #   HealthManagement, IntelAI (Jinda), Marketplace, SupplierStock,
 │   │                     #   TradingJournal, VetCommunication, ui/
 │   └── App.jsx, config.js, verify_logic*.js
@@ -26,12 +26,10 @@ PFUMA/
 │   ├── app.py            # 143 routes, all business logic
 │   ├── protocols.py       # disease/diagnostic knowledge used by Jinda + DiseaseDetection
 │   └── schema.sql         # source of truth for the data model
-├── hardware/             # IoT hardware design + firmware — dormant, see PLATFORM_OVERVIEW.md
 ├── DOCUMENTATION/         # ALL non-code material, grouped by topic (see DOCUMENTATION/README.md):
 │   ├── platform/          #   these generalized platform docs
 │   ├── agric-show-2026/   #   ZAS-specific pitch guide, impact doc, deck, dossier
 │   ├── business-and-funding/ # budget, procurement, commercialization requests
-│   ├── hardware/          #   IOT_HARDWARE_GUIDE.md + component/breadboard docs
 │   ├── posters-and-diagrams/ # poster + wiring-diagram HTML sources, generators, PDFs
 │   ├── compliance-research/  # cited Zimbabwean livestock-law research (laws/, species/)
 │   ├── legal-and-privacy/ #   PRIVACY_POLICY.md, DATA_PROTECTION_INTERNAL.md
@@ -78,7 +76,7 @@ locally. Diff `SHOW TABLES` on prod against `schema.sql` after any such commit.
 - `PFUMA_SECRET_KEY` is fail-closed — the backend refuses to start in production without one set
   (an earlier hardcoded fallback in this public repo was a real forgeable-admin-session bug, since
   fixed).
-- Rate limiting on `/auth/login`, `/auth/register`, and IoT telemetry endpoints; CORS allow-list;
+- Rate limiting on `/auth/login` and `/auth/register`; CORS allow-list;
   `MAX_CONTENT_LENGTH` cap; DB credentials from environment, not hardcoded.
 
 ## Running locally

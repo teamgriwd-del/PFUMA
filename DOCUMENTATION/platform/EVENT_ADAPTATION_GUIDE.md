@@ -61,8 +61,7 @@ agric-show-specific. When adapting it for a new event:
   the live VPS URL) before it asks about smartphone penetration.
 
 ### 5. What NOT to claim, regardless of event
-- Do not present IoT/collar tracking as a working feature (see `PLATFORM_OVERVIEW.md`) — it is
-  dormant, hardware hasn't shipped.
+- PFUMA/INGCEBO is software only. Never include hardware or IoT in any event material.
 - Do not claim the legal compliance mapping is lawyer-certified — it is researched and cited, say
   exactly that if asked.
 - Do not imply the Zimbabwean Acts cited apply outside Zimbabwe or outside livestock if pitching a

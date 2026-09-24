@@ -1,3 +1,5 @@
+> **Archived, out of scope.** This is an old hardware budget. PFUMA/INGCEBO is software only; do not reuse anything here (see the root `CLAUDE.md`).
+
 # PFUMA/INGCEBO — Hardware Budget Proposal
 # Team GRIWD | Zimbabwe Agricultural Show 2026
 # Prepared: 2026-06-23

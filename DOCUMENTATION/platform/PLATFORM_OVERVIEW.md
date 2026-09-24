@@ -49,27 +49,11 @@ system to record it in."**
   from ZimLII, FAOLEX, CVSZ, Veritas, and the Consumer Council — see
   [COMPLIANCE_AND_LEGAL.md](COMPLIANCE_AND_LEGAL.md).
 
-## IoT hardware status: paused, not part of the current pitch
+## Scope: software only
 
-Earlier iterations of this project (and earlier memory of it) included real ESP32/LoRa hardware —
-a livestock collar (CN-01) and base station (BS-01) — with a full pin-level design, wiring
-diagrams, and Proteus simulation. **That hardware track has been removed from the active
-product story.** Concretely, as of the `Rebrand to PFUMA/INGCEBO, hide IoT until hardware ships`
-commit:
-
-- The current root `README.md` no longer lists IoT/hardware as a feature at all.
-- The mobile app still ships an `IoTScreen.js` and the web app still ships a
-  `HardwareSimulation` component and backend routes (`/iot-devices`, `/api/iot/telemetry`,
-  `/admin/iot/*`) — this code was **not deleted**, it's just no longer surfaced as a marketed,
-  demo-ready feature, because there is no hardware in hand to back it live at a booth.
-- [`DOCUMENTATION/hardware/IOT_HARDWARE_GUIDE.md`](../hardware/IOT_HARDWARE_GUIDE.md) and the root `hardware/` folder (wiring diagrams, BOM, Proteus projects) remain in the
-  repo as design documentation for if/when the hardware track resumes, but should not be presented
-  as a current capability.
-
-**How to talk about this if asked:** IoT collar tracking was part of the original design and the
-hardware design work is real and finished (not vaporware), but it is currently a **roadmap item**,
-not a demoable feature, since no physical collars have been built/deployed. Do not include IoT in
-a live demo or claim it works today.
+PFUMA/INGCEBO is a software platform (web app, mobile app, backend). It has no hardware
+component. Do not describe, pitch or budget any hardware or IoT for it — see the root
+`CLAUDE.md`.
 
 ## What's new since the last full documentation pass
 

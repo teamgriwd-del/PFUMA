@@ -114,12 +114,6 @@ animal?"), does smart in-app navigation ("take me to the marketplace"), and calc
 analytics via chat. Trained on a condensed version of the `compliance-research/` knowledge base plus
 disease/diagnostic protocols (`backend/protocols.py`).
 
-### IoT (dormant — see PLATFORM_OVERVIEW.md)
-Backend routes (`iot-devices`, `iot-devices/pair`, `api/iot/telemetry`, `api/iot/alert`,
-`admin/iot/geofence`, `admin/iot/simulate`) and UI (`IoTScreen.js`, `HardwareSimulation`
-component) still exist in the codebase but are **not part of the current marketed feature set** —
-no physical collar hardware has shipped. Do not present this as working in a live demo.
-
 ### Real Auth & Access Control
 Password auth (bcrypt) + JWT sessions; no endpoint is reachable unauthenticated except
 health-check, login, register, and public feed reference data. Per-owner data scoping — a farmer
