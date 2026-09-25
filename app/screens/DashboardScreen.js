@@ -308,8 +308,6 @@ function FarmerDashboard({ currentUser, navigation }) {
 
   return (
     <ScrollView style={s.bg} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-      <RatingsDashboardCard currentUser={currentUser} />
-
       {/* Greeting banner */}
       <GradientBanner role="Farmer" colors={ROLE_GRADIENT.Farmer}>
         <View style={s.bannerTopRow}>
@@ -518,6 +516,8 @@ function FarmerDashboard({ currentUser, navigation }) {
       </View>
 
       <StakeholderMap />
+      {/* Trust ratings live at the foot of the dashboard so they never crowd the hero banner. */}
+      <RatingsDashboardCard currentUser={currentUser} />
     </ScrollView>
   );
 }
@@ -635,8 +635,6 @@ function VeterinarianDashboard({ currentUser, navigation }) {
 
   return (
     <ScrollView style={[s.bg, { backgroundColor: COLORS.slate }]} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-      <RatingsDashboardCard currentUser={currentUser} />
-
       {/* Greeting banner */}
       <GradientBanner role="Veterinarian" colors={ROLE_GRADIENT.Veterinarian}>
         <View style={s.bannerTopRow}>
@@ -831,6 +829,8 @@ function VeterinarianDashboard({ currentUser, navigation }) {
         </Text>
         <MiniBarChart data={reportingHealth} labelKey="day" valueKey="sync" color={COLORS.sprout} light />
       </View>
+      {/* Trust ratings live at the foot of the dashboard so they never crowd the hero banner. */}
+      <RatingsDashboardCard currentUser={currentUser} />
     </ScrollView>
   );
 }
@@ -875,8 +875,6 @@ function SupplierDashboard({ currentUser, navigation }) {
 
   return (
     <ScrollView style={s.bg} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-      <RatingsDashboardCard currentUser={currentUser} />
-
       {/* Banner */}
       <GradientBanner role="Supplier" colors={ROLE_GRADIENT.Supplier}>
         <View style={s.bannerTopRow}>
@@ -1001,6 +999,8 @@ function SupplierDashboard({ currentUser, navigation }) {
       </TouchableOpacity>
 
       <StakeholderMap />
+      {/* Trust ratings live at the foot of the dashboard so they never crowd the hero banner. */}
+      <RatingsDashboardCard currentUser={currentUser} />
     </ScrollView>
   );
 }
@@ -1034,8 +1034,6 @@ function BuyerDashboard({ currentUser, navigation }) {
 
   return (
     <ScrollView style={s.bg} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-      <RatingsDashboardCard currentUser={currentUser} />
-
       {/* Banner */}
       <GradientBanner role="Buyer" colors={ROLE_GRADIENT.Buyer}>
         <View style={s.bannerTopRow}>
@@ -1200,6 +1198,8 @@ function BuyerDashboard({ currentUser, navigation }) {
       </TouchableOpacity>
 
       <StakeholderMap />
+      {/* Trust ratings live at the foot of the dashboard so they never crowd the hero banner. */}
+      <RatingsDashboardCard currentUser={currentUser} />
     </ScrollView>
   );
 }
