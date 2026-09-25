@@ -632,10 +632,14 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
         <StatCard label="Listed for sale"  value={forSale}                           sub={forSale ? 'Pending clearance or live' : 'None listed yet'} onClick={() => setActiveTab('profile')} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Cards flow masonry-style instead of sitting in three rigid columns:
+          a long column (the sale list, a vet's queues) used to leave the other
+          two trailing off into empty space. Cards that need the full width opt
+          out with [column-span:all]. */}
+      <div className="columns-1 lg:columns-2 xl:columns-3 gap-6">
 
         {/* Left: Priority Actions + Quick Nav */}
-        <div className="col-span-1 space-y-5">
+        <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
@@ -686,7 +690,7 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
         </div>
 
         {/* Middle: Sell Your Animals */}
-        <div className="col-span-1 space-y-5">
+        <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
           {/* Sell animals panel */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-1">
@@ -816,7 +820,7 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
         </div>
 
         {/* Right: Recent activity + alerts */}
-        <div className="col-span-1 space-y-5">
+        <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
           {/* Alerts */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
             <h3 className="text-sm font-bold text-gray-800 mb-4">Disease Alerts Near You</h3>
@@ -1374,10 +1378,10 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="columns-1 lg:columns-2 xl:columns-3 gap-6">
 
         {/* Outbreak alert */}
-        <div className="col-span-1 space-y-5">
+        <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
           <div className={`${activeOutbreak ? 'bg-red-600/10 border-red-500/30' : 'bg-white/5 border-white/10'} border rounded-2xl p-5`}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -1513,12 +1517,12 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
         </div>
 
         {/* Farm registry */}
-        <div className="col-span-2 space-y-5">
+        <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
           {/* Clearance witness queue — ZRP Form 392 Part D. This is the vet's
               first real role in the sale-clearance flow: witnessing a pending
               clearance with an actual signature, same as the paper form's
               "Vet Officer/Dip Tank Attendant" line. */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+          <div className="bg-white/5 border border-white/10 rounded-2xl [column-span:all] p-5">
             <div className="flex items-center gap-2 mb-1">
               <ShieldCheck size={15} className="text-pfuma-green" />
               <h3 className="text-sm font-bold text-white">Clearance Witness Queue</h3>
@@ -1555,7 +1559,7 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
 
           {/* Movement permit queue — DVS Form V27. Nothing is authorized
               until a VEA/AHI/GVO signs; this is that signature, digitized. */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+          <div className="bg-white/5 border border-white/10 rounded-2xl [column-span:all] p-5">
             <div className="flex items-center gap-2 mb-1">
               <FileText size={15} className="text-pfuma-green" />
               <h3 className="text-sm font-bold text-white">Movement Permit Requests</h3>
@@ -1957,11 +1961,11 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="columns-1 lg:columns-2 xl:columns-3 gap-6">
 
         {/* Orders list */}
-        <div className="col-span-2">
-          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+        <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
+          <div className="bg-white border border-gray-100 rounded-2xl [column-span:all] p-5 shadow-sm">
             <div className="flex justify-between items-center mb-5">
               <div>
                 <h3 className="text-sm font-bold text-gray-800">Active Orders</h3>
@@ -2011,7 +2015,7 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
         </div>
 
         {/* Right: demand chart + stock */}
-        <div className="col-span-1 space-y-5">
+        <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
           {/* Demand chart */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
             <h3 className="text-sm font-bold text-gray-800 mb-1">Order Demand (6 Weeks)</h3>
@@ -2296,11 +2300,11 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="columns-1 lg:columns-2 xl:columns-3 gap-6">
 
         {/* Listings */}
-        <div className="col-span-2 space-y-5">
-          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+        <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
+          <div className="bg-white border border-gray-100 rounded-2xl [column-span:all] p-5 shadow-sm">
             <div className="flex justify-between items-center mb-5">
               <div>
                 <h3 className="text-sm font-bold text-gray-800">Verified Marketplace Listings</h3>
@@ -2344,7 +2348,7 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
             )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
             {/* Price trend chart */}
             <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
               <h3 className="text-sm font-bold text-gray-800 mb-1">Livestock Price Trend (USD / head)</h3>
@@ -2399,7 +2403,7 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
         </div>
 
         {/* Right: recent bids + tips */}
-        <div className="col-span-1 space-y-5">
+        <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
           {/* Claim an animal bought off-platform — the counterpart to a
               farmer generating a transfer code from their Herd Registry. */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
@@ -3383,9 +3387,9 @@ const InstitutionDashboard = ({ currentUser, setActiveTab }) => {
       </div>
 
       <div className="p-4 pt-4 lg:p-6 lg:pt-6">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="columns-1 lg:columns-2 xl:columns-3 gap-6">
 
-        <div className="col-span-2 space-y-5">
+        <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
           {/* Lookup box */}
           <div id="institution-lookup" className="bg-bark-900 lg:bg-white border border-white/5 lg:border-gray-100 rounded-2xl p-5 lg:shadow-sm">
             <h3 className="text-sm font-bold text-white lg:text-gray-800 mb-1">Look Up a Certificate</h3>
@@ -3462,7 +3466,7 @@ const InstitutionDashboard = ({ currentUser, setActiveTab }) => {
           </div>
         </div>
 
-        <div className="col-span-1 space-y-5">
+        <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
           <div className="bg-bark-900 lg:bg-white border border-white/5 lg:border-gray-100 rounded-2xl p-5 lg:shadow-sm">
             <h3 className="text-sm font-bold text-white lg:text-gray-800 mb-3">How It Works</h3>
             <div className="space-y-3">
@@ -4336,15 +4340,17 @@ function App() {
         <div className={`flex-1 ${activeTab === 'vet' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
           {activeTab === 'dashboard' && (
             <ErrorBoundary>
-              {['Farmer', 'Veterinarian', 'Supplier', 'Buyer'].includes(role) && (
-                <div className="px-4 sm:px-6 pt-4"><RatingsDashboardCard currentUser={currentUser} /></div>
-              )}
               {role === 'Farmer'       && <FarmerDashboard      animals={animals} auditLog={auditLog} inventory={inventory} notifications={notifications} nearbyFarmers={nearbyFarmers} currentUser={currentUser} setActiveTab={setActiveTab} onListAnimal={handleListAnimal} />}
               {role === 'Veterinarian' && <VeterinarianDashboard animals={animals} notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} onMessageFarmer={requestVetContact} />}
               {role === 'Supplier'     && <SupplierDashboard     inventory={inventory} setActiveTab={setActiveTab} currentUser={currentUser} onMessageFarmer={requestVetContact} onAddStock={openMarketplacePostForm} />}
               {role === 'Buyer'     && <BuyerDashboard     setActiveTab={setActiveTab} currentUser={currentUser} onMessageSeller={requestVetContact} />}
               {role === 'Police'       && <PoliceDashboard       notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} onMessageFarmer={requestVetContact} />}
               {role === 'Institution'  && <InstitutionDashboard  currentUser={currentUser} setActiveTab={setActiveTab} />}
+              {/* Trust ratings sit at the foot of the dashboard so they never
+                  crowd the hero imagery at the top. */}
+              {['Farmer', 'Veterinarian', 'Supplier', 'Buyer'].includes(role) && (
+                <div className="px-4 sm:px-6 pb-2"><RatingsDashboardCard currentUser={currentUser} /></div>
+              )}
             </ErrorBoundary>
           )}
           {activeTab === 'profile'     && <ErrorBoundary><AnimalProfile animals={animals} onAddAnimal={addAnimal} onAddAnimalPhotos={addAnimalPhotos} auditLog={auditLog} currentUser={currentUser} onListAnimal={handleListAnimal} onAnimalsChanged={() => loadUserData(currentUser)} /></ErrorBoundary>}
