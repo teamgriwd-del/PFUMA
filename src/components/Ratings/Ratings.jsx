@@ -217,7 +217,7 @@ export const RatingsDashboardCard = ({ currentUser }) => {
   };
 
   return (
-    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-4 mb-4">
+    <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <Star size={15} className="text-amber-400 fill-amber-400" />

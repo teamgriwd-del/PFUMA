@@ -29,7 +29,7 @@ import {
   ShieldAlert, Pencil, BookOpen, Plus, Landmark, Search,
 } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, ResponsiveContainer, Tooltip, CartesianGrid, XAxis, YAxis } from 'recharts';
-import { Hero, StatCard, StatRow, Button, SectionHeading, StatusBadge, EmptyState } from './components/ui';
+import { Hero, StatCard, StatRow, Button, SectionHeading, StatusBadge, EmptyState, CardColumns } from './components/ui';
 import { roleHero, speciesPhoto } from './theme/imagery';
 
 import { API } from './config';
@@ -636,10 +636,10 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
           a long column (the sale list, a vet's queues) used to leave the other
           two trailing off into empty space. Cards that need the full width opt
           out with [column-span:all]. */}
-      <div className="columns-1 lg:columns-2 xl:columns-3 gap-6">
+      <CardColumns>
 
         {/* Left: Priority Actions + Quick Nav */}
-        <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
+        <div className="contents">
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
@@ -690,7 +690,7 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
         </div>
 
         {/* Middle: Sell Your Animals */}
-        <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
+        <div className="contents">
           {/* Sell animals panel */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-1">
@@ -820,7 +820,7 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
         </div>
 
         {/* Right: Recent activity + alerts */}
-        <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
+        <div className="contents">
           {/* Alerts */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
             <h3 className="text-sm font-bold text-gray-800 mb-4">Disease Alerts Near You</h3>
@@ -918,7 +918,10 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
             )}
           </div>
         </div>
-      </div>
+        {/* Trust rating — last card in the flow, so it sits by the footer
+            instead of crowding the hero imagery at the top. */}
+        <RatingsDashboardCard currentUser={currentUser} />
+      </CardColumns>
 
       {/* Stakeholder map — full width at bottom */}
       <StakeholderMap />
@@ -1378,10 +1381,10 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
         ))}
       </div>
 
-      <div className="columns-1 lg:columns-2 xl:columns-3 gap-6">
+      <CardColumns>
 
         {/* Outbreak alert */}
-        <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
+        <div className="contents">
           <div className={`${activeOutbreak ? 'bg-red-600/10 border-red-500/30' : 'bg-white/5 border-white/10'} border rounded-2xl p-5`}>
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
@@ -1517,7 +1520,7 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
         </div>
 
         {/* Farm registry */}
-        <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
+        <div className="contents">
           {/* Clearance witness queue — ZRP Form 392 Part D. This is the vet's
               first real role in the sale-clearance flow: witnessing a pending
               clearance with an actual signature, same as the paper form's
@@ -1709,7 +1712,10 @@ const VeterinarianDashboard = ({ animals, notifications, setActiveTab, currentUs
             </div>
           </div>
         </div>
-      </div>
+        {/* Trust rating — last card in the flow, so it sits by the footer
+            instead of crowding the hero imagery at the top. */}
+        <RatingsDashboardCard currentUser={currentUser} />
+      </CardColumns>
       </div>
       </div>
     </>
@@ -1961,10 +1967,10 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
         </div>
       )}
 
-      <div className="columns-1 lg:columns-2 xl:columns-3 gap-6">
+      <CardColumns>
 
         {/* Orders list */}
-        <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
+        <div className="contents">
           <div className="bg-white border border-gray-100 rounded-2xl [column-span:all] p-5 shadow-sm">
             <div className="flex justify-between items-center mb-5">
               <div>
@@ -2015,7 +2021,7 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
         </div>
 
         {/* Right: demand chart + stock */}
-        <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
+        <div className="contents">
           {/* Demand chart */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
             <h3 className="text-sm font-bold text-gray-800 mb-1">Order Demand (6 Weeks)</h3>
@@ -2051,7 +2057,10 @@ const SupplierDashboard = ({ inventory, setActiveTab, currentUser, onMessageFarm
             <ArrowRight size={13} className="text-gray-300 group-hover:text-pfuma-gold transition ml-auto" />
           </button>
         </div>
-      </div>
+        {/* Trust rating — last card in the flow, so it sits by the footer
+            instead of crowding the hero imagery at the top. */}
+        <RatingsDashboardCard currentUser={currentUser} />
+      </CardColumns>
 
       <StakeholderMap />
       </div>
@@ -2300,10 +2309,10 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
         ))}
       </div>
 
-      <div className="columns-1 lg:columns-2 xl:columns-3 gap-6">
+      <CardColumns>
 
         {/* Listings */}
-        <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
+        <div className="contents">
           <div className="bg-white border border-gray-100 rounded-2xl [column-span:all] p-5 shadow-sm">
             <div className="flex justify-between items-center mb-5">
               <div>
@@ -2348,7 +2357,7 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
             )}
           </div>
 
-          <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
+        <div className="contents">
             {/* Price trend chart */}
             <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
               <h3 className="text-sm font-bold text-gray-800 mb-1">Livestock Price Trend (USD / head)</h3>
@@ -2403,7 +2412,7 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
         </div>
 
         {/* Right: recent bids + tips */}
-        <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
+        <div className="contents">
           {/* Claim an animal bought off-platform — the counterpart to a
               farmer generating a transfer code from their Herd Registry. */}
           <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
@@ -2528,7 +2537,10 @@ const BuyerDashboard = ({ setActiveTab, currentUser, onMessageSeller }) => {
             <ArrowRight size={13} className="text-purple-300 ml-auto" />
           </button>
         </div>
-      </div>
+        {/* Trust rating — last card in the flow, so it sits by the footer
+            instead of crowding the hero imagery at the top. */}
+        <RatingsDashboardCard currentUser={currentUser} />
+      </CardColumns>
 
       <StakeholderMap />
       </div>
@@ -3387,9 +3399,9 @@ const InstitutionDashboard = ({ currentUser, setActiveTab }) => {
       </div>
 
       <div className="p-4 pt-4 lg:p-6 lg:pt-6">
-      <div className="columns-1 lg:columns-2 xl:columns-3 gap-6">
+      <CardColumns>
 
-        <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
+        <div className="contents">
           {/* Lookup box */}
           <div id="institution-lookup" className="bg-bark-900 lg:bg-white border border-white/5 lg:border-gray-100 rounded-2xl p-5 lg:shadow-sm">
             <h3 className="text-sm font-bold text-white lg:text-gray-800 mb-1">Look Up a Certificate</h3>
@@ -3466,7 +3478,7 @@ const InstitutionDashboard = ({ currentUser, setActiveTab }) => {
           </div>
         </div>
 
-        <div className="contents [&>*]:mb-5 [&>*]:break-inside-avoid">
+        <div className="contents">
           <div className="bg-bark-900 lg:bg-white border border-white/5 lg:border-gray-100 rounded-2xl p-5 lg:shadow-sm">
             <h3 className="text-sm font-bold text-white lg:text-gray-800 mb-3">How It Works</h3>
             <div className="space-y-3">
@@ -3487,7 +3499,7 @@ const InstitutionDashboard = ({ currentUser, setActiveTab }) => {
             </div>
           </div>
         </div>
-      </div>
+      </CardColumns>
       </div>
     </div>
   );
@@ -4346,11 +4358,6 @@ function App() {
               {role === 'Buyer'     && <BuyerDashboard     setActiveTab={setActiveTab} currentUser={currentUser} onMessageSeller={requestVetContact} />}
               {role === 'Police'       && <PoliceDashboard       notifications={notifications} setActiveTab={setActiveTab} currentUser={currentUser} onMessageFarmer={requestVetContact} />}
               {role === 'Institution'  && <InstitutionDashboard  currentUser={currentUser} setActiveTab={setActiveTab} />}
-              {/* Trust ratings sit at the foot of the dashboard so they never
-                  crowd the hero imagery at the top. */}
-              {['Farmer', 'Veterinarian', 'Supplier', 'Buyer'].includes(role) && (
-                <div className="px-4 sm:px-6 pb-2"><RatingsDashboardCard currentUser={currentUser} /></div>
-              )}
             </ErrorBoundary>
           )}
           {activeTab === 'profile'     && <ErrorBoundary><AnimalProfile animals={animals} onAddAnimal={addAnimal} onAddAnimalPhotos={addAnimalPhotos} auditLog={auditLog} currentUser={currentUser} onListAnimal={handleListAnimal} onAnimalsChanged={() => loadUserData(currentUser)} /></ErrorBoundary>}

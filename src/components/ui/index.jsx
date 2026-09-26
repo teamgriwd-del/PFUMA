@@ -370,3 +370,122 @@ export const Container = ({ className, children, wide }) => (
     {children}
   </div>
 );
+
+/* ════════════════════════════════════════════════════════════════════════
+   CARD COLUMNS
+   ════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * Dashboard cards in balanced columns.
+ *
+ * A grid pins every card to one column, so a long card — a farmer's sale
+ * list, a vet's clearance queue — stretches its column into a ladder while
+ * the other two run out of content and trail off into empty space. CSS
+ * multi-column balances the heights but still fills strictly in source
+ * order, which strands the same short column. So this measures instead:
+ * each card goes to whichever column is shortest when its turn comes, the
+ * way you would place them by hand.
+ *
+ * Cards are measured at their column width and then positioned absolutely,
+ * so a card never moves between parents and never remounts — it keeps its
+ * state and its in-flight fetches. Heights are re-read whenever a card
+ * grows, because dashboard cards fill in as their requests land.
+ *
+ * Two conventions, both readable in the markup:
+ *   - a child whose className contains `contents` is a transparent group;
+ *     its own children join the flow (same meaning as the CSS display).
+ *   - a card whose className contains `[column-span:all]` takes the full
+ *     width, for queues and tables that would be cramped in a third.
+ * Both degrade to sensible CSS if the measuring never runs.
+ */
+const GROUP = 'contents';
+const SPAN  = '[column-span:all]';
+
+const classOf = (el) => (React.isValidElement(el) && typeof el.props?.className === 'string' ? el.props.className : '');
+
+// Keys are namespaced by the group they came from: each group's children
+// start numbering at zero again, and duplicate keys in one list make React
+// recycle DOM nodes, which loses the element the size observer is watching.
+const flattenGroups = (children) =>
+  React.Children.toArray(children).flatMap((child, gi) =>
+    (classOf(child).split(/\s+/).includes(GROUP)
+      ? React.Children.toArray(child.props.children).map((node, i) => ({ node, key: `g${gi}:${node.key ?? i}` }))
+      : [{ node: child, key: `c${gi}:${child.key ?? ''}` }]),
+  );
+
+export const CardColumns = ({ children, gap = 20, className }) => {
+  const items   = flattenGroups(children);
+  const hostRef = React.useRef(null);
+  const nodes   = React.useRef([]);
+  const count   = items.length;
+
+  // Positions are written straight to the DOM rather than held in state: a
+  // layout pass that waits on a React commit lands a beat late, and a card
+  // that grew after its fetch then overlaps whatever sits below it.
+  const place = React.useCallback(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    const cards = nodes.current.slice(0, count).filter(Boolean);
+    const width = host.clientWidth;
+    const cols  = width >= 1180 ? 3 : width >= 760 ? 2 : 1;
+
+    // One column: ordinary flow, so the cards stay selectable and scrollable
+    // on a phone without any of this.
+    if (cols === 1 || !width || !cards.length) {
+      host.style.height = '';
+      cards.forEach((node) => { node.removeAttribute('style'); });
+      return;
+    }
+
+    const colW = (width - gap * (cols - 1)) / cols;
+    const isWide = (node) => !!node.firstElementChild?.classList.contains(SPAN);
+
+    // Width first, then read: a card's height is a function of the width it
+    // will actually be laid out at, not the width it happens to have now.
+    cards.forEach((node) => { node.style.width = `${isWide(node) ? width : colW}px`; });
+
+    const heights = new Array(cols).fill(0);
+    cards.forEach((node) => {
+      const h = node.getBoundingClientRect().height;
+      let top;
+      let left;
+      if (isWide(node)) {
+        top = Math.max(...heights);
+        left = 0;
+        heights.fill(top + h + gap);
+      } else {
+        let c = 0;
+        for (let k = 1; k < cols; k += 1) if (heights[k] < heights[c] - 0.5) c = k;
+        top = heights[c];
+        left = c * (colW + gap);
+        heights[c] = top + h + gap;
+      }
+      node.style.position = 'absolute';
+      node.style.top  = `${top}px`;
+      node.style.left = `${left}px`;
+      node.style.marginTop = '0'; // the single-column rhythm must not shift a placed card
+    });
+
+    host.style.height = `${Math.max(0, Math.max(...heights) - gap)}px`;
+  }, [count, gap]);
+
+  // Runs after every render, and again whenever the container or any card
+  // changes size — dashboard cards fill in as their requests land.
+  React.useLayoutEffect(place);
+  React.useLayoutEffect(() => {
+    const host = hostRef.current;
+    if (!host) return undefined;
+    const ro = new ResizeObserver(place);
+    ro.observe(host);
+    nodes.current.slice(0, count).forEach((node) => node && ro.observe(node));
+    return () => ro.disconnect();
+  }, [place, count]);
+
+  return (
+    <div ref={hostRef} className={cx('relative w-full space-y-5', className)}>
+      {items.map((item, i) => (
+        <div key={item.key} ref={(el) => { nodes.current[i] = el; }}>{item.node}</div>
+      ))}
+    </div>
+  );
+};
