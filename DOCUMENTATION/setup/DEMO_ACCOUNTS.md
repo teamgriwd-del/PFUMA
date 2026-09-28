@@ -26,9 +26,9 @@ accounts on the same server, so either one signs in with these.
 - **1 supplier** and **1 buyer**, both trading nationwide
 
 Plus the trade around them: livestock listings live on the marketplace and
-others still waiting on police clearance, past sales with bids and trust
-ratings, cooperative dip rounds, supplier orders, and a few genuinely overdue
-vaccinations so the compliance queue isn't empty.
+others still waiting on police clearance, sixty past sales carrying bids and
+trust ratings, cooperative dip rounds, supplier orders, and one genuinely
+overdue booster per province so the compliance queue is not empty.
 
 ## Farmers, vets and police, by province
 
@@ -75,8 +75,10 @@ make it appear.
 The senior officer sees all ten. Signing in as both, one after the other,
 shows the difference on the same screen.
 
-**Trust ratings.** The buyer has completed a sale with a farmer in half the
-provinces, and those sales carry ratings on both sides.
+**Trust ratings.** Every farmer has three completed sales to the buyer,
+rated on both sides, which is enough for the platform to publish an
+average (it withholds one below three ratings). Sellers carry a visible
+score on their marketplace cards as a result.
 
 ## Re-running it
 
