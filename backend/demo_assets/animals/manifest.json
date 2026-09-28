@@ -1,0 +1,77 @@
+{
+  "Cattle|Angus": [
+    "cattle-angus-01.jpg",
+    "cattle-angus-02.jpg",
+    "cattle-angus-03.jpg"
+  ],
+  "Cattle|Boran": [
+    "cattle-boran-02.jpg"
+  ],
+  "Cattle|Brahman": [
+    "cattle-brahman-01.jpg",
+    "cattle-brahman-02.jpg",
+    "cattle-brahman-03.jpg",
+    "cattle-brahman-04.jpg"
+  ],
+  "Cattle|Hereford": [
+    "cattle-hereford-01.jpg",
+    "cattle-hereford-02.jpg",
+    "cattle-hereford-03.jpg"
+  ],
+  "Cattle|Mashona": [
+    "cattle-mashona-01.jpg",
+    "cattle-mashona-02.jpg",
+    "cattle-mashona-03.jpg"
+  ],
+  "Cattle|Nguni": [
+    "cattle-nguni-01.jpg",
+    "cattle-nguni-02.jpg",
+    "cattle-nguni-03.jpg",
+    "cattle-nguni-04.jpg"
+  ],
+  "Cattle|Nkone": [
+    "cattle-nkone-01.jpg",
+    "cattle-nkone-02.jpg"
+  ],
+  "Cattle|Simmental": [
+    "cattle-simmental-01.jpg",
+    "cattle-simmental-02.jpg"
+  ],
+  "Cattle|Sussex": [
+    "cattle-sussex-01.jpg",
+    "cattle-sussex-02.jpg"
+  ],
+  "Cattle|Tuli": [
+    "cattle-tuli-01.jpg",
+    "cattle-tuli-02.jpg"
+  ],
+  "Goat|Boer": [
+    "goat-boer-01.jpg",
+    "goat-boer-02.jpg",
+    "goat-boer-03.jpg",
+    "goat-boer-04.jpg"
+  ],
+  "Goat|Kalahari Red": [
+    "goat-kalahari-red-01.jpg",
+    "goat-kalahari-red-02.jpg",
+    "goat-kalahari-red-03.jpg"
+  ],
+  "Goat|Matabele": [
+    "goat-matabele-01.jpg",
+    "goat-matabele-03.jpg"
+  ],
+  "Goat|Saanen": [
+    "goat-saanen-01.jpg",
+    "goat-saanen-02.jpg",
+    "goat-saanen-03.jpg"
+  ],
+  "Goat|Savanna": [
+    "goat-savanna-01.jpg",
+    "goat-savanna-02.jpg"
+  ],
+  "Goat|Toggenburg": [
+    "goat-toggenburg-01.jpg",
+    "goat-toggenburg-02.jpg",
+    "goat-toggenburg-03.jpg"
+  ]
+}
