@@ -14,6 +14,7 @@ import { authFetch } from '../api';
 import pfumaMark from '../assets/pfuma-mark.png';
 import { roleHero } from '../imagery';
 import { RatingsDashboardCard } from '../components/Ratings';
+import { HEALTH_PROTOCOLS } from '../data/healthData';
 
 // A real uploaded photo is a relative /uploads/... path; a species stock
 // fallback (assigned server-side) is already a full URL.
@@ -37,19 +38,11 @@ function getMarketRates() {
   return _marketRatesCache || FALLBACK_PRICE_PER_KG;
 }
 
-// Regional disease-alert bulletin content — not per-user/animal data, left
-// as static informational content (same treatment as the web app).
-const NOTIFICATIONS = [
-  { id: 1, title: 'January Disease Alert', msg: 'Chegutu Area — increased tick counts detected.', type: 'Critical', time: '1h ago' },
-  { id: 2, title: 'Vaccine Recall',         msg: 'Lot #992 Oxytetracycline recalled by supplier.',  type: 'Info',     time: '4h ago' },
-];
-const VACCINE_SCHEDULES = {
-  Cattle: [
-    { name: 'FMD Vaccine (Annual)',     age: 180 },
-    { name: 'Anthrax Vaccine',          age: 365 },
-    { name: 'Blackleg Vaccine',         age: 90  },
-  ],
-};
+// The farmer's "critical alerts" are real outbreak reports for their own
+// province now, fetched in FarmerDashboard below, the same as the web app
+// already does. The static bulletin that used to sit here showed every
+// farmer in the country the same invented January Disease alert for
+// Chegutu, regardless of where they farm.
 
 const greet = () => {
   const h = new Date().getHours();
@@ -225,6 +218,8 @@ function FarmerDashboard({ currentUser, navigation }) {
   const [localAnimals, setLocalAnimals] = useState([]);
   const [inventory, setInventory]       = useState([]);
   const [nearbyFarmers, setNearbyFarmers] = useState([]);
+  const [healthLog, setHealthLog]       = useState([]);
+  const [outbreaks, setOutbreaks]       = useState([]);
 
   useEffect(() => {
     if (!currentUser?.id) return;
@@ -237,6 +232,17 @@ function FarmerDashboard({ currentUser, navigation }) {
           forSale: !!a.for_sale, imageUrl: resolveImageUrl(a.image_url),
           marketplaceStatus: a.marketplace_status,
         })));
+      } catch { /* offline — leave empty, no fake fallback */ }
+      try {
+        const res = await authFetch(currentUser, '/health-events');
+        if (res.ok) setHealthLog((await res.json()).map(e => ({
+          animalId: e.animal_id, eventType: e.event_type,
+          eventDate: e.event_date, nextDueDate: e.next_due_date,
+        })));
+      } catch { /* offline */ }
+      try {
+        const res = await authFetch(currentUser, '/outbreaks');
+        if (res.ok) setOutbreaks(await res.json());
       } catch { /* offline — leave empty, no fake fallback */ }
       try {
         const res = await authFetch(currentUser, `/inventory/${currentUser.id}`);
@@ -253,7 +259,14 @@ function FarmerDashboard({ currentUser, navigation }) {
   }, [currentUser?.id]);
 
   const forSale    = localAnimals.filter(a => a.forSale).length;
-  const critAlerts = NOTIFICATIONS.filter(n => n.type === 'Critical');
+  // Real outbreak reports for the farmer's own province, filed by a Vet or
+  // Police officer and verified by a national-tier officer before they reach
+  // farmers at all — same source the web app uses.
+  const critAlerts = outbreaks.map(o => ({
+    id: `outbreak-${o.id}`, title: `${o.disease_name} Outbreak`,
+    msg: `${o.district ? `${o.district}, ` : ''}${o.province}. ${o.details || ''}`.trim(),
+    type: 'Critical', time: new Date(o.created_at).toLocaleDateString(),
+  }));
   const lowStock   = inventory.filter(i => i.stock <= i.min);
   // Rough per-kg live-weight benchmarks for the Zimbabwean market (wholesale
   // range midpoints from Selina Wamucii's Zimbabwe livestock price data,
@@ -266,19 +279,37 @@ function FarmerDashboard({ currentUser, navigation }) {
     .filter(a => a.marketplaceStatus !== 'sold')
     .reduce((acc, a) => acc + a.currentWeight * (marketRates[a.species] ?? marketRates.Cattle ?? FALLBACK_PRICE_PER_KG.Cattle), 0);
 
+  // A milestone only counts as overdue if the farmer hasn't actually logged
+  // it in health_events (or logged it with a next_due_date that's now in the
+  // past). Age-past-due alone isn't enough: that flagged every vaccinated
+  // animal forever, because it never looked at what was administered. This
+  // mirrors overdueVaccines in the web app's src/App.jsx — and reads the
+  // shared HEALTH_PROTOCOLS rather than the short hardcoded cattle-only list
+  // that used to live in this file with names matching no real protocol.
   const overdueVaccines = useMemo(() => {
     const rows = [];
+    const now = new Date();
     localAnimals.forEach(a => {
       if (!a.birthDate) return;
       const birth = new Date(a.birthDate);
-      (VACCINE_SCHEDULES[a.species] || []).forEach(v => {
+      const animalLog = healthLog.filter(e => e.animalId === a.id);
+      (HEALTH_PROTOCOLS[a.species]?.vaccines || []).forEach(v => {
         const due = new Date(birth);
         due.setDate(birth.getDate() + v.age);
-        if (new Date() > due) rows.push({ animal: a.name, vaccine: v.name });
+        if (now <= due) return;
+
+        const logged = animalLog
+          .filter(e => e.eventType?.toLowerCase().startsWith(v.name.toLowerCase()))
+          .sort((x, y) => new Date(y.eventDate) - new Date(x.eventDate))[0];
+        if (!logged) { rows.push({ animal: a.name, vaccine: v.name }); return; }
+        if (logged.nextDueDate && new Date(logged.nextDueDate) < now) {
+          rows.push({ animal: a.name, vaccine: v.name });
+        }
+        // Logged with no next_due_date, or one still ahead — current.
       });
     });
     return rows.slice(0, 4);
-  }, [localAnimals]);
+  }, [localAnimals, healthLog]);
 
   const priorityRows = [
     ...overdueVaccines.map(v => ({
@@ -359,7 +390,7 @@ function FarmerDashboard({ currentUser, navigation }) {
       <View style={s.kpiRow}>
         <KpiCard label="Total Animals" value={localAnimals.length} sub="In your herd registry"
           icon={Users} iconColor={COLORS.primary} iconBg={COLORS.light} />
-        <KpiCard label="Herd Value" value={`$${totalValue.toLocaleString()}`} sub="Estimated market value"
+        <KpiCard label="Herd Value" value={`$${Math.round(totalValue).toLocaleString()}`} sub="Estimated market value"
           icon={Wallet} iconColor="#8C632A" iconBg={COLORS.goldBg} />
       </View>
       <View style={s.kpiRow}>
@@ -488,7 +519,11 @@ function FarmerDashboard({ currentUser, navigation }) {
       {/* Disease Alerts */}
       <SectionLabel icon={AlertTriangle}>DISEASE ALERTS NEAR YOU</SectionLabel>
       <View style={s.panel}>
-        {NOTIFICATIONS.map(n => <AlertCard key={n.id} {...n} />)}
+        {critAlerts.length === 0 ? (
+          <Text style={[s.panelDesc, { fontStyle: 'italic', textAlign: 'center', paddingVertical: 10 }]}>
+            No active outbreaks reported in {currentUser?.province || 'your province'}.
+          </Text>
+        ) : critAlerts.map(n => <AlertCard key={n.id} {...n} />)}
       </View>
 
       {/* Farmers Near You */}
