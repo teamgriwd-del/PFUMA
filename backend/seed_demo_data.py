@@ -493,18 +493,35 @@ def weight_points(rng, a):
     return out
 
 
+def administrable(species):
+    """Every protocol item that is actually a shot someone gives, whether or
+    not it's mandatory.
+
+    Not the same set as protocols.enforceable_vaccines(), and the difference
+    matters here. The backend only opens a compliance case for a *mandatory*
+    item, but the farmer dashboard counts every vaccine in the species
+    protocol as overdue if it was never logged (see overdueVaccines in
+    src/App.jsx, over HEALTH_PROTOCOLS in healthData.js). Seeding only the
+    mandatory ones left every goat owner showing a red "overdue vaccines"
+    tile for Foot Rot and Deworming, which are optional. So log the lot; the
+    one dose deliberately left out below is a mandatory one, so it still
+    opens a real case.
+    """
+    return [v for v in protocols.PROTOCOLS.get(species, []) if v['enforceable']]
+
+
 def vaccination_history(a, skip_vaccine=None):
     """The doses this animal should already have on file.
 
-    Mirrors _due_occurrences() in app.py: for each enforceable protocol item,
-    log the most recent occurrence with next_due_date set ahead of today, so
-    a seeded animal reads as compliant. Pass skip_vaccine to deliberately
-    leave one outstanding — sync_compliance() then opens a real case for it
-    on the next read, which is what gives the compliance queue something
-    genuine to show.
+    Mirrors _due_occurrences() in app.py: for each protocol item, log the most
+    recent occurrence with next_due_date set ahead of today, so a seeded
+    animal reads as up to date on the farmer's dashboard and in the vet's
+    queue alike. Pass skip_vaccine to deliberately leave one outstanding —
+    sync_compliance() then opens a real case for it on the next read, which
+    is what gives the compliance queue something genuine to show.
     """
     events = []
-    for v in protocols.enforceable_vaccines(a['species']):
+    for v in administrable(a['species']):
         if v['name'] == skip_vaccine:
             continue
         first_due = a['birth_date'] + datetime.timedelta(days=v['age'])
