@@ -380,7 +380,7 @@ const FarmerMobileDashboard = ({ animals, currentUser, setActiveTab, totalValue,
           <div className="bg-bark-900 border border-white/8 rounded-2xl p-3.5">
             <DollarSign size={14} className="text-white/40 mb-2.5" aria-hidden="true" />
             <p data-tabular className="text-white text-xl font-bold leading-none">
-              ${totalValue >= 1000 ? `${(totalValue / 1000).toFixed(1)}k` : totalValue.toLocaleString()}
+              ${totalValue >= 1000 ? `${(totalValue / 1000).toFixed(1)}k` : Math.round(totalValue).toLocaleString()}
             </p>
             <p className="text-white/45 text-xs font-semibold mt-1.5">Herd value</p>
           </div>
@@ -627,7 +627,7 @@ const FarmerDashboard = ({ animals, auditLog, inventory, notifications, nearbyFa
           most "generic dashboard" element on this screen. */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard label="Total animals"    value={animals.length}                    sub="In your herd registry"      onClick={() => setActiveTab('profile')} />
-        <StatCard label="Herd value"       value={`$${totalValue.toLocaleString()}`} sub="Estimated market value" />
+        <StatCard label="Herd value"       value={`$${Math.round(totalValue).toLocaleString()}`} sub="Estimated market value" />
         <StatCard label="Overdue vaccines" value={overdueVaccines.length}            sub={overdueVaccines.length ? 'Open the follow-up list' : 'All vaccinations current'} tone={overdueVaccines.length ? 'alert' : 'neutral'} onClick={() => setActiveTab('compliance')} />
         <StatCard label="Listed for sale"  value={forSale}                           sub={forSale ? 'Pending clearance or live' : 'None listed yet'} onClick={() => setActiveTab('profile')} />
       </div>
