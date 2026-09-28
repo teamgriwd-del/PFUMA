@@ -640,10 +640,21 @@ def seed_market(c, rng, users, animals):
             # that listing outright (animal_trade_block), so seeding one
             # would misrepresent how the lockout behaves.
             sellable = [a for a in herd if not a.get('overdue')]
-            listable = [a for a in sellable if a['species'] == 'Cattle'][:4] or sellable[:4]
-            rng.shuffle(listable)
+            cattle = [a for a in sellable if a['species'] == 'Cattle']
+            goats = [a for a in sellable if a['species'] == 'Goat']
+            rng.shuffle(cattle)
+            rng.shuffle(goats)
+            listable = (cattle + goats)[:6]
 
-            plan = [('available', 1), ('pending', 1)] if farmer_no == 0 else [('available', 1), ('sold', 1)]
+            # Three past sales each, not one. A seller's trust score stays
+            # unpublished below MIN_RATINGS_FOR_AVERAGE (3), so a single sale
+            # per farmer left every card on the marketplace reading "No
+            # ratings yet" and the whole ratings feature undemonstrable.
+            # Only the first farmer in each province carries the listing held
+            # for clearance, so every province has exactly one in the queue.
+            plan = [('sold', 3), ('available', 1)]
+            if farmer_no == 0:
+                plan.append(('pending', 1))
             i = 0
             for kind, n in plan:
                 for _ in range(n):
